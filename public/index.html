@@ -1388,6 +1388,34 @@ function renderLive(){
   paintLive();
 }
 
+let SELDOWN = null;
+document.addEventListener('mouseup', e=>{
+  const d = SELDOWN; SELDOWN = null;
+  if(!d) return;
+  // 拖过（选文字）或双击（选词）都不进编辑；只有"点一下没挪"才算要改这一块
+  if(Math.abs(e.clientX - d.x) > 4 || Math.abs(e.clientY - d.y) > 4) return;
+  if(e.detail > 1) return;
+  editBlock(d.i, d.x, d.y);
+});
+
+/* 跨块复制：给富文本 + markdown 两种格式 */
+document.addEventListener('copy', e=>{
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const host = liveHost();
+  if(!host || !host.contains(sel.anchorNode) || !host.contains(sel.focusNode)) return;
+  const blocks = [...host.querySelectorAll('.blk')];
+  const idxOf = node => blocks.findIndex(b=>b.contains(node));
+  let a = idxOf(sel.anchorNode), b = idxOf(sel.focusNode);
+  if(a < 0 || b < 0 || a === b) return;    // 同一块内交给浏览器默认行为
+  if(a > b){ const t = a; a = b; b = t; }
+  const md = LIVE.raws.slice(a, b+1).join('\n');
+  const html = blocks.slice(a, b+1).map(b2=>b2.querySelector('.blk-view').innerHTML).join('');
+  e.clipboardData.setData('text/plain', md);
+  e.clipboardData.setData('text/html', html);
+  e.preventDefault();
+});
+
 function paintLive(){
   const host = liveHost(); if(!host) return;
   host.innerHTML = '';
@@ -1428,8 +1456,9 @@ function blockEl(raw, i, only){
   view.addEventListener('mousedown', e=>{
     if(e.target.closest && e.target.closest('a')) return;
     if(e.target.matches && e.target.matches('input[type=checkbox]')){ e.preventDefault(); toggleTask(i, e.target); return; }
-    e.preventDefault();
-    editBlock(i, e.clientX, e.clientY);
+    if(e.button !== 0) return;
+    // 不阻止默认行为：允许像普通网页一样拖过多个块选中文字
+    SELDOWN = { i, x:e.clientX, y:e.clientY };
   });
   ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); });
   ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));

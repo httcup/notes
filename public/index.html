@@ -277,6 +277,18 @@ a{color:inherit;text-decoration:none}
 .prose a{color:rgb(var(--ivy));text-decoration:underline;text-decoration-thickness:.5px;text-underline-offset:2.5px}
 .prose mark{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));padding:1px 3px;border-radius:4px}
 .prose del{color:rgb(var(--muted))}
+.wiki-pop{
+  position:fixed;z-index:86;width:290px;max-height:236px;overflow:auto;padding:5px;display:none;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));border-radius:11px;
+  box-shadow:var(--shadow-lift);
+}
+.wiki-pop.open{display:block}
+.wiki-item{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:7px;font-size:12.5px;color:rgb(var(--ink-2));cursor:default}
+.wiki-item.on{background:rgb(var(--hover));color:rgb(var(--ink))}
+.wiki-ico{flex:0 0 auto;color:rgb(var(--ivy));font-size:11px;line-height:1}
+.wiki-new{flex:0 0 auto;font-size:10.5px;color:rgb(var(--ivy-ink));background:rgb(var(--ivy-soft));padding:1px 5px;border-radius:4px}
+.wiki-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiki-empty{padding:10px;font-size:12px;color:rgb(var(--faint))}
 .prose .wikilink{
   color:rgb(var(--ivy-ink));background:rgb(var(--ivy-soft));text-decoration:none;
   padding:1.5px 5px;border-radius:5px;font-size:.94em;white-space:nowrap;
@@ -1405,9 +1417,9 @@ function blockEl(raw, i, only){
     e.preventDefault();
     editBlock(i, e.clientX, e.clientY);
   });
-  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); });
+  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); });
   ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));
-  ta.addEventListener('blur', ()=>{ if(el.isConnected && el.classList.contains('editing')) commitBlock(i); });
+  ta.addEventListener('blur', ()=>{ closeWikiPop(); if(el.isConnected && el.classList.contains('editing')) commitBlock(i); });
   ta.addEventListener('paste', onBlockPaste);
   ta.addEventListener('dragover', e=>e.preventDefault());
   ta.addEventListener('drop', e=>{
@@ -1530,8 +1542,97 @@ function ensureLiveInput(){
 }
 
 /* ---- 按键 ---- */
+/* ---- [[ 双链自动补全 ---- */
+const WIKI = { open:false, idx:0, items:[], ta:null, from:0 };
+
+function wikiPanel(){
+  let el = document.getElementById('wikiPop');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'wikiPop'; el.className = 'wiki-pop';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function closeWikiPop(){
+  const el = document.getElementById('wikiPop');
+  if(el) el.classList.remove('open');
+  WIKI.open = false; WIKI.ta = null;
+}
+
+function paintWikiPop(){
+  const el = wikiPanel();
+  if(!WIKI.items.length){
+    el.innerHTML = '<div class="wiki-empty">没有匹配的笔记，直接回车可插入</div>';
+  } else {
+    el.innerHTML = WIKI.items.map((it,i)=>`<div class="wiki-item ${i===WIKI.idx?'on':''}" data-i="${i}">
+      ${it.create ? '<span class="wiki-new">新建</span>' : '<span class="wiki-ico">→</span>'}
+      <span class="wiki-t">${esc(it.title)}</span></div>`).join('');
+  }
+  const r = WIKI.ta.getBoundingClientRect();
+  el.classList.add('open');
+  const h = el.offsetHeight || 60;
+  el.style.left = Math.round(Math.max(12, Math.min(r.left, window.innerWidth - 306))) + 'px';
+  el.style.top = Math.round(r.bottom + h + 12 > window.innerHeight ? Math.max(12, r.top - h - 6) : r.bottom + 6) + 'px';
+  el.querySelectorAll('.wiki-item').forEach(b=>{
+    b.addEventListener('mousedown', ev2=>{ ev2.preventDefault(); WIKI.idx = +b.dataset.i; pickWiki(); });
+  });
+}
+
+function openWikiPop(ta, query, from){
+  const q = String(query||'').trim().toLowerCase();
+  const pool = S.notes
+    .filter(n=>!n.trashed && !n.deleted && n.id!==S.active && (n.title||'').trim())
+    .filter(n=> !q || (n.title||'').toLowerCase().includes(q));
+  // 前缀命中的排前面，其余按最近编辑
+  const byRecent = (a,b)=>(b.updatedAt||0)-(a.updatedAt||0);
+  const head = pool.filter(n=>(n.title||'').toLowerCase().startsWith(q)).sort(byRecent);
+  const rest = pool.filter(n=>!(n.title||'').toLowerCase().startsWith(q)).sort(byRecent);
+  WIKI.items = head.concat(rest).slice(0, 6).map(n=>({title:n.title, id:n.id, create:false}));
+  // 「新建」永远排在最后，回车默认选已有笔记
+  if(q && !WIKI.items.some(it=>it.title.toLowerCase()===q)) WIKI.items.push({title:q, create:true});
+  WIKI.open = true; WIKI.idx = 0; WIKI.ta = ta; WIKI.from = from;
+  paintWikiPop();
+}
+
+function detectWiki(ta){
+  const caret = ta.selectionStart;
+  const before = ta.value.slice(0, caret);
+  const m = before.match(/\[\[([^\[\]\n]{0,40})$/);
+  if(m) openWikiPop(ta, m[1], caret - m[0].length);
+  else closeWikiPop();
+}
+
+function pickWiki(){
+  const ta = WIKI.ta;
+  if(!ta) { closeWikiPop(); return; }
+  const it = WIKI.items[WIKI.idx] || {title:''};
+  const title = (it.title||'').trim();
+  if(!title){ closeWikiPop(); return; }
+  const caret = ta.selectionStart;
+  ta.setRangeText('[[' + title + ']]', WIKI.from, caret, 'end');
+  const i = parseInt(ta.dataset.i, 10) || 0;
+  LIVE.raws[i] = ta.value;
+  closeWikiPop();
+  growTa(ta); syncBody(); ta.focus();
+}
+
 function onBlockKey(e, i, ta, el){
   if(e.isComposing || e.keyCode===229) return;
+
+  if(WIKI.open && WIKI.ta === ta){
+    if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+      e.preventDefault();
+      const n = WIKI.items.length || 1;
+      WIKI.idx = (WIKI.idx + (e.key==='ArrowDown' ? 1 : n-1)) % n;
+      paintWikiPop(); return;
+    }
+    if(e.key==='Enter' || e.key==='Tab'){
+      e.preventDefault(); pickWiki(); return;
+    }
+    if(e.key==='Escape'){ e.preventDefault(); closeWikiPop(); return; }
+  }
 
   if(e.key==='Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey){
     e.preventDefault();

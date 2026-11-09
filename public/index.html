@@ -493,12 +493,15 @@ body.split-mode .outline{display:none}
 
 /* ============ 导出面板 ============ */
 .export-pop{
-  position:fixed;z-index:75;padding:12px;background:rgb(var(--surface));border-radius:12px;
+  position:fixed;z-index:75;padding:15px 17px 17px;width:430px;max-width:calc(100vw - 24px);
+  background:rgb(var(--surface));border-radius:14px;
   box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   opacity:0;pointer-events:none;transform:translateY(-4px) scale(.985);
   transition:opacity .16s,transform .2s var(--spring);
 }
 .export-pop.open{opacity:1;pointer-events:auto;transform:none}
+.ex-head{font-size:13.5px;font-weight:600;color:rgb(var(--ink));margin-bottom:6px}
+.ex-desc{font-size:12px;line-height:1.65;color:rgb(var(--faint));margin:0 0 13px}
 .ex-row{display:flex;gap:8px}
 .ex-row button{
   height:34px;padding:0 15px;border-radius:17px;background:rgb(var(--hover));
@@ -597,7 +600,8 @@ const ICONS = {
   globe:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
   info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
   columns:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/>',
-  code:'<path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>'
+  code:'<path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>',
+  link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>'
 };
 function ic(name, cls){
   const p = ICONS[name] || '';
@@ -1120,7 +1124,9 @@ function applyFormat(kind){
 function openExportPanel(anchor){
   const pop = document.getElementById('exportPop');
   if(!pop) return;
-  pop.innerHTML = `<div class="ex-row">
+  pop.innerHTML = `<div class="ex-head">复制或导出</div>
+    <p class="ex-desc">「复制富文本」能直接粘进 Word、飞书、邮件和公众号，保留标题、加粗、列表、表格等格式；「复制 Markdown」得到纯文本源码。</p>
+    <div class="ex-row">
       <button data-ex="rich">复制富文本</button>
       <button data-ex="md">复制 Markdown</button>
       <button data-ex="file">导出 Markdown</button>
@@ -2210,8 +2216,10 @@ function openNoteMenu(anchor){
     '-',
     ['隐藏大纲', '', '', 'outline', ()=>{ S.outlineOpen=!S.outlineOpen; renderMain(); save(); }],
     '-',
+    ['复制富文本', '', '', 'share', copyRich],
+    ['复制 Markdown', '', '', 'code', copyMarkdown],
     ['导出 Markdown', '', '', 'download', exportMd],
-    ['复制分享链接', '', '', 'share', shareNote],
+    ['复制分享链接', '', '', 'link', shareNote],
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);

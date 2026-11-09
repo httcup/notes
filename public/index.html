@@ -211,6 +211,11 @@ a{color:inherit;text-decoration:none}
 .meta-btn{padding:2px 4px;border-radius:5px;color:rgb(var(--faint));transition:background .14s,color .14s;font-size:12.5px}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
+.meta-sync{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgb(var(--faint))}
+.meta-sync .sd{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
+.meta-sync .sd.ok{background:rgb(var(--ivy));opacity:1}
+.meta-sync .sd.busy{background:rgb(var(--ivy));opacity:1;animation:pulse 1s ease-in-out infinite}
+.meta-sync .sd.error{background:rgb(var(--warn));opacity:1}
 .chip{
   display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:6px;
   font-size:11.5px;font-weight:500;background:rgb(var(--ink)/.05);color:rgb(var(--tag-gray-fg));
@@ -394,6 +399,8 @@ a{color:inherit;text-decoration:none}
 .dock-item.sync-ok{color:rgb(var(--ivy))}
 .dock-item.sync-ok .dot{opacity:1}
 .dock-item.sync-busy .dot{opacity:1;animation:pulse 1s ease-in-out infinite}
+.dock-item.sync-pending{color:rgb(var(--ivy))}
+.dock-item.sync-pending .dot{opacity:1;animation:pulse 1s ease-in-out infinite}
 .dock-item.sync-error{color:rgb(var(--warn))}
 .dock-item.sync-error .dot{opacity:1}
 @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
@@ -875,8 +882,10 @@ function renderMeta(){
   const wc = countWords(n.body);
   meta.innerHTML = `<button class="meta-btn" id="metaTime">${stamp}</button>
     <span class="sep">·</span><span>${wc} 字</span>
+    <span class="meta-sync" id="metaSync"></span>
     ${n.tags.map((t,i)=>`<span class="chip" style="color:${TAG_COLORS[i%TAG_COLORS.length]}">${esc(t)}<span class="rm" data-rmtag="${esc(t)}">×</span></span>`).join('')}
     <button class="meta-btn add" id="addTag">+ 标签</button>`;
+  updateSyncBadge();
   const add = meta.querySelector('#addTag');
   add.onclick=()=>{
     const inp = document.createElement('input');
@@ -1576,6 +1585,7 @@ function syncSave(){ try{ localStorage.setItem(SYNC_STORE, JSON.stringify({key:S
 function syncTip(){
   if(!SYNC.key) return '云同步未连接 · 点击设置';
   if(SYNC.state==='busy') return '正在同步…';
+  if(SYNC.state==='pending') return '有改动，正在自动保存…';
   if(SYNC.state==='error') return '同步失败：'+(SYNC.error||'网络错误')+' · 点击查看';
   if(SYNC.state==='ok') return '已同步 · '+new Date(SYNC.last).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · 点击管理';
   return '云同步已就绪 · 点击立即同步';
@@ -1630,11 +1640,20 @@ function renderAfterSync(changed, force){
     if(first){ S.active = first.id; S.tabs = [first.id]; renderAll(); }
   }
 }
+let syncDirty = false, syncFails = 0, syncRetryTimer = null;
+
+function scheduleRetry(){
+  clearTimeout(syncRetryTimer);
+  const delay = Math.min(30000, 1500 * Math.pow(2, Math.min(syncFails, 4)));
+  syncRetryTimer = setTimeout(()=>{ syncRetryTimer = null; syncNow(); }, delay);
+}
+
 async function syncNow(opts={}){
   if(!SYNC.key || syncBusy) return;
   syncBusy = true;
+  syncDirty = false;
   const firstTime = !SYNC.last;
-  SYNC.state = 'busy'; SYNC.error = ''; renderDock();
+  SYNC.state = 'busy'; SYNC.error = ''; renderDock(); updateSyncBadge();
   try{
     if(firstTime){
       // 首次连接：云端已有数据时，丢弃本机示例笔记，避免污染服务器
@@ -1647,22 +1666,45 @@ async function syncNow(opts={}){
     const data = await api('POST', localPayload());
     const changed = applyRemote(data);
     S.notes = S.notes.filter(n=>!n.deleted);
-    SYNC.last = Date.now(); SYNC.state = 'ok'; syncSave();
+    SYNC.last = Date.now(); SYNC.state = 'ok'; SYNC.error = '';
+    syncFails = 0; clearTimeout(syncRetryTimer); syncRetryTimer = null;
+    syncSave();
     renderAfterSync(changed, opts.rerender);
     persistLocal();
   }catch(e){
     SYNC.state = 'error';
     SYNC.error = e.status===401 ? '口令不正确' : (e.message||'网络错误');
+    if(e.status !== 401){ syncFails++; syncDirty = true; scheduleRetry(); }
     renderDock();
   }finally{
     syncBusy = false;
+    updateSyncBadge();
     if(syncPanelOpen) paintSyncPanel();
+    // 同步期间又有改动：立刻续跑一轮
+    if(syncDirty && SYNC.state !== 'error'){
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(()=>syncNow(), 120);
+    }
   }
 }
 function queueSync(){
-  try{ if(!SYNC.key || syncBusy) return; }catch(e){ return; }
+  try{ if(!SYNC.key) return; }catch(e){ return; }
+  syncDirty = true;
+  if(SYNC.state !== 'busy'){ SYNC.state = 'pending'; renderDock(); }
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(()=>syncNow(), 1200);
+  syncTimer = setTimeout(()=>syncNow(), 800);
+  updateSyncBadge();
+}
+// 页面要走了：用 keepalive 兜住最后不到 1 秒的改动
+function flushSync(){
+  if(!SYNC.key || syncBusy || !syncDirty) return;
+  try{
+    fetch('/api/sync', {
+      method: 'POST', keepalive: true,
+      headers: {'content-type':'application/json','x-ivy-key':SYNC.key},
+      body: JSON.stringify(localPayload())
+    }).then(()=>{ syncDirty = false; }).catch(()=>{});
+  }catch(e){}
 }
 async function pullRemote(){
   if(!SYNC.key || syncBusy || document.hidden) return;
@@ -1670,21 +1712,36 @@ async function pullRemote(){
     const data = await api('GET');
     const changed = applyRemote(data);
     if(changed){ S.notes = S.notes.filter(n=>!n.deleted); renderAfterSync(true, false); persistLocal(); }
-    SYNC.state = 'ok'; SYNC.last = Date.now(); syncSave(); renderDock();
+    SYNC.state = 'ok'; SYNC.last = Date.now(); syncSave(); renderDock(); updateSyncBadge();
   }catch(e){
     SYNC.state = 'error'; SYNC.error = e.status===401 ? '口令不正确' : (e.message||'网络错误');
-    renderDock();
+    renderDock(); updateSyncBadge();
   }
 }
 setInterval(pullRemote, 45000);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && SYNC.key) pullRemote(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(!SYNC.key) return;
+  if(document.hidden) flushSync();
+  else pullRemote();
+});
+window.addEventListener('pagehide', flushSync);
+
+function updateSyncBadge(){
+  const el = document.getElementById('metaSync');
+  if(!el) return;
+  if(!SYNC.key){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  const st = SYNC.state==='ok' ? 'ok' : (SYNC.state==='error' ? 'error' : 'busy');
+  const label = st==='ok' ? '已同步' : (st==='error' ? '未保存' : '保存中');  el.innerHTML = `<span class="sd ${st}"></span>${label}`;
+  el.title = syncTip();
+}
 
 function paintSyncPanel(){
   const line = $('#syncStatusLine'); if(!line) return;
   const btn = $('#syncConnect');
   const n = S.notes.filter(x=>!x.trashed).length;
   if(SYNC.state==='ok'){
-    line.innerHTML = `已连接 · 上次同步 <b>${new Date(SYNC.last).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</b><br>本机 ${n} 篇笔记 · 多端按编辑时间后写覆盖`;
+    line.innerHTML = `已连接 · 自动同步已开启，编辑后约 1 秒上传<br>上次同步 <b>${new Date(SYNC.last).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</b> · 本机 ${n} 篇笔记`;
   } else if(SYNC.state==='busy'){
     line.innerHTML = '正在同步…';
   } else if(SYNC.state==='error'){

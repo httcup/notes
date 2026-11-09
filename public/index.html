@@ -399,42 +399,62 @@ body.split-mode .outline,body.split-mode .outline-zone{display:none}
 .blank .kbd{font-family:var(--font-mono);font-size:11.5px;padding:3px 7px;border-radius:5px;background:rgb(var(--sunken));border:.5px solid rgb(var(--line))}
 .blank p{margin:0;font-size:13.5px}
 
-/* ============ outline ============ */
-/* 大纲：平时藏在右边，鼠标靠近右边缘滑出（幕布那种），点按钮可钉住 */
-.outline-zone{position:absolute;right:0;top:0;bottom:0;width:18px;z-index:7}
+/* ============ outline（幕布式：无边框悬浮卡片） ============ */
+/* 平时只在窗口右边缘留三根短横线做把手，鼠标靠近滑出卡片；点卡片上的图钉可固定 */
+.outline-zone{position:fixed;right:0;top:58px;bottom:0;width:26px;z-index:45}
 .outline-zone::after{
-  content:'';position:absolute;right:3px;top:50%;transform:translateY(-50%);
-  width:3px;height:52px;border-radius:3px;background:rgb(var(--ink) / .09);
-  transition:background .16s,height .2s var(--spring);
+  content:'';position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:11px;height:13px;border-radius:2px;
+  background:repeating-linear-gradient(to bottom,rgb(var(--ink)/.16) 0 1.5px,transparent 1.5px 5px);
+  transition:background .16s;
 }
-.outline-zone:hover::after{background:rgb(var(--ivy) / .5);height:78px}
+.outline-zone:hover::after{background:repeating-linear-gradient(to bottom,rgb(var(--ivy)/.55) 0 1.5px,transparent 1.5px 5px)}
+/* 固定展开时把手隐身，避免卡片旁多一根小横线 */
+body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opacity .18s}
 .outline{
-  position:absolute;right:0;top:0;bottom:0;width:236px;z-index:8;
-  padding:52px 14px 20px;overflow-y:auto;scrollbar-width:none;
+  position:fixed;right:14px;top:72px;z-index:56;
+  width:256px;max-height:min(620px,calc(100vh - 116px));
+  display:flex;flex-direction:column;
+  padding:4px 5px 6px;border:0;border-radius:14px;
   background:rgb(var(--surface));
-  border-left:1px solid #edf0f2;
-  box-shadow:-10px 0 26px -20px rgb(16 24 32 / .35);
-  transform:translateX(102%);opacity:0;pointer-events:none;
+  /* 无描边，只用一层极淡外阴影 + 一层柔和投影托起来 */
+  box-shadow:
+    0 0 0 .5px rgb(16 24 32 / .045),
+    0 1px 2px rgb(16 24 32 / .04),
+    0 14px 34px -12px rgb(16 24 32 / .22);
+  transform:translateX(10px) scale(.985);transform-origin:right top;
+  opacity:0;pointer-events:none;
   transition:transform .26s var(--spring),opacity .16s;
+}
+[data-theme=dark] .outline{
+  box-shadow:0 0 0 .5px rgb(255 255 255 / .05),0 14px 34px -12px rgb(0 0 0 / .6);
 }
 .outline-zone:hover ~ .outline,
 .outline:hover,
 .outline.pinned{transform:none;opacity:1;pointer-events:auto}
 .outline.hidden{display:none}
-[data-theme=dark] .outline{border-left-color:#2b3035}
-.outline::-webkit-scrollbar{width:0}
-.outline-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.outline-head span{font-size:12px;font-weight:600;letter-spacing:.03em;color:rgb(var(--muted))}
+.outline-head{display:flex;align-items:center;justify-content:flex-end;gap:1px;padding:3px 3px 5px;flex:0 0 auto}
+.ol-btn{
+  width:26px;height:26px;display:grid;place-items:center;border-radius:7px;
+  color:rgb(var(--faint));transition:background .14s,color .14s;
+}
+.ol-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.ol-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.ol-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.outline-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:1px 1px 2px}
+.outline-body::-webkit-scrollbar{width:7px}
+.outline-body::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.12);border-radius:7px;border:2px solid transparent;background-clip:content-box}
 .ol-item{
-  display:block;width:100%;text-align:left;font-size:12.5px;line-height:1.5;color:rgb(var(--muted));
-  padding:4px 6px;border-radius:6px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:block;width:100%;text-align:left;font-size:12.8px;line-height:1.55;color:rgb(var(--ink-2));
+  padding:5px 8px;border-radius:7px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:background .14s,color .14s;
 }
 .ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
-.ol-item.l2{padding-left:16px}
-.ol-item.l3{padding-left:26px;font-size:12px}
-.ol-item.l4,.ol-item.l5,.ol-item.l6{padding-left:34px;font-size:12px;color:rgb(var(--faint))}
-.ol-empty{font-size:12px;color:rgb(var(--faint));padding:4px 6px}
+.ol-item.l1{font-weight:500;color:rgb(var(--ink))}
+.ol-item.l2{padding-left:21px}
+.ol-item.l3{padding-left:34px;font-size:12.3px}
+.ol-item.l4,.ol-item.l5,.ol-item.l6{padding-left:47px;font-size:12.3px;color:rgb(var(--muted))}
+.ol-empty{font-size:12px;color:rgb(var(--faint));padding:8px 9px}
 
 /* ============ media ============ */
 .view-pad{padding:44px 32px 40px}
@@ -681,6 +701,7 @@ const ICONS = {
   pencil:'<path d="M4 20h4L20 8a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14.5 6.5 17.5 9.5"/>',
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12"/><circle cx="12" cy="12" r="3"/>',
   outline:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+  pin:'<path d="M9.5 3.2h5l-.55 5.1 3.05 3.2H7l3.05-3.2z"/><path d="M12 11.5V20.8"/>',
   bookOpen:'<path d="M12 6.5C10.5 5 8.4 4.4 4 4.5v14c4.4-.1 6.5.5 8 2 1.5-1.5 3.6-2.1 8-2v-14c-4.4-.1-6.5.5-8 2z"/><path d="M12 6.5v14"/>',
   sort:'<path d="M7 20V4M7 4 3.5 7.5M7 4l3.5 3.5M17 4v16M17 20l3.5-3.5M17 20l-3.5-3.5"/>',
   filter:'<path d="M4 5h16l-6.2 7.4V19l-3.6-2v-4.6z"/>',
@@ -720,6 +741,7 @@ function seed(){
     theme: 'light',
     shelfOpen: true,
     outlineOpen: false,
+    outlineTop: false,
     mode: 'live',
     media: []
   };
@@ -1030,6 +1052,7 @@ function renderAll(){
 function renderMain(){
   closeExportPanel();
   paperActions.innerHTML = '';
+  if(S.view!=='notes'){ outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); }
   if(S.view==='media'){ renderMedia(); return; }
   if(S.view==='graph'){ renderGraph(); return; }
   renderEditor();
@@ -1049,7 +1072,7 @@ function applyNoteMode(n){
   }
 }
 function renderEditor(){
-  if(trashView){ renderTrash(); outlineEl.classList.add('hidden'); return; }
+  if(trashView){ renderTrash(); outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); return; }
   const n = S.active ? noteById(S.active) : null;
   applyNoteMode(n);
 
@@ -2400,20 +2423,58 @@ function wireEditor(n){
 let outlineItems = [];
 function renderOutline(){
   const n = noteById(S.active);
-  if(!n){ outlineEl.innerHTML=''; outlineEl.classList.add('hidden'); return; }
+  if(!n){ outlineEl.innerHTML=''; outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); return; }
   outlineEl.classList.remove('hidden');
   outlineEl.classList.toggle('pinned', !!S.outlineOpen);
-  const heads = mdToHtml(n.body).headings;
-  outlineEl.innerHTML = `<div class="outline-head"><span>大纲</span>
-      <button class="pa-btn" id="closeOutline" title="${S.outlineOpen?'取消固定':'固定展开'}" style="width:24px;height:24px">${ic('x')}</button></div>`
-    + (heads.length ? heads.map(h=>`<button class="ol-item l${h.level}" data-h="${h.id}">${esc(h.text)}</button>`).join('')
-                    : `<div class="ol-empty">标题、小节会出现在这里</div>`);
-  const c = outlineEl.querySelector('#closeOutline');
-  if(c) c.onclick=()=>{ S.outlineOpen=false; outlineEl.classList.remove('pinned'); renderMain(); save(); };
-  outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
-    const t = document.getElementById(b.dataset.h);
-    if(t) t.scrollIntoView({behavior:'smooth', block:'start'});
-  });
+  document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
+  const all = mdToHtml(n.body).headings;
+  const heads = S.outlineTop ? all.filter(h=>h.level <= 2) : all;
+  outlineEl.innerHTML = `<div class="outline-head">
+      <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" title="${S.outlineTop?'显示全部标题':'只看一、二级标题'}">${ic('filter')}</button>
+      <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" title="${S.outlineOpen?'取消固定（鼠标移开自动收起）':'固定在页面上'}">${ic('pin')}</button>
+    </div>
+    <div class="outline-body">`
+    + (heads.length ? heads.map(h=>`<button class="ol-item l${h.level}" data-h="${h.id}" title="${esc(h.text)}">${esc(h.text)}</button>`).join('')
+                    : `<div class="ol-empty">标题、小节会出现在这里</div>`)
+    + `</div>`;
+
+  const pin = outlineEl.querySelector('#olPin');
+  if(pin) pin.onclick = ()=>{
+    S.outlineOpen = !S.outlineOpen;
+    outlineEl.classList.toggle('pinned', !!S.outlineOpen);
+    document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
+    pin.classList.toggle('on', !!S.outlineOpen);
+    pin.title = S.outlineOpen ? '取消固定（鼠标移开自动收起）' : '固定在页面上';
+    const pb = document.getElementById('paOutline');
+    if(pb) pb.classList.toggle('on', !!S.outlineOpen);
+    save();
+  };
+  const top = outlineEl.querySelector('#olTop');
+  if(top) top.onclick = ()=>{ S.outlineTop = !S.outlineTop; renderOutline(); save(); };
+
+  outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>jumpToHeading(b.dataset.h));
+}
+
+/* 点大纲跳转：页面里可能有多个同名 id（即时预览副本是隐藏的），要挑真正可见的那个 */
+function jumpToHeading(id){
+  const all = [...document.querySelectorAll('[id="'+String(id).replace(/"/g,'\\"')+'"]')];
+  const t = all.find(el=>el.getClientRects().length);
+  if(!t) return;
+  const sc = document.getElementById('scroll');
+  if(S.mode === 'source'){
+    // 源码模式没有标题元素，按行号估算位置
+    const n = noteById(S.active); const src = document.getElementById('source');
+    if(!n || !src) return;
+    const heads = mdToHtml(n.body).headings;
+    const idx = heads.findIndex(h=>h.id===id);
+    if(idx < 0) return;
+    const ratio = (idx + 1) / (heads.length + 1);
+    src.scrollTo({ top: Math.max(0, src.scrollHeight * ratio - 80), behavior:'smooth' });
+    return;
+  }
+  if(!sc) return;
+  const top = t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 28;
+  sc.scrollTo({ top: Math.max(0, top), behavior:'smooth' });
 }
 
 /* ---- 回收站 ---- */

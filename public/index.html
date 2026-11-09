@@ -658,6 +658,41 @@ function save(){
   if(typeof queueSync === 'function') queueSync();
 }
 S = load();
+
+/* 把「块级语法前的多余空行」收掉（不动代码块内部、不动普通段落之间） */
+function normalizeBlockSpacing(md){
+  const lines = String(md||'').replace(/\r\n?/g,'\n').split('\n');
+  const out = [];
+  let inFence = false;
+  for(let i=0;i<lines.length;i++){
+    const ln = lines[i];
+    if(/^\s*```/.test(ln)){ inFence = !inFence; out.push(ln); continue; }
+    if(!inFence && !ln.trim()){
+      let j = i+1;
+      while(j < lines.length && !lines[j].trim()) j++;
+      const nxt = j < lines.length ? lines[j] : '';
+      const isSep = /^\s*\|?[\s:-]*-[-\s:|]*\|?\s*$/.test(nxt) && nxt.includes('-');
+      const startsBlock = /^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s|\|)/.test(nxt) || isSep;
+      if(nxt && startsBlock) continue;   // 这些空行纯粹是块分隔，去掉不影响排版
+    }
+    out.push(ln);
+  }
+  return out.join('\n');
+}
+
+// 一次性修复：旧版本保存时把块之间的单换行写成了空行，导致源码看着很空
+try{
+  if(!localStorage.getItem('ivy.spacingFix1')){
+    let changed = false;
+    (S.notes||[]).forEach(n=>{
+      const fixed = normalizeBlockSpacing(n.body||'');
+      if(fixed !== n.body){ n.body = fixed; n.updatedAt = Date.now(); changed = true; }
+    });
+    if(changed) persistLocal();
+    localStorage.setItem('ivy.spacingFix1','1');
+  }
+}catch(e){}
+
 const noteById = id => S.notes.find(n=>n.id===id);
 const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt);
 
@@ -1231,7 +1266,7 @@ function openWikiLink(t){
 }
 
 /* ========== 所见即所得编辑（块级 Markdown） ========== */
-const LIVE = { raws: [], editing: -1, ta: null };
+const LIVE = { raws: [], gaps: [], editing: -1, ta: null };
 
 function modeClass(m){
   if(m==='source') return 'mode-edit';
@@ -1322,6 +1357,8 @@ function renderLive(){
   commitAnyEditing();
   const blocks = parseBlocks(n.body);
   LIVE.raws = blocks.length ? blocks.map(b=>b.lines.join('\n')) : [''];
+  // 记住块之间原本隔了几个空行，保存时原样还原，绝不擅自把单换行改成空行
+  LIVE.gaps = blocks.length ? blocks.map((b,i)=> i===0 ? 0 : Math.max(0, b.start - blocks[i-1].end)) : [0];
   paintLive();
 }
 
@@ -1338,7 +1375,7 @@ function paintLive(){
       if(a){ e.preventDefault(); openWikiLink(a.dataset.wiki); return; }
       if(e.target.classList && e.target.classList.contains('lv-tail')){
         if(!String(LIVE.raws[LIVE.raws.length-1]).trim()) focusBlock(LIVE.raws.length-1, 'end');
-        else { LIVE.raws.push(''); rebuild(LIVE.raws.length-1, 0); }
+        else { LIVE.raws.push(''); LIVE.gaps.push(0); rebuild(LIVE.raws.length-1, 0); }
       }
     });
   }
@@ -1465,7 +1502,11 @@ function livePreviewSoon(){
 
 function syncBody(){
   const n = noteById(S.active); if(!n) return;
-  const body = LIVE.raws.join('\n\n');
+  let body = '';
+  LIVE.raws.forEach((r,i)=>{
+    if(i) body += '\n'.repeat(((LIVE.gaps && LIVE.gaps[i]) || 0) + 1);
+    body += r;
+  });
   if(body === n.body) return;
   n.body = body; n.updatedAt = Date.now();
   renderMeta(); renderOutline(); save();
@@ -1477,7 +1518,7 @@ function focusBlock(i, caret){
   if(i < 0){ const t = document.getElementById('docTitle'); if(t) t.focus(); return; }
   if(i >= LIVE.raws.length){
     if(!String(LIVE.raws[LIVE.raws.length-1]).trim()) i = LIVE.raws.length-1;
-    else { LIVE.raws.push(''); rebuild(i, 0); return; }
+    else { LIVE.raws.push(''); LIVE.gaps.push(0); rebuild(i, 0); return; }
   }
   editBlock(i, null, null, caret);
 }
@@ -1509,7 +1550,7 @@ function onBlockKey(e, i, ta, el){
     if(!ta.value){
       if(LIVE.raws.length<=1) return;
       e.preventDefault();
-      LIVE.raws.splice(i,1);
+      LIVE.raws.splice(i,1); LIVE.gaps.splice(i,1);
       rebuild(i > 0 ? i-1 : 0, 'end');
       return;
     }
@@ -1517,7 +1558,7 @@ function onBlockKey(e, i, ta, el){
     e.preventDefault();
     const prev = LIVE.raws[i-1];
     LIVE.raws[i-1] = prev + (prev.endsWith('\n') ? '' : '\n') + ta.value;
-    LIVE.raws.splice(i,1);
+    LIVE.raws.splice(i,1); LIVE.gaps.splice(i,1);
     rebuild(i-1, prev.length);
     return;
   }
@@ -1544,7 +1585,7 @@ function handleEnter(i, ta){
   }
   if(t==='heading'){
     LIVE.raws[i] = before.trimEnd();
-    LIVE.raws.splice(i+1, 0, after.replace(/^\n+/,''));
+    LIVE.raws.splice(i+1, 0, after.replace(/^\n+/,'')); LIVE.gaps.splice(i+1, 0, 0);
     rebuild(i+1, 0);
     return;
   }
@@ -1555,7 +1596,7 @@ function handleEnter(i, ta){
       if(!text.trim()){
         const headRaw = v.slice(0, lineStart).replace(/\n$/,'');
         LIVE.raws[i] = headRaw;
-        LIVE.raws.splice(i+1, 0, after.replace(/^\n/,''));
+        LIVE.raws.splice(i+1, 0, after.replace(/^\n/,'')); LIVE.gaps.splice(i+1, 0, 0);
         rebuild(i+1, 0);
         return;
       }
@@ -1570,7 +1611,7 @@ function handleEnter(i, ta){
   let tailRaw = after.replace(/^\n/,'');
   if(t==='quote' && tailRaw) tailRaw = '> ' + tailRaw;
   LIVE.raws[i] = headRaw;
-  LIVE.raws.splice(i+1, 0, tailRaw);
+  LIVE.raws.splice(i+1, 0, tailRaw); LIVE.gaps.splice(i+1, 0, 0);
   rebuild(i+1, t==='quote' ? 2 : 0);
 }
 

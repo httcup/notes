@@ -60,6 +60,18 @@ h1.title{
 .body blockquote{margin:.7em 0;padding:2px 0 2px 15px;border-left:2px solid rgb(var(--ivy) / .35);color:rgb(var(--ink-2))}
 .body code{font-family:var(--font-mono);font-size:.86em;background:rgb(var(--code-bg));padding:2px 5px;border-radius:5px;border:.5px solid rgb(var(--line))}
 .body mark{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));padding:1px 3px;border-radius:4px}
+.body mark.hl-yellow{background:#fdf0c5;color:#7a580c}
+.body mark.hl-pink{background:#fce2e5;color:#9a2c3c}
+.body mark.hl-blue{background:#dbeafa;color:#1c4e84}
+.body mark.hl-purple{background:#ebe2f8;color:#5e3a94}
+.body mark.hl-gray{background:#e9ecef;color:#474e55}
+@media (prefers-color-scheme: dark){
+  .body mark.hl-yellow{background:#4a3c14;color:#f5dc94}
+  .body mark.hl-pink{background:#4a222c;color:#f4b9c3}
+  .body mark.hl-blue{background:#1b3552;color:#b3d4f7}
+  .body mark.hl-purple{background:#33254d;color:#d6bcfa}
+  .body mark.hl-gray{background:#34383d;color:#d2d7dc}
+}
 .body pre{background:rgb(var(--code-bg));border:.5px solid rgb(var(--line));border-radius:10px;padding:14px 16px;overflow-x:auto;margin:.9em 0}
 .body pre code{background:none;border:0;padding:0;font-size:13px;line-height:1.72;display:block}
 .body hr{border:0;border-top:1px solid rgb(var(--line));margin:1.2em 0}
@@ -112,7 +124,17 @@ function inlineMd(s){
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>');
   s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-  s = s.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+  s = s.replace(/==([^=]+)==(?:\{(?:\.([a-z]+)|c:(#[0-9a-fA-F]{3,8}))\})?/g, (m,t,named,hex)=>{
+    if(hex){
+      const h = String(hex).replace('#','');
+      const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+      const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+      return '<mark style="background:rgba('+r+','+g+','+b+',.24);color:color-mix(in srgb, '+hex+' 60%, CanvasText)">'+t+'</mark>';
+    }
+    const k = String(named||'').toLowerCase();
+    const cls = ['yellow','pink','blue','purple','gray'].includes(k) ? ' class="hl-'+k+'"' : '';
+    return '<mark'+cls+'>'+t+'</mark>';
+  });
   return s;
 }
 

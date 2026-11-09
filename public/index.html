@@ -153,6 +153,50 @@ a{color:inherit;text-decoration:none}
 .note-item .tags{display:flex;gap:3px;flex:0 0 auto}
 .dot-tag{width:5px;height:5px;border-radius:50%}
 
+/* 左侧标签分类 */
+.tag-filter-bar{
+  display:flex;align-items:center;gap:6px;margin:2px 8px 8px;padding:6px 9px;
+  border-radius:8px;background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));
+  font-size:11.5px;font-weight:500;line-height:1.3;
+}
+.tag-filter-bar .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag-filter-bar button{font-size:11px;color:inherit;opacity:.72;white-space:nowrap}
+.tag-filter-bar button:hover{opacity:1;text-decoration:underline}
+.tag-sec{margin-top:12px}
+.tag-sec .sec-label{margin-bottom:4px}
+.tag-sec-clear{font-size:11px;color:rgb(var(--ivy));font-weight:500}
+.tag-sec-clear:hover{text-decoration:underline}
+.shelf-row.tag-row{padding:5px 8px;gap:9px}
+.shelf-row.tag-row.active{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:500}
+.tag-dot{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+.tag-empty{font-size:11.5px;color:rgb(var(--faint));padding:4px 8px 6px;line-height:1.6}
+
+/* 单篇笔记的标签选择器 */
+.tag-pick{width:238px;padding:6px}
+.tp-search{padding:0 2px 6px}
+.tp-search input{
+  width:100%;height:28px;border:0;border-radius:7px;outline:none;
+  background:rgb(var(--ink)/.05);padding:0 9px;font-size:12.5px;color:rgb(var(--ink));
+}
+.tp-search input::placeholder{color:rgb(var(--faint))}
+.tp-list{max-height:230px;overflow-y:auto;scrollbar-width:thin}
+.tp-list::-webkit-scrollbar{width:6px}
+.tp-list::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.16);border-radius:6px}
+.tp-row{
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  padding:6px 8px;border-radius:7px;color:rgb(var(--ink-2));font-size:12.5px;
+}
+.tp-row:hover{background:rgb(var(--hover))}
+.tp-row .tp-dot{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+.tp-row .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-row .n{font-size:10.5px;color:rgb(var(--faint))}
+.tp-row .ck{width:14px;text-align:center;color:rgb(var(--ivy));font-size:12px}
+.tp-row.on .t{color:rgb(var(--ink));font-weight:500}
+.tp-row.tp-create{color:rgb(var(--ivy))}
+.tp-plus{width:14px;text-align:center;font-size:15px;line-height:1}
+.tp-none{font-size:11.5px;color:rgb(var(--faint));padding:10px 8px;text-align:center}
+.chip{cursor:pointer}
+
 .shelf-foot{margin-top:auto;padding-top:10px}
 
 /* dock */
@@ -399,36 +443,34 @@ body.split-mode .outline,body.split-mode .outline-zone{display:none}
 .blank .kbd{font-family:var(--font-mono);font-size:11.5px;padding:3px 7px;border-radius:5px;background:rgb(var(--sunken));border:.5px solid rgb(var(--line))}
 .blank p{margin:0;font-size:13.5px}
 
-/* ============ outline（幕布式：无边框悬浮卡片） ============ */
-/* 平时只在窗口右边缘留三根短横线做把手，鼠标靠近滑出卡片；点卡片上的图钉可固定 */
+/* ============ outline（无边框透明悬浮 + 右边缘刻度） ============ */
+/* 收起时：右边缘一列随笔记长度变化的短刻度，一根对应一个标题，当前位置高亮 */
 .outline-zone{position:fixed;right:0;top:58px;bottom:0;width:26px;z-index:45}
-.outline-zone::after{
-  content:'';position:absolute;right:6px;top:50%;transform:translateY(-50%);
-  width:11px;height:13px;border-radius:2px;
-  background:repeating-linear-gradient(to bottom,rgb(var(--ink)/.16) 0 1.5px,transparent 1.5px 5px);
-  transition:background .16s;
+.ol-mini{position:absolute;right:12px;top:34px;width:16px;transition:opacity .18s}
+.ol-tick{
+  position:absolute;right:0;height:1px;padding:0;border:0;border-radius:1px;
+  background:rgb(var(--ink)/.22);
+  transition:background .16s,height .16s,transform .16s;
 }
-.outline-zone:hover::after{background:repeating-linear-gradient(to bottom,rgb(var(--ivy)/.55) 0 1.5px,transparent 1.5px 5px)}
-/* 固定展开时把手隐身，避免卡片旁多一根小横线 */
-body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opacity .18s}
+[data-theme=dark] .ol-tick{background:rgb(255 255 255 / .22)}
+.ol-tick.on{background:rgb(var(--ivy));height:2px;transform:scaleX(1.3);transform-origin:right center}
+/* 卡片展开/固定时，刻度让位给卡片自己的短横线 */
+.outline-zone:hover .ol-mini,
+body.ol-peek .ol-mini,
+body.outline-pinned .ol-mini,
+body.ol-hidden .ol-mini{opacity:0;pointer-events:none}
+body.ol-hidden .outline-zone{display:none}
 .outline{
-  position:fixed;right:14px;top:72px;z-index:56;
+  position:fixed;right:4px;top:66px;z-index:56;
   width:256px;max-height:min(620px,calc(100vh - 116px));
   display:flex;flex-direction:column;
-  padding:4px 5px 6px;border:0;border-radius:14px;
-  background:rgb(var(--surface));
-  /* 无描边，只用一层极淡外阴影 + 一层柔和投影托起来 */
-  box-shadow:
-    0 0 0 .5px rgb(16 24 32 / .045),
-    0 1px 2px rgb(16 24 32 / .04),
-    0 14px 34px -12px rgb(16 24 32 / .22);
-  transform:translateX(10px) scale(.985);transform-origin:right top;
+  padding:4px 5px 6px;border:0;border-radius:0;
+  background:transparent;box-shadow:none;
+  transform:translateX(10px);transform-origin:right top;
   opacity:0;pointer-events:none;
   transition:transform .26s var(--spring),opacity .16s;
 }
-[data-theme=dark] .outline{
-  box-shadow:0 0 0 .5px rgb(255 255 255 / .05),0 14px 34px -12px rgb(0 0 0 / .6);
-}
+[data-theme=dark] .outline{box-shadow:none}
 .outline-zone:hover ~ .outline,
 .outline:hover,
 .outline.pinned{transform:none;opacity:1;pointer-events:auto}
@@ -445,15 +487,20 @@ body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opaci
 .outline-body::-webkit-scrollbar{width:7px}
 .outline-body::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.12);border-radius:7px;border:2px solid transparent;background-clip:content-box}
 .ol-item{
-  display:block;width:100%;text-align:left;font-size:12.8px;line-height:1.55;color:rgb(var(--ink-2));
-  padding:5px 8px;border-radius:7px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  font-size:12.8px;line-height:1.55;color:rgb(var(--ink-2));
+  padding:5px 8px;border-radius:7px;margin:0;
   transition:background .14s,color .14s;
 }
+.ol-item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ol-item .dash{flex:0 0 auto;width:9px;height:1px;border-radius:1px;background:rgb(var(--ink)/.17);transition:width .18s,background .18s,height .18s}
 .ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .ol-item.l1{font-weight:500;color:rgb(var(--ink))}
 .ol-item.l2{padding-left:21px}
 .ol-item.l3{padding-left:34px;font-size:12.3px}
 .ol-item.l4,.ol-item.l5,.ol-item.l6{padding-left:47px;font-size:12.3px;color:rgb(var(--muted))}
+.ol-item.on{color:rgb(var(--ink));font-weight:600}
+.ol-item.on .dash{width:18px;height:1.5px;background:rgb(var(--ivy))}
 .ol-empty{font-size:12px;color:rgb(var(--faint));padding:8px 9px}
 
 /* ============ media ============ */
@@ -537,9 +584,16 @@ body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opaci
 .po-sep{height:1px;margin:4px 6px;background:rgb(var(--line))}
 .po-key{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--faint))}
 .hl-row{display:flex;align-items:center;gap:7px;padding:6px 8px 5px}
-.hl-sw{width:22px;height:22px;border-radius:6px;background:var(--sw);box-shadow:inset 0 0 0 1px rgb(var(--ink) / .10);transition:transform .12s var(--spring)}
+.hl-grid{display:grid;grid-template-columns:repeat(7,20px);gap:6px;padding:8px 9px 7px}
+.hl-sw{width:20px;height:20px;border-radius:6px;background:var(--sw);box-shadow:inset 0 0 0 1px rgb(var(--ink) / .10);transition:transform .12s var(--spring)}
 .hl-sw:hover{transform:scale(1.14)}
 .hl-sw:active{transform:scale(.96)}
+.hl-add{
+  display:grid;place-items:center;background:none;box-shadow:inset 0 0 0 1px rgb(var(--line));
+  color:rgb(var(--muted));font-size:14px;line-height:1;
+}
+.hl-add:hover{color:rgb(var(--ink));box-shadow:inset 0 0 0 1px rgb(var(--ink)/.2)}
+.hl-color-in{position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
 .emoji-grid{display:grid;grid-template-columns:repeat(8,34px);gap:1px;padding:6px 4px;max-height:210px;overflow-y:auto;scrollbar-width:thin}
 .emoji-grid::-webkit-scrollbar{width:6px}
 .emoji-grid::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.16);border-radius:6px;border:1px solid transparent;background-clip:content-box}
@@ -656,7 +710,9 @@ body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opaci
       <div class="paper-actions" id="paperActions"></div>
       <div class="content-row">
         <div class="scroll" id="scroll"></div>
-        <div class="outline-zone" id="outlineZone" title="大纲"></div>
+        <div class="outline-zone" id="outlineZone" title="大纲：靠近查看，点击固定">
+          <div class="ol-mini" id="olMini"></div>
+        </div>
         <aside class="outline" id="outline"></aside>
       </div>
     </section>
@@ -674,6 +730,7 @@ body.outline-pinned .outline-zone{opacity:0;pointer-events:none;transition:opaci
   </div>
 </div>
 <div class="popover" id="popover"></div>
+<input type="color" id="hlColorIn" class="hl-color-in" value="#f59e0b" tabindex="-1" aria-hidden="true">
 <div class="export-pop" id="exportPop"></div>
 <div class="overlay" id="syncOverlay"></div>
 <div class="toasts" id="toasts"></div>
@@ -743,6 +800,8 @@ function seed(){
     outlineOpen: false,
     outlineTop: false,
     mode: 'live',
+    tagFilter: '',
+    tagLibrary: [],
     media: []
   };
 }
@@ -758,6 +817,10 @@ function load(){
     // 大纲改成「鼠标靠近右边缘滑出」，老数据默认不再常驻展开
     if(!s.outlineHoverV1){ s.outlineOpen = false; s.outlineHoverV1 = true; }
     if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
+    if(typeof s.tagFilter !== 'string') s.tagFilter = '';
+    if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
+    // 老数据 / 云端数据可能没有 tags 字段，统一补成数组
+    s.notes.forEach(n=>{ if(!Array.isArray(n.tags)) n.tags = []; });
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
     return s;
@@ -806,6 +869,22 @@ try{
   }
 }catch(e){}
 
+// 一次性改名：使用说明示例里的「常青笔记」统一改成「小胡的笔记」
+try{
+  if(!localStorage.getItem('ivy.renameV1')){
+    let changed = false;
+    (S.notes||[]).forEach(n=>{
+      if(typeof n.body === 'string' && n.body.includes('常青笔记')){
+        n.body = n.body.split('常青笔记').join('小胡的笔记');
+        n.updatedAt = Date.now(); changed = true;
+      }
+      if(n.title === '常青笔记'){ n.title = '小胡的笔记'; changed = true; }
+    });
+    if(changed) persistLocal();
+    localStorage.setItem('ivy.renameV1','1');
+  }
+}catch(e){}
+
 const noteById = id => S.notes.find(n=>n.id===id);
 const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt);
 
@@ -849,6 +928,40 @@ function paintRowIcons(){
   $('#shelfOpen').innerHTML = ic('panelLeft');
 }
 
+/* ========== 标签：历史库 / 颜色 / 计数 ========== */
+/* 颜色按标签名取，保证同一个标签在书架、笔记胶囊、选择器里颜色一致 */
+function tagColor(t){
+  let h = 0;
+  for(const c of String(t||'')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return TAG_COLORS[h % TAG_COLORS.length];
+}
+function tagOf(n){ return Array.isArray(n.tags) ? n.tags : []; }
+/* 历史标签 = 所有笔记（含回收站）用过的 + 本机记住的新建标签。
+   笔记本身的 tags 会随云同步走，所以其它设备建过的标签也会出现在这里。 */
+function allTags(){
+  const set = new Set();
+  (S.tagLibrary||[]).forEach(t=>{ if(t) set.add(t); });
+  S.notes.forEach(n=>{ if(!n.deleted) tagOf(n).forEach(t=>{ if(t) set.add(t); }); });
+  return [...set];
+}
+function tagCount(t){
+  return S.notes.filter(n=>!n.trashed && !n.deleted && tagOf(n).includes(t)).length;
+}
+function rememberTag(t){
+  if(!t) return;
+  if(!Array.isArray(S.tagLibrary)) S.tagLibrary = [];
+  if(!S.tagLibrary.includes(t)) S.tagLibrary.push(t);
+}
+function toggleNoteTag(t){
+  const n = noteById(S.active); if(!n || !t) return;
+  const arr = tagOf(n); n.tags = arr.slice();
+  const i = n.tags.indexOf(t);
+  if(i >= 0) n.tags.splice(i, 1);
+  else { n.tags.push(t); rememberTag(t); }
+  n.updatedAt = Date.now();
+  renderMeta(); renderShelf(); save();
+}
+
 function renderShelf(){
   brandName.textContent = S.view==='notes' ? '小胡小胡的笔记' : (S.view==='media' ? '媒体库' : '关系图');
 
@@ -857,15 +970,20 @@ function renderShelf(){
 
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
-  let html = `<div class="sec-label"><span>笔记</span><span class="count">${notes.length}</span></div>`;
+  // 点标签分类时，书架里只列带这个标签的笔记
+  let tagFilter = S.tagFilter || '';
+  if(tagFilter && !allTags().includes(tagFilter)){ tagFilter = ''; S.tagFilter = ''; }
+  const shown = tagFilter ? notes.filter(n=>tagOf(n).includes(tagFilter)) : notes;
+  let html = `<div class="sec-label"><span>笔记</span><span class="count">${shown.length}</span></div>`;
+  if(tagFilter) html += `<div class="tag-filter-bar"><span class="t">标签 · ${esc(tagFilter)}</span><button data-act="clear-tag">查看全部</button></div>`;
   html += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
-  notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
-  const loose = notes.filter(n=>!n.notebookId);
+  shown.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
+  const loose = shown.filter(n=>!n.notebookId);
 
   function noteRow(n){
-    const dots = n.tags.slice(0,3).map((t,i)=>`<span class="dot-tag" style="background:${TAG_COLORS[i%TAG_COLORS.length]}"></span>`).join('');
+    const dots = tagOf(n).slice(0,3).map(t=>`<span class="dot-tag" style="background:${tagColor(t)}"></span>`).join('');
     return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
       ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
       ${dots?`<span class="tags">${dots}</span>`:''}
@@ -888,6 +1006,20 @@ function renderShelf(){
 
   if(loose.length) html += `<div class="nb-notes" style="padding-left:0">${loose.map(noteRow).join('')}</div>`;
 
+  // 笔记本下面：标签分类
+  const tags = allTags().sort((a,b)=> tagCount(b)-tagCount(a) || a.localeCompare(b,'zh-CN'));
+  html += `<div class="tag-sec">
+    <div class="sec-label"><span>标签</span>${tagFilter
+      ? `<button class="tag-sec-clear" data-act="clear-tag">清除筛选</button>`
+      : `<span class="count">${tags.length}</span>`}</div>
+    ${tags.length ? tags.map(t=>`
+      <button class="shelf-row tag-row ${tagFilter===t?'active':''}" data-tag="${esc(t)}">
+        <span class="tag-dot" style="background:${tagColor(t)}"></span>
+        <span class="t">${esc(t)}</span><span class="meta">${tagCount(t)}</span>
+      </button>`).join('')
+      : `<div class="tag-empty">还没有标签。打开一篇笔记，点标题下方「+ 标签」新建。</div>`}
+  </div>`;
+
   html += `<div style="height:6px"></div>
     <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
   shelfBody.innerHTML = html;
@@ -896,6 +1028,10 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
+  shelfBody.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{
+    S.tagFilter = (S.tagFilter === b.dataset.tag) ? '' : b.dataset.tag;
+    renderShelf(); save();
+  });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
     const nb = S.notebooks.find(x=>x.id===b.dataset.nb);
     if(!nb) return;
@@ -909,6 +1045,7 @@ function bindShelf(){
     const a = b.dataset.act;
     if(a==='new-nb') newNotebook();
     if(a==='trash') openTrashView();
+    if(a==='clear-tag'){ S.tagFilter = ''; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
 }
@@ -1052,7 +1189,11 @@ function renderAll(){
 function renderMain(){
   closeExportPanel();
   paperActions.innerHTML = '';
-  if(S.view!=='notes'){ outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); }
+  if(S.view!=='notes'){
+    outlineEl.classList.add('hidden');
+    document.body.classList.remove('outline-pinned');
+    document.body.classList.add('ol-hidden');
+  }else document.body.classList.remove('ol-hidden');
   if(S.view==='media'){ renderMedia(); return; }
   if(S.view==='graph'){ renderGraph(); return; }
   renderEditor();
@@ -1072,7 +1213,12 @@ function applyNoteMode(n){
   }
 }
 function renderEditor(){
-  if(trashView){ renderTrash(); outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); return; }
+  if(trashView){
+    renderTrash(); outlineEl.classList.add('hidden');
+    document.body.classList.remove('outline-pinned');
+    document.body.classList.add('ol-hidden');
+    return;
+  }
   const n = S.active ? noteById(S.active) : null;
   applyNoteMode(n);
 
@@ -1127,26 +1273,83 @@ function renderEditor(){
     wireSplitSync();
   }
 }
-/* 双栏：左右滚动按比例联动 */
+/* 双栏：以标题为锚点对齐左右，段内按比例插值。
+   纯比例联动会让两边越滚越偏（源码一行 = 渲染后一段带间距），锚点法每个标题处严格对齐。*/
+let SPLIT_ANCH = null;
+function invalidateSplitAnchors(){ SPLIT_ANCH = null; }
+function buildSplitAnchors(){
+  const n = noteById(S.active);
+  const src = document.getElementById('source');
+  const prose = document.getElementById('prose');
+  if(!n || !src || !prose) return null;
+  const body = n.body || '';
+  // 左栏是 textarea，它的滚动是按「折行后的行数」走的，所以要先估算每行能放几个字符
+  const cs = getComputedStyle(src);
+  let perLine = 60;
+  try{
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const chW = ctx.measureText('0123456789').width / 10 || (parseFloat(cs.fontSize)*0.6);
+    const usable = Math.max(40, src.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0));
+    perLine = Math.max(8, Math.floor(usable / chW));
+  }catch(e){}
+  const headRows = [];
+  let row = 0;
+  body.split('\n').forEach(ln=>{
+    if(/^#{1,6}\s+/.test(ln)) headRows.push(row);
+    row += Math.max(1, Math.ceil(ln.length / perLine));
+  });
+  const totalRows = Math.max(1, row);
+  const els = [...prose.querySelectorAll('h1,h2,h3,h4,h5,h6')];
+  const m = Math.min(headRows.length, els.length);
+  // 右栏用「可滚动范围」做分母：scrollTop=0 时标题正好在顶部
+  const maxTo = Math.max(1, prose.scrollHeight - prose.clientHeight);
+  const base = prose.getBoundingClientRect().top - prose.scrollTop;
+  const out = [{ lf:0, rf:0 }];
+  for(let i=0;i<m;i++){
+    const top = els[i].getBoundingClientRect().top - base;
+    out.push({ lf: headRows[i] / totalRows, rf: Math.min(1, Math.max(0, top / maxTo)) });
+  }
+  out.push({ lf:1, rf:1 });
+  out.sort((a,b)=>a.lf-b.lf);
+  // 保证 rf 单调不减，避免个别错位把映射拽回去
+  for(let i=1;i<out.length;i++) out[i].rf = Math.max(out[i].rf, out[i-1].rf);
+  return out;
+}
+function mapSplitPos(fromEl, toEl, anchors, reverse){
+  const maxFrom = Math.max(1, fromEl.scrollHeight - fromEl.clientHeight);
+  const maxTo = Math.max(1, toEl.scrollHeight - toEl.clientHeight);
+  const f = Math.min(1, Math.max(0, fromEl.scrollTop / maxFrom));
+  const A = reverse ? anchors.map(a=>({f:a.rf, t:a.lf})) : anchors.map(a=>({f:a.lf, t:a.rf}));
+  let i = 0;
+  while(i < A.length-1 && A[i+1].f <= f) i++;
+  const a = A[i], b = A[Math.min(i+1, A.length-1)];
+  const span = (b.f - a.f) || 1;
+  const k = Math.min(1, Math.max(0, (f - a.f) / span));
+  return Math.min(maxTo, Math.max(0, (a.t + (b.t - a.t) * k) * maxTo));
+}
 function wireSplitSync(){
   const src = document.getElementById('source');
   const prose = document.getElementById('prose');
   if(!src || !prose) return;
-  let lock = false;
-  const link = (a, b)=>{
+  let lock = 0;
+  const bind = (a, b, reverse)=>{
     a.addEventListener('scroll', ()=>{
-      if(lock) return;
+      const now = (window.performance || Date).now();
+      if(now - lock < 22) return;          // 22ms 内不再响应，挡掉自己触发的回声
       const maxA = a.scrollHeight - a.clientHeight;
       const maxB = b.scrollHeight - b.clientHeight;
       if(maxA <= 4 || maxB <= 4) return;
-      lock = true;
-      b.scrollTop = (a.scrollTop / maxA) * maxB;
-      requestAnimationFrame(()=>{ lock = false; });
+      if(!SPLIT_ANCH) SPLIT_ANCH = buildSplitAnchors();
+      if(!SPLIT_ANCH) return;
+      lock = now;
+      b.scrollTop = mapSplitPos(a, b, SPLIT_ANCH, reverse);
     }, { passive:true });
   };
-  link(src, prose);
-  link(prose, src);
+  bind(src, prose, false);
+  bind(prose, src, true);
 }
+window.addEventListener('resize', ()=>{ SPLIT_ANCH = null; }, { passive:true });
 
 function renderMeta(){
   const n = noteById(S.active); if(!n) return;
@@ -1157,29 +1360,91 @@ function renderMeta(){
   meta.innerHTML = `<button class="meta-btn" id="metaTime">${stamp}</button>
     <span class="sep">·</span><span>${wc} 字</span>
     <span class="meta-sync" id="metaSync"></span>
-    ${n.tags.map((t,i)=>`<span class="chip" style="color:${TAG_COLORS[i%TAG_COLORS.length]}">${esc(t)}<span class="rm" data-rmtag="${esc(t)}">×</span></span>`).join('')}
+    ${tagOf(n).map(t=>`<span class="chip" data-pick="${esc(t)}" style="color:${tagColor(t)}">${esc(t)}<span class="rm" data-rmtag="${esc(t)}">×</span></span>`).join('')}
     <button class="meta-btn add" id="addTag">+ 标签</button>`;
   updateSyncBadge();
-  const add = meta.querySelector('#addTag');
-  add.onclick=()=>{
-    const inp = document.createElement('input');
-    inp.className='tag-input'; inp.placeholder='标签名';
-    add.replaceWith(inp); inp.focus();
-    const commit = ()=>{
-      const v = inp.value.trim();
-      if(v && !n.tags.includes(v)){ n.tags.push(v); }
-      renderMeta(); renderShelf(); save();
-    };
-    inp.onblur = commit;
-    inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } if(e.key==='Escape'){ inp.value=''; commit(); } };
-  };
-  meta.querySelectorAll('[data-rmtag]').forEach(x=>x.onclick=()=>{
-    n.tags = n.tags.filter(t=>t!==x.dataset.rmtag); renderMeta(); renderShelf(); save();
+  meta.querySelector('#addTag').onclick = e=>openTagPicker(e.currentTarget);
+  meta.querySelectorAll('[data-pick]').forEach(x=>{
+    x.onclick = e=>{ if(e.target.closest('[data-rmtag]')) return; openTagPicker(x); };
+  });
+  meta.querySelectorAll('[data-rmtag]').forEach(x=>x.onclick=e=>{
+    e.stopPropagation();
+    const t = x.dataset.rmtag;
+    n.tags = tagOf(n).filter(v=>v!==t); n.updatedAt = Date.now();
+    renderMeta(); renderShelf(); save();
   });
   meta.querySelector('#metaTime').onclick=(e)=>popover(e.currentTarget,[
     ['创建于 '+new Date(n.createdAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}), null],
     ['最后编辑 '+new Date(n.updatedAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}), null]
   ]);
+}
+
+/* 标题下的标签选择器：列出所有历史标签，勾选即加上/去掉；也能直接新建 */
+function openTagPicker(anchor){
+  const n = noteById(S.active); if(!n) return;
+  popover(anchor, [
+    ['#', `<div class="tag-pick">
+      <div class="tp-search"><input id="tpIn" placeholder="搜索或新建标签…" autocomplete="off" spellcheck="false"></div>
+      <div class="tp-list" id="tpList"></div>
+    </div>`]
+  ], { align:'left' });
+  const po = $('#popover');
+  const inp = po.querySelector('#tpIn');
+  const list = po.querySelector('#tpList');
+  if(!inp || !list) return;
+
+  const createTag = t=>{
+    t = String(t||'').trim().slice(0, 60); if(!t) return;
+    const cur = noteById(S.active); if(!cur) return;
+    const arr = tagOf(cur); cur.tags = arr.slice();
+    if(!cur.tags.includes(t)){
+      cur.tags.push(t); rememberTag(t); cur.updatedAt = Date.now();
+      renderMeta(); renderShelf(); save();
+    }
+    inp.value = ''; paint(); inp.focus();
+  };
+
+  function paint(){
+    const q = (inp.value||'').trim();
+    const ql = q.toLowerCase();
+    const mine = tagOf(noteById(S.active) || {});
+    const all = allTags().sort((a,b)=> tagCount(b)-tagCount(a) || a.localeCompare(b,'zh-CN'));
+    const shown = ql ? all.filter(t=>t.toLowerCase().includes(ql)) : all;
+    const exact = all.some(t=>t.toLowerCase() === ql);
+    let html = shown.map(t=>`
+      <button class="tp-row ${mine.includes(t)?'on':''}" data-tag="${esc(t)}">
+        <span class="tp-dot" style="background:${tagColor(t)}"></span>
+        <span class="t">${esc(t)}</span><span class="n">${tagCount(t)}</span>
+        <span class="ck">${mine.includes(t)?'✓':''}</span>
+      </button>`).join('');
+    if(q && !exact) html += `<button class="tp-row tp-create" data-new="${esc(q)}">
+        <span class="tp-plus">+</span><span class="t">新建「${esc(q)}」</span></button>`;
+    if(!html) html = `<div class="tp-none">${q ? '没有匹配的标签，回车可新建' : '还没有标签，输入名称后回车新建'}</div>`;
+    list.innerHTML = html;
+    list.querySelectorAll('[data-tag]').forEach(b=>{
+      b.onmousedown = e=>e.preventDefault();
+      b.onclick = ()=>{ toggleNoteTag(b.dataset.tag); paint(); inp.focus(); };
+    });
+    list.querySelectorAll('[data-new]').forEach(b=>{
+      b.onmousedown = e=>e.preventDefault();
+      b.onclick = ()=>createTag(b.dataset.new);
+    });
+  }
+
+  inp.oninput = paint;
+  inp.onkeydown = e=>{
+    if(e.key === 'Escape'){ e.preventDefault(); po.classList.remove('open'); return; }
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      const q = (inp.value||'').trim(); if(!q) return;
+      const all = allTags();
+      const hit = all.find(t=>t.toLowerCase() === q.toLowerCase());
+      if(hit){ toggleNoteTag(hit); inp.value = ''; paint(); inp.focus(); }
+      else createTag(q);
+    }
+  };
+  paint();
+  setTimeout(()=>{ if(po.classList.contains('open')) inp.focus(); }, 30);
 }
 
 function countWords(md){
@@ -1231,29 +1496,61 @@ function openListMenu(anchor){
     ['待办列表','- [ ]','','',()=>applyFormat('todo')]
   ], { align:'left' });
 }
-/* 高亮：可选色块（绿/黄/粉/蓝/紫/灰），语法 ==文字== 或 ==文字=={.yellow} */
-const HL_COLORS = [
-  { k:'',       name:'绿色', v:'--hl-green-bg' },
-  { k:'yellow', name:'黄色', v:'--hl-yellow-bg' },
-  { k:'pink',   name:'粉色', v:'--hl-pink-bg' },
-  { k:'blue',   name:'蓝色', v:'--hl-blue-bg' },
-  { k:'purple', name:'紫色', v:'--hl-purple-bg' },
-  { k:'gray',   name:'灰色', v:'--hl-gray-bg' }
+/* 高亮：27 个预设色 + 自定义取色。语法 ==文字==（绿）/ ==文字=={.yellow} / ==文字=={c:#f59e0b} */
+const HL_HEX = [
+  '#e5484d','#0f9b8e','#4a8fb5','#1f9d55','#8b5cf6','#8a7b1f','#f76b15',
+  '#c2255c','#e11d48','#db2777','#a21caf','#7c3aed','#1e3a8a','#2563eb',
+  '#3b82f6','#06b6d4','#0d9488','#16a34a','#65a30d','#84cc16','#facc15',
+  '#f59e0b','#f97316','#ef4444','#78350f','#9ca3af','#475569'
 ];
+function hex2rgb(h){
+  let s = String(h||'').replace('#','').trim();
+  if(s.length === 3) s = s.split('').map(c=>c+c).join('');
+  const n = parseInt(s, 16);
+  if(isNaN(n) || s.length !== 6) return [128,128,128];
+  return [(n>>16)&255, (n>>8)&255, n&255];
+}
+function hlInline(hex){
+  const [r,g,b] = hex2rgb(hex);
+  const dark = (S && S.theme === 'dark');
+  const a = dark ? .30 : .20;
+  const t = dark ? 255 : 0, p = dark ? .60 : .42;
+  const fg = `rgb(${Math.round(r+(t-r)*p)},${Math.round(g+(t-g)*p)},${Math.round(b+(t-b)*p)})`;
+  return `background:rgba(${r},${g},${b},${a});color:${fg}`;
+}
 function openHighlightMenu(anchor){
-  const row = `<div class="hl-row">${HL_COLORS.map(c=>
-    `<button class="hl-sw" data-hl="${c.k}" title="${c.name}" style="--sw:rgb(var(${c.v}))"></button>`
-  ).join('')}</div>`;
+  const grid = `<div class="hl-grid">${HL_HEX.map(h=>
+    `<button class="hl-sw" data-hex="${h}" title="${h}" style="--sw:${h}"></button>`
+  ).join('')}<button class="hl-sw hl-add" data-hladd="1" title="自定义颜色…">+</button></div>`;
   popover(anchor, [
-    ['#', row],
+    ['#', grid],
     ['-'],
     ['清除高亮','','','',()=>applyFormat('mark-clear')]
   ], { align:'left' });
   const po = $('#popover');
-  po.querySelectorAll('[data-hl]').forEach(b=>{
+  po.querySelectorAll('[data-hex]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();   // 保住正文选区
-    b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hl); };
+    b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hex); };
   });
+  const add = po.querySelector('[data-hladd]');
+  if(add){
+    add.onmousedown = e=>e.preventDefault();
+    add.onclick = ()=>{
+      const inp = $('#hlColorIn');
+      if(!inp) return;
+      HOLD_BLUR = true;                       // 取色器会让输入框失焦，先别提交这一块
+      inp.value = '#f59e0b';
+      let done = false;
+      const finish = ()=>{
+        if(done) return; done = true;
+        HOLD_BLUR = false;
+        inp.onchange = null; inp.onblur = null;
+      };
+      inp.onchange = ()=>{ const v = inp.value; finish(); po.classList.remove('open'); applyFormat('mark', v); };
+      inp.onblur = ()=>{ setTimeout(finish, 120); };
+      try{ inp.click(); }catch(e){ finish(); }
+    };
+  }
 }
 /* 表情选择器：分类 + 点一下插到光标处 */
 const EMOJI_GROUPS = [
@@ -1327,6 +1624,18 @@ function insertPlain(text){
     if(curMode()==='split') livePreviewSoon();
   }
 }
+/* 选区落在哪一段 ==高亮== 里？返回整段区间，否则 null。
+   用整篇扫描而不是看相邻字符，才能正确处理「整段连标记一起选中」的情况。 */
+function markSpan(v, s, e){
+  const re = /==([^=\n]+)==(?:\{(?:\.[a-z]+|c:#[0-9a-fA-F]{3,8})\})?/g;
+  let m;
+  while((m = re.exec(v))){
+    const st = m.index, en = m.index + m[0].length;
+    if(s >= st && e <= en) return { start: st, end: en, text: m[1] };
+  }
+  return null;
+}
+
 function applyFormat(kind, opt){
   const n = S.active ? noteById(S.active) : null;
   if(!n) return;
@@ -1384,27 +1693,24 @@ function applyFormat(kind, opt){
     case 's': wrapSel('~~','~~','删除线'); break;
     case 'mark': {
       const c = opt || '';
-      const tail = c ? `=={.${c}}` : '==';
-      // 选区已经在 ==…== 里（即时渲染态选中的是纯文本）→ 只换颜色，不再套一层
-      const pre = (s >= 2 && v.slice(s-2, s) === '==');
-      const mAfter = v.slice(e).match(/^==(?:\{\.([a-z]+)\})?/i);
-      if(pre && mAfter){
-        const text = sel || '';
-        v = v.slice(0, s) + text + tail + v.slice(e + mAfter[0].length);
-        setRange(s, s + text.length);
+      const tail = c ? (c.charAt(0) === '#' ? `=={c:${c}}` : `=={.${c}}`) : '==';
+      const sp = markSpan(v, s, e);
+      if(sp){
+        // 已经在高亮里（选区包含标记 / 标记紧贴选区两端）→ 只换颜色或去色，绝不再套一层
+        v = v.slice(0, sp.start) + '==' + sp.text + tail + v.slice(sp.end);
+        setRange(sp.start + 2, sp.start + 2 + sp.text.length);
       } else {
         wrapSel('==', tail, '高亮文字');
       }
       break;
     }
     case 'mark-clear': {
-      const pre = (s >= 2 && v.slice(s-2, s) === '==');
-      const mAfter = v.slice(e).match(/^==(?:\{\.([a-z]+)\})?/i);
-      if(pre && mAfter){
-        v = v.slice(0, s-2) + sel + v.slice(e + mAfter[0].length);
-        setRange(s-2, s-2 + sel.length);
+      const sp = markSpan(v, s, e);
+      if(sp){
+        v = v.slice(0, sp.start) + sp.text + v.slice(sp.end);
+        setRange(sp.start, sp.start + sp.text.length);
       } else {
-        const cleaned = sel.replace(/==([^=]+)==(?:\{\.\w+\})?/g, '$1');
+        const cleaned = sel.replace(/==([^=]+)==(?:\{(?:\.[a-z]+|c:#[0-9a-fA-F]{3,8})\})?/g, '$1');
         v = v.slice(0,s) + cleaned + v.slice(e);
         setRange(s, s + cleaned.length);
       }
@@ -1581,6 +1887,7 @@ function renderProse(){
     e.preventDefault(); openWikiLink(a.dataset.wiki);
   });
   outlineItems = out.headings;
+  SPLIT_ANCH = null;   // 预览重绘后锚点位置全变了，下一帧重建
 }
 
 function openWikiLink(t){
@@ -1601,6 +1908,8 @@ function openWikiLink(t){
 
 /* ========== 所见即所得编辑（块级 Markdown） ========== */
 const LIVE = { raws: [], gaps: [], editing: -1, ta: null };
+/* 打开系统取色器等外部窗口时，先别把正在编辑的块提交掉 */
+let HOLD_BLUR = false;
 
 function modeClass(m){
   if(m==='source') return 'mode-edit';
@@ -1676,6 +1985,33 @@ function paintHeadings(host){
   let k = 0;
   host.querySelectorAll('.blk-view h1,.blk-view h2,.blk-view h3,.blk-view h4,.blk-view h5,.blk-view h6')
     .forEach(h=>{ h.id = 'h'+(k++); });
+}
+
+/* 空块只被加了前缀（# / - / > / 1. …）却一直没写字：收起编辑态时顺手清掉，
+   否则正文里会一直挂着一行「# 一级标题」这样的灰色提示 */
+function isBarePrefix(raw){
+  const v = String(raw||'').trim();
+  if(!v) return true;
+  return BLOCK_HINTS.some(([re])=>re.test(v)) || /^(#{1,6}|[-*+]|1\.|>|- \[ \])$/.test(v);
+}
+function dropBarePrefixBlock(i){
+  const host = liveHost(); if(!host) return;
+  const el = host.querySelector('.blk[data-i="'+i+'"]');
+  if(!el) return;
+  if(el.classList.contains('editing')) return;          // 又回到编辑了，别打扰
+  if(document.getElementById('popover')?.classList.contains('open')) return;
+  const raw = LIVE.raws[i];
+  // 有真实正文就别动；空块 / 只剩前缀的块都要把占位提示收起来
+  if(raw && raw.trim() && !isBarePrefix(raw)) return;
+  LIVE.raws[i] = '';
+  const view = el.querySelector('.blk-view');
+  if(view) view.innerHTML = '<p class="lv-hint" style="margin:0">&nbsp;</p>';
+  const ta = el.querySelector('.blk-src');
+  if(ta){ ta.value = ''; ta.classList.remove('has-hint'); }
+  // 占位提示（「# 一级标题」等）也要一起收掉，否则失焦后会一直留在页面上
+  const hint = el.querySelector('.blk-hint');
+  if(hint){ hint.style.display = 'none'; hint.innerHTML = ''; }
+  syncBody(); save();
 }
 
 function growTa(ta){
@@ -1939,7 +2275,13 @@ function blockEl(raw, i, only){
   });
   ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); updateBlockHint(ta); });
   ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));
-  ta.addEventListener('blur', ()=>{ closeWikiPop(); if(el.isConnected && el.classList.contains('editing')) commitBlock(i); });
+  ta.addEventListener('blur', ()=>{
+    closeWikiPop();
+    if(HOLD_BLUR) return;   // 正在取色，先留着这一块的编辑态
+    if(el.isConnected && el.classList.contains('editing')) commitBlock(i);
+    // 只是点了工具栏加了前缀、什么都没写：别把它一直留在正文里
+    setTimeout(()=>dropBarePrefixBlock(i), 180);
+  });
   ta.addEventListener('paste', onBlockPaste);
   ta.addEventListener('dragover', e=>e.preventDefault());
   ta.addEventListener('drop', e=>{
@@ -2016,6 +2358,9 @@ function commitBlock(i){
   if(!el) return;
   const ta = el.querySelector('.blk-src');
   ta.value = trimRaw(ta.value);
+  // 只有前缀没有正文（点了标题/列表却没写）→ 当成空块，别在正文里留下 "#" 这种残渣
+  if(ta.value.trim() && isBarePrefix(ta.value)) ta.value = '';
+  updateBlockHint(ta);                 // 收掉「# 一级标题」这类占位文字
   LIVE.raws[i] = ta.value;
   el.classList.remove('editing');
   const view = el.querySelector('.blk-view');
@@ -2353,6 +2698,7 @@ function setMode(m){
   else if(m==='split'){
     if(src) src.style.height = '';      // 两栏等高，交给 CSS
     renderProse(); renderOutline();
+    SPLIT_ANCH = null;
     wireSplitSync();
   }
   else if(m==='source'){
@@ -2419,41 +2765,119 @@ function wireEditor(n){
 }
 
 
-/* ---- 大纲 ---- */
+/* ---- 大纲 + 右边缘刻度 ---- */
 let outlineItems = [];
+/* 每个标题在正文里的字符偏移，用来把刻度按文档位置铺开（笔记越长，刻度越多、铺得越开） */
+function headingOffsets(body){
+  const out = []; let ch = 0;
+  String(body||'').split('\n').forEach(ln=>{
+    if(/^#{1,6}\s+/.test(ln)) out.push(ch);
+    ch += ln.length + 1;
+  });
+  return out;
+}
+function renderMiniTicks(heads, body){
+  const mini = document.getElementById('olMini'); if(!mini) return;
+  if(!heads.length){ mini.innerHTML = ''; mini.style.height = ''; return; }
+  const total = Math.max(1, String(body||'').length);
+  const H = Math.min(360, Math.max(64, heads.length * 14));
+  mini.style.height = H + 'px';
+  let last = -6;
+  mini.innerHTML = heads.map(h=>{
+    let y = Math.round(h.off / total * (H - 4));
+    y = Math.max(y, last + 5); last = y;        // 相邻刻度别叠在一起
+    y = Math.min(y, H - 2);
+    const w = h.level === 1 ? 14 : h.level === 2 ? 10 : 7;
+    return `<button class="ol-tick" style="top:${y}px;width:${w}px" data-y="${y}" data-h="${h.id}" title="${esc(h.text)}"></button>`;
+  }).join('');
+}
+/* 当前读到哪个标题：取滚动容器里最后一个已经越过顶部的可见标题 */
+function currentHeadingId(){
+  const sc = document.getElementById('scroll'); if(!sc) return null;
+  const box = sc.getBoundingClientRect();
+  let cur = null;
+  sc.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]').forEach(el=>{
+    if(!el.getClientRects().length) return;    // 过滤隐藏的预览副本
+    if(el.getBoundingClientRect().top - box.top <= 72) cur = el.id;
+  });
+  return cur;
+}
+function updateOutlineActive(){
+  const cur = currentHeadingId();
+  outlineEl.querySelectorAll('.ol-item').forEach(b=>b.classList.toggle('on', b.dataset.h === cur));
+  const mini = document.getElementById('olMini');
+  if(mini) mini.querySelectorAll('.ol-tick').forEach(t=>t.classList.toggle('on', t.dataset.h === cur));
+}
+function toggleOutlinePin(){
+  S.outlineOpen = !S.outlineOpen;
+  outlineEl.classList.toggle('pinned', !!S.outlineOpen);
+  document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
+  const pin = outlineEl.querySelector('#olPin');
+  if(pin){
+    pin.classList.toggle('on', !!S.outlineOpen);
+    pin.title = S.outlineOpen ? '取消固定（鼠标移开自动收起）' : '固定在页面上';
+  }
+  const pb = document.getElementById('paOutline');
+  if(pb) pb.classList.toggle('on', !!S.outlineOpen);
+  save();
+}
 function renderOutline(){
   const n = noteById(S.active);
-  if(!n){ outlineEl.innerHTML=''; outlineEl.classList.add('hidden'); document.body.classList.remove('outline-pinned'); return; }
+  const mini = document.getElementById('olMini');
+  if(!n){
+    outlineEl.innerHTML=''; outlineEl.classList.add('hidden');
+    document.body.classList.remove('outline-pinned');
+    document.body.classList.add('ol-hidden');
+    if(mini){ mini.innerHTML=''; mini.style.height=''; }
+    return;
+  }
+  document.body.classList.remove('ol-hidden');
   outlineEl.classList.remove('hidden');
   outlineEl.classList.toggle('pinned', !!S.outlineOpen);
   document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
   const all = mdToHtml(n.body).headings;
-  const heads = S.outlineTop ? all.filter(h=>h.level <= 2) : all;
+  const offs = headingOffsets(n.body);
+  const pairs = all.map((h,i)=>Object.assign({}, h, {off: offs[i] != null ? offs[i] : 0}));
+  const heads = S.outlineTop ? pairs.filter(h=>h.level <= 2) : pairs;
+  outlineItems = heads;
   outlineEl.innerHTML = `<div class="outline-head">
       <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" title="${S.outlineTop?'显示全部标题':'只看一、二级标题'}">${ic('filter')}</button>
       <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" title="${S.outlineOpen?'取消固定（鼠标移开自动收起）':'固定在页面上'}">${ic('pin')}</button>
     </div>
     <div class="outline-body">`
-    + (heads.length ? heads.map(h=>`<button class="ol-item l${h.level}" data-h="${h.id}" title="${esc(h.text)}">${esc(h.text)}</button>`).join('')
+    + (heads.length ? heads.map(h=>`<button class="ol-item l${h.level}" data-h="${h.id}" title="${esc(h.text)}"><span class="t">${esc(h.text)}</span><span class="dash"></span></button>`).join('')
                     : `<div class="ol-empty">标题、小节会出现在这里</div>`)
     + `</div>`;
+  renderMiniTicks(heads, n.body);
 
   const pin = outlineEl.querySelector('#olPin');
-  if(pin) pin.onclick = ()=>{
-    S.outlineOpen = !S.outlineOpen;
-    outlineEl.classList.toggle('pinned', !!S.outlineOpen);
-    document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
-    pin.classList.toggle('on', !!S.outlineOpen);
-    pin.title = S.outlineOpen ? '取消固定（鼠标移开自动收起）' : '固定在页面上';
-    const pb = document.getElementById('paOutline');
-    if(pb) pb.classList.toggle('on', !!S.outlineOpen);
-    save();
-  };
+  if(pin) pin.onclick = toggleOutlinePin;
   const top = outlineEl.querySelector('#olTop');
   if(top) top.onclick = ()=>{ S.outlineTop = !S.outlineTop; renderOutline(); save(); };
-
   outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>jumpToHeading(b.dataset.h));
+  updateOutlineActive();
 }
+
+/* 右边缘刻度：点某根跳到对应标题，点空白处固定/取消固定大纲 */
+document.getElementById('outlineZone').addEventListener('click', e=>{
+  const mini = document.getElementById('olMini'); if(!mini) return;
+  const y = e.clientY - mini.getBoundingClientRect().top;
+  let best = null, bd = Infinity;
+  mini.querySelectorAll('.ol-tick').forEach(t=>{
+    const d = Math.abs((+t.dataset.y || 0) - y);
+    if(d < bd){ bd = d; best = t; }
+  });
+  if(best && bd <= 9){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
+  else toggleOutlinePin();
+});
+/* 鼠标移到卡片上时，刻度也让位；滚动时同步高亮当前标题 */
+outlineEl.addEventListener('mouseenter', ()=>document.body.classList.add('ol-peek'));
+outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-peek'));
+let olScrollRaf = 0;
+document.getElementById('scroll').addEventListener('scroll', ()=>{
+  if(olScrollRaf) return;
+  olScrollRaf = requestAnimationFrame(()=>{ olScrollRaf = 0; updateOutlineActive(); });
+}, { passive:true });
 
 /* 点大纲跳转：页面里可能有多个同名 id（即时预览副本是隐藏的），要挑真正可见的那个 */
 function jumpToHeading(id){
@@ -2527,8 +2951,9 @@ function inlineMd(s){
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>');
   s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-  s = s.replace(/==([^=]+)==(?:\{\.([a-z]+)\})?/gi, (m,t,c)=>{
-    const k = String(c||'').toLowerCase();
+  s = s.replace(/==([^=\n]+)==(?:\{(?:\.([a-z]+)|c:(#[0-9a-fA-F]{3,8}))\})?/g, (m,t,named,hex)=>{
+    if(hex) return `<mark style="${hlInline(hex)}">${t}</mark>`;
+    const k = String(named||'').toLowerCase();
     const cls = ['yellow','pink','blue','purple','gray'].includes(k) ? ` class="hl-${k}"` : '';
     return `<mark${cls}>${t}</mark>`;
   });
@@ -3551,6 +3976,7 @@ function applyRemote(data){
   let changed = false;
   const map = new Map(S.notes.map(n=>[n.id,n]));
   for(const r of (data.notes||[])){
+    if(!Array.isArray(r.tags)) r.tags = [];       // 兼容老客户端/老数据
     const cur = map.get(r.id);
     if(!cur){ S.notes.push(r); changed = true; }
     else if((r.updatedAt||0) > (cur.updatedAt||0)){ Object.assign(cur, r); changed = true; }
@@ -3565,6 +3991,12 @@ function applyRemote(data){
       const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted;
       if(newer || (same && diff)){ Object.assign(cur, r); changed = true; }
     }
+  }
+  // 把云端同步过来的标签也记进历史库，之后即使从笔记上摘掉也还能再选
+  if(changed){
+    const lib = Array.isArray(S.tagLibrary) ? S.tagLibrary : [];
+    S.notes.forEach(n=>tagOf(n).forEach(t=>{ if(t && !lib.includes(t)) lib.push(t); }));
+    S.tagLibrary = lib;
   }
   return changed;
 }

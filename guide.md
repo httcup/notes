@@ -120,7 +120,7 @@
 
 ```js
 const note = {
-  title: '常青笔记',
+  title: '小胡的笔记',
   evergreen: true
 };
 ```

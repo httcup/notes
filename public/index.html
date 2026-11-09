@@ -112,11 +112,20 @@ a{color:inherit;text-decoration:none}
 .shelf-row.new-nb svg{color:currentColor}
 
 .nb-group{margin-top:2px}
+.nb-row{display:flex;align-items:center;gap:0;border-radius:7px}
+.nb-row:hover{background:rgb(var(--hover))}
+.nb-more{
+  flex:0 0 auto;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  color:rgb(var(--faint));opacity:.28;transition:opacity .12s,background .12s;margin-right:4px;
+}
+.nb-row:hover .nb-more{opacity:1}
+.nb-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
+.nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nb-head{
   display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;
   color:rgb(var(--muted));font-size:12px;font-weight:600;letter-spacing:.02em;
 }
-.nb-head:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.nb-row:hover .nb-head{color:rgb(var(--ink-2))}
 .nb-head svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 .nb-head.open svg.chev{transform:rotate(90deg)}
 .nb-head .t{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -289,6 +298,26 @@ a{color:inherit;text-decoration:none}
 .doc.mode-edit .prose{display:none}
 .doc.mode-edit .source{display:block}
 .doc.mode-preview .prose{cursor:text}
+
+/* ===== 所见即所得（块级） ===== */
+.live{display:none}
+.doc.mode-live #prose{display:none}
+.doc.mode-live .source{display:none}
+.doc.mode-live .live{display:block;min-height:360px;cursor:text}
+.blk{position:relative;border-radius:7px;transition:box-shadow .12s,background .12s}
+.blk.editing{background:rgb(var(--hover));box-shadow:0 0 0 9px rgb(var(--hover))}
+.blk-src{
+  display:none;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
+  font-family:var(--font-mono);font-size:15px;line-height:2.24;color:rgb(var(--ink));
+  padding:0;margin:0;field-sizing:content;
+}
+.blk.editing .blk-src{display:block}
+.blk.editing .blk-view{display:none}
+.blk-view{min-height:1.2em}
+.blk-view input[type=checkbox]{cursor:pointer}
+.blk-view img{cursor:default}
+.lv-tail{height:180px}
+.lv-hint{color:rgb(var(--faint));font-size:15px;line-height:1.95}
 
 /* empty state */
 .blank{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgb(var(--faint));text-align:center}
@@ -571,6 +600,7 @@ function seed(){
     theme: 'light',
     shelfOpen: true,
     outlineOpen: true,
+    mode: 'live',
     media: []
   };
 }
@@ -583,6 +613,7 @@ function load(){
     s.media = []; // 本地文件的 blob url 无法持久化
     if(typeof s.shelfOpen!=='boolean') s.shelfOpen = true;
     if(typeof s.outlineOpen!=='boolean') s.outlineOpen = true;
+    if(s.mode!=='live' && s.mode!=='preview' && s.mode!=='source') s.mode = 'live';
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
     return s;
@@ -663,13 +694,16 @@ function renderShelf(){
     </button>`;
   }
 
-  S.notebooks.forEach(nb=>{
+  S.notebooks.filter(nb=>!nb.deleted).forEach(nb=>{
     const list = byNb[nb.id]||[];
     html += `<div class="nb-group">
-      <button class="nb-head ${nb.open?'open':''}" data-nb="${nb.id}">
-        <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
-        <span class="t">${esc(nb.name)}</span><span class="meta">${list.length}</span>
-      </button>
+      <div class="nb-row">
+        <button class="nb-head ${nb.open?'open':''}" data-nb="${nb.id}">
+          <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="t">${esc(nb.name)}</span><span class="meta">${list.length}</span>
+        </button>
+        <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 删除">${ic('more')}</button>
+      </div>
       <div class="nb-notes ${nb.open?'':'hidden'}">${list.map(noteRow).join('')}</div>
     </div>`;
   });
@@ -684,9 +718,14 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
-  shelfBody.querySelectorAll('[data-nb]').forEach(b=>b.onclick=()=>{
-    const nb = S.notebooks.find(x=>x.id===b.dataset.nb); if(!nb) return;
-    nb.open = !nb.open; renderShelf(); save();
+  shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
+    const nb = S.notebooks.find(x=>x.id===b.dataset.nb);
+    if(!nb) return;
+    b.onclick = ()=>{ nb.open = !nb.open; nb.updatedAt = Date.now(); renderShelf(); save(); };
+    b.oncontextmenu = e=>{ e.preventDefault(); openNotebookMenu(b, nb.id); };
+  });
+  shelfBody.querySelectorAll('[data-nbmenu]').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); openNotebookMenu(b, b.dataset.nbmenu); };
   });
   shelfBody.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
     const a = b.dataset.act;
@@ -769,9 +808,44 @@ function closeTab(id){
 }
 function newNotebook(){
   const name = prompt('笔记本名称', '新笔记本');
-  if(!name) return;
-  S.notebooks.push({id:'nb'+Date.now().toString(36), name:name.trim(), open:true});
-  renderAll(); save(); toast('已创建笔记本「'+name.trim()+'」');
+  if(!name || !name.trim()) return;
+  const now = Date.now();
+  const nb = {id:'nb'+now.toString(36), name:name.trim(), open:true, deleted:false, updatedAt:now};
+  S.notebooks.push(nb);
+  renderAll(); save(); toast('已创建笔记本「'+nb.name+'」');
+}
+function renameNotebook(id){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
+  const name = prompt('重命名笔记本', nb.name);
+  if(name==null) return;
+  const v = name.trim(); if(!v || v===nb.name) return;
+  nb.name = v; nb.updatedAt = Date.now();
+  renderAll(); save(); toast('已重命名');
+}
+function delNotebook(id){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb || nb.deleted) return;
+  const count = S.notes.filter(n=>n.notebookId===id && !n.trashed).length;
+  const msg = count
+    ? '删除笔记本「'+nb.name+'」？\n里面的 '+count+' 篇笔记会移到「未归类」，不会丢失。'
+    : '删除笔记本「'+nb.name+'」？';
+  if(!confirm(msg)) return;
+  const now = Date.now();
+  S.notes.forEach(n=>{ if(n.notebookId===id){ n.notebookId = null; n.updatedAt = now; } });
+  nb.deleted = true; nb.open = false; nb.updatedAt = now;
+  renderAll(); save();
+  toast(count ? '已删除笔记本，'+count+' 篇笔记移到未归类' : '已删除笔记本「'+nb.name+'」');
+}
+function openNotebookMenu(anchor, id){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
+  popover(anchor, [
+    ['重命名', '', '', 'pencil', ()=>renameNotebook(id)],
+    ['在这建一篇笔记', '', '', 'plus', ()=>{
+      if(!nb.open){ nb.open = true; nb.updatedAt = Date.now(); }
+      newNote(id);
+    }],
+    '-',
+    ['删除笔记本', '', 'danger', 'trash', ()=>delNotebook(id)]
+  ]);
 }
 function toggleTrash(id){
   const n = noteById(id); if(!n) return;
@@ -833,12 +907,13 @@ function renderEditor(){
 
   scrollEl.style.display='';
   scrollEl.innerHTML = `
-    <div class="doc mode-preview" id="doc">
+    <div class="doc ${modeClass(S.mode||'live')}" id="doc">
       <textarea class="doc-title" id="docTitle" rows="1" placeholder="标题" spellcheck="false">${esc(n.title)}</textarea>
       <div class="fmt-bar" id="fmtBar"></div>
       <div class="doc-meta" id="docMeta"></div>
       <div class="doc-body">
         <div class="prose" id="prose"></div>
+        <div class="live prose" id="live"></div>
         <textarea class="source" id="source" placeholder="开始书写，支持 Markdown…" spellcheck="false"></textarea>
       </div>
     </div>`;
@@ -846,6 +921,7 @@ function renderEditor(){
   renderMeta();
   renderFmtBar();
   renderProse();
+  if((S.mode||'live')==='live') renderLive();
   wireEditor(n);
   outlineEl.classList.toggle('hidden', !S.outlineOpen);
   renderOutline();
@@ -914,14 +990,20 @@ function applyFormat(kind){
   if(!n) return;
   const doc = document.getElementById('doc');
   if(!doc) return;
-  const wasPreview = !doc.classList.contains('mode-edit');
-  if(wasPreview) enterEdit();
-  const src = document.getElementById('source');
+
+  let src = document.activeElement;
+  if(!(src && src.classList && src.classList.contains('blk-src'))){
+    src = curMode()==='live' ? ensureLiveInput() : document.getElementById('source');
+  }
   if(!src) return;
+  const inLive = src.classList.contains('blk-src');
+  const prevMode = curMode();
+  if(!inLive && prevMode!=='source'){ /* 源码气泡里本来就能插 */ }
 
   let v = src.value;
   let s = src.selectionStart, e = src.selectionEnd;
-  if(wasPreview || typeof s !== 'number'){ s = e = v.length; }
+  if(typeof s !== 'number'){ s = e = v.length; }
+  if(!inLive && prevMode!=='source'){ s = e = v.length; }
   const sel = v.slice(s, e);
   let ns = s, ne = e;
   const setRange = (a,b)=>{ ns = a; ne = b; };
@@ -988,12 +1070,22 @@ function applyFormat(kind){
   }
 
   src.value = v;
-  src.setSelectionRange(ns, ne);
+  try{ src.setSelectionRange(ns, ne); }catch(e2){}
   src.focus();
-  src.style.height = 'auto';
-  src.style.height = Math.max(src.scrollHeight, 240) + 'px';
-  n.body = v; n.updatedAt = Date.now();
-  renderMeta(); renderOutline(); save();
+
+  if(inLive){
+    const i = parseInt(src.dataset.i, 10) || 0;
+    LIVE.raws[i] = v;
+    growTa(src);
+    syncBody();
+    // 结构性改动（标题/列表/引用…）立刻渲染出来，看得到效果
+    if(['h2','h3','ul','ol','todo','quote','table','hr','pre'].includes(kind)) commitBlock(i);
+  } else {
+    src.style.height = 'auto';
+    src.style.height = Math.max(src.scrollHeight, 240) + 'px';
+    n.body = v; n.updatedAt = Date.now();
+    renderMeta(); renderOutline(); save();
+  }
 }
 
 /* ---- 导出 / 复制 ---- */
@@ -1078,22 +1170,472 @@ function renderProse(){
   const prose = $('#prose');
   prose.innerHTML = n.body.trim() ? out.html : `<p class="empty">空笔记。双击开始写点什么…</p>`;
   prose.querySelectorAll('.wikilink').forEach(a=>a.onclick=(e)=>{
-    e.preventDefault(); const t = a.dataset.wiki;
-    const target = S.notes.find(x=>!x.trashed && (x.title===t || x.title.toLowerCase()===t.toLowerCase()));
-    if(target) openNote(target.id);
-    else {
-      const now = Date.now();
-      const nn = {id:'n'+now.toString(36), title:t, body:'', notebookId:null,
-        tags:[], trashed:false, createdAt:now, updatedAt:now};
-      S.notes.unshift(nn);
-      S.active = nn.id; S.view='notes'; trashView=false;
-      if(!S.tabs.includes(nn.id)) S.tabs.push(nn.id);
-      renderAll(); save();
-      setTimeout(()=>{ const el=$('#docTitle'); if(el) el.focus(); }, 30);
-      toast('已创建「'+t+'」');
-    }
+    e.preventDefault(); openWikiLink(a.dataset.wiki);
   });
   outlineItems = out.headings;
+}
+
+function openWikiLink(t){
+  const target = S.notes.find(x=>!x.trashed && (x.title===t || x.title.toLowerCase()===t.toLowerCase()));
+  if(target) openNote(target.id);
+  else {
+    const now = Date.now();
+    const nn = {id:'n'+now.toString(36), title:t, body:'', notebookId:null,
+      tags:[], trashed:false, createdAt:now, updatedAt:now};
+    S.notes.unshift(nn);
+    S.active = nn.id; S.view='notes'; trashView=false;
+    if(!S.tabs.includes(nn.id)) S.tabs.push(nn.id);
+    renderAll(); save();
+    setTimeout(()=>{ const el=$('#docTitle'); if(el) el.focus(); }, 30);
+    toast('已创建「'+t+'」');
+  }
+}
+
+/* ========== 所见即所得编辑（块级 Markdown） ========== */
+const LIVE = { raws: [], editing: -1, ta: null };
+
+function modeClass(m){ return m==='source' ? 'mode-edit' : (m==='preview' ? 'mode-preview' : 'mode-live'); }
+function curMode(){
+  const doc = document.getElementById('doc');
+  if(!doc) return 'live';
+  if(doc.classList.contains('mode-edit')) return 'source';
+  if(doc.classList.contains('mode-preview')) return 'preview';
+  return 'live';
+}
+function liveHost(){ return document.getElementById('live'); }
+
+/* 切块规则与 mdToHtml 完全一致，保证「所见」与「渲染」不打架 */
+function parseBlocks(md){
+  const lines = String(md||'').replace(/\r\n?/g,'\n').split('\n');
+  const out = [];
+  const isSep = l => /^\s*\|?[\s:-]*-[-\s:|]*\|?\s*$/.test(l) && l.includes('-');
+  let i = 0;
+  while(i < lines.length){
+    const line = lines[i];
+    if(!line.trim()){ i++; continue; }
+    const start = i;
+    if(/^```/.test(line)){
+      i++;
+      while(i<lines.length && !/^```/.test(lines[i])) i++;
+      if(i<lines.length) i++;
+    } else if(/^(#{1,6})\s+/.test(line)){
+      i++;
+    } else if(/^\s*(\*\s*){3,}$|^\s*(-\s*){3,}$|^\s*(_\s*){3,}$/.test(line)){
+      i++;
+    } else if(/^>\s?/.test(line)){
+      while(i<lines.length && /^>\s?/.test(lines[i])) i++;
+    } else if(line.includes('|') && i+1<lines.length && isSep(lines[i+1])){
+      i += 2;
+      while(i<lines.length && lines[i].includes('|') && lines[i].trim()) i++;
+    } else if(/^\s*([-*+]|\d+\.)\s+/.test(line)){
+      while(i<lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) i++;
+    } else {
+      i++;
+      while(i<lines.length && lines[i].trim() && !/^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s)/.test(lines[i]) && !isSep(lines[i])) i++;
+    }
+    out.push({lines: lines.slice(start, i), start:start, end:i});
+  }
+  return out;
+}
+
+function blockType(raw){
+  const ls = String(raw||'').split('\n');
+  const first = ls[0] || '';
+  if(/^```/.test(first)) return 'fence';
+  if(/^(#{1,6})\s+/.test(first)) return 'heading';
+  if(/^>\s?/.test(first)) return 'quote';
+  const isSep = l => /^\s*\|?[\s:-]*-[-\s:|]*\|?\s*$/.test(l) && l.includes('-');
+  if(first.includes('|') && ls.length>1 && isSep(ls[1])) return 'table';
+  if(/^\s*([-*+]|\d+\.)\s+/.test(first)) return 'list';
+  if(/^\s*(\*\s*){3,}$|^\s*(-\s*){3,}$|^\s*(_\s*){3,}$/.test(first)) return 'hr';
+  return 'para';
+}
+
+function mdBlock(raw){
+  return mdToHtml(raw).html
+    .replace(/ id="h\d+"/g,'')
+    .replace(/<input type="checkbox" disabled/g,'<input type="checkbox"');
+}
+
+function paintHeadings(host){
+  if(!host) return;
+  let k = 0;
+  host.querySelectorAll('.blk-view h1,.blk-view h2,.blk-view h3,.blk-view h4,.blk-view h5,.blk-view h6')
+    .forEach(h=>{ h.id = 'h'+(k++); });
+}
+
+function growTa(ta){
+  if(!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+/* ---- 渲染 ---- */
+function renderLive(){
+  const n = noteById(S.active); const host = liveHost();
+  if(!n || !host) return;
+  commitAnyEditing();
+  const blocks = parseBlocks(n.body);
+  LIVE.raws = blocks.length ? blocks.map(b=>b.lines.join('\n')) : [''];
+  paintLive();
+}
+
+function paintLive(){
+  const host = liveHost(); if(!host) return;
+  host.innerHTML = '';
+  LIVE.raws.forEach((raw,i)=> host.appendChild(blockEl(raw, i, LIVE.raws.length===1)));
+  const tail = document.createElement('div'); tail.className = 'lv-tail'; host.appendChild(tail);
+  paintHeadings(host);
+  if(!host._wired){
+    host._wired = true;
+    host.addEventListener('click', e=>{
+      const a = e.target.closest ? e.target.closest('.wikilink') : null;
+      if(a){ e.preventDefault(); openWikiLink(a.dataset.wiki); return; }
+      if(e.target.classList && e.target.classList.contains('lv-tail')){
+        if(!String(LIVE.raws[LIVE.raws.length-1]).trim()) focusBlock(LIVE.raws.length-1, 'end');
+        else { LIVE.raws.push(''); rebuild(LIVE.raws.length-1, 0); }
+      }
+    });
+  }
+}
+
+function rebuild(focusIdx, caret){
+  paintLive();
+  syncBody();
+  if(focusIdx!=null && focusIdx>=0) focusBlock(focusIdx, caret);
+}
+
+function blockEl(raw, i, only){
+  const el = document.createElement('div');
+  el.className = 'blk'; el.dataset.i = i;
+  const view = document.createElement('div');
+  view.className = 'blk-view';
+  if(raw.trim()) view.innerHTML = mdBlock(raw);
+  else view.innerHTML = '<p class="lv-hint" style="margin:0">' + (only ? '点这里开始写 · # 加空格是标题，- 加空格是列表，回车就排版' : '&nbsp;') + '</p>';
+  const ta = document.createElement('textarea');
+  ta.className = 'blk-src'; ta.value = raw; ta.rows = 1;
+  ta.spellcheck = false; ta.dataset.i = i;
+  el.appendChild(view); el.appendChild(ta);
+
+  view.addEventListener('mousedown', e=>{
+    if(e.target.closest && e.target.closest('a')) return;
+    if(e.target.matches && e.target.matches('input[type=checkbox]')){ e.preventDefault(); toggleTask(i, e.target); return; }
+    e.preventDefault();
+    editBlock(i, e.clientX, e.clientY);
+  });
+  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); });
+  ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));
+  ta.addEventListener('blur', ()=>{ if(el.isConnected && el.classList.contains('editing')) commitBlock(i); });
+  ta.addEventListener('paste', onBlockPaste);
+  ta.addEventListener('dragover', e=>e.preventDefault());
+  ta.addEventListener('drop', e=>{
+    e.preventDefault();
+    const files = [...((e.dataTransfer && e.dataTransfer.files)||[])];
+    if(files.length) insertFiles(files, ta);
+  });
+  return el;
+}
+
+/* ---- 进入 / 离开编辑 ---- */
+function editBlock(i, x, y, caret){
+  const host = liveHost(); if(!host) return;
+  if(LIVE.editing>=0 && LIVE.editing!==i) closeEditing();
+  const el = host.querySelector('.blk[data-i="'+i+'"]');
+  if(!el) return;
+  const ta = el.querySelector('.blk-src');
+  // 必须先算光标位置：加了 editing 后 .blk-view 就 display:none 了，量不到
+  let off;
+  if(caret==='end') off = ta.value.length;
+  else if(typeof caret === 'number') off = caret;
+  else off = offsetFromPoint(el.querySelector('.blk-view'), ta.value, x, y);
+  el.classList.add('editing');
+  LIVE.editing = i; LIVE.ta = ta;
+  growTa(ta);
+  ta.focus();
+  off = Math.max(0, Math.min(off, ta.value.length));
+  try{ ta.setSelectionRange(off, off); }catch(e){}
+}
+
+function closeEditing(){
+  if(LIVE.editing<0) return;
+  const i = LIVE.editing;
+  LIVE.editing = -1; LIVE.ta = null;
+  commitBlock(i);
+}
+
+function commitAnyEditing(){
+  if(LIVE.editing>=0 && LIVE.ta && LIVE.ta.isConnected){
+    LIVE.ta.value = trimRaw(LIVE.ta.value);
+    LIVE.raws[LIVE.editing] = LIVE.ta.value;
+    LIVE.editing = -1; LIVE.ta = null;
+    syncBody();
+  }
+  LIVE.editing = -1; LIVE.ta = null;
+}
+
+function trimRaw(raw){
+  const lines = String(raw).split('\n');
+  const isEmptyItem = l => /^\s*([-*+]|\d+\.)\s*(\[[ xX]\]\s*)?$/.test(l);
+  if(!lines.every(isEmptyItem)) {
+    while(lines.length > 1 && isEmptyItem(lines[lines.length-1])) lines.pop();
+  } else if(lines.length){
+    return '';
+  }
+  return lines.join('\n');
+}
+
+function commitBlock(i){
+  const host = liveHost(); if(!host) return;
+  const el = host.querySelector('.blk[data-i="'+i+'"]');
+  if(!el) return;
+  const ta = el.querySelector('.blk-src');
+  ta.value = trimRaw(ta.value);
+  LIVE.raws[i] = ta.value;
+  el.classList.remove('editing');
+  const view = el.querySelector('.blk-view');
+  view.innerHTML = ta.value.trim()
+    ? mdBlock(ta.value)
+    : '<p class="lv-hint" style="margin:0">&nbsp;</p>';
+  if(LIVE.editing===i){ LIVE.editing = -1; LIVE.ta = null; }
+  paintHeadings(host);
+  syncBody();
+}
+
+function syncBody(){
+  const n = noteById(S.active); if(!n) return;
+  const body = LIVE.raws.join('\n\n');
+  if(body === n.body) return;
+  n.body = body; n.updatedAt = Date.now();
+  renderMeta(); renderOutline(); save();
+}
+
+/* ---- 焦点与导航 ---- */
+function focusBlock(i, caret){
+  const host = liveHost(); if(!host) return;
+  if(i < 0){ const t = document.getElementById('docTitle'); if(t) t.focus(); return; }
+  if(i >= LIVE.raws.length){
+    if(!String(LIVE.raws[LIVE.raws.length-1]).trim()) i = LIVE.raws.length-1;
+    else { LIVE.raws.push(''); rebuild(i, 0); return; }
+  }
+  editBlock(i, null, null, caret);
+}
+function ensureLiveInput(){
+  if(LIVE.ta && LIVE.ta.isConnected) return LIVE.ta;
+  const host = liveHost(); if(!host) return null;
+  focusBlock(Math.max(0, LIVE.raws.length-1), 'end');
+  return LIVE.ta;
+}
+
+/* ---- 按键 ---- */
+function onBlockKey(e, i, ta, el){
+  if(e.isComposing || e.keyCode===229) return;
+
+  if(e.key==='Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey){
+    e.preventDefault();
+    handleEnter(i, ta);
+    return;
+  }
+  if(e.key==='Tab'){
+    e.preventDefault();
+    ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+    LIVE.raws[i] = ta.value; growTa(ta); syncBody();
+    return;
+  }
+  if(e.key==='Escape'){ e.preventDefault(); closeEditing(); return; }
+
+  if(e.key==='Backspace' && ta.selectionStart===0 && ta.selectionEnd===0){
+    if(!ta.value){
+      if(LIVE.raws.length<=1) return;
+      e.preventDefault();
+      LIVE.raws.splice(i,1);
+      rebuild(i > 0 ? i-1 : 0, 'end');
+      return;
+    }
+    if(i===0) return;
+    e.preventDefault();
+    const prev = LIVE.raws[i-1];
+    LIVE.raws[i-1] = prev + (prev.endsWith('\n') ? '' : '\n') + ta.value;
+    LIVE.raws.splice(i,1);
+    rebuild(i-1, prev.length);
+    return;
+  }
+
+  if(e.key==='ArrowDown' && !ta.value.includes('\n') && ta.selectionStart===ta.value.length){
+    e.preventDefault(); closeEditing(); focusBlock(i+1, 0); return;
+  }
+  if(e.key==='ArrowUp' && !ta.value.includes('\n') && ta.selectionStart===0){
+    e.preventDefault(); closeEditing(); focusBlock(i-1, 'end'); return;
+  }
+}
+
+function handleEnter(i, ta){
+  const v = ta.value, s = ta.selectionStart, en = ta.selectionEnd;
+  const before = v.slice(0, s), after = v.slice(en);
+  const t = blockType(v);
+  const lineStart = before.lastIndexOf('\n') + 1;
+  const curLine = before.slice(lineStart);
+
+  if(t==='fence' || t==='table'){
+    ta.setRangeText('\n', s, en, 'end');
+    LIVE.raws[i] = ta.value; growTa(ta); syncBody();
+    return;
+  }
+  if(t==='heading'){
+    LIVE.raws[i] = before.trimEnd();
+    LIVE.raws.splice(i+1, 0, after.replace(/^\n+/,''));
+    rebuild(i+1, 0);
+    return;
+  }
+  if(t==='list'){
+    const m = curLine.match(/^(\s*)([-*+]|\d+\.)(\s+)(\[[ xX]\]\s+)?(.*)$/);
+    if(m){
+      const indent = m[1], marker = m[2], task = m[4] || '', text = m[5];
+      if(!text.trim()){
+        const headRaw = v.slice(0, lineStart).replace(/\n$/,'');
+        LIVE.raws[i] = headRaw;
+        LIVE.raws.splice(i+1, 0, after.replace(/^\n/,''));
+        rebuild(i+1, 0);
+        return;
+      }
+      const nextMarker = /^\d+\.$/.test(marker) ? (parseInt(marker,10)+1)+'.' : marker;
+      const ins = '\n' + indent + nextMarker + ' ' + (task ? '[ ] ' : '');
+      ta.setRangeText(ins, s, en, 'end');
+      LIVE.raws[i] = ta.value; growTa(ta); syncBody();
+      return;
+    }
+  }
+  const headRaw = before.replace(/\n$/,'');
+  let tailRaw = after.replace(/^\n/,'');
+  if(t==='quote' && tailRaw) tailRaw = '> ' + tailRaw;
+  LIVE.raws[i] = headRaw;
+  LIVE.raws.splice(i+1, 0, tailRaw);
+  rebuild(i+1, t==='quote' ? 2 : 0);
+}
+
+function toggleTask(i, cb){
+  const host = liveHost(); if(!host) return;
+  const view = host.querySelector('.blk[data-i="'+i+'"] .blk-view');
+  if(!view) return;
+  const boxes = [...view.querySelectorAll('li.task')];
+  const li = cb.closest('li');
+  const k = boxes.indexOf(li);
+  if(k < 0) return;
+  const lines = String(LIVE.raws[i]).split('\n');
+  let n = 0;
+  for(let j=0;j<lines.length;j++){
+    if(/^\s*([-*+]|\d+\.)\s+\[[ xX]\]/.test(lines[j])){
+      if(n===k){
+        const done = /\[[xX]\]/.test(lines[j]);
+        lines[j] = lines[j].replace(/\[[ xX]\]/, done ? '[ ]' : '[x]');
+        break;
+      }
+      n++;
+    }
+  }
+  const el = host.querySelector('.blk[data-i="'+i+'"]');
+  const ta = el && el.querySelector('.blk-src');
+  const next = lines.join('\n');
+  LIVE.raws[i] = next;
+  if(ta) ta.value = next;
+  commitBlock(i);
+}
+
+function onBlockPaste(e){
+  const files = [...((e.clipboardData && e.clipboardData.items)||[])]
+    .filter(x=>x.kind==='file').map(x=>x.getAsFile()).filter(Boolean);
+  if(!files.length) return;      // 纯文本粘贴走浏览器默认
+  e.preventDefault();
+  insertFiles(files, e.currentTarget);
+}
+
+/* ---- 光标定位：点哪儿就从哪儿开始改 ---- */
+function offsetFromPoint(view, raw, x, y){
+  if(!view) return String(raw).length;
+  let range = null;
+  try{
+    if(document.caretRangeFromPoint) range = document.caretRangeFromPoint(x, y);
+    else if(document.caretPositionFromPoint){
+      const p = document.caretPositionFromPoint(x, y);
+      if(p){ range = document.createRange(); range.setStart(p.offsetNode, p.offset); }
+    }
+  }catch(e){}
+  if(!range || !view.contains(range.startContainer)) return String(raw).length;
+  const r = document.createRange();
+  r.selectNodeContents(view);
+  try{ r.setEnd(range.startContainer, range.startOffset); }catch(e){ return String(raw).length; }
+  return visToRaw(String(raw), r.toString().length);
+}
+
+function stripVis(s){
+  return String(s)
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function(m,t,a){ return a || t; })
+    .replace(/\[([^\]]*)\]\([^)]*\)/g,'$1')
+    .replace(/[*_~`]/g,'');
+}
+
+function rawOffsetInLine(body, vis){
+  let seen = 0, i = 0;
+  while(i < body.length && seen < vis){
+    const ch = body[i];
+    if(ch==='!' && body[i+1]==='['){ i += 2; continue; }
+    if(ch==='['){ i++; continue; }
+    if(ch===']'){
+      i++;
+      if(body[i]==='('){ while(i<body.length && body[i]!==')') i++; i++; }
+      continue;
+    }
+    if(ch==='*'||ch==='_'||ch==='~'||ch==='`'){ i++; continue; }
+    if(ch==='=' && (body[i+1]==='=' || (i>0 && body[i-1]==='='))){ i++; continue; }
+    if(ch==='|' && i===0){ i++; continue; }
+    seen++; i++;
+  }
+  return i;
+}
+
+function visToRaw(raw, vis){
+  const lines = raw.split('\n');
+  let left = vis, consumed = 0;
+  for(let li=0; li<lines.length; li++){
+    const line = lines[li];
+    const p = line.match(/^(\s*)(#{1,6}\s+|[-*+]\s+(\[[ xX]\]\s+)?|\d+\.\s+|>\s?)?/);
+    const prefix = p ? p[0] : '';
+    const body = line.slice(prefix.length);
+    const visLen = stripVis(body).length;
+    if(left <= visLen || li===lines.length-1){
+      return Math.min(raw.length, consumed + prefix.length + rawOffsetInLine(body, left));
+    }
+    left -= visLen;
+    consumed += line.length + 1;
+  }
+  return raw.length;
+}
+
+/* ---- 模式切换 ---- */
+function setMode(m){
+  const doc = document.getElementById('doc'); if(!doc) return;
+  commitAnyEditing();
+  S.mode = m;
+  doc.classList.remove('mode-live','mode-preview','mode-edit');
+  doc.classList.add(modeClass(m));
+  const n = noteById(S.active);
+  const src = document.getElementById('source');
+  if(src && n) src.value = n.body;
+  if(m==='preview'){ renderProse(); renderOutline(); }
+  else if(m==='live'){ renderLive(); }
+  else if(m==='source'){
+    if(src){
+      src.style.height='auto';
+      src.style.height = Math.max(src.scrollHeight, 360) + 'px';
+      src.focus();
+    }
+  }
+  save();
+}
+function enterEdit(){ setMode('source'); }
+function enterPreview(){ setMode('preview'); }
+function toggleMode(){
+  setMode(curMode()==='live' ? 'preview' : 'live');
 }
 
 function wireEditor(n){
@@ -1129,31 +1671,15 @@ function wireEditor(n){
   doc.addEventListener('drop', handleDrop);
   grow(src);
 
-  // 预览双击 → 编辑
-  $('#prose').addEventListener('dblclick', ()=>{ if(!n.body.trim()) enterEdit(); });
+  // 预览区双击空白 → 直接开始写
+  $('#prose').addEventListener('dblclick', ()=>{
+    if(!n.body.trim()){ if(curMode()!=='live') setMode('live'); setTimeout(()=>focusBlock(0, 0), 20); }
+  });
 
   // 切换编辑/预览
   doc.dataset.note = n.id;
 }
 
-function enterEdit(){
-  const doc = $('#doc'); if(!doc) return;
-  doc.classList.remove('mode-preview'); doc.classList.add('mode-edit');
-  const src = $('#source'); src.focus();
-  src.style.height='auto'; src.style.height = Math.max(src.scrollHeight, 360)+'px';
-}
-function enterPreview(){
-  const doc = $('#doc'); if(!doc) return;
-  const src = $('#source');
-  const n = noteById(S.active);
-  if(src && n){ n.body = src.value; }
-  doc.classList.remove('mode-edit'); doc.classList.add('mode-preview');
-  renderProse(); renderOutline();
-}
-function toggleMode(){
-  const doc = $('#doc'); if(!doc) return;
-  doc.classList.contains('mode-edit') ? enterPreview() : enterEdit();
-}
 
 /* ---- 大纲 ---- */
 let outlineItems = [];
@@ -1351,9 +1877,7 @@ function pickFiles(){
   inp.type='file'; inp.multiple = true;
   inp.onchange = async ()=>{
     const files = [...inp.files];
-    const doc = $('#doc');
-    if(doc && !doc.classList.contains('mode-edit')) enterEdit();
-    await insertFiles(files, $('#source'));
+    await insertFiles(files);
     toast(files.length+' 个文件已插入');
   };
   inp.click();
@@ -1376,7 +1900,7 @@ function handleDrop(e){
   const files = [...(e.dataTransfer?.files||[])];
   if(!files.length) return;
   e.preventDefault();
-  insertFiles(files, $('#source')).then(()=>toast('已插入 '+files.length+' 个附件'));
+  insertFiles(files).then(()=>toast('已插入 '+files.length+' 个附件'));
 }
 
 /* ========== 关系图 ========== */
@@ -1562,14 +2086,19 @@ function shareNote(){
   const url = location.origin+location.pathname+'?n='+n.id;
   navigator.clipboard?.writeText(url).then(()=>toast('分享链接已复制')).catch(()=>toast(url));
 }
+function dateStamp(d){
+  const t = d || new Date();
+  return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+}
 function exportMd(){
   const n = noteById(S.active); if(!n) return;
   const blob = new Blob([`# ${n.title||'无标题'}\n\n${n.body}`], {type:'text/markdown;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = (n.title||'无标题')+'.md';
+  const base = (n.title||'无标题').replace(/[\\/:*?"<>|]/g,' ').trim() || '无标题';
+  a.download = base + ' ' + dateStamp() + '.md';
   a.click();
-  toast('已导出 Markdown');
+  toast('已导出 ' + base + ' ' + dateStamp() + '.md');
 }
 function importMd(){
   const inp = document.createElement('input'); inp.type='file'; inp.accept='.md,.markdown,.txt';
@@ -1614,10 +2143,11 @@ function popover(anchor, items){
 function openNoteMenu(anchor){
   const n = noteById(S.active);
   popover(anchor, [
-    ['编辑 / 预览', '⌘E', '', 'pencil', toggleMode],
+    ['写作 / 阅读视图', '⌘E', '', 'pencil', toggleMode],
+    ['Markdown 源码', '⌘⇧E', '', 'code', ()=>setMode('source')],
     ['隐藏大纲', '', '', 'outline', ()=>{ S.outlineOpen=!S.outlineOpen; renderMain(); save(); }],
     '-',
-    ['导出 Markdown', '⌘⇧E', '', 'download', exportMd],
+    ['导出 Markdown', '', '', 'download', exportMd],
     ['复制分享链接', '', '', 'share', shareNote],
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
@@ -1717,8 +2247,8 @@ document.addEventListener('keydown', e=>{
   if(meta && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
   if(meta && e.key.toLowerCase()==='n'){ e.preventDefault(); newNote(); return; }
   if(meta && e.key==='\\'){ e.preventDefault(); toggleShelf(); return; }
+  if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
-  if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); exportMd(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
   if(e.key==='Escape'){ $('#popover').classList.remove('open'); closeExportPanel(); if(syncPanelOpen) closeSyncPanel(); }
 });
@@ -1808,7 +2338,10 @@ function localPayload(){
   }));
   return {
     notes: live.concat(tombs),
-    notebooks: S.notebooks.map(nb=>({id:nb.id, name:nb.name, open:nb.open!==false}))
+    notebooks: S.notebooks.map(nb=>({
+      id:nb.id, name:nb.name, open:nb.open!==false,
+      deleted:!!nb.deleted, updatedAt:nb.updatedAt||0
+    }))
   };
 }
 function applyRemote(data){
@@ -1822,8 +2355,13 @@ function applyRemote(data){
   const nbm = new Map(S.notebooks.map(n=>[n.id,n]));
   for(const r of (data.notebooks||[])){
     const cur = nbm.get(r.id);
-    if(!cur){ S.notebooks.push(r); changed = true; }
-    else if(cur.name!==r.name || cur.open!==r.open){ Object.assign(cur, r); changed = true; }
+    if(!cur){ S.notebooks.push(Object.assign({deleted:false, updatedAt:0}, r)); changed = true; }
+    else {
+      const newer = (r.updatedAt||0) > (cur.updatedAt||0);
+      const same  = (r.updatedAt||0) === (cur.updatedAt||0);
+      const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted;
+      if(newer || (same && diff)){ Object.assign(cur, r); changed = true; }
+    }
   }
   return changed;
 }
@@ -1966,7 +2504,7 @@ function mdForFile(name, url, type){
 }
 // 先试云上传，失败或未登录则退回本机 blob
 async function insertFiles(files, target){
-  const src = target || document.getElementById('source');
+  const src = target || (curMode()==='live' ? ensureLiveInput() : document.getElementById('source'));
   if(!src || !files.length) return;
   const parts = [];
   for(const f of files){
@@ -1980,10 +2518,18 @@ async function insertFiles(files, target){
     parts.push(mdForFile(m.name, m.url, m.type));
   }
   const text = parts.join('');
-  const p = src.selectionStart;
+  const p = typeof src.selectionStart==='number' ? src.selectionStart : src.value.length;
   src.setRangeText(text, p, src.selectionEnd, 'end');
-  const n = noteById(S.active);
-  if(n){ n.body = src.value; n.updatedAt = Date.now(); save(); renderMeta(); }
+  src.dispatchEvent(new Event('input', {bubbles:true}));
+  if(src.classList && src.classList.contains('blk-src')){
+    const i = parseInt(src.dataset.i,10) || 0;
+    LIVE.raws[i] = src.value;
+    syncBody();
+    commitBlock(i);            // 立刻渲染，图片当场可见
+  } else {
+    const n = noteById(S.active);
+    if(n){ n.body = src.value; n.updatedAt = Date.now(); save(); renderMeta(); }
+  }
   if(S.view==='media') renderMedia();
 }
 
@@ -2088,7 +2634,9 @@ if(nParam && noteById(nParam) && !noteById(nParam).trashed){
   S.active = nParam; if(!S.tabs.includes(nParam)) S.tabs.push(nParam);
 } else if(qs.get('new')==='1'){ newNote(); }
 renderAll();
-if(qs.get('mode')==='edit') setTimeout(()=>enterEdit(), 60);
+if(qs.get('mode')==='edit') setTimeout(()=>setMode('source'), 60);
+if(qs.get('mode')==='preview') setTimeout(()=>setMode('preview'), 60);
+if(qs.get('mode')==='live') setTimeout(()=>setMode('live'), 60);
 if(qs.get('cmd')==='1') setTimeout(()=>openPalette(), 60);
 if(qs.get('sync')==='1') setTimeout(()=>openSyncPanel(), 60);
 // 已有口令时后台安静同步一次

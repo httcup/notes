@@ -33,7 +33,9 @@ async function readAll(env, uid) {
   const notebooks = (nbsRes.results || []).map((r) => ({
     id: r.id,
     name: r.name || '',
-    open: !!r.open
+    open: !!r.open,
+    deleted: !!r.deleted,
+    updatedAt: r.updated_at || 0
   }));
   return { notes, notebooks, serverTime: Date.now() };
 }
@@ -90,10 +92,21 @@ export async function onRequest({ request, env }) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notebooks (user_id, id, name, open, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)
-             ON CONFLICT(user_id, id) DO UPDATE SET name = excluded.name, open = excluded.open, updated_at = excluded.updated_at
+            `INSERT INTO notebooks (user_id, id, name, open, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(user_id, id) DO UPDATE SET
+               name = excluded.name,
+               open = excluded.open,
+               deleted = excluded.deleted,
+               updated_at = excluded.updated_at
              WHERE excluded.updated_at >= notebooks.updated_at`
-          ).bind(uid, str(nb.id, 80), str(nb.name, 120), nb.open === false ? 0 : 1, Date.now())
+          ).bind(
+            uid,
+            str(nb.id, 80),
+            str(nb.name, 120),
+            nb.open === false ? 0 : 1,
+            nb.deleted ? 1 : 0,
+            Number(nb.updatedAt) || 0
+          )
         );
       }
 

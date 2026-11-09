@@ -509,7 +509,7 @@ body.outline-pinned .ol-mini,
 body.ol-hidden .ol-mini{opacity:0;pointer-events:none}
 body.ol-hidden .outline-zone{display:none}
 .outline{
-  position:fixed;right:4px;top:66px;z-index:56;
+  position:fixed;right:14px;top:66px;z-index:56;
   width:256px;max-height:min(620px,calc(100vh - 116px));
   display:flex;flex-direction:column;
   padding:4px 5px 6px;border:0;border-radius:0;
@@ -542,11 +542,12 @@ body.ol-hidden .outline-zone{display:none}
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;
   font-size:12.8px;line-height:1.55;color:rgb(var(--ink-2));
   padding:5px 8px;border-radius:7px;margin:0;
-  transition:background .14s,color .14s;
+  transition:background .16s,color .16s,transform .2s var(--spring),padding-left .2s var(--spring);
 }
 .ol-item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ol-item .dash{flex:0 0 auto;width:9px;height:1px;border-radius:1px;background:rgb(var(--ink)/.17);transition:width .18s,background .18s,height .18s}
-.ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+/* 悬停：加粗加黑 + 轻微右移动效，松手回弹 */
+.ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:600;transform:translateX(3px)}
 .ol-item.l1{font-weight:500;color:rgb(var(--ink))}
 .ol-item.l2{padding-left:21px}
 .ol-item.l3{padding-left:34px;font-size:12.3px}
@@ -868,7 +869,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v26', at: '2026-11-10 00:55' };
+window.IVY_BUILD = { id: 'v27', at: '2026-11-10 01:15' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

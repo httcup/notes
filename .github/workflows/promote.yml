@@ -1,0 +1,30 @@
+# Cloudflare Pages production deployments are driven by the release branch only.
+# A real push to main fast-forwards release, which triggers one production build.
+# Replayed historical main push webhooks can no longer become the live version.
+name: Promote main to release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward release to main
+        run: |
+          git config user.name "release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+          git push origin "HEAD:refs/heads/release" || git push --force origin "HEAD:refs/heads/release"

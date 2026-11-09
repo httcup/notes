@@ -1053,8 +1053,8 @@ function countWords(md){
 /* ---- 标题下的 Markdown 工具条 ---- */
 const FMT_GROUPS = [
   [['h','H','标题级别（一号～六号）']],
-  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['code','代码','行内代码']],
-  [['ul','列表','无序列表'],['ol','编号','有序列表'],['todo','待办','待办清单'],['quote','引用','引用块']],
+  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字=='],['code','代码','行内代码']],
+  [['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
   [['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
 ];
 function renderFmtBar(){
@@ -1066,7 +1066,12 @@ function renderFmtBar(){
   ).join('');
   bar.querySelectorAll('[data-fmt]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
-    b.onclick = ()=>{ b.dataset.fmt==='h' ? openHeadingMenu(b) : applyFormat(b.dataset.fmt); };
+    b.onclick = ()=>{
+      const k = b.dataset.fmt;
+      if(k==='h') openHeadingMenu(b);
+      else if(k==='list') openListMenu(b);
+      else applyFormat(k);
+    };
   });
 }
 
@@ -1078,6 +1083,13 @@ function openHeadingMenu(anchor){
     ['四号标题','H4','','',()=>applyFormat('h4')],
     ['五号标题','H5','','',()=>applyFormat('h5')],
     ['六号标题','H6','','',()=>applyFormat('h6')]
+  ], { align:'left' });
+}
+function openListMenu(anchor){
+  popover(anchor, [
+    ['无序列表','-','','',()=>applyFormat('ul')],
+    ['有序列表','1.','','',()=>applyFormat('ol')],
+    ['待办列表','- [ ]','','',()=>applyFormat('todo')]
   ], { align:'left' });
 }
 function applyFormat(kind){
@@ -1133,6 +1145,7 @@ function applyFormat(kind){
     case 'b': wrapSel('**','**','加粗文字'); break;
     case 'i': wrapSel('*','*','斜体文字'); break;
     case 's': wrapSel('~~','~~','删除线'); break;
+    case 'mark': wrapSel('==','==','高亮文字'); break;
     case 'code': wrapSel('`','`','代码'); break;
     case 'ul': prefixLines('- '); break;
     case 'ol': prefixLines('1. '); break;
@@ -1431,6 +1444,121 @@ document.addEventListener('copy', e=>{
   e.clipboardData.setData('text/plain', md);
   e.clipboardData.setData('text/html', html);
   e.preventDefault();
+});
+
+/* 即时渲染态里的块是只读 div，原生选区按删除没反应 → 手动按 markdown 源删 */
+function viewOffset(view, node, offset){
+  try{
+    const r = document.createRange();
+    r.selectNodeContents(view);
+    r.setEnd(node, offset);
+    return r.toString().length;
+  }catch(e){ return 0; }
+}
+function blockPoint(node, offset, isEnd){
+  const host = liveHost(); if(!host) return null;
+  const blocks = [...host.querySelectorAll('.blk')];
+  if(!blocks.length) return null;
+  if(node === host){
+    return isEnd ? { i: blocks.length - 1, off: 1e9 } : { i: 0, off: 0 };
+  }
+  const i = blocks.findIndex(b=>b.contains(node));
+  if(i < 0) return null;
+  const view = blocks[i].querySelector('.blk-view');
+  if(!view || node === blocks[i] || !view.contains(node)){
+    const len = view ? view.textContent.length : 0;
+    return { i, off: isEnd ? len : 0 };
+  }
+  return { i, off: viewOffset(view, node, offset) };
+}
+// 把「渲染后的文本」对齐回 markdown 源，返回应截断的源位置
+function cutBefore(raw, plain){
+  if(!plain) return 0;
+  const at = raw.indexOf(plain);
+  if(at >= 0) return at + plain.length;
+  for(let k = plain.length - 1; k > 1; k--){
+    const at2 = raw.indexOf(plain.slice(-k));
+    if(at2 >= 0) return at2 + k;
+  }
+  return 0;
+}
+function cutAfter(raw, plain){
+  if(!plain) return raw.length;
+  const at = raw.lastIndexOf(plain);
+  if(at >= 0) return at;
+  for(let k = plain.length - 1; k > 1; k--){
+    const at2 = raw.lastIndexOf(plain.slice(0, k));
+    if(at2 >= 0) return at2;
+  }
+  return raw.length;
+}
+// 截断可能切坏成对的 ** == ~~ ` ，补一下
+function healInline(s){
+  ['**','~~','==','`'].forEach(tok=>{
+    const cnt = s.split(tok).length - 1;
+    if(cnt % 2 === 1){
+      const at = s.lastIndexOf(tok);
+      if(at >= 0) s = s.slice(0, at) + s.slice(at + tok.length);
+    }
+  });
+  return s;
+}
+function deleteLiveSelection(){
+  const ae = document.activeElement;
+  if(ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.isContentEditable)) return false;
+  if((S.mode || 'live') !== 'live') return false;
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return false;
+  const host = liveHost();
+  if(!host) return false;
+  const range = sel.getRangeAt(0);
+  if(!host.contains(range.startContainer) || !host.contains(range.endContainer)) return false;
+  const p1 = blockPoint(range.startContainer, range.startOffset, false);
+  const p2 = blockPoint(range.endContainer, range.endOffset, true);
+  if(!p1 || !p2) return false;
+  let a = p1.i, b = p2.i, offA = p1.off, offB = p2.off;
+  if(a > b || (a === b && offA > offB)){ const t = a; a = b; b = t; const u = offA; offA = offB; offB = u; }
+  if(!LIVE.raws.length || LIVE.raws[a] == null || LIVE.raws[b] == null) return false;
+
+  const viewA = host.querySelector('.blk[data-i="'+a+'"] .blk-view');
+  const viewB = host.querySelector('.blk[data-i="'+b+'"] .blk-view');
+  const textA = viewA ? viewA.textContent : '';
+  const textB = viewB ? viewB.textContent : '';
+  const headPlain = textA.slice(0, Math.min(offA, textA.length));
+  const tailPlain = textB.slice(Math.min(offB, textB.length));
+
+  const rawA = LIVE.raws[a], rawB = LIVE.raws[b];
+  const cut0 = cutBefore(rawA, headPlain);
+  const cut1 = cutAfter(rawB, tailPlain);
+  if(a === b && cut1 < cut0) return false;
+
+  const merged = healInline(
+    a === b ? rawA.slice(0, cut0) + rawA.slice(cut1)
+            : rawA.slice(0, cut0) + rawB.slice(cut1)
+  );
+
+  const restAfter = LIVE.raws.slice(b + 1);
+  const gapsAfter = (LIVE.gaps || []).slice(b + 1);
+  const gapA = (LIVE.gaps && LIVE.gaps[a]) || 0;
+  const raws = LIVE.raws.slice(0, a);
+  const gaps = (LIVE.gaps || []).slice(0, a);
+  if(a === b || merged !== ''){ raws.push(merged); gaps.push(gapA); }
+  else if(raws.length === 0 && restAfter.length === 0){ raws.push(''); gaps.push(0); }
+  restAfter.forEach((r,k)=>{ raws.push(r); gaps.push(gapsAfter[k]); });
+
+  LIVE.raws = raws; LIVE.gaps = gaps;
+  syncBody();
+  renderLive();
+  const idx = Math.max(0, Math.min(a, LIVE.raws.length - 1));
+  const caret = Math.min(cut0, LIVE.raws[idx] ? LIVE.raws[idx].length : 0);
+  sel.removeAllRanges();
+  focusBlock(idx, caret);
+  return true;
+}
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Backspace' && e.key !== 'Delete') return;
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  if(deleteLiveSelection()){ e.preventDefault(); }
 });
 
 function paintLive(){

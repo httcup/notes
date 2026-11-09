@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>常青笔记</title>
+<title>小胡小胡的笔记</title>
 <style>
 /* ============ tokens（取自 ivyNote 真实配色） ============ */
 :root{
@@ -75,14 +75,14 @@ a{color:inherit;text-decoration:none}
 .shelf-head{display:flex;align-items:center;gap:8px;padding:2px 4px 12px}
 .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
 .brand-name{
-  font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:.01em;
+  font-family:var(--font-serif);font-size:16.5px;font-weight:700;letter-spacing:0;
   margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .ver{
-  font-size:10px;font-weight:600;letter-spacing:.02em;color:rgb(var(--ivy-ink));
-  background:rgb(var(--ivy-soft));border-radius:5px;padding:2px 5px;flex:0 0 auto;
+  font-size:9.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ivy-ink));
+  background:rgb(var(--ivy-soft));border-radius:5px;padding:2px 4px;flex:0 0 auto;
 }
-.head-actions{display:flex;align-items:center;gap:2px;flex:0 0 auto}
+.head-actions{display:flex;align-items:center;gap:0;flex:0 0 auto}
 .icon-btn{
   width:28px;height:28px;display:grid;place-items:center;border-radius:7px;
   color:rgb(var(--muted));transition:background .15s,color .15s;
@@ -206,11 +206,22 @@ a{color:inherit;text-decoration:none}
   color:rgb(var(--ink));padding:0;margin:0 0 2px;
 }
 .doc-title::placeholder{color:rgb(var(--faint));opacity:.75}
-.doc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:10px 0 34px;font-size:12.5px;color:rgb(var(--faint))}
+.doc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 30px;font-size:12.5px;color:rgb(var(--faint))}
 .doc-meta .sep{opacity:.6}
 .meta-btn{padding:2px 4px;border-radius:5px;color:rgb(var(--faint));transition:background .14s,color .14s;font-size:12.5px}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
+/* 标题下的 Markdown 工具条 */
+.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:1px;margin:12px 0 0;user-select:none}
+.fmt-bar button{
+  height:26px;min-width:26px;padding:0 8px;border-radius:6px;font-size:12.5px;color:rgb(var(--muted));
+  transition:background .14s,color .14s,transform .1s;
+}
+.fmt-bar button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.fmt-bar button:active{transform:scale(.95)}
+.fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
+.fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
+.fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 7px;flex:0 0 auto}
 .meta-sync{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgb(var(--faint))}
 .meta-sync .sd{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
 .meta-sync .sd.ok{background:rgb(var(--ivy));opacity:1}
@@ -432,6 +443,23 @@ a{color:inherit;text-decoration:none}
 .sheet-status{margin-top:14px;padding-top:11px;border-top:1px solid rgb(var(--line));font-size:11.5px;line-height:1.75;color:rgb(var(--faint))}
 .sheet-status b{color:rgb(var(--ink-2));font-weight:600}
 
+/* ============ 导出面板 ============ */
+.export-pop{
+  position:fixed;z-index:75;padding:12px;background:rgb(var(--surface));border-radius:12px;
+  box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
+  opacity:0;pointer-events:none;transform:translateY(-4px) scale(.985);
+  transition:opacity .16s,transform .2s var(--spring);
+}
+.export-pop.open{opacity:1;pointer-events:auto;transform:none}
+.ex-row{display:flex;gap:8px}
+.ex-row button{
+  height:34px;padding:0 15px;border-radius:17px;background:rgb(var(--hover));
+  font-size:13px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;
+  transition:background .15s,transform .12s;
+}
+.ex-row button:hover{background:rgb(var(--sunken))}
+.ex-row button:active{transform:scale(.97)}
+
 @media (max-width:900px){
   .outline{display:none}
   .doc{padding:40px 20px 120px}
@@ -443,7 +471,7 @@ a{color:inherit;text-decoration:none}
   <aside class="shelf" id="shelf">
     <header class="shelf-head">
       <div class="brand">
-        <h1 class="brand-name" id="brandName">常青笔记</h1>
+        <h1 class="brand-name" id="brandName">小胡小胡的笔记</h1>
         <span class="ver">v0.1.7</span>
       </div>
       <div class="head-actions" id="headActions">
@@ -480,6 +508,7 @@ a{color:inherit;text-decoration:none}
   </div>
 </div>
 <div class="popover" id="popover"></div>
+<div class="export-pop" id="exportPop"></div>
 <div class="overlay" id="syncOverlay"></div>
 <div class="toasts" id="toasts"></div>
 
@@ -532,94 +561,17 @@ const D = 864e5;
 let S;
 
 function seed(){
-  const now = Date.now();
-  const n = (o)=>Object.assign({notebookId:null,tags:[],trashed:false,seed:true,createdAt:now,updatedAt:now},o);
-  const notes = [
-    n({id:'n1',title:'欢迎使用 ivyNote',tags:['入门'],updatedAt:now-36e5,
-      body:`这是一款**本地优先**的 Markdown 笔记应用。所有内容先写进浏览器里的数据库，再在后台安静地同步。
-
-## 三个核心习惯
-
-1. **原子化** —— 一条笔记只讲一件事，方便被反复引用
-2. **双向链接** —— 用 [[常青笔记方法论]] 这样的写法把想法连成网
-3. **持续迭代** —— 笔记会旧，但可以被修剪、被重写
-
-> 常青笔记不是「收集」，而是「培育」。写下来不是为了存起来，是为了让它下次长出新的东西。
-
-## 常用语法
-
-- 行内代码 \`npm run dev\`、加粗、*斜体*、~~删除线~~
-- 任务清单
-  - [x] 建一个笔记本
-  - [ ] 写下今天的第一条想法
-- 引用、表格、代码块都支持
-
-\`\`\`js
-const notes = await db.notes.all();
-console.log(notes.length);
-\`\`\`
-
----
-
-右侧的**大纲**会跟着滚动高亮，左下的 Dock 可以切到媒体库和关系图。`}),
-    n({id:'n2',title:'常青笔记方法论',tags:['方法','知识管理'],updatedAt:now-3*36e5,
-      body:`# 什么是常青笔记
-
-Andy Matuschak 提出的概念：笔记应该像常青植物一样，被持续修改、链接、复用，而不是一次性写完就沉底。
-
-## 判断标准
-
-| 维度 | 临时笔记 | 常青笔记 |
-| --- | --- | --- |
-| 生命周期 | 一次性 | 长期迭代 |
-| 粒度 | 混杂 | 单一主题 |
-| 链接 | 少 | 密度高 |
-
-## 落地方式
-
-先写**论点式标题**，再写正文解释这个论点为什么成立。标题本身就是一句判断句，而不是「关于 XX 的想法」。
-
-相关：[[欢迎使用 ivyNote]]、[[读书笔记-卡片盒]]`}),
-    n({id:'n3',title:'读书笔记 · 卡片盒',notebookId:'nb1',tags:['读书'],updatedAt:now-2*D,
-      body:`# 《卡片笔记写作法》
-
-核心不是工具，而是**工作流**：
-
-- 闪念笔记：随手记，48 小时内处理
-- 文献笔记：读到什么，用自己的话重写
-- 永久笔记：放进盒子里，主动建立链接
-
-> 不要为笔记分类，让笔记自己长出结构。
-
-关联 [[常青笔记方法论]]`}),
-    n({id:'n4',title:'每周回顾 · 模板',tags:['模板'],updatedAt:now-5*D,
-      body:`## 本周做了什么
-
-- 
-
-## 卡住的地方
-
-- 
-
-## 下周要推进
-
-- [ ] 
-- [ ] 
-
-\`\`\`
-小提示：⌘K 打开命令面板，⌘N 新建笔记，⌘\\ 收起书架
-\`\`\``})
-  ];
+  // 全新安装从空白开始，不带任何示例笔记
   return {
-    notes,
-    notebooks:[{id:'nb1',name:'读书笔记',open:true}],
-    tabs:['n1'],
-    active:'n1',
-    view:'notes',
-    theme:'light',
-    shelfOpen:true,
-    outlineOpen:true,
-    media:[]
+    notes: [],
+    notebooks: [],
+    tabs: [],
+    active: null,
+    view: 'notes',
+    theme: 'light',
+    shelfOpen: true,
+    outlineOpen: true,
+    media: []
   };
 }
 function load(){
@@ -647,6 +599,28 @@ S = load();
 const noteById = id => S.notes.find(n=>n.id===id);
 const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt);
 
+// 一次性清理旧版内置的示例笔记（只删带 seed 标记的，不动自己写的）
+try{
+  if(!localStorage.getItem('ivy.purgedSeeds')){
+    const seeds = S.notes.filter(n=>n.seed);
+    if(seeds.length){
+      // 生成墓碑，让云端和其他设备也一起删掉
+      S.pendingDeletes = (S.pendingDeletes||[]).concat(seeds.map(n=>n.id));
+      S.notes = S.notes.filter(n=>!n.seed);
+      S.notebooks = S.notebooks.filter(nb=>nb.id!=='nb1');
+      S.tabs = S.tabs.filter(id=>S.notes.some(n=>n.id===id));
+      if(!S.notes.some(n=>n.id===S.active)){
+        const first = S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+        S.active = first ? first.id : null;
+        if(first && !S.tabs.length) S.tabs = [first.id];
+      }
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({}, S, {media:[]}))); }catch(e){}
+    }
+    localStorage.setItem('ivy.purgedSeeds','1');
+  }
+}catch(e){}
+S.pendingDeletes = Array.isArray(S.pendingDeletes) ? S.pendingDeletes : [];
+
 /* ========== 主题 ========== */
 function applyTheme(){
   document.documentElement.dataset.theme = S.theme;
@@ -666,7 +640,7 @@ function paintRowIcons(){
 }
 
 function renderShelf(){
-  brandName.textContent = S.view==='notes' ? '常青笔记' : (S.view==='media' ? '媒体库' : '关系图');
+  brandName.textContent = S.view==='notes' ? '小胡小胡的笔记' : (S.view==='media' ? '媒体库' : '关系图');
   document.querySelector('.shelf-head .ver').style.display = S.view==='notes' ? '' : 'none';
 
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
@@ -824,6 +798,7 @@ function renderAll(){
 }
 
 function renderMain(){
+  closeExportPanel();
   paperActions.innerHTML = '';
   if(S.view==='media'){ renderMedia(); return; }
   if(S.view==='graph'){ renderGraph(); return; }
@@ -841,7 +816,7 @@ function renderEditor(){
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paAttach').onclick=()=>pickFiles();
-  $('#paShare').onclick=()=>shareNote();
+  $('#paShare').onclick=(e)=>openExportPanel(e.currentTarget);
   $('#paTheme').onclick=()=>toggleTheme();
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
@@ -860,6 +835,7 @@ function renderEditor(){
   scrollEl.innerHTML = `
     <div class="doc mode-preview" id="doc">
       <textarea class="doc-title" id="docTitle" rows="1" placeholder="标题" spellcheck="false">${esc(n.title)}</textarea>
+      <div class="fmt-bar" id="fmtBar"></div>
       <div class="doc-meta" id="docMeta"></div>
       <div class="doc-body">
         <div class="prose" id="prose"></div>
@@ -868,6 +844,7 @@ function renderEditor(){
     </div>`;
 
   renderMeta();
+  renderFmtBar();
   renderProse();
   wireEditor(n);
   outlineEl.classList.toggle('hidden', !S.outlineOpen);
@@ -911,6 +888,188 @@ function renderMeta(){
 function countWords(md){
   const t = md.replace(/```[\s\S]*?```/g,'').replace(/[#>*_`\-\|\[\]()!]/g,'').replace(/\s+/g,'');
   return t.length;
+}
+
+/* ---- 标题下的 Markdown 工具条 ---- */
+const FMT_GROUPS = [
+  [['h2','H2','二级标题'],['h3','H3','三级标题']],
+  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['code','代码','行内代码']],
+  [['ul','列表','无序列表'],['ol','编号','有序列表'],['todo','待办','待办清单'],['quote','引用','引用块']],
+  [['link','链接','插入链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
+];
+function renderFmtBar(){
+  const bar = document.getElementById('fmtBar');
+  if(!bar) return;
+  bar.innerHTML = FMT_GROUPS.map((g,gi)=>
+    (gi ? '<span class="fmt-sep"></span>' : '') +
+    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${label}</button>`).join('')
+  ).join('');
+  bar.querySelectorAll('[data-fmt]').forEach(b=>{
+    b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
+    b.onclick = ()=>applyFormat(b.dataset.fmt);
+  });
+}
+function applyFormat(kind){
+  const n = S.active ? noteById(S.active) : null;
+  if(!n) return;
+  const doc = document.getElementById('doc');
+  if(!doc) return;
+  const wasPreview = !doc.classList.contains('mode-edit');
+  if(wasPreview) enterEdit();
+  const src = document.getElementById('source');
+  if(!src) return;
+
+  let v = src.value;
+  let s = src.selectionStart, e = src.selectionEnd;
+  if(wasPreview || typeof s !== 'number'){ s = e = v.length; }
+  const sel = v.slice(s, e);
+  let ns = s, ne = e;
+  const setRange = (a,b)=>{ ns = a; ne = b; };
+  const wrapSel = (before, after, ph)=>{
+    const text = sel || ph || '';
+    v = v.slice(0,s) + before + text + after + v.slice(e);
+    setRange(s + before.length, s + before.length + text.length);
+  };
+  const prefixLines = (prefix)=>{
+    const lineStart = v.lastIndexOf('\n', s-1) + 1;
+    const tail = Math.max(s, e);
+    let blockEnd = v.indexOf('\n', tail);
+    if(blockEnd === -1) blockEnd = v.length;
+    const block = v.slice(lineStart, blockEnd);
+    const nb = block.split('\n').map(line=>{
+      const bare = line.replace(/^\s*(#{1,6}\s+|-\s\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+|>\s+)?/, '');
+      return prefix + bare;
+    }).join('\n');
+    v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
+    setRange(lineStart, lineStart + nb.length);
+  };
+
+  switch(kind){
+    case 'h2': prefixLines('## '); break;
+    case 'h3': prefixLines('### '); break;
+    case 'b': wrapSel('**','**','加粗文字'); break;
+    case 'i': wrapSel('*','*','斜体文字'); break;
+    case 's': wrapSel('~~','~~','删除线'); break;
+    case 'code': wrapSel('`','`','代码'); break;
+    case 'ul': prefixLines('- '); break;
+    case 'ol': prefixLines('1. '); break;
+    case 'todo': prefixLines('- [ ] '); break;
+    case 'quote': prefixLines('> '); break;
+    case 'link': {
+      const text = sel || '链接文字';
+      const url = 'https://';
+      const ins = '[' + text + '](' + url + ')';
+      v = v.slice(0,s) + ins + v.slice(e);
+      const a = s + 1 + text.length + 2;
+      setRange(a, a + url.length);
+      break;
+    }
+    case 'table': {
+      const tpl = '\n| 列 1 | 列 2 | 列 3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |\n';
+      v = v.slice(0,s) + tpl + v.slice(e);
+      setRange(s + tpl.length, s + tpl.length);
+      break;
+    }
+    case 'pre': {
+      const body = sel || '代码';
+      const head = '\n```\n';
+      v = v.slice(0,s) + head + body + '\n```\n' + v.slice(e);
+      const a = s + head.length;
+      setRange(a, a + body.length);
+      break;
+    }
+    case 'hr': {
+      const ins = '\n\n---\n\n';
+      v = v.slice(0,s) + ins + v.slice(e);
+      setRange(s + ins.length, s + ins.length);
+      break;
+    }
+    default: return;
+  }
+
+  src.value = v;
+  src.setSelectionRange(ns, ne);
+  src.focus();
+  src.style.height = 'auto';
+  src.style.height = Math.max(src.scrollHeight, 240) + 'px';
+  n.body = v; n.updatedAt = Date.now();
+  renderMeta(); renderOutline(); save();
+}
+
+/* ---- 导出 / 复制 ---- */
+function openExportPanel(anchor){
+  const pop = document.getElementById('exportPop');
+  if(!pop) return;
+  pop.innerHTML = `<div class="ex-row">
+      <button data-ex="rich">复制富文本</button>
+      <button data-ex="md">复制 Markdown</button>
+      <button data-ex="file">导出 Markdown</button>
+    </div>`;
+  pop.classList.add('open');
+  const r = anchor.getBoundingClientRect();
+  const w = pop.offsetWidth || 300;
+  pop.style.left = Math.max(12, Math.min(r.right - w, window.innerWidth - w - 12)) + 'px';
+  pop.style.top = Math.min(r.bottom + 8, window.innerHeight - 80) + 'px';
+  pop.querySelector('[data-ex="rich"]').onclick = ()=>{ closeExportPanel(); copyRich(); };
+  pop.querySelector('[data-ex="md"]').onclick = ()=>{ closeExportPanel(); copyMarkdown(); };
+  pop.querySelector('[data-ex="file"]').onclick = ()=>{ closeExportPanel(); exportMd(); };
+  setTimeout(()=>{
+    const off = ev=>{ if(!pop.contains(ev.target)){ closeExportPanel(); document.removeEventListener('mousedown', off); } };
+    document.addEventListener('mousedown', off);
+  }, 0);
+}
+function closeExportPanel(){
+  const pop = document.getElementById('exportPop');
+  if(pop) pop.classList.remove('open');
+}
+function legacyCopy(text){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try{ ok = document.execCommand('copy'); }catch(e){}
+  ta.remove();
+  return ok;
+}
+async function copyMarkdown(){
+  const n = S.active ? noteById(S.active) : null;
+  if(!n){ toast('没有打开的笔记'); return; }
+  const text = (n.title ? '# ' + n.title + '\n\n' : '') + n.body;
+  try{
+    await navigator.clipboard.writeText(text);
+    toast('已复制 Markdown');
+  }catch(e){
+    legacyCopy(text) ? toast('已复制 Markdown') : toast('复制失败，请手动选择');
+  }
+}
+async function copyRich(){
+  const n = S.active ? noteById(S.active) : null;
+  if(!n){ toast('没有打开的笔记'); return; }
+  const html = `<h1>${esc(n.title||'无标题')}</h1>\n` + mdToHtml(n.body).html;
+  const plain = (n.title ? n.title + '\n\n' : '') + n.body;
+  try{
+    if(!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], {type:'text/html'}),
+      'text/plain': new Blob([plain], {type:'text/plain'})
+    })]);
+    toast('已复制富文本');
+  }catch(e){
+    const div = document.createElement('div');
+    div.contentEditable = 'true';
+    div.innerHTML = html;
+    div.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(div);
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(err){}
+    sel.removeAllRanges(); div.remove();
+    ok ? toast('已复制富文本') : toast('复制失败，请手动选择');
+  }
 }
 
 function renderProse(){
@@ -1480,7 +1639,7 @@ function openUserMenu(anchor){
       toast('已导出 '+S.notes.length+' 篇笔记');
     }],
     '-',
-    ['关于 ivyNote', '', '', 'info', ()=>toast('ivyNote 常青笔记 · 本地优先的 Markdown 笔记（界面复刻版）')]
+    ['关于', '', '', 'info', ()=>toast('小胡小胡的笔记 · 本地优先 + Cloudflare 云同步')]
   ]);
 }
 
@@ -1565,7 +1724,7 @@ document.addEventListener('keydown', e=>{
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); exportMd(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ $('#popover').classList.remove('open'); if(syncPanelOpen) closeSyncPanel(); }
+  if(e.key==='Escape'){ $('#popover').classList.remove('open'); closeExportPanel(); if(syncPanelOpen) closeSyncPanel(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
@@ -1603,12 +1762,18 @@ async function api(method, body){
   return data;
 }
 function localPayload(){
+  const live = S.notes.map(n=>({
+    id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
+    tags:n.tags||[], trashed:!!n.trashed, deleted:!!n.deleted,
+    createdAt:n.createdAt||0, updatedAt:n.updatedAt||0
+  }));
+  // 待删除的笔记以墓碑上传，让云端和其它设备一起消失
+  const tombs = (S.pendingDeletes||[]).map(id=>({
+    id, title:'', body:'', notebookId:null, tags:[], trashed:true, deleted:true,
+    createdAt:0, updatedAt:Date.now()
+  }));
   return {
-    notes: S.notes.map(n=>({
-      id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
-      tags:n.tags||[], trashed:!!n.trashed, deleted:!!n.deleted,
-      createdAt:n.createdAt||0, updatedAt:n.updatedAt||0
-    })),
+    notes: live.concat(tombs),
     notebooks: S.notebooks.map(nb=>({id:nb.id, name:nb.name, open:nb.open!==false}))
   };
 }
@@ -1666,6 +1831,7 @@ async function syncNow(opts={}){
     const data = await api('POST', localPayload());
     const changed = applyRemote(data);
     S.notes = S.notes.filter(n=>!n.deleted);
+    S.pendingDeletes = [];
     SYNC.last = Date.now(); SYNC.state = 'ok'; SYNC.error = '';
     syncFails = 0; clearTimeout(syncRetryTimer); syncRetryTimer = null;
     syncSave();

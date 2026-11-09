@@ -1,6 +1,6 @@
-# notes · ivyNote 常青笔记（云同步版）
+# notes · 小胡小胡的笔记（云同步版）
 
-一个本地优先、云端同步的 Markdown 笔记应用。界面参考 [ivyNote](https://ivynote.frytea.com) 复刻重写，数据存在自己的 Cloudflare 账号里。
+一个本地优先、云端同步的 Markdown 笔记应用。界面参考 ivyNote 重写，数据存在自己的 Cloudflare 账号里。
 
 - 线上地址：https://notes-4fi.pages.dev
 - 前端：单文件 `public/index.html`（原生 HTML/CSS/JS，零构建、零依赖）
@@ -23,7 +23,9 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 
 ## 功能
 
-- 书架式侧边栏、多标签页、笔记本分组、回收站
+- 书架式侧边栏、多标签页、笔记本分组、回收站（全新安装是空库，不带示例笔记）
+- 标题下 Markdown 工具条：H2/H3、加粗、斜体、删除线、行内代码、列表、编号、待办、引用、链接、表格、代码块、分割线
+- 导出：复制富文本（带格式，可直接粘进 Word/飞书）、复制 Markdown、导出 .md 文件
 - Markdown 源码 / 预览双模式（⌘E），标题大纲自动生成
 - `[[双链]]` + Canvas 力导向关系图
 - 粘贴或拖入图片进媒体库

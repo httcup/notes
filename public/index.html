@@ -1290,10 +1290,11 @@ const CATS = [
 ];
 function kindOf(f){ if(f.type.startsWith('image')) return 'image'; if(f.type.startsWith('video')) return 'video'; if(f.type.startsWith('audio')) return 'audio'; return 'file'; }
 function mediaCount(k){
-  if(k==='all') return S.media.length;
-  if(k==='unused') return S.media.filter(m=>!m.noteId).length;
+  const all = allMedia();
+  if(k==='all') return all.length;
+  if(k==='unused') return all.filter(m=>!m.noteId).length;
   if(k==='trash') return 0;
-  return S.media.filter(m=>kindOf(m)===k).length;
+  return all.filter(m=>kindOf(m)===k).length;
 }
 function fmtSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 
@@ -1302,17 +1303,18 @@ function mediaShelf(){
   h += CATS.map(c=>`<button class="shelf-row" data-media-cat="${c.k}" style="${mediaCat===c.k?'background:rgb(var(--hover));color:rgb(var(--ink))':''}">
       <span class="t" style="font-weight:${mediaCat===c.k?500:400}">${c.label}</span>
       <span class="meta">${mediaCount(c.k)}</span></button>`).join('');
-  const used = S.media.filter(m=>m.noteId).length;
-  const bytes = S.media.reduce((a,m)=>a+m.size,0);
+  const all = allMedia();
+  const used = all.filter(m=>m.noteId).length;
+  const bytes = all.reduce((a,m)=>a+(m.size||0),0);
   h += `<div style="position:absolute;left:20px;right:20px;bottom:78px;font-size:11px;line-height:1.7;color:rgb(var(--faint))">
-      ${S.media.length} 个文件 · ${fmtSize(bytes)} · 被 ${used} 篇笔记引用<br>S3 存储 + CDN · 自动去重 · 加密存储</div>`;
+      ${all.length} 个文件 · ${fmtSize(bytes)} · 被 ${used} 篇引用<br>${isConnected()?'Cloudflare KV · 跨设备可见':'仅本机会话可见 · 去「账号」里登录'}</div>`;
   return h;
 }
 
 function renderMedia(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
-  const list = S.media.filter(m=>{
+  const list = allMedia().filter(m=>{
     if(mediaCat==='all') return true;
     if(mediaCat==='unused') return !m.noteId;
     return kindOf(m)===mediaCat;
@@ -1338,12 +1340,22 @@ function renderMedia(){
     });
   };
   scrollEl.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat=b.dataset.mediaCat; renderShelf(); renderMain(); });
+  // 首次进入异步拉一次云端列表
+  if(isConnected() && !remoteMedia && !mediaLoading){
+    loadRemoteMedia(true).then(()=>{ if(S.view==='media'){ renderShelf(); renderMedia(); } });
+  }
 }
 
 function pickFiles(){
   const inp = document.createElement('input');
   inp.type='file'; inp.multiple = true;
-  inp.onchange = ()=>{ [...inp.files].forEach(f=>addMedia(f)); renderMain(); };
+  inp.onchange = async ()=>{
+    const files = [...inp.files];
+    const doc = $('#doc');
+    if(doc && !doc.classList.contains('mode-edit')) enterEdit();
+    await insertFiles(files, $('#source'));
+    toast(files.length+' 个文件已插入');
+  };
   inp.click();
 }
 function addMedia(file){
@@ -1358,29 +1370,13 @@ function handlePaste(e){
   if(!files.length) return;
   e.preventDefault();
   const src = e.currentTarget;
-  files.forEach(f=>{
-    const m = addMedia(f);
-    const md = m.type.startsWith('image') ? `\n![${m.name}](${m.url})\n` : `\n[${m.name}](${m.url})\n`;
-    const p = src.selectionStart;
-    src.setRangeText(md, p, src.selectionEnd, 'end');
-  });
-  const n = noteById(S.active); if(n){ n.body = src.value; n.updatedAt=Date.now(); save(); }
-  toast(files.length+' 个文件已加入媒体库');
+  insertFiles(files, src).then(()=>toast(files.length+' 个文件已插入'));
 }
 function handleDrop(e){
   const files = [...(e.dataTransfer?.files||[])];
   if(!files.length) return;
   e.preventDefault();
-  const n = noteById(S.active); if(!n) return;
-  let add = '';
-  files.forEach(f=>{
-    const m = addMedia(f);
-    add += m.type.startsWith('image') ? `\n![${m.name}](${m.url})\n` : `\n[${m.name}](${m.url})\n`;
-  });
-  n.body += add; n.updatedAt = Date.now(); save();
-  const doc = $('#doc');
-  if(doc && doc.classList.contains('mode-edit')){ const s=$('#source'); s.value = n.body; }
-  renderProse(); toast('已插入 '+files.length+' 个附件');
+  insertFiles(files, $('#source')).then(()=>toast('已插入 '+files.length+' 个附件'));
 }
 
 /* ========== 关系图 ========== */
@@ -1733,31 +1729,69 @@ $('#btnNew').onclick=()=>newNote();
 $('#btnShelf').onclick=()=>toggleShelf();
 $('#shelfOpen').onclick=()=>toggleShelf();
 
-/* ========== 云同步 ========== */
+/* ========== 账号与云同步 ========== */
 const SYNC_STORE = 'ivy.sync';
-const SYNC = { key:'', state:'off', last:0, error:'' };
+const SYNC = { token:'', account:'', key:'', state:'off', last:0, error:'' };
 try{
   const raw = localStorage.getItem(SYNC_STORE);
-  if(raw){ const s = JSON.parse(raw); SYNC.key = s.key||''; SYNC.last = s.last||0; if(SYNC.key) SYNC.state='idle'; }
+  if(raw){
+    const s = JSON.parse(raw);
+    SYNC.token = s.token||''; SYNC.account = s.account||''; SYNC.key = s.key||''; SYNC.last = s.last||0;
+    if(SYNC.token || SYNC.key) SYNC.state = 'idle';
+  }
 }catch(e){}
-function syncSave(){ try{ localStorage.setItem(SYNC_STORE, JSON.stringify({key:SYNC.key,last:SYNC.last})); }catch(e){} }
+function syncSave(){
+  try{
+    localStorage.setItem(SYNC_STORE, JSON.stringify({
+      token: SYNC.token, account: SYNC.account, key: SYNC.key, last: SYNC.last
+    }));
+  }catch(e){}
+}
+const isConnected = ()=> !!(SYNC.token || SYNC.key);
+const accountLabel = ()=> SYNC.account || '主人';
+
 function syncTip(){
-  if(!SYNC.key) return '云同步未连接 · 点击设置';
+  if(!isConnected()) return '云同步未连接 · 点击设置';
   if(SYNC.state==='busy') return '正在同步…';
   if(SYNC.state==='pending') return '有改动，正在自动保存…';
   if(SYNC.state==='error') return '同步失败：'+(SYNC.error||'网络错误')+' · 点击查看';
-  if(SYNC.state==='ok') return '已同步 · '+new Date(SYNC.last).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · 点击管理';
-  return '云同步已就绪 · 点击立即同步';
+  if(SYNC.state==='ok') return '已同步 · '+new Date(SYNC.last).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · '+accountLabel();
+  return '已连接 '+accountLabel()+' · 点击立即同步';
+}
+function authHeaders(json){
+  const h = json ? {'content-type':'application/json'} : {};
+  if(SYNC.token) h.authorization = 'Bearer ' + SYNC.token;
+  else if(SYNC.key) h['x-ivy-key'] = SYNC.key;
+  return h;
 }
 let syncBusy = false, syncTimer = null, syncPanelOpen = false;
 
-async function api(method, body){
-  const r = await fetch('/api/sync', {
-    method,
-    headers: {'content-type':'application/json','x-ivy-key':SYNC.key},
-    body: body? JSON.stringify(body) : undefined
+async function doAuth(account, key, create){
+  const r = await fetch('/api/auth', {
+    method: 'POST',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({name: account || '', key, create: !!create})
   });
-  const data = await r.json().catch(()=>({}));
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok){ const e = new Error(d.error || '登录失败'); e.status = r.status; throw e; }
+  SYNC.token = d.token; SYNC.account = account || ''; SYNC.key = key;
+  SYNC.last = 0; SYNC.state = 'idle';
+  syncSave();
+  return d;
+}
+async function relogin(){
+  if(!SYNC.key) return false;
+  try{ await doAuth(SYNC.account, SYNC.key, false); return true; }catch(e){ return false; }
+}
+async function api(method, body){
+  const send = ()=> fetch('/api/sync', {
+    method, headers: authHeaders(true), body: body ? JSON.stringify(body) : undefined
+  });
+  let r = await send();
+  let data = await r.json().catch(()=>({}));
+  if(r.status === 401 && SYNC.token && SYNC.key){
+    if(await relogin()){ r = await send(); data = await r.json().catch(()=>({})); }
+  }
   if(!r.ok){ const e = new Error(data.error || ('HTTP '+r.status)); e.status = r.status; throw e; }
   return data;
 }
@@ -1814,7 +1848,7 @@ function scheduleRetry(){
 }
 
 async function syncNow(opts={}){
-  if(!SYNC.key || syncBusy) return;
+  if(!isConnected() || syncBusy) return;
   syncBusy = true;
   syncDirty = false;
   const firstTime = !SYNC.last;
@@ -1839,14 +1873,13 @@ async function syncNow(opts={}){
     persistLocal();
   }catch(e){
     SYNC.state = 'error';
-    SYNC.error = e.status===401 ? '口令不正确' : (e.message||'网络错误');
+    SYNC.error = e.status===401 ? '登录已过期，请重新输入口令' : (e.message||'网络错误');
     if(e.status !== 401){ syncFails++; syncDirty = true; scheduleRetry(); }
     renderDock();
   }finally{
     syncBusy = false;
     updateSyncBadge();
     if(syncPanelOpen) paintSyncPanel();
-    // 同步期间又有改动：立刻续跑一轮
     if(syncDirty && SYNC.state !== 'error'){
       clearTimeout(syncTimer);
       syncTimer = setTimeout(()=>syncNow(), 120);
@@ -1854,7 +1887,7 @@ async function syncNow(opts={}){
   }
 }
 function queueSync(){
-  try{ if(!SYNC.key) return; }catch(e){ return; }
+  try{ if(!isConnected()) return; }catch(e){ return; }
   syncDirty = true;
   if(SYNC.state !== 'busy'){ SYNC.state = 'pending'; renderDock(); }
   clearTimeout(syncTimer);
@@ -1863,97 +1896,180 @@ function queueSync(){
 }
 // 页面要走了：用 keepalive 兜住最后不到 1 秒的改动
 function flushSync(){
-  if(!SYNC.key || syncBusy || !syncDirty) return;
+  if(!isConnected() || syncBusy || !syncDirty) return;
   try{
     fetch('/api/sync', {
       method: 'POST', keepalive: true,
-      headers: {'content-type':'application/json','x-ivy-key':SYNC.key},
+      headers: authHeaders(true),
       body: JSON.stringify(localPayload())
     }).then(()=>{ syncDirty = false; }).catch(()=>{});
   }catch(e){}
 }
 async function pullRemote(){
-  if(!SYNC.key || syncBusy || document.hidden) return;
+  if(!isConnected() || syncBusy || document.hidden) return;
   try{
     const data = await api('GET');
     const changed = applyRemote(data);
     if(changed){ S.notes = S.notes.filter(n=>!n.deleted); renderAfterSync(true, false); persistLocal(); }
     SYNC.state = 'ok'; SYNC.last = Date.now(); syncSave(); renderDock(); updateSyncBadge();
   }catch(e){
-    SYNC.state = 'error'; SYNC.error = e.status===401 ? '口令不正确' : (e.message||'网络错误');
+    SYNC.state = 'error'; SYNC.error = e.status===401 ? '登录已过期，请重新输入口令' : (e.message||'网络错误');
     renderDock(); updateSyncBadge();
   }
 }
 setInterval(pullRemote, 45000);
 document.addEventListener('visibilitychange', ()=>{
-  if(!SYNC.key) return;
+  if(!isConnected()) return;
   if(document.hidden) flushSync();
   else pullRemote();
 });
 window.addEventListener('pagehide', flushSync);
 
+/* ========== 云端媒体（KV / R2） ========== */
+let remoteMedia = null;
+let mediaLoading = false;
+async function loadRemoteMedia(force){
+  if(!isConnected()){ remoteMedia = []; return; }
+  if(mediaLoading) return;
+  if(remoteMedia && !force) return;
+  mediaLoading = true;
+  try{
+    const r = await fetch('/api/media', {headers: authHeaders(false)});
+    if(r.ok){
+      const d = await r.json();
+      remoteMedia = (d.items||[]).map(it=>Object.assign({remote:true}, it));
+    } else if(r.status===401){
+      remoteMedia = remoteMedia || [];
+    }
+  }catch(e){ remoteMedia = remoteMedia || []; }
+  mediaLoading = false;
+}
+function allMedia(){
+  const remote = (remoteMedia||[]).map(it=>({
+    id: it.id, name: it.name, size: it.size, type: it.type,
+    url: it.url, createdAt: it.createdAt, remote: true
+  }));
+  return remote.concat(S.media);
+}
+async function uploadMediaFile(file){
+  if(!isConnected()) return null;
+  const fd = new FormData();
+  fd.append('file', file, file.name || 'file');
+  const r = await fetch('/api/media', {method:'POST', headers: authHeaders(false), body: fd});
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || ('上传失败 HTTP '+r.status));
+  remoteMedia = null;
+  return d;
+}
+function mdForFile(name, url, type){
+  return (type && type.startsWith('image')) ? `\n![${name}](${url})\n` : `\n[${name}](${url})\n`;
+}
+// 先试云上传，失败或未登录则退回本机 blob
+async function insertFiles(files, target){
+  const src = target || document.getElementById('source');
+  if(!src || !files.length) return;
+  const parts = [];
+  for(const f of files){
+    try{
+      const up = await uploadMediaFile(f);
+      if(up){ parts.push(mdForFile(up.name, up.url, up.type)); continue; }
+    }catch(err){
+      toast('上传失败：'+(err.message||'网络错误')+'，已暂存到本机');
+    }
+    const m = addMedia(f);
+    parts.push(mdForFile(m.name, m.url, m.type));
+  }
+  const text = parts.join('');
+  const p = src.selectionStart;
+  src.setRangeText(text, p, src.selectionEnd, 'end');
+  const n = noteById(S.active);
+  if(n){ n.body = src.value; n.updatedAt = Date.now(); save(); renderMeta(); }
+  if(S.view==='media') renderMedia();
+}
+
 function updateSyncBadge(){
   const el = document.getElementById('metaSync');
   if(!el) return;
-  if(!SYNC.key){ el.style.display = 'none'; return; }
+  if(!isConnected()){ el.style.display = 'none'; return; }
   el.style.display = '';
   const st = SYNC.state==='ok' ? 'ok' : (SYNC.state==='error' ? 'error' : 'busy');
-  const label = st==='ok' ? '已同步' : (st==='error' ? '未保存' : '保存中');  el.innerHTML = `<span class="sd ${st}"></span>${label}`;
+  const label = st==='ok' ? '已同步' : (st==='error' ? '未保存' : '保存中');
+  el.innerHTML = `<span class="sd ${st}"></span>${label}`;
   el.title = syncTip();
 }
 
 function paintSyncPanel(){
-  const line = $('#syncStatusLine'); if(!line) return;
-  const btn = $('#syncConnect');
+  const line = $('#syncStatusLine');
+  if(!line) return;
   const n = S.notes.filter(x=>!x.trashed).length;
+  const m = allMedia().length;
   if(SYNC.state==='ok'){
-    line.innerHTML = `已连接 · 自动同步已开启，编辑后约 1 秒上传<br>上次同步 <b>${new Date(SYNC.last).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</b> · 本机 ${n} 篇笔记`;
+    line.innerHTML = `已登录 <b>${esc(accountLabel())}</b> · 自动同步已开启<br>上次同步 <b>${new Date(SYNC.last).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</b> · 本机 ${n} 篇笔记 · ${m} 个文件`;
   } else if(SYNC.state==='busy'){
     line.innerHTML = '正在同步…';
   } else if(SYNC.state==='error'){
     line.innerHTML = `<b style="color:rgb(var(--warn))">同步失败</b> · ${esc(SYNC.error)}`;
-  } else if(SYNC.key){
-    line.innerHTML = '口令已保存，点「立即同步」开始。';
+  } else if(isConnected()){
+    line.innerHTML = `已保存账号 <b>${esc(accountLabel())}</b>，点「登录并同步」开始。`;
   } else {
-    line.innerHTML = '尚未连接。口令只保存在本机浏览器，不会写进代码库。';
+    line.innerHTML = '尚未登录。账号留空 = 主人账号（用主人口令）；填账号名 + 注册 = 独立空间，数据互相看不到。';
   }
-  if(btn){
-    btn.textContent = SYNC.key ? (SYNC.state==='busy' ? '同步中…' : '立即同步') : '连接并同步';
-    btn.disabled = SYNC.state==='busy';
-  }
-  const dis = $('#syncDisconnect'); if(dis) dis.disabled = !SYNC.key;
+  const login = $('#syncLogin'); if(login) login.textContent = isConnected() ? '立即同步' : '登录并同步';
+  const out = $('#syncLogout'); if(out) out.disabled = !isConnected();
 }
 function openSyncPanel(){
   const ov = $('#syncOverlay');
   ov.innerHTML = `<div class="sheet">
-    <div class="sheet-head"><h3>云同步</h3>
+    <div class="sheet-head"><h3>账号与云同步</h3>
       <button class="pa-btn" id="syncClose" title="关闭">${ic('x')}</button></div>
-    <p class="sheet-sub">笔记存在 Cloudflare D1 数据库里，换台设备输入同一口令就能读写。口令只留在本机浏览器。</p>
-    <label class="field"><span>访问口令</span>
-      <input id="syncKeyInput" type="password" placeholder="粘贴你的口令" autocomplete="off" spellcheck="false" value="${esc(SYNC.key)}"></label>
+    <p class="sheet-sub">笔记存在 Cloudflare D1，图片存在 KV。账号留空就用主人口令；填一个账号名再注册，就是独立空间，别人看不到内容。</p>
+    <label class="field"><span>账号（留空 = 主人）</span>
+      <input id="syncNameInput" type="text" placeholder="例如 xiaohu" autocomplete="off" spellcheck="false" value="${esc(SYNC.account)}"></label>
+    <label class="field"><span>口令</span>
+      <input id="syncKeyInput" type="password" placeholder="至少 4 位" autocomplete="off" spellcheck="false" value="${esc(SYNC.key)}"></label>
     <div class="sheet-row">
-      <button class="btn-primary" id="syncConnect">连接并同步</button>
-      <button class="btn-ghost" id="syncDisconnect">断开</button>
+      <button class="btn-primary" id="syncLogin">登录并同步</button>
+      <button class="btn-ghost" id="syncRegister">注册新账号</button>
+      <button class="btn-ghost" id="syncLogout">退出</button>
     </div>
     <div class="sheet-status" id="syncStatusLine"></div>
   </div>`;
   ov.classList.add('open'); syncPanelOpen = true;
   paintSyncPanel();
+
+  const readForm = ()=>({
+    name: ($('#syncNameInput').value||'').trim(),
+    key: ($('#syncKeyInput').value||'').trim()
+  });
+  const run = async (create)=>{
+    const {name, key} = readForm();
+    if(!key){ toast('请先填写口令'); return; }
+    if(create && !name){ toast('注册新账号需要填写账号名'); return; }
+    const btn = create ? $('#syncRegister') : $('#syncLogin');
+    btn.disabled = true;
+    try{
+      await doAuth(name, key, create);
+      SYNC.state = 'busy'; paintSyncPanel(); renderDock();
+      await syncNow({rerender:true});
+      paintSyncPanel();
+      if(SYNC.state==='ok') toast((create?'已创建账号「':'已登录「')+ (name||'主人') +'」');
+    }catch(e){
+      SYNC.state = 'off'; SYNC.error = '';
+      toast(e.message || '登录失败');
+      paintSyncPanel();
+    }finally{ btn.disabled = false; }
+  };
+
   $('#syncClose').onclick = closeSyncPanel;
-  $('#syncDisconnect').onclick = ()=>{
-    SYNC.key=''; SYNC.state='off'; SYNC.last=0; SYNC.error=''; syncSave();
-    paintSyncPanel(); renderDock(); toast('已断开云同步，数据仍在本机');
+  $('#syncLogin').onclick = ()=>run(false);
+  $('#syncRegister').onclick = ()=>run(true);
+  $('#syncLogout').onclick = ()=>{
+    SYNC.token=''; SYNC.key=''; SYNC.account=''; SYNC.state='off'; SYNC.last=0; SYNC.error='';
+    syncSave(); paintSyncPanel(); renderDock(); updateSyncBadge();
+    toast('已退出账号，本机数据保留');
   };
-  $('#syncConnect').onclick = async ()=>{
-    const v = $('#syncKeyInput').value.trim();
-    if(!v){ toast('请先填写口令'); return; }
-    SYNC.key = v; SYNC.state = 'busy'; syncSave(); paintSyncPanel(); renderDock();
-    await syncNow({rerender:true});
-    paintSyncPanel();
-    if(SYNC.state==='ok') toast('已同步 · '+S.notes.filter(x=>!x.trashed).length+' 篇笔记');
-  };
-  $('#syncKeyInput').onkeydown = e=>{ if(e.key==='Enter') $('#syncConnect').click(); };
-  if(!SYNC.key) setTimeout(()=>{ const i=$('#syncKeyInput'); if(i) i.focus(); }, 60);
+  $('#syncKeyInput').onkeydown = e=>{ if(e.key==='Enter') $('#syncLogin').click(); };
+  if(!isConnected()) setTimeout(()=>{ const i=$('#syncNameInput'); if(i) i.focus(); }, 60);
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
 $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverlay') closeSyncPanel(); });
@@ -1976,7 +2092,15 @@ if(qs.get('mode')==='edit') setTimeout(()=>enterEdit(), 60);
 if(qs.get('cmd')==='1') setTimeout(()=>openPalette(), 60);
 if(qs.get('sync')==='1') setTimeout(()=>openSyncPanel(), 60);
 // 已有口令时后台安静同步一次
-if(SYNC.key) setTimeout(()=>syncNow({rerender:true}), 350);
+if(isConnected()){
+  setTimeout(async ()=>{
+    if(!SYNC.token && SYNC.key){
+      try{ await doAuth(SYNC.account, SYNC.key, false); }
+      catch(e){ SYNC.state='error'; SYNC.error=e.message||'登录失败'; renderDock(); return; }
+    }
+    syncNow({rerender:true});
+  }, 350);
+}
 </script>
 </body>
 </html>

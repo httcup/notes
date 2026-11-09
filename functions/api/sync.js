@@ -1,32 +1,5 @@
-// Pages Function: /api/sync
-// 单用户口令鉴权 + D1 双向同步（按 updatedAt 后写覆盖）
-
-const CORS = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'content-type, x-ivy-key',
-  'access-control-allow-methods': 'GET, POST, OPTIONS'
-};
-
-function res(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-      ...CORS
-    }
-  });
-}
-
-function checkKey(request, env) {
-  const expected = env.IVY_KEY || '';
-  if (!expected) return 'unset';
-  const given = request.headers.get('x-ivy-key') || '';
-  if (given.length !== expected.length) return 'bad';
-  let diff = 0;
-  for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0 ? 'ok' : 'bad';
-}
+// /api/sync  按账号隔离的双向同步（updatedAt 后写覆盖）
+import { json, preflight, currentUser } from '../_lib.js';
 
 function safeTags(s) {
   try {
@@ -37,10 +10,14 @@ function safeTags(s) {
   }
 }
 
-async function readAll(env) {
+function str(v, max) {
+  return typeof v === 'string' ? v.slice(0, max) : '';
+}
+
+async function readAll(env, uid) {
   const [notesRes, nbsRes] = await env.DB.batch([
-    env.DB.prepare('SELECT * FROM notes'),
-    env.DB.prepare('SELECT * FROM notebooks')
+    env.DB.prepare('SELECT * FROM notes WHERE user_id = ?1').bind(uid),
+    env.DB.prepare('SELECT * FROM notebooks WHERE user_id = ?1').bind(uid)
   ]);
   const notes = (notesRes.results || []).map((r) => ({
     id: r.id,
@@ -61,20 +38,17 @@ async function readAll(env) {
   return { notes, notebooks, serverTime: Date.now() };
 }
 
-function str(v, max) {
-  return typeof v === 'string' ? v.slice(0, max) : '';
-}
-
 export async function onRequest({ request, env }) {
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  if (request.method === 'OPTIONS') return preflight();
 
-  const auth = checkKey(request, env);
-  if (auth === 'unset') return res({ error: '服务端还没配置 IVY_KEY 口令' }, 503);
-  if (auth !== 'ok') return res({ error: '口令不正确' }, 401);
-  if (!env.DB) return res({ error: '还没绑定 D1 数据库（变量名 DB）' }, 503);
+  const user = await currentUser(request, env);
+  if (!user) return json({ error: '口令不正确或登录已过期' }, 401);
+  if (!env.DB) return json({ error: '还没绑定 D1 数据库（变量名 DB）' }, 503);
+
+  const uid = user.uid;
 
   try {
-    if (request.method === 'GET') return res(await readAll(env));
+    if (request.method === 'GET') return json(await readAll(env, uid));
 
     if (request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
@@ -86,9 +60,9 @@ export async function onRequest({ request, env }) {
         if (!n || typeof n.id !== 'string' || !n.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notes (id, title, body, notebook_id, tags, trashed, deleted, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-             ON CONFLICT(id) DO UPDATE SET
+            `INSERT INTO notes (user_id, id, title, body, notebook_id, tags, trashed, deleted, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(user_id, id) DO UPDATE SET
                title = excluded.title,
                body = excluded.body,
                notebook_id = excluded.notebook_id,
@@ -98,6 +72,7 @@ export async function onRequest({ request, env }) {
                updated_at = excluded.updated_at
              WHERE excluded.updated_at > notes.updated_at`
           ).bind(
+            uid,
             str(n.id, 80),
             str(n.title, 500),
             typeof n.body === 'string' ? n.body.slice(0, 400000) : '',
@@ -115,19 +90,19 @@ export async function onRequest({ request, env }) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notebooks (id, name, open, updated_at) VALUES (?1, ?2, ?3, ?4)
-             ON CONFLICT(id) DO UPDATE SET name = excluded.name, open = excluded.open, updated_at = excluded.updated_at
+            `INSERT INTO notebooks (user_id, id, name, open, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(user_id, id) DO UPDATE SET name = excluded.name, open = excluded.open, updated_at = excluded.updated_at
              WHERE excluded.updated_at >= notebooks.updated_at`
-          ).bind(str(nb.id, 80), str(nb.name, 120), nb.open === false ? 0 : 1, Date.now())
+          ).bind(uid, str(nb.id, 80), str(nb.name, 120), nb.open === false ? 0 : 1, Date.now())
         );
       }
 
       if (stmts.length) await env.DB.batch(stmts);
-      return res(await readAll(env));
+      return json(await readAll(env, uid));
     }
 
-    return res({ error: 'Method not allowed' }, 405);
+    return json({ error: 'Method not allowed' }, 405);
   } catch (err) {
-    return res({ error: String((err && err.message) || err) }, 500);
+    return json({ error: String((err && err.message) || err) }, 500);
   }
 }

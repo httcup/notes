@@ -5,12 +5,18 @@
 - 线上地址：https://notes-4fi.pages.dev
 - 前端：单文件 `public/index.html`（原生 HTML/CSS/JS，零构建、零依赖）
 - 后端：Cloudflare Pages Functions（`functions/api/sync.js`）
-- 数据库：Cloudflare D1（`ivynote`）
-- 鉴权：单用户口令，请求头 `x-ivy-key`，与 Pages 环境变量 `IVY_KEY` 比对
+- 数据库：Cloudflare D1（`ivynote`），按 `user_id` 隔离
+- 文件：Cloudflare KV（`ivynote_media`），绑了 R2 会自动优先用 R2
+- 鉴权：`POST /api/auth` 换 90 天令牌（Bearer）；主人账号也兼容旧的 `x-ivy-key` 单口令
 
 ## 首次使用
 
-打开线上地址 → 点左下角云朵图标 → 粘贴口令（部署时设置的环境变量 `IVY_KEY`）→ 连接。之后每台设备只需输一次，口令存在本机 localStorage。
+打开线上地址 → 点左下角云朵图标：
+
+- **主人账号**：账号留空，口令填 `IVY_KEY`（部署时设的环境变量）
+- **新账号**：填一个账号名 + 口令，点「注册新账号」，就是一个独立空间，和主人账号数据完全隔离
+
+登录状态存在本机 localStorage，令牌 90 天有效，过期后自动用记住的口令续期。
 
 ## 目录
 
@@ -23,7 +29,9 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 
 ## 功能
 
+- 多账号：账号名 + 口令注册，数据按 `user_id` 隔离；主人账号沿用单口令
 - 书架式侧边栏、多标签页、笔记本分组、回收站（全新安装是空库，不带示例笔记）
+- 图片粘贴/拖拽即上传到 KV，返回稳定 URL，换设备打开笔记照样显示
 - 标题下 Markdown 工具条：H2/H3、加粗、斜体、删除线、行内代码、列表、编号、待办、引用、链接、表格、代码块、分割线
 - 导出：复制富文本（带格式，可直接粘进 Word/飞书）、复制 Markdown、导出 .md 文件
 - Markdown 源码 / 预览双模式（⌘E），标题大纲自动生成
@@ -37,14 +45,22 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
   - 关闭或切走页面时用 `fetch(keepalive)` 兜底上传尚未提交的改动
   - 冲突按 `updatedAt` 后写覆盖
 
-## 同步接口
+## 接口
+
+`POST /api/auth` body `{ name, key, create }` → `{ token, name, uid }`
+- `name` 留空 = 主人账号（比对 `IVY_KEY`）；填名字则查 `users` 表，`create:true` 时注册
 
 `GET /api/sync` → `{ notes, notebooks, serverTime }`
 
 `POST /api/sync` body `{ notes, notebooks }` → 服务端按 `updatedAt` 做 upsert 合并，返回合并后的全量数据。
 
 - `trashed=1` 为回收站，`deleted=1` 为彻底删除（墓碑，只用于让其他设备同步删除）
-- 请求头缺失或口令不符返回 401
+- 请求头缺失或令牌无效返回 401
+
+`GET /api/media` → `{ items:[{id,url,name,size,type,createdAt}] }`（仅本人）
+`POST /api/media`（multipart，字段 `file`，≤20MB）→ 同上单条
+`GET /api/media/:uid/:id` → 文件本体（公开，靠 32 位随机 key 不可猜）
+`DELETE /api/media/:uid/:id` → 需本人令牌
 
 ## 部署
 
@@ -61,9 +77,10 @@ Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
 
 - Build command：留空
 - Build output directory：`public`
-- 环境变量 `IVY_KEY`：设置成自己的口令（Pages → Settings → Variables and Secrets，类型选 Secret）
+- 环境变量 `IVY_KEY`：主人口令（Secret）；`IVY_SECRET`：令牌签名密钥（Secret，随便一串 64 位十六进制）
+- 绑定 D1：变量名 `DB`；绑定 KV：变量名 `MEDIA`（可选再绑 R2：`BUCKET`）
 
-绑定 D1：Settings → Bindings → 添加 D1 database，变量名 `DB`，选择 `ivynote`。
+也可以用 API 一次配好（本项目就是这么部署的）。
 
 > 之后每次 push 到 `main` 都会自动构建部署。
 
@@ -75,5 +92,6 @@ wrangler pages dev public --d1=DB=<database_id> --binding IVY_KEY=dev
 
 ## 说明
 
-- 口令只存在浏览器 localStorage，不写进代码库；忘记口令不会丢数据，重新设置环境变量即可。
-- 媒体文件目前只在本机会话内有效（未接 R2），笔记文本完全云同步。
+- 账号口令经 PBKDF2-SHA256（6 万次迭代）加盐哈希后存 D1，服务端不存明文
+- 媒体读取是公开 URL（靠随机 key），需要更严的隔离可以改成签名 URL 或套 Cloudflare Access
+- R2 未开通时自动用 KV 存文件；开通后加 `BUCKET` 绑定即可无缝切换

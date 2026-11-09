@@ -2,10 +2,15 @@
 
 一个本地优先、云端同步的 Markdown 笔记应用。界面参考 [ivyNote](https://ivynote.frytea.com) 复刻重写，数据存在自己的 Cloudflare 账号里。
 
+- 线上地址：https://notes-4fi.pages.dev
 - 前端：单文件 `public/index.html`（原生 HTML/CSS/JS，零构建、零依赖）
 - 后端：Cloudflare Pages Functions（`functions/api/sync.js`）
 - 数据库：Cloudflare D1（`ivynote`）
 - 鉴权：单用户口令，请求头 `x-ivy-key`，与 Pages 环境变量 `IVY_KEY` 比对
+
+## 首次使用
+
+打开线上地址 → 点左下角云朵图标 → 粘贴口令（部署时设置的环境变量 `IVY_KEY`）→ 连接。之后每台设备只需输一次，口令存在本机 localStorage。
 
 ## 目录
 

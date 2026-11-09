@@ -308,11 +308,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 正文偏左居中：左侧留白固定得小一些，剩余空间留给右侧（悬浮大纲），
    避免宽屏下整块居中导致离左边书架太远 */
 .doc{
-  /* v34: 正文加宽并整体居中。
-     - 840px 保底：窄屏 / iPad 行为与旧版一致，不会变窄；
-     - 有富余时按「可用宽度 − 208px」取宽，右侧白区比旧版（760/840 + 左固定边距）小一半以上；
-     - 书架折叠多出来的宽度由左右均摊，不会再全堆在大纲一侧 */
-  max-width:min(1060px, max(calc(100% - 208px), 840px));
+  /* v35: 编辑框往左挪、左右留白同时收窄（保底 840 / 上限 1060 不变）。
+     有富余时按「可用宽度 − 120px」取宽，1440 书架开时左右各约 60px；
+     书架折叠多出来的宽度仍由左右均摊（上限 1060 挡住，右侧不会又被拉大） */
+  max-width:min(1060px, max(calc(100% - 120px), 840px));
   margin:0 auto;
   padding:52px 36px 140px;
 }
@@ -517,7 +516,7 @@ body.ol-hidden .outline-zone{display:none}
   /* right 仍是 4px：保持和右边缘刻度连续的鼠标热区，否则鼠标从边缘移进卡片会闪回去；
      视觉上的间距靠 padding-right 让内容左移实现 */
   position:fixed;right:4px;top:66px;z-index:56;
-  width:264px;max-height:min(620px,calc(100vh - 116px));
+  width:240px;max-height:min(620px,calc(100vh - 116px));
   display:flex;flex-direction:column;
   padding:5px 17px 7px 9px;border:0;border-radius:14px;
   /* 底色与笔记纸面一致（--surface），浮在正文上时加一层柔和阴影分离 */
@@ -746,11 +745,12 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 /* 窄屏（含 iPad 竖屏、手机）不再隐藏大纲：卡片改成可读的浮层，点大纲按钮或右边缘刻度展开 */
 @media (max-width:900px){
   .doc{padding:40px 20px 120px}
-  /* 浮层盖在正文上，手机上看不清透明底，这里给一层毛玻璃底（仍无边框） */
+  /* 浮层盖在正文上，手机上看不清透明底，这里给一层毛玻璃底（仍无边框）；
+     v35: 手机上卡片收窄（64vw、右缘 8px），条目文字离右侧短横线不再空一大片 */
   .outline{
-    width:min(268px,76vw);right:10px;top:60px;
+    width:min(238px,64vw);right:8px;top:60px;
     max-height:min(72vh,calc(100dvh - 150px));
-    padding:6px 8px 8px;border-radius:14px;
+    padding:6px 6px 8px 8px;border-radius:14px;
     background:rgb(var(--surface)/.97);
     -webkit-backdrop-filter:blur(14px) saturate(1.15);backdrop-filter:blur(14px) saturate(1.15);
     box-shadow:var(--shadow-float);
@@ -918,7 +918,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v34', at: '2026-11-10 03:10' };
+window.IVY_BUILD = { id: 'v35', at: '2026-11-10 03:32' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3062,7 +3062,7 @@ function renderOutline(){
   const top = outlineEl.querySelector('#olTop');
   if(top) top.onclick = ()=>{ S.outlineTop = !S.outlineTop; renderOutline(); save(); };
   const close = outlineEl.querySelector('#olClose');
-  if(close) close.onclick = ()=>setOutlinePanel(false);
+  if(close) close.onclick = ()=>closeOutlinePanel();
   outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
     jumpToHeading(b.dataset.h);
     updateOutlineActive();
@@ -3081,11 +3081,21 @@ function setOutlinePanel(on){
   if(on){ renderOutline(); updateOutlineActive(); }
 }
 function toggleOutlinePanel(){ setOutlinePanel(!document.body.classList.contains('ol-open')); }
+/* 彻底收起：图钉固定（.pinned）也会把卡片点亮，只清 ol-open 会显得「× 没用」 */
+function closeOutlinePanel(){
+  if(S.outlineOpen) toggleOutlinePin();
+  setOutlinePanel(false);
+}
 
 /* 右边缘刻度：桌面点某根跳标题、点空白处固定；触屏（含 iPad）点边缘一律弹出/收起大纲，
    不做刻度跳转——触摸很难精确落在某根刻度上，点了没反应像「坏了」 */
 document.getElementById('outlineZone').addEventListener('click', e=>{
-  if(OL_TOUCH){ toggleOutlinePanel(); return; }
+  if(OL_TOUCH){
+    // 触屏点边缘：开着就彻底收起（含图钉固定），没开才展开
+    if(document.body.classList.contains('ol-open') || S.outlineOpen) closeOutlinePanel();
+    else toggleOutlinePanel();
+    return;
+  }
   const mini = document.getElementById('olMini'); if(!mini) return;
   const y = e.clientY - mini.getBoundingClientRect().top;
   let best = null, bd = Infinity;
@@ -3111,7 +3121,13 @@ outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-
    不限定 !OL_TOUCH —— iPad 接鼠标/触控板时 hover:hover 媒体查询也成立，需要同样的驱动 */
 {
   let olHover = false;
+  /* 触摸抬起后浏览器会合成一次 mousemove（位置就在指尖）——指尖常落在大纲卡片/正文里，
+     会把卡片重新点亮，看起来就像「× 点了没反应」。600ms 内的合成移动一律不算 hover */
+  let lastTouchAt = 0;
+  document.addEventListener('touchstart', ()=>{ lastTouchAt = Date.now(); }, { passive:true, capture:true });
+  document.addEventListener('touchend',   ()=>{ lastTouchAt = Date.now(); }, { passive:true, capture:true });
   document.addEventListener('mousemove', e=>{
+    if(Date.now() - lastTouchAt < 600) return;
     const near = e.clientX >= window.innerWidth - 34;      // 右边缘刻度区
     const inCard = outlineEl.contains(e.target);           // 已在大纲卡片里
     const want = near || inCard;

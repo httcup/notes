@@ -1,0 +1,18 @@
+# 页面本身别让浏览器缓存，否则改完样式用户还看着旧版本
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/s.html
+  Cache-Control: no-cache
+
+/s/*
+  Cache-Control: no-cache
+
+/*.js
+  Cache-Control: public, max-age=3600
+
+/*.css
+  Cache-Control: public, max-age=3600

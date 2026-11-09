@@ -523,7 +523,8 @@ body.ol-hidden .outline-zone{display:none}
 [data-theme=dark] .outline{box-shadow:none}
 .outline-zone:hover ~ .outline,
 .outline:hover,
-.outline.pinned{transform:none;opacity:1;pointer-events:auto}
+.outline.pinned,
+body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .outline.hidden{display:none}
 /* Chrome 会把「可滚动/可聚焦」的浮层当成可聚焦控件，画一圈原生焦点环（黑框），Safari 不画。
    大纲是纯浮层，不需要这圈；键盘焦点改用下面的内描边，仍然可见。 */
@@ -548,8 +549,8 @@ body.ol-hidden .outline-zone{display:none}
 }
 .ol-item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ol-item .dash{flex:0 0 auto;width:9px;height:1px;border-radius:1px;background:rgb(var(--ink)/.17);transition:width .18s,background .18s,height .18s}
-/* 悬停：加粗加黑 + 轻微右移动效，松手回弹 */
-.ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:600;transform:translateX(3px)}
+/* 悬停：加粗加黑 + 轻微右移动效，松手回弹（选择器要压过 .ol-item.l1~l6 的字重/颜色） */
+.outline .ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:600;transform:translateX(3px)}
 .ol-item.l1{font-weight:500;color:rgb(var(--ink))}
 .ol-item.l2{padding-left:21px}
 .ol-item.l3{padding-left:34px;font-size:12.3px}
@@ -871,7 +872,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v28', at: '2026-11-10 01:25' };
+window.IVY_BUILD = { id: 'v29', at: '2026-11-10 01:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3056,6 +3057,18 @@ if(OL_TOUCH){
 /* 鼠标移到卡片上时，刻度也让位；滚动时同步高亮当前标题 */
 outlineEl.addEventListener('mouseenter', ()=>document.body.classList.add('ol-peek'));
 outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-peek'));
+/* 桌面上「靠边滑出」的展开态交给鼠标位置判断：
+   只靠 CSS :hover 会跟 pointer-events 互相依赖，鼠标从边缘移进卡片时容易闪回去 */
+if(!OL_TOUCH){
+  let olHover = false;
+  document.addEventListener('mousemove', e=>{
+    const near = e.clientX >= window.innerWidth - 34;      // 右边缘刻度区
+    const inCard = outlineEl.contains(e.target);           // 已在大纲卡片里
+    const want = near || inCard;
+    if(want !== olHover){ olHover = want; document.body.classList.toggle('ol-hover', want); }
+  }, { passive:true });
+  document.addEventListener('mouseleave', ()=>{ olHover = false; document.body.classList.remove('ol-hover'); });
+}
 let olScrollRaf = 0;
 document.getElementById('scroll').addEventListener('scroll', ()=>{
   if(olScrollRaf) return;

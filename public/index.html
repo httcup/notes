@@ -734,11 +734,13 @@ body.ol-hidden .outline-zone{display:none}
   .ol-mini{right:11px}
   .ol-tick{height:2px}
   .ol-tick::after{content:'';position:absolute;left:-8px;right:0;top:-10px;bottom:-10px}
-  /* iPad Safari 的 tap 只模拟一次 hover，点完就撤销，会把面板闪回去 */
+  /* iPad Safari 的 tap 只模拟一次 hover，点完就撤销，会把面板闪回去；
+     而且粘滞的 :hover 会盖掉 body.ol-open，所以展开态要写得更具体 */
   .outline-zone:hover ~ .outline,
   .outline:hover{transform:translateX(10px);opacity:0;pointer-events:none}
   body .outline.pinned,
-  body.ol-open .outline{transform:none;opacity:1;pointer-events:auto}
+  body.ol-open .outline,
+  body.ol-open .outline-zone:hover ~ .outline{transform:none;opacity:1;pointer-events:auto}
   .ol-close{display:grid}
 }
 body.ol-open .outline{transform:none;opacity:1;pointer-events:auto}
@@ -841,7 +843,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v24', at: '2026-11-10 00:45' };
+window.IVY_BUILD = { id: 'v25', at: '2026-11-10 01:05' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 const OL_TOUCH = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}

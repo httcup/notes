@@ -298,6 +298,22 @@ a{color:inherit;text-decoration:none}
 .doc.mode-edit .prose{display:none}
 .doc.mode-edit .source{display:block}
 .doc.mode-preview .prose{cursor:text}
+/* 双栏：左边源码，右边即时预览 */
+.doc.mode-split{max-width:1180px}
+body.split-mode .outline{display:none}
+.doc.mode-split .doc-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;align-items:start}
+.doc.mode-split .source{
+  display:block;grid-column:1;grid-row:1;min-height:420px;padding-right:28px;
+  border-right:1px solid rgb(var(--line));
+  font-family:var(--font-mono);font-size:13.5px;line-height:1.95;
+}
+.doc.mode-split #live{display:none}
+.doc.mode-split .prose{
+  grid-column:2;grid-row:1;position:sticky;top:0;padding-left:28px;
+  max-height:calc(100vh - 210px);overflow-y:auto;
+}
+.doc.mode-split .prose::-webkit-scrollbar{width:8px}
+.doc.mode-split .prose::-webkit-scrollbar-thumb{background:rgb(var(--line));border-radius:8px}
 
 /* ===== 所见即所得（块级） ===== */
 .live{display:none}
@@ -575,7 +591,9 @@ const ICONS = {
   restore:'<path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   globe:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
-  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>'
+  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+  columns:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/>',
+  code:'<path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>'
 };
 function ic(name, cls){
   const p = ICONS[name] || '';
@@ -612,7 +630,7 @@ function load(){
     s.media = []; // 本地文件的 blob url 无法持久化
     if(typeof s.shelfOpen!=='boolean') s.shelfOpen = true;
     if(typeof s.outlineOpen!=='boolean') s.outlineOpen = true;
-    if(s.mode!=='live' && s.mode!=='preview' && s.mode!=='source') s.mode = 'live';
+    if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
     return s;
@@ -924,6 +942,11 @@ function renderEditor(){
   wireEditor(n);
   outlineEl.classList.toggle('hidden', !S.outlineOpen);
   renderOutline();
+  document.body.classList.toggle('split-mode', (S.mode||'live')==='split');
+  if((S.mode||'live')==='split'){
+    const src = document.getElementById('source');
+    if(src){ src.style.height='auto'; src.style.height = Math.max(src.scrollHeight, 420) + 'px'; }
+  }
 }
 
 function renderMeta(){
@@ -1002,7 +1025,8 @@ function applyFormat(kind){
   let v = src.value;
   let s = src.selectionStart, e = src.selectionEnd;
   if(typeof s !== 'number'){ s = e = v.length; }
-  if(!inLive && prevMode!=='source'){ s = e = v.length; }
+  // 只有「文本框没被聚焦」时才插到末尾；双栏/源码里要尊重光标位置
+  if(!inLive && document.activeElement !== src){ s = e = v.length; }
   const sel = v.slice(s, e);
   let ns = s, ne = e;
   const setRange = (a,b)=>{ ns = a; ne = b; };
@@ -1084,6 +1108,7 @@ function applyFormat(kind){
     src.style.height = Math.max(src.scrollHeight, 240) + 'px';
     n.body = v; n.updatedAt = Date.now();
     renderMeta(); renderOutline(); save();
+    if(curMode()==='split') livePreviewSoon();
   }
 }
 
@@ -1193,11 +1218,17 @@ function openWikiLink(t){
 /* ========== 所见即所得编辑（块级 Markdown） ========== */
 const LIVE = { raws: [], editing: -1, ta: null };
 
-function modeClass(m){ return m==='source' ? 'mode-edit' : (m==='preview' ? 'mode-preview' : 'mode-live'); }
+function modeClass(m){
+  if(m==='source') return 'mode-edit';
+  if(m==='split') return 'mode-split';
+  if(m==='preview') return 'mode-preview';
+  return 'mode-live';
+}
 function curMode(){
   const doc = document.getElementById('doc');
   if(!doc) return 'live';
   if(doc.classList.contains('mode-edit')) return 'source';
+  if(doc.classList.contains('mode-split')) return 'split';
   if(doc.classList.contains('mode-preview')) return 'preview';
   return 'live';
 }
@@ -1409,6 +1440,12 @@ function commitBlock(i){
   if(LIVE.editing===i){ LIVE.editing = -1; LIVE.ta = null; }
   paintHeadings(host);
   syncBody();
+}
+
+let splitTimer = null;
+function livePreviewSoon(){
+  clearTimeout(splitTimer);
+  splitTimer = setTimeout(()=>{ if(curMode()==='split'){ renderProse(); renderOutline(); } }, 120);
 }
 
 function syncBody(){
@@ -1626,13 +1663,21 @@ function setMode(m){
   const doc = document.getElementById('doc'); if(!doc) return;
   commitAnyEditing();
   S.mode = m;
-  doc.classList.remove('mode-live','mode-preview','mode-edit');
+  doc.classList.remove('mode-live','mode-preview','mode-edit','mode-split');
   doc.classList.add(modeClass(m));
+  document.body.classList.toggle('split-mode', m==='split');
   const n = noteById(S.active);
   const src = document.getElementById('source');
   if(src && n) src.value = n.body;
   if(m==='preview'){ renderProse(); renderOutline(); }
   else if(m==='live'){ renderLive(); }
+  else if(m==='split'){
+    if(src){
+      src.style.height='auto';
+      src.style.height = Math.max(src.scrollHeight, 420) + 'px';
+    }
+    renderProse(); renderOutline();
+  }
   else if(m==='source'){
     if(src){
       src.style.height='auto';
@@ -1644,8 +1689,10 @@ function setMode(m){
 }
 function enterEdit(){ setMode('source'); }
 function enterPreview(){ setMode('preview'); }
+/* ⌘E 在 即时渲染 → 双栏 → 源码 之间轮转 */
 function toggleMode(){
-  setMode(curMode()==='live' ? 'preview' : 'live');
+  const m = curMode();
+  setMode(m==='live' ? 'split' : (m==='split' ? 'source' : 'live'));
 }
 
 function wireEditor(n){
@@ -1670,7 +1717,7 @@ function wireEditor(n){
   src.addEventListener('input', ()=>{
     n.body = src.value; n.updatedAt = Date.now();
     grow(src); renderMeta(); save();
-    if(doc.classList.contains('mode-edit')) { /* live outline */ }
+    if(curMode()==='split'){ livePreviewSoon(); }
   });
   src.addEventListener('keydown', e=>{
     if(e.key==='Tab'){ e.preventDefault(); const s=src.selectionStart,en=src.selectionEnd;
@@ -2153,8 +2200,10 @@ function popover(anchor, items){
 function openNoteMenu(anchor){
   const n = noteById(S.active);
   popover(anchor, [
-    ['写作 / 阅读视图', '⌘E', '', 'pencil', toggleMode],
-    ['Markdown 源码', '⌘⇧E', '', 'code', ()=>setMode('source')],
+    ['即时渲染', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
+    ['源码', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
+    ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
+    '-',
     ['隐藏大纲', '', '', 'outline', ()=>{ S.outlineOpen=!S.outlineOpen; renderMain(); save(); }],
     '-',
     ['导出 Markdown', '', '', 'download', exportMd],

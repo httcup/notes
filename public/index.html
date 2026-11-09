@@ -509,10 +509,12 @@ body.outline-pinned .ol-mini,
 body.ol-hidden .ol-mini{opacity:0;pointer-events:none}
 body.ol-hidden .outline-zone{display:none}
 .outline{
-  position:fixed;right:14px;top:66px;z-index:56;
+  /* right 仍是 4px：保持和右边缘刻度连续的鼠标热区，否则鼠标从边缘移进卡片会闪回去；
+     视觉上的 14px 间距靠 padding-right 让内容左移实现 */
+  position:fixed;right:4px;top:66px;z-index:56;
   width:256px;max-height:min(620px,calc(100vh - 116px));
   display:flex;flex-direction:column;
-  padding:4px 5px 6px;border:0;border-radius:0;
+  padding:4px 12px 6px 5px;border:0;border-radius:0;
   background:transparent;box-shadow:none;
   transform:translateX(10px);transform-origin:right top;
   opacity:0;pointer-events:none;
@@ -869,7 +871,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v27', at: '2026-11-10 01:15' };
+window.IVY_BUILD = { id: 'v28', at: '2026-11-10 01:25' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

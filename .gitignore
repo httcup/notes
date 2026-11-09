@@ -3,3 +3,6 @@ node_modules/
 .dev.vars
 .DS_Store
 *.log
+
+# 部署钩子 URL（含凭据，不提交）
+.deploy-hook.local

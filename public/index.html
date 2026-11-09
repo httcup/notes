@@ -24,6 +24,12 @@
   --shadow-float:0 0 0 .5px rgb(16 24 32 / .06),0 2px 6px rgb(16 24 32 / .05),0 12px 28px -10px rgb(16 24 32 / .14);
   --shadow-lift:0 0 0 .5px rgb(16 24 32 / .07),0 8px 16px -6px rgb(16 24 32 / .08),0 32px 64px -16px rgb(16 24 32 / .22);
   --tag-green-fg:#3f7a5b; --tag-blue-fg:#4f6a9a; --tag-amber-fg:#a0702c; --tag-pink-fg:#a65a7c; --tag-gray-fg:#6f767d; --tag-purple-fg:#7a62a8;
+  --hl-green-bg:229 243 235; --hl-green-fg:27 92 60;
+  --hl-yellow-bg:253 240 197; --hl-yellow-fg:122 88 12;
+  --hl-pink-bg:252 226 229; --hl-pink-fg:154 44 60;
+  --hl-blue-bg:219 234 250; --hl-blue-fg:28 78 132;
+  --hl-purple-bg:235 226 248; --hl-purple-fg:94 58 148;
+  --hl-gray-bg:233 236 239; --hl-gray-fg:71 78 85;
 }
 [data-theme=dark]{
   color-scheme:dark;
@@ -38,6 +44,12 @@
   --shadow-float:0 0 0 .5px rgb(255 255 255 / .07),0 12px 28px -10px rgb(0 0 0 / .6);
   --shadow-lift:0 0 0 .5px rgb(255 255 255 / .08),0 32px 64px -16px rgb(0 0 0 / .7);
   --tag-green-fg:#92c4a6; --tag-blue-fg:#9db2dc; --tag-amber-fg:#d9b77e; --tag-pink-fg:#dba6bf; --tag-gray-fg:#a3a9af; --tag-purple-fg:#bcaae0;
+  --hl-green-bg:28 50 39; --hl-green-fg:150 224 182;
+  --hl-yellow-bg:58 47 20; --hl-yellow-fg:240 214 128;
+  --hl-pink-bg:58 30 34; --hl-pink-fg:240 168 176;
+  --hl-blue-bg:24 42 64; --hl-blue-fg:150 196 240;
+  --hl-purple-bg:44 34 60; --hl-purple-fg:196 176 240;
+  --hl-gray-bg:44 47 51; --hl-gray-fg:190 195 200;
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
@@ -277,7 +289,12 @@ a{color:inherit;text-decoration:none}
 .prose hr{border:0;border-top:1px solid rgb(var(--line));margin:2.2em 0}
 .prose img{max-width:100%;border-radius:9px;display:block;margin:1.2em 0}
 .prose a{color:rgb(var(--ivy));text-decoration:underline;text-decoration-thickness:.5px;text-underline-offset:2.5px}
-.prose mark{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));padding:1px 3px;border-radius:4px}
+.prose mark{background:rgb(var(--hl-green-bg));color:rgb(var(--hl-green-fg));padding:1px 3px;border-radius:4px}
+.prose mark.hl-yellow{background:rgb(var(--hl-yellow-bg));color:rgb(var(--hl-yellow-fg))}
+.prose mark.hl-pink{background:rgb(var(--hl-pink-bg));color:rgb(var(--hl-pink-fg))}
+.prose mark.hl-blue{background:rgb(var(--hl-blue-bg));color:rgb(var(--hl-blue-fg))}
+.prose mark.hl-purple{background:rgb(var(--hl-purple-bg));color:rgb(var(--hl-purple-fg))}
+.prose mark.hl-gray{background:rgb(var(--hl-gray-bg));color:rgb(var(--hl-gray-fg))}
 .prose del{color:rgb(var(--muted))}
 .wiki-pop{
   position:fixed;z-index:86;width:290px;max-height:236px;overflow:auto;padding:5px;display:none;
@@ -456,6 +473,10 @@ body.split-mode .outline{display:none}
 .po-item.danger svg{color:rgb(var(--danger))}
 .po-sep{height:1px;margin:4px 6px;background:rgb(var(--line))}
 .po-key{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--faint))}
+.hl-row{display:flex;align-items:center;gap:7px;padding:6px 8px 5px}
+.hl-sw{width:22px;height:22px;border-radius:6px;background:var(--sw);box-shadow:inset 0 0 0 1px rgb(var(--ink) / .10);transition:transform .12s var(--spring)}
+.hl-sw:hover{transform:scale(1.14)}
+.hl-sw:active{transform:scale(.96)}
 
 /* toast */
 .toasts{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
@@ -965,11 +986,13 @@ function renderEditor(){
 
   paperActions.innerHTML = `
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
-    <button class="pa-btn" id="paShare" title="分享">${ic('share')}</button>
+    <button class="pa-btn" id="paShare" title="分享 / 复制 / 导出">${ic('share')}</button>
+    <button class="pa-btn ${S.outlineOpen?'on':''}" id="paOutline" title="${S.outlineOpen?'隐藏大纲':'显示大纲'}">${ic('outline')}</button>
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paAttach').onclick=()=>pickFiles();
-  $('#paShare').onclick=(e)=>openExportPanel(e.currentTarget);
+  $('#paShare').onclick=(e)=>openShareMenu(e.currentTarget);
+  $('#paOutline').onclick=()=>{ S.outlineOpen = !S.outlineOpen; renderMain(); save(); };
   $('#paTheme').onclick=()=>toggleTheme();
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
@@ -1070,6 +1093,7 @@ function renderFmtBar(){
       const k = b.dataset.fmt;
       if(k==='h') openHeadingMenu(b);
       else if(k==='list') openListMenu(b);
+      else if(k==='mark') openHighlightMenu(b);
       else applyFormat(k);
     };
   });
@@ -1092,7 +1116,31 @@ function openListMenu(anchor){
     ['待办列表','- [ ]','','',()=>applyFormat('todo')]
   ], { align:'left' });
 }
-function applyFormat(kind){
+/* 高亮：可选色块（绿/黄/粉/蓝/紫/灰），语法 ==文字== 或 ==文字=={.yellow} */
+const HL_COLORS = [
+  { k:'',       name:'绿色', v:'--hl-green-bg' },
+  { k:'yellow', name:'黄色', v:'--hl-yellow-bg' },
+  { k:'pink',   name:'粉色', v:'--hl-pink-bg' },
+  { k:'blue',   name:'蓝色', v:'--hl-blue-bg' },
+  { k:'purple', name:'紫色', v:'--hl-purple-bg' },
+  { k:'gray',   name:'灰色', v:'--hl-gray-bg' }
+];
+function openHighlightMenu(anchor){
+  const row = `<div class="hl-row">${HL_COLORS.map(c=>
+    `<button class="hl-sw" data-hl="${c.k}" title="${c.name}" style="--sw:rgb(var(${c.v}))"></button>`
+  ).join('')}</div>`;
+  popover(anchor, [
+    ['#', row],
+    ['-'],
+    ['清除高亮','','','',()=>applyFormat('mark-clear')]
+  ], { align:'left' });
+  const po = $('#popover');
+  po.querySelectorAll('[data-hl]').forEach(b=>{
+    b.onmousedown = e=>e.preventDefault();   // 保住正文选区
+    b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hl); };
+  });
+}
+function applyFormat(kind, opt){
   const n = S.active ? noteById(S.active) : null;
   if(!n) return;
   const doc = document.getElementById('doc');
@@ -1145,7 +1193,34 @@ function applyFormat(kind){
     case 'b': wrapSel('**','**','加粗文字'); break;
     case 'i': wrapSel('*','*','斜体文字'); break;
     case 's': wrapSel('~~','~~','删除线'); break;
-    case 'mark': wrapSel('==','==','高亮文字'); break;
+    case 'mark': {
+      const c = opt || '';
+      const tail = c ? `=={.${c}}` : '==';
+      // 选区已经在 ==…== 里（即时渲染态选中的是纯文本）→ 只换颜色，不再套一层
+      const pre = (s >= 2 && v.slice(s-2, s) === '==');
+      const mAfter = v.slice(e).match(/^==(?:\{\.([a-z]+)\})?/i);
+      if(pre && mAfter){
+        const text = sel || '';
+        v = v.slice(0, s) + text + tail + v.slice(e + mAfter[0].length);
+        setRange(s, s + text.length);
+      } else {
+        wrapSel('==', tail, '高亮文字');
+      }
+      break;
+    }
+    case 'mark-clear': {
+      const pre = (s >= 2 && v.slice(s-2, s) === '==');
+      const mAfter = v.slice(e).match(/^==(?:\{\.([a-z]+)\})?/i);
+      if(pre && mAfter){
+        v = v.slice(0, s-2) + sel + v.slice(e + mAfter[0].length);
+        setRange(s-2, s-2 + sel.length);
+      } else {
+        const cleaned = sel.replace(/==([^=]+)==(?:\{\.\w+\})?/g, '$1');
+        v = v.slice(0,s) + cleaned + v.slice(e);
+        setRange(s, s + cleaned.length);
+      }
+      break;
+    }
     case 'code': wrapSel('`','`','代码'); break;
     case 'ul': prefixLines('- '); break;
     case 'ol': prefixLines('1. '); break;
@@ -2151,7 +2226,11 @@ function inlineMd(s){
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>');
   s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
-  s = s.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+  s = s.replace(/==([^=]+)==(?:\{\.([a-z]+)\})?/gi, (m,t,c)=>{
+    const k = String(c||'').toLowerCase();
+    const cls = ['yellow','pink','blue','purple','gray'].includes(k) ? ` class="hl-${k}"` : '';
+    return `<mark${cls}>${t}</mark>`;
+  });
   return s;
 }
 function mdToHtml(md){
@@ -2532,6 +2611,108 @@ function dateStamp(d){
   const t = d || new Date();
   return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
 }
+/* ---- 导出 HTML / Word / PDF ---- */
+const EXPORT_CSS = `
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#1c1f22;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;-webkit-font-smoothing:antialiased}
+article{max-width:720px;margin:0 auto;padding:56px 46px 76px}
+h1.t{font-family:"Songti SC","Noto Serif SC",Georgia,serif;font-size:29px;font-weight:700;line-height:1.34;margin:0 0 8px;letter-spacing:-.01em}
+.meta{color:#9aa0a6;font-size:12.5px;margin:0 0 30px}
+.body{font-size:16px;line-height:1.86;word-break:break-word}
+.body>*{margin:0}
+.body>*+*{margin-top:.62em}
+.body h1,.body h2,.body h3,.body h4,.body h5,.body h6{font-weight:600;line-height:1.42;margin:1.2em 0 .3em}
+.body h1{font-size:1.48em}.body h2{font-size:1.3em}.body h3{font-size:1.12em}.body h4,.body h5,.body h6{font-size:1em}
+.body p{margin:0}
+.body ul,.body ol{padding-left:1.4em;margin:.35em 0}
+.body li{margin:.22em 0}
+.body blockquote{margin:.8em 0;padding:2px 0 2px 14px;border-left:2px solid #cdd9d2;color:#4a5056}
+.body code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.86em;background:#f4f6f8;padding:2px 5px;border-radius:4px;border:.5px solid #e6e9ec}
+.body pre{background:#f6f8f9;border:.5px solid #e6e9ec;border-radius:8px;padding:13px 15px;overflow-x:auto;margin:.9em 0}
+.body pre code{background:none;border:0;padding:0;font-size:12.5px;line-height:1.7;display:block}
+.body hr{border:0;border-top:1px solid #e6e9ec;margin:1.6em 0}
+.body img{max-width:100%;border-radius:6px;display:block;margin:1em 0}
+.body a{color:#287a52;text-decoration:underline;text-underline-offset:2px}
+.body table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.94em}
+.body th,.body td{border:1px solid #e0e4e7;padding:7px 10px;text-align:left}
+.body th{background:#f6f8f9;font-weight:600}
+.body mark{background:#e5f3eb;color:#1b5c3c;padding:1px 3px;border-radius:3px}
+.body mark.hl-yellow{background:#fdf0c5;color:#7a580c}
+.body mark.hl-pink{background:#fce2e5;color:#9a2c3c}
+.body mark.hl-blue{background:#dbeafa;color:#1c4e84}
+.body mark.hl-purple{background:#ebe2f8;color:#5e3a94}
+.body mark.hl-gray{background:#e9ecef;color:#474e55}
+.body .wikilink{color:#287a52;text-decoration:none;border-bottom:1px solid #bcd9c9}
+@media print{
+  article{max-width:none;padding:0}
+  @page{size:A4;margin:18mm 16mm}
+  .body pre,.body blockquote,.body table,.body img{break-inside:avoid}
+  .body h1,.body h2,.body h3{break-after:avoid}
+}`;
+function noteDocHtml(n, extraHead){
+  const title = esc(n.title || '无标题');
+  const d = new Date(n.updatedAt || Date.now());
+  const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>${EXPORT_CSS}</style>
+${extraHead||''}
+</head><body><article>
+<h1 class="t">${title}</h1>
+<div class="meta">${stamp}</div>
+<div class="body">${(mdToHtml(n.body||'')||{}).html || ''}</div>
+</article></body></html>`;
+}
+function safeName(n){
+  const base = (n.title||'无标题').replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim() || '无标题';
+  return base + ' ' + dateStamp();
+}
+function downloadBlob(html, name, mime){
+  const blob = new Blob(['\ufeff' + html], {type:mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+function exportHtml(){
+  const n = noteById(S.active); if(!n) return;
+  downloadBlob(noteDocHtml(n), safeName(n) + '.html', 'text/html;charset=utf-8');
+  toast('已导出 ' + safeName(n) + '.html');
+}
+function exportWord(){
+  const n = noteById(S.active); if(!n) return;
+  const head = `<meta name="ProgId" content="Word.Document">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->`;
+  const html = noteDocHtml(n, head).replace('<html lang="zh-CN">','<html lang="zh-CN" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">');
+  downloadBlob(html, safeName(n) + '.doc', 'application/msword');
+  toast('已导出 ' + safeName(n) + '.doc（Word 可直接打开）');
+}
+function exportPdf(){
+  const n = noteById(S.active); if(!n) return;
+  const old = document.getElementById('printFrame'); if(old) old.remove();
+  const f = document.createElement('iframe');
+  f.id = 'printFrame';
+  f.setAttribute('aria-hidden','true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(f);
+  const doc = f.contentWindow.document;
+  doc.open(); doc.write(noteDocHtml(n)); doc.close();
+  const run = ()=>{
+    try{ f.contentWindow.focus(); f.contentWindow.print(); }
+    catch(e){ toast('打印窗口打不开，请换个浏览器试试'); }
+    setTimeout(()=>{ try{ f.remove(); }catch(e){} }, 60000);
+  };
+  const imgs = [...doc.images];
+  let left = imgs.length;
+  if(!left){ setTimeout(run, 350); return; }
+  const tick = ()=>{ if(--left <= 0) setTimeout(run, 250); };
+  imgs.forEach(im=>{ if(im.complete) tick(); else { im.onload = tick; im.onerror = tick; } });
+  setTimeout(()=>{ if(left > 0) run(); }, 3500);
+}
 function exportMd(){
   const n = noteById(S.active); if(!n) return;
   const blob = new Blob([`# ${n.title||'无标题'}\n\n${n.body}`], {type:'text/markdown;charset=utf-8'});
@@ -2542,23 +2723,187 @@ function exportMd(){
   a.click();
   toast('已导出 ' + base + ' ' + dateStamp() + '.md');
 }
-function importMd(){
-  const inp = document.createElement('input'); inp.type='file'; inp.accept='.md,.markdown,.txt';
+/* ---- HTML → Markdown（导入用，够用的子集：标题/段落/列表/引用/代码/表格/行内样式/图片） ---- */
+function htmlToMd(html){
+  const doc = new DOMParser().parseFromString(String(html||''),'text/html');
+  const root = doc.querySelector('article') || doc.querySelector('main') || doc.body;
+  if(!root) return '';
+  root.querySelectorAll('script,style,noscript,link,meta,nav,header,footer,aside,form,iframe').forEach(x=>x.remove());
+  root.querySelectorAll(':scope > .meta').forEach(x=>x.remove());   // 自己导出的日期行
+
+  const norm = s => String(s||'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\s*\n\s*/g,' ').trim();
+  const BLOCK = /^(P|DIV|SECTION|ARTICLE|UL|OL|LI|TABLE|PRE|BLOCKQUOTE|H[1-6]|HR|FIGURE)$/;
+
+  function inline(node){
+    if(node.nodeType === 3) return node.nodeValue.replace(/\u00a0/g,' ');
+    if(node.nodeType !== 1) return '';
+    const t = node.tagName;
+    if(/^(SCRIPT|STYLE|NOSCRIPT)$/.test(t)) return '';
+    const inner = [...node.childNodes].map(inline).join('');
+    const core = inner.trim();
+    switch(t){
+      case 'BR': return '\n';
+      case 'STRONG': case 'B': return core ? `**${core}**` : inner;
+      case 'EM': case 'I': return core ? `*${core}*` : inner;
+      case 'DEL': case 'S': case 'STRIKE': return core ? `~~${core}~~` : inner;
+      case 'U': return inner;
+      case 'MARK': {
+        const cls = (typeof node.className === 'string' ? node.className : '');
+        const mcls = cls.match(/hl-(yellow|pink|blue|purple|gray)/);
+        let color = mcls ? mcls[1] : '';
+        if(!color){
+          const bg = (node.getAttribute('style')||'').match(/background(?:-color)?\s*:\s*([^;]+)/i);
+          const v = bg ? bg[1].toLowerCase() : '';
+          if(/fdf0c5|253,\s*240,\s*197/.test(v)) color = 'yellow';
+          else if(/fce2e5|252,\s*226,\s*229/.test(v)) color = 'pink';
+          else if(/dbeafa|219,\s*234,\s*250/.test(v)) color = 'blue';
+          else if(/ebe2f8|235,\s*226,\s*248/.test(v)) color = 'purple';
+          else if(/e9ecef|233,\s*236,\s*239/.test(v)) color = 'gray';
+        }
+        return core ? `==${core}==${color ? `{.${color}}` : ''}` : inner;
+      }
+      case 'CODE': return core ? '`' + core + '`' : inner;
+      case 'A': {
+        const href = node.getAttribute('href') || '';
+        const txt = core || href;
+        if(!href || /^(javascript:|#)/i.test(href)) return txt;
+        return `[${txt}](${href})`;
+      }
+      case 'IMG': {
+        const src = node.getAttribute('src') || '';
+        const alt = node.getAttribute('alt') || '';
+        return src ? `![${alt}](${src})` : '';
+      }
+      default: return inner;
+    }
+  }
+  const inlineOf = el => norm([...el.childNodes].map(inline).join(''));
+
+  const blocks = [];
+  const push = s => { const v = String(s||'').replace(/\n{3,}/g,'\n\n').trim(); if(v) blocks.push(v); };
+
+  function listMd(el, indent){
+    const ordered = el.tagName === 'OL';
+    let idx = 0;
+    const rows = [];
+    [...el.children].filter(c=>c.tagName==='LI').forEach(li=>{
+      idx++;
+      const clone = li.cloneNode(true);
+      clone.querySelectorAll('ul,ol').forEach(x=>x.remove());
+      const cb = clone.querySelector('input[type=checkbox]');
+      const checked = !!(cb && (cb.hasAttribute('checked') || cb.checked));
+      if(cb) cb.remove();
+      const body = norm([...clone.childNodes].map(inline).join(''));
+      const mark = cb ? `- [${checked?'x':' '}] ` : (ordered ? `${idx}. ` : '- ');
+      rows.push(' '.repeat(indent) + mark + body);
+      li.querySelectorAll(':scope > ul, :scope > ol').forEach(sub=>{
+        rows.push(listMd(sub, indent + 2));
+      });
+    });
+    return rows.join('\n');
+  }
+  function tableMd(el){
+    const rows = [...el.querySelectorAll('tr')];
+    if(!rows.length) return '';
+    const cellsOf = tr => [...tr.children].map(td=>norm(inlineOf(td)).replace(/\|/g,'\\|'));
+    const head = cellsOf(rows[0]);
+    const body = rows.slice(1).map(cellsOf);
+    const out = [`| ${head.join(' | ')} |`, `| ${head.map(()=>'---').join(' | ')} |`];
+    body.forEach(r=>out.push(`| ${r.join(' | ')} |`));
+    return out.join('\n');
+  }
+
+  function walk(node, indent){
+    if(node.nodeType === 3){
+      const v = norm(node.nodeValue);
+      if(v) push(v);
+      return;
+    }
+    if(node.nodeType !== 1) return;
+    const t = node.tagName;
+    if(/^(SCRIPT|STYLE|NOSCRIPT)$/.test(t)) return;
+    if(/^H[1-6]$/.test(t)){ push('#'.repeat(+t[1]) + ' ' + inlineOf(node)); return; }
+    if(t === 'HR'){ push('---'); return; }
+    if(t === 'PRE'){
+      const code = node.querySelector('code');
+      const cls = code ? (typeof code.className === 'string' ? code.className : '') : '';
+      const lang = (cls.match(/lang-([\w-]+)/)||[])[1] || '';
+      const text = (code || node).textContent.replace(/\n+$/,'');
+      push('```' + lang + '\n' + text + '\n```');
+      return;
+    }
+    if(t === 'BLOCKQUOTE'){
+      const inner = [];
+      const save = blocks.length;
+      [...node.childNodes].forEach(c=>walk(c, indent));
+      const got = blocks.splice(save);
+      got.forEach(g=>inner.push(g.split('\n').map(l=>'> ' + l).join('\n')));
+      push(inner.join('\n>\n'));
+      return;
+    }
+    if(t === 'UL' || t === 'OL'){ push(listMd(node, indent)); return; }
+    if(t === 'TABLE'){ const tb = tableMd(node); if(tb) push(tb); return; }
+    if(t === 'IMG'){ const s = inline(node); if(s) push(s); return; }
+    if(t === 'P' || t === 'DIV' || t === 'SECTION' || t === 'ARTICLE' || t === 'FIGURE' || t === 'FIGCAPTION'){
+      const hasBlock = [...node.children].some(c=>BLOCK.test(c.tagName));
+      if(hasBlock){ [...node.childNodes].forEach(c=>walk(c, indent)); }
+      else { const v = inlineOf(node); if(v) push(v); }
+      return;
+    }
+    if(t === 'BR'){ return; }
+    if([...node.children].some(c=>BLOCK.test(c.tagName))){
+      [...node.childNodes].forEach(c=>walk(c, indent));
+    } else {
+      const v = inlineOf(node);
+      if(v) push(v);
+    }
+  }
+
+  [...root.childNodes].forEach(n=>walk(n, 0));
+  let md = blocks.join('\n\n').replace(/\n{3,}/g,'\n\n').trim();
+  // 正文开头的 H1 常与文件名重复，交给 importDoc 决定标题，这里先原样保留
+  return md;
+}
+
+function importDoc(){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.md,.markdown,.txt,.html,.htm';
   inp.onchange = ()=>{
     const f = inp.files[0]; if(!f) return;
+    const isHtml = /\.html?$/i.test(f.name);
     const r = new FileReader();
     r.onload = ()=>{
       const text = String(r.result);
-      const first = text.split('\n').find(l=>/^#\s+/.test(l));
+      let title = f.name.replace(/\.\w+$/,'');
+      let body = '';
+      if(isHtml){
+        const doc = new DOMParser().parseFromString(text,'text/html');
+        const t = (doc.querySelector('title') && doc.querySelector('title').textContent || '').trim();
+        const h1 = (doc.querySelector('h1') && doc.querySelector('h1').textContent || '').trim();
+        title = t || h1 || title;
+        body = htmlToMd(text);
+        // 去掉和标题重复的首个 H1
+        body = body.replace(/^#\s+.*\n?/, m => {
+          const h = m.replace(/^#\s+/,'').trim();
+          return h && h === title ? '' : m;
+        }).trim();
+      }else{
+        const first = text.split('\n').find(l=>/^#\s+/.test(l));
+        if(first) title = first.replace(/^#\s+/,'').trim();
+        body = text.replace(/^#\s+.*\n/,'');
+      }
       const nn = newNote();
-      nn.title = first ? first.replace(/^#\s+/,'').trim() : f.name.replace(/\.\w+$/,'');
-      nn.body = text.replace(/^#\s+.*\n/,'');
-      renderAll(); save(); toast('已导入「'+nn.title+'」');
+      nn.title = title;
+      nn.body = body;
+      renderAll(); save();
+      toast('已导入「' + title + '」');
     };
     r.readAsText(f);
   };
   inp.click();
 }
+function importMd(){ importDoc(); }
 
 /* ========== 菜单 ========== */
 function popover(anchor, items, opts){
@@ -2566,6 +2911,7 @@ function popover(anchor, items, opts){
   const r = anchor.getBoundingClientRect();
   po.innerHTML = items.map((it,idx)=>{
     if(it[0]==='-') return '<div class="po-sep"></div>';
+    if(it[0]==='#') return it[1];
     return `<button class="po-item ${it[2]||''}" data-i="${idx}">${it[3]?ic(it[3]):''}<span>${esc(it[0])}</span>${it[1]?`<span class="po-key">${it[1]}</span>`:''}</button>`;
   }).join('');
   po.classList.add('open');
@@ -2586,20 +2932,35 @@ function popover(anchor, items, opts){
     document.addEventListener('mousedown', off);
   },0);
 }
-function openNoteMenu(anchor){
+function openShareMenu(anchor){
   const n = noteById(S.active);
+  popover(anchor, [
+    ['复制富文本', '', '', 'share', copyRich],
+    ['复制 Markdown', '', '', 'code', copyMarkdown],
+    '-',
+    ['导出 Markdown', '', '', 'download', exportMd],
+    ['导出 HTML', '', '', 'download', exportHtml],
+    ['导出 Word（.doc）', '', '', 'download', exportWord],
+    ['导出 PDF', '', '', 'download', exportPdf],
+    '-',
+    ['分享链接（公开只读）', '', '', 'link', shareNote],
+    ...(n && n.shareSlug ? [
+      ['复制分享链接', '', '', 'link', copyShareUrl],
+      ['取消分享链接', '', 'danger', 'trash', unshareNote]
+    ] : [])
+  ]);
+}
+function copyShareUrl(){
+  const n = noteById(S.active);
+  if(!n || !n.shareSlug) return;
+  const url = location.origin + '/s/' + n.shareSlug;
+  navigator.clipboard.writeText(url).then(()=>toast('链接已复制：' + url), ()=>toast(url));
+}
+function openNoteMenu(anchor){
   popover(anchor, [
     ['即时渲染', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
     ['源码', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
-    '-',
-    ['隐藏大纲', '', '', 'outline', ()=>{ S.outlineOpen=!S.outlineOpen; renderMain(); save(); }],
-    '-',
-    ['复制富文本', '', '', 'share', copyRich],
-    ['复制 Markdown', '', '', 'code', copyMarkdown],
-    ['导出 Markdown', '', '', 'download', exportMd],
-    ['分享链接（公开只读）', '', '', 'link', shareNote],
-    ...(n && n.shareSlug ? [['取消分享链接', '', 'danger', 'trash', unshareNote]] : []),
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);
@@ -2608,7 +2969,7 @@ function openUserMenu(anchor){
   popover(anchor, [
     ['云同步设置', '', '', 'cloud', openSyncPanel],
     ['切换主题', '', '', 'moon', toggleTheme],
-    ['导入 Markdown', '', '', 'upload', importMd],
+    ['导入 Markdown / HTML', '', '', 'upload', importDoc],
     ['导出全部笔记', '', '', 'download', ()=>{
       const all = S.notes.map(n=>`# ${n.title||'无标题'}\n\n${n.body}`).join('\n\n---\n\n');
       const blob = new Blob([all],{type:'text/markdown;charset=utf-8'});

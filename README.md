@@ -58,6 +58,11 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 - `trashed=1` 为回收站，`deleted=1` 为彻底删除（墓碑，只用于让其他设备同步删除）
 - 请求头缺失或令牌无效返回 401
 
+`POST /api/share` body `{ noteId, title, body }`（需登录）→ `{ slug }`，同一篇笔记复用同一个 slug，内容会更新
+`GET /api/share?slug=xx` → `{ title, body, createdAt, updatedAt }`（公开，无需登录）
+`DELETE /api/share?noteId=xx`（需登录）→ 取消分享，链接立即失效
+`GET /s/<slug>` → 只读分享页（`public/s.html` 渲染）
+
 `GET /api/media` → `{ items:[{id,url,name,size,type,createdAt}] }`（仅本人）
 `POST /api/media`（multipart，字段 `file`，≤20MB）→ 同上单条
 `GET /api/media/:uid/:id` → 文件本体（公开，靠 32 位随机 key 不可猜）

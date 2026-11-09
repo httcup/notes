@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>分享的笔记</title>
+<style>
+:root{
+  --font-sans:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --font-serif:"Iowan Old Style",Charter,"Source Serif 4","Songti SC","Noto Serif SC","Source Han Serif SC",STSong,Georgia,serif;
+  --font-mono:"SF Mono","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"PingFang SC",monospace;
+  color-scheme:light;
+  --canvas:247 248 249; --surface:255 255 255; --sunken:241 243 245;
+  --ink:28 31 34; --ink-2:70 75 80; --muted:112 118 124; --faint:160 166 172;
+  --line:230 233 236; --hover:234 237 240;
+  --ivy:40 122 82; --ivy-soft:229 243 235; --ivy-ink:27 92 60;
+  --code-bg:244 246 248;
+  --shadow-paper:0 0 0 .5px rgb(16 24 32 / .05),0 1px 2px rgb(16 24 32 / .03),0 12px 32px -12px rgb(16 24 32 / .08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme:dark;
+    --canvas:16 18 20; --surface:25 27 30; --sunken:34 37 41;
+    --ink:232 235 238; --ink-2:190 195 200; --muted:138 144 150; --faint:96 101 107;
+    --line:44 48 52; --hover:38 41 45;
+    --ivy:86 180 130; --ivy-soft:28 50 39; --ivy-ink:150 224 182;
+    --code-bg:31 34 38;
+    --shadow-paper:0 0 0 .5px rgb(255 255 255 / .05),0 12px 32px -12px rgb(0 0 0 / .5);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:rgb(var(--canvas));color:rgb(var(--ink));font-family:var(--font-sans);
+  -webkit-font-smoothing:antialiased;
+}
+.shell{max-width:720px;margin:0 auto;padding:48px 20px 96px}
+.paper{
+  background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-paper);
+  padding:52px 56px 60px;
+}
+.brand{display:flex;align-items:center;gap:8px;margin-bottom:26px;font-size:12.5px;color:rgb(var(--faint))}
+.brand .dot{width:6px;height:6px;border-radius:50%;background:rgb(var(--ivy))}
+h1.title{
+  font-family:var(--font-serif);font-size:29px;line-height:1.35;font-weight:700;
+  margin:0 0 10px;letter-spacing:-.01em;
+}
+.meta{font-size:12.5px;color:rgb(var(--faint));margin-bottom:30px}
+.body{font-family:var(--font-serif);font-size:17.5px;line-height:1.95;word-break:break-word}
+.body>*{margin-top:0;margin-bottom:0}
+.body>*+*{margin-top:.62em}
+.body h1,.body h2,.body h3,.body h4{font-weight:600;line-height:1.4;margin:.9em 0 .3em}
+.body h1{font-size:1.5em}
+.body h2{font-size:1.3em}
+.body h3{font-size:1.12em}
+.body p{margin:0}
+.body ul,.body ol{padding-left:1.35em;margin:.3em 0}
+.body li{margin:.24em 0}
+.body li::marker{color:rgb(var(--faint))}
+.body blockquote{margin:.7em 0;padding:2px 0 2px 15px;border-left:2px solid rgb(var(--ivy) / .35);color:rgb(var(--ink-2))}
+.body code{font-family:var(--font-mono);font-size:.86em;background:rgb(var(--code-bg));padding:2px 5px;border-radius:5px;border:.5px solid rgb(var(--line))}
+.body pre{background:rgb(var(--code-bg));border:.5px solid rgb(var(--line));border-radius:10px;padding:14px 16px;overflow-x:auto;margin:.9em 0}
+.body pre code{background:none;border:0;padding:0;font-size:13px;line-height:1.72;display:block}
+.body hr{border:0;border-top:1px solid rgb(var(--line));margin:1.2em 0}
+.body img{max-width:100%;border-radius:9px;display:block;margin:1em 0}
+.body a{color:rgb(var(--ivy));text-decoration:underline;text-decoration-thickness:.5px;text-underline-offset:2.5px}
+.body table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.94em}
+.body th,.body td{border:1px solid rgb(var(--line));padding:7px 10px;text-align:left}
+.body th{background:rgb(var(--sunken));font-weight:600}
+.body .task{list-style:none;margin-left:-1.1em}
+.body .task input{margin-right:7px;accent-color:rgb(var(--ivy))}
+.foot{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:38px;padding-top:18px;border-top:1px solid rgb(var(--line));
+  font-size:12px;color:rgb(var(--faint));flex-wrap:wrap;
+}
+.foot a{color:rgb(var(--muted));text-decoration:none}
+.foot a:hover{color:rgb(var(--ink))}
+.copy{
+  height:30px;padding:0 13px;border-radius:15px;border:0;cursor:pointer;
+  background:rgb(var(--hover));color:rgb(var(--ink));font-size:12px;font-weight:600;font-family:inherit;
+}
+.copy:hover{background:rgb(var(--sunken))}
+.state{text-align:center;padding:70px 10px;color:rgb(var(--faint));font-size:14px;line-height:2}
+.state .big{font-family:var(--font-serif);font-size:19px;color:rgb(var(--muted));display:block;margin-bottom:6px}
+.spin{width:15px;height:15px;border-radius:50%;border:2px solid rgb(var(--line));border-top-color:rgb(var(--ivy));display:inline-block;animation:sp .8s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (max-width:640px){
+  .shell{padding:20px 12px 60px}
+  .paper{padding:32px 22px 40px;border-radius:13px}
+  h1.title{font-size:24px}
+  .body{font-size:16.5px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="paper" id="paper">
+    <div class="state" id="state"><span class="spin"></span>正在打开笔记…</div>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function inlineMd(s){
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img alt="$1" src="$2" loading="lazy">');
+  s = s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m,t,a) => '<a href="#">' + (a || t) + '</a>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer noopener">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  s = s.replace(/==([^=]+)==/g, '<mark>$1</mark>');
+  return s;
+}
+
+function mdToHtml(md){
+  const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+  const out = [];
+  const isSep = l => /^\s*\|?[\s:-]*-[-\s:|]*\|?\s*$/.test(l) && l.includes('-');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      const lang = line.slice(3).trim();
+      const buf = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+      i++;
+      out.push('<pre><code' + (lang ? ' class="lang-' + esc(lang) + '"' : '') + '>' + esc(buf.join('\n')) + '</code></pre>');
+      continue;
+    }
+    const m = line.match(/^(#{1,6})\s+(.*)$/);
+    if (m) { const lv = m[1].length; out.push('<h' + lv + '>' + inlineMd(m[2]) + '</h' + lv + '>'); i++; continue; }
+    if (/^\s*(\*\s*){3,}$|^\s*(-\s*){3,}$|^\s*(_\s*){3,}$/.test(line)) { out.push('<hr>'); i++; continue; }
+    if (/^>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, '')); i++; }
+      out.push('<blockquote><p>' + buf.map(inlineMd).join('<br>') + '</p></blockquote>');
+      continue;
+    }
+    if (line.includes('|') && i + 1 < lines.length && isSep(lines[i + 1])) {
+      const head = line; const rows = [];
+      i += 2;
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) { rows.push(lines[i]); i++; }
+      const cells = r => r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+      out.push('<table><thead><tr>' + cells(head).map(c => '<th>' + inlineMd(c) + '</th>').join('') + '</tr></thead><tbody>' +
+        rows.map(r => '<tr>' + cells(r).map(c => '<td>' + inlineMd(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>');
+      continue;
+    }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(line)) {
+      const ordered = /^\s*\d+\./.test(line);
+      const items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
+        let l = lines[i].replace(/^\s*([-*+]|\d+\.)\s+/, '');
+        if (/^\[[ xX]\]\s/.test(l)) {
+          const chk = /^\[[xX]\]/.test(l);
+          l = l.replace(/^\[[ xX]\]\s/, '');
+          items.push('<li class="task"><input type="checkbox" disabled ' + (chk ? 'checked' : '') + '>' + inlineMd(l) + '</li>');
+        } else {
+          items.push('<li>' + inlineMd(l) + '</li>');
+        }
+        i++;
+      }
+      out.push(ordered ? '<ol>' + items.join('') + '</ol>' : '<ul>' + items.join('') + '</ul>');
+      continue;
+    }
+    if (!line.trim()) { i++; continue; }
+    const buf = [line]; i++;
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s)/.test(lines[i]) && !isSep(lines[i])) {
+      buf.push(lines[i]); i++;
+    }
+    out.push('<p>' + buf.map(inlineMd).join('<br>') + '</p>');
+  }
+  return out.join('\n');
+}
+
+function getSlug(){
+  const q = new URLSearchParams(location.search);
+  if (q.get('slug')) return q.get('slug');
+  if (q.get('s')) return q.get('s');
+  const m = location.pathname.match(/\/s\/([A-Za-z0-9]+)/);
+  if (m) return m[1];
+  const h = (location.hash || '').replace(/^#/, '');
+  return /^[A-Za-z0-9]+$/.test(h) ? h : '';
+}
+
+function stamp(t){
+  const d = new Date(t || Date.now());
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function fail(msg){
+  document.getElementById('paper').innerHTML =
+    '<div class="state"><span class="big">' + esc(msg) + '</span>这个链接可能已经失效，或者作者取消了分享。</div>';
+}
+
+async function boot(){
+  const slug = getSlug();
+  if (!slug) return fail('链接不完整');
+  try {
+    const r = await fetch('/api/share?slug=' + encodeURIComponent(slug), { cache: 'no-store' });
+    const d = await r.json();
+    if (!r.ok) return fail(d.error || '打不开这篇笔记');
+    document.title = (d.title || '分享的笔记') + ' · 小胡小胡的笔记';
+    document.getElementById('paper').innerHTML = `
+      <div class="brand"><span class="dot"></span>公开分享 · 只读</div>
+      <h1 class="title">${esc(d.title || '无标题')}</h1>
+      <div class="meta">${esc(stamp(d.updatedAt || d.createdAt))}${d.updatedAt && d.createdAt && stamp(d.updatedAt) !== stamp(d.createdAt) ? '' : ''}</div>
+      <div class="body">${d.body && d.body.trim() ? mdToHtml(d.body) : '<p style="color:rgb(var(--faint))">（这篇笔记没有正文）</p>'}</div>
+      <div class="foot">
+        <span>由「小胡小胡的笔记」分享</span>
+        <button class="copy" id="copyBtn">复制链接</button>
+      </div>`;
+    const btn = document.getElementById('copyBtn');
+    btn.onclick = async () => {
+      try { await navigator.clipboard.writeText(location.href); btn.textContent = '已复制'; }
+      catch (e) { btn.textContent = '复制失败'; }
+      setTimeout(() => { btn.textContent = '复制链接'; }, 1600);
+    };
+  } catch (e) {
+    fail('网络错误');
+  }
+}
+boot();
+</script>
+</body>
+</html>

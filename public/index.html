@@ -75,12 +75,8 @@ a{color:inherit;text-decoration:none}
 .shelf-head{display:flex;align-items:center;gap:8px;padding:2px 4px 12px}
 .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
 .brand-name{
-  font-family:var(--font-serif);font-size:16.5px;font-weight:700;letter-spacing:0;
+  font-family:var(--font-serif);font-size:17.5px;font-weight:700;letter-spacing:0;
   margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.ver{
-  font-size:9.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ivy-ink));
-  background:rgb(var(--ivy-soft));border-radius:5px;padding:2px 4px;flex:0 0 auto;
 }
 .head-actions{display:flex;align-items:center;gap:0;flex:0 0 auto}
 .icon-btn{
@@ -523,7 +519,6 @@ body.split-mode .outline{display:none}
     <header class="shelf-head">
       <div class="brand">
         <h1 class="brand-name" id="brandName">小胡小胡的笔记</h1>
-        <span class="ver">v0.1.7</span>
       </div>
       <div class="head-actions" id="headActions">
         <button class="icon-btn" id="btnSearch" title="搜索笔记 (⌘K)" aria-label="搜索笔记"></button>
@@ -697,7 +692,6 @@ function paintRowIcons(){
 
 function renderShelf(){
   brandName.textContent = S.view==='notes' ? '小胡小胡的笔记' : (S.view==='media' ? '媒体库' : '关系图');
-  document.querySelector('.shelf-head .ver').style.display = S.view==='notes' ? '' : 'none';
 
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
@@ -2148,10 +2142,29 @@ function toggleTheme(){
   applyTheme(); save(); renderMain();
   toast(S.theme==='dark'?'已切换到深色':'已切换到浅色');
 }
-function shareNote(){
+async function shareNote(){
   const n = noteById(S.active); if(!n) return;
-  const url = location.origin+location.pathname+'?n='+n.id;
-  navigator.clipboard?.writeText(url).then(()=>toast('分享链接已复制')).catch(()=>toast(url));
+  if(!isConnected()){ toast('先连接账号，才能生成公开分享链接'); openSyncPanel(); return; }
+  toast('正在生成分享链接…');
+  try{
+    const d = await apiCall('/api/share', {method:'POST', body:{noteId:n.id, title:n.title||'', body:n.body||''}});
+    const url = location.origin + '/s/' + d.slug;
+    n.shareSlug = d.slug; save();
+    try{ await navigator.clipboard.writeText(url); toast('公开链接已复制：' + url); }
+    catch(e){ toast(url); }
+  }catch(e){
+    toast('分享失败：' + (e.message || '网络错误'));
+  }
+}
+async function unshareNote(){
+  const n = noteById(S.active); if(!n) return;
+  if(!n.shareSlug){ toast('这篇笔记还没有分享链接'); return; }
+  try{
+    await apiCall('/api/share?noteId=' + encodeURIComponent(n.id), {method:'DELETE'});
+    delete n.shareSlug; save(); toast('已取消分享，原链接已失效');
+  }catch(e){
+    toast('取消失败：' + (e.message || '网络错误'));
+  }
 }
 function dateStamp(d){
   const t = d || new Date();
@@ -2219,7 +2232,8 @@ function openNoteMenu(anchor){
     ['复制富文本', '', '', 'share', copyRich],
     ['复制 Markdown', '', '', 'code', copyMarkdown],
     ['导出 Markdown', '', '', 'download', exportMd],
-    ['复制分享链接', '', '', 'link', shareNote],
+    ['分享链接（公开只读）', '', '', 'link', shareNote],
+    ...(n && n.shareSlug ? [['取消分享链接', '', 'danger', 'trash', unshareNote]] : []),
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);
@@ -2358,6 +2372,21 @@ function syncTip(){
   if(SYNC.state==='error') return '同步失败：'+(SYNC.error||'网络错误')+' · 点击查看';
   if(SYNC.state==='ok') return '已同步 · '+new Date(SYNC.last).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+' · '+accountLabel();
   return '已连接 '+accountLabel()+' · 点击立即同步';
+}
+async function apiCall(path, opts){
+  opts = opts || {};
+  const send = ()=> fetch(path, {
+    method: opts.method || 'GET',
+    headers: authHeaders(!!opts.body),
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  let r = await send();
+  let data = await r.json().catch(()=>({}));
+  if(r.status === 401 && SYNC.token && SYNC.key){
+    if(await relogin()){ r = await send(); data = await r.json().catch(()=>({})); }
+  }
+  if(!r.ok){ const e = new Error(data.error || ('HTTP '+r.status)); e.status = r.status; throw e; }
+  return data;
 }
 function authHeaders(json){
   const h = json ? {'content-type':'application/json'} : {};

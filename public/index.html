@@ -908,7 +908,7 @@ try{
   }
 }catch(e){}
 
-/* 视图是全局偏好，所有笔记一视同仁，默认即时渲染；
+/* 视图是全局偏好，所有笔记一视同仁，默认「预览」(live 模式)；
    旧版本曾把「使用说明」强制成双栏，这里一次性把遗留的 split 重置回来 */
 try{
   if(!localStorage.getItem('ivy.guideLiveV1')){
@@ -1306,12 +1306,10 @@ function renderEditor(){
   paperActions.innerHTML = `
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
     <button class="pa-btn" id="paShare" title="分享 / 复制 / 导出">${ic('share')}</button>
-    <button class="pa-btn ${S.outlineOpen?'on':''}" id="paOutline" title="${S.outlineOpen?'取消固定大纲':'固定展开大纲（平时把鼠标移到右边缘即可）'}">${ic('outline')}</button>
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paAttach').onclick=()=>pickFiles();
   $('#paShare').onclick=(e)=>openShareMenu(e.currentTarget);
-  $('#paOutline').onclick=()=>{ S.outlineOpen = !S.outlineOpen; renderMain(); save(); };
   $('#paTheme').onclick=()=>toggleTheme();
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
@@ -2193,7 +2191,7 @@ document.addEventListener('copy', e=>{
   e.preventDefault();
 });
 
-/* 即时渲染态里的块是只读 div，原生选区按删除没反应 → 手动按 markdown 源删 */
+/* 预览态里的块是只读 div，原生选区按删除没反应 → 手动按 markdown 源删 */
 function viewOffset(view, node, offset){
   try{
     const r = document.createRange();
@@ -2792,7 +2790,7 @@ function setMode(m){
 }
 function enterEdit(){ setMode('source'); }
 function enterPreview(){ setMode('preview'); }
-/* ⌘E 在 即时渲染 → 双栏 → 源码 之间轮转 */
+/* ⌘E 在 预览 → 双栏 → Markdown 之间轮转 */
 function toggleMode(){
   const m = curMode();
   setMode(m==='live' ? 'split' : (m==='split' ? 'source' : 'live'));
@@ -2897,8 +2895,6 @@ function toggleOutlinePin(){
     pin.classList.toggle('on', !!S.outlineOpen);
     pin.title = S.outlineOpen ? '取消固定（鼠标移开自动收起）' : '固定在页面上';
   }
-  const pb = document.getElementById('paOutline');
-  if(pb) pb.classList.toggle('on', !!S.outlineOpen);
   save();
 }
 function renderOutline(){
@@ -3799,8 +3795,8 @@ function openNoteMenu(anchor){
   const n = noteById(S.active);
   const nb = n && S.notebooks.find(x=>x.id===n.notebookId && !x.deleted);
   popover(anchor, [
-    ['即时渲染', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
-    ['源码', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
+    ['预览', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
+    ['Markdown', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
     ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(liveAnchor(anchor, 'paMore'))],

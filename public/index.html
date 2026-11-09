@@ -872,7 +872,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v30', at: '2026-11-10 01:35' };
+window.IVY_BUILD = { id: 'v31', at: '2026-11-10 01:30' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1084,9 +1084,9 @@ function openTagMenu(anchor, t){
     ['删除标签', '', 'danger', 'trash', ()=>deleteTag(t)]
   ]);
 }
-/* 「没有标签」是一个虚拟分组，用内部 key，避免和真实标签重名 */
+/* 「未加标签」是一个虚拟分组，用内部 key，避免和真实标签重名；固定排在标签列表末尾 */
 const NO_TAG = '__no_tag__';
-let NO_TAG_LABEL = '没有标签';
+let NO_TAG_LABEL = '未加标签';
 const tagGroupName = k => k === NO_TAG ? NO_TAG_LABEL : k;
 function tagGroupNotes(k, notes){
   return k === NO_TAG ? notes.filter(n=>!tagOf(n).length) : notes.filter(n=>tagOf(n).includes(k));
@@ -1155,10 +1155,10 @@ function renderShelf(){
 
   // 笔记本下面：标签分类（每个标签可展开，列出打了该标签的笔记）
   const keys = usedTags(notes);
-  // 万一真有标签名叫「没有标签」，虚拟分组临时改名，避免左侧出现两行同名
-  NO_TAG_LABEL = keys.includes('没有标签') ? '未添加标签' : '没有标签';
-  keys.push(NO_TAG);                                   // 固定分组
+  // 万一真有标签名叫「未加标签」，虚拟分组临时改名，避免左侧出现两行同名
+  NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   keys.sort((a,b)=> tagGroupName(a).localeCompare(tagGroupName(b), 'zh-CN'));
+  keys.push(NO_TAG);                                   // 固定分组，置底
   const secOpen = !S.tagSectionClosed;
   const tagTree = keys.map(k=>{
     const list = tagGroupNotes(k, notes);

@@ -364,6 +364,15 @@ body.split-mode .outline{display:none}
 }
 .blk.editing .blk-src{display:block}
 .blk.editing .blk-view{display:none}
+/* 空块刚套上标题/列表时，用灰字提示该写什么，一输入就消失 */
+.blk-hint{
+  display:none;position:absolute;left:0;top:0;width:100%;
+  font-family:var(--font-serif);font-size:17.5px;line-height:1.8;
+  color:rgb(var(--faint));pointer-events:none;white-space:pre-wrap;overflow:hidden;
+}
+.blk-hint .hp{color:rgb(var(--faint))}
+.blk-hint .ht{color:rgb(var(--faint));opacity:.72}
+.blk-src.has-hint{color:transparent}
 .blk-view{min-height:1.2em}
 .blk-view input[type=checkbox]{cursor:pointer}
 .blk-view img{cursor:default}
@@ -482,6 +491,10 @@ body.split-mode .outline{display:none}
 .hl-sw{width:22px;height:22px;border-radius:6px;background:var(--sw);box-shadow:inset 0 0 0 1px rgb(var(--ink) / .10);transition:transform .12s var(--spring)}
 .hl-sw:hover{transform:scale(1.14)}
 .hl-sw:active{transform:scale(.96)}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,28px);gap:1px;padding:5px}
+.emo{width:28px;height:28px;border-radius:6px;font-size:17px;line-height:1;display:grid;place-items:center;transition:background .12s}
+.emo:hover{background:rgb(var(--hover))}
+.emo:active{transform:scale(.92)}
 
 /* toast */
 .toasts{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
@@ -1083,7 +1096,7 @@ const FMT_GROUPS = [
   [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字=='],['code','代码','行内代码']],
   [['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
-  [['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
+  [['emoji','表情','插入表情符号'],['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
 ];
 function renderFmtBar(){
   const bar = document.getElementById('fmtBar');
@@ -1099,6 +1112,7 @@ function renderFmtBar(){
       if(k==='h') openHeadingMenu(b);
       else if(k==='list') openListMenu(b);
       else if(k==='mark') openHighlightMenu(b);
+      else if(k==='emoji') openEmojiMenu(b);
       else applyFormat(k);
     };
   });
@@ -1145,6 +1159,54 @@ function openHighlightMenu(anchor){
     b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hl); };
   });
 }
+/* 表情选择器：点一下插到光标处 */
+const EMOJIS = [
+  '😀','😁','😂','🤣','😊','😍','😘','😎',
+  '🤔','😅','😇','🙂','😉','😌','😴','🥳',
+  '🤩','🥺','😭','😢','😡','😱','🤗','🫶',
+  '👍','👎','👌','✌️','🙏','💪','👏','🤝',
+  '❤️','🧡','💛','💚','💙','💜','🖤','💯',
+  '🎉','🎈','🔥','✨','⭐','💡','📌','✅',
+  '📝','📖','📚','💻','🚀','⏰','☕','🍀'
+];
+function openEmojiMenu(anchor){
+  const grid = `<div class="emoji-grid">${EMOJIS.map(e=>
+    `<button class="emo" type="button" data-e="${e}">${e}</button>`
+  ).join('')}</div>`;
+  popover(anchor, [['#', grid]]);
+  const po = $('#popover');
+  po.querySelectorAll('.emo').forEach(b=>{
+    b.onmousedown = e=>e.preventDefault();   // 保住光标/选区
+    b.onclick = ()=>{ po.classList.remove('open'); insertPlain(b.dataset.e); };
+  });
+}
+function insertPlain(text){
+  const n = noteById(S.active); if(!n) return;
+  let src = document.activeElement;
+  if(!(src && src.classList && src.classList.contains('blk-src'))){
+    if(curMode()==='source') src = document.getElementById('source');
+    else src = ensureLiveInput();
+  }
+  if(!src) return;
+  const v = src.value;
+  const s = (typeof src.selectionStart === 'number') ? src.selectionStart : v.length;
+  const e = (typeof src.selectionEnd === 'number') ? src.selectionEnd : s;
+  src.value = v.slice(0, s) + text + v.slice(e);
+  const p = s + text.length;
+  try{ src.setSelectionRange(p, p); }catch(err){}
+  src.focus();
+  if(src.classList.contains('blk-src')){
+    const i = parseInt(src.dataset.i, 10) || 0;
+    LIVE.raws[i] = src.value;
+    growTa(src); syncBody(); updateBlockHint(src);
+  }else{
+    n.body = src.value; n.updatedAt = Date.now();
+    src.style.height = 'auto';
+    src.style.height = Math.max(src.scrollHeight, 240) + 'px';
+    renderMeta(); save();
+    if(curMode()==='split') livePreviewSoon();
+  }
+}
 function applyFormat(kind, opt){
   const n = S.active ? noteById(S.active) : null;
   if(!n) return;
@@ -1185,7 +1247,9 @@ function applyFormat(kind, opt){
       return prefix + bare;
     }).join('\n');
     v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
-    setRange(lineStart, lineStart + nb.length);
+    // 空块只加了前缀：光标停在标记后面（别把前缀一起选中，否则一打字就被覆盖）
+    if(!block.trim()) setRange(lineStart + nb.length, lineStart + nb.length);
+    else setRange(lineStart, lineStart + nb.length);
   };
 
   switch(kind){
@@ -1285,8 +1349,22 @@ function applyFormat(kind, opt){
     LIVE.raws[i] = v;
     growTa(src);
     syncBody();
-    // 结构性改动（标题/列表/引用…）立刻渲染出来，看得到效果
-    if(['h1','h2','h3','h4','h5','h6','ul','ol','todo','quote','table','hr','pre'].includes(kind)) commitBlock(i);
+    // 只加了前缀、还没写正文 → 留在编辑态，用灰字提示该写什么；写过了就立刻渲染
+    const barePrefix = /^(?:#{1,6}|- \[ \]|[-*+]|\d+\.|>)\s*$/.test(v);
+    if(barePrefix){
+      // 让输入框（和提示）直接用这类块渲染后的字号，写起来所见即所得
+      const st = probeBlockStyle(kind);
+      if(st){
+        src.style.fontSize = st.fontSize;
+        src.style.lineHeight = st.lineHeight;
+        src.style.fontWeight = st.fontWeight;
+        src.style.fontFamily = st.fontFamily;
+        growTa(src);
+      }
+      updateBlockHint(src);
+    }else if(['h1','h2','h3','h4','h5','h6','ul','ol','todo','quote','table','hr','pre'].includes(kind)){
+      commitBlock(i);
+    }
   } else {
     src.style.height = 'auto';
     src.style.height = Math.max(src.scrollHeight, 240) + 'px';
@@ -1485,6 +1563,58 @@ function growTa(ta){
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 'px';
 }
+/* 空块加了标题/列表前缀后，用灰字提示该写什么；一旦输入就消失 */
+const BLOCK_HINTS = [
+  [/^######\s?$/, '六级标题', '###### '],
+  [/^#####\s?$/,  '五级标题', '##### '],
+  [/^####\s?$/,   '四级标题', '#### '],
+  [/^###\s?$/,    '三级标题', '### '],
+  [/^##\s?$/,     '二级标题', '## '],
+  [/^#\s?$/,      '一级标题', '# '],
+  [/^- \[ \]\s?$/, '待办事项', '- [ ] '],
+  [/^[-*+]\s?$/,  '列表项', '- '],
+  [/^\d+\.\s?$/,  '编号列表', '1. '],
+  [/^>\s?$/,      '引用', '> ']
+];
+// 量一下这类块渲染后真实的字号/字重（判断用，不写进正文）
+function probeBlockStyle(kind){
+  const map = {
+    h1:'<h1>x</h1>', h2:'<h2>x</h2>', h3:'<h3>x</h3>', h4:'<h4>x</h4>', h5:'<h5>x</h5>', h6:'<h6>x</h6>',
+    ul:'<ul><li>x</li></ul>', ol:'<ol><li>x</li></ol>', todo:'<ul><li>x</li></ul>',
+    quote:'<blockquote><p>x</p></blockquote>'
+  };
+  const html = map[kind]; if(!html) return null;
+  const box = document.createElement('div');
+  box.className = 'prose';
+  box.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden;pointer-events:none';
+  box.innerHTML = html;
+  document.body.appendChild(box);
+  const el = box.querySelector('li, p, h1, h2, h3, h4, h5, h6') || box.firstElementChild;
+  const cs = getComputedStyle(el);
+  const out = { fontSize:cs.fontSize, lineHeight:cs.lineHeight, fontWeight:cs.fontWeight, fontFamily:cs.fontFamily };
+  box.remove();
+  return out;
+}
+function updateBlockHint(ta){
+  if(!ta || !ta.closest) return;
+  const el = ta.closest('.blk');
+  const hint = el && el.querySelector('.blk-hint');
+  if(!hint) return;
+  const hit = BLOCK_HINTS.find(([re])=>re.test(ta.value));
+  if(hit){
+    hint.innerHTML = `<span class="hp">${esc(hit[2])}</span><span class="ht">${esc(hit[1])}</span>`;
+    hint.style.fontSize = ta.style.fontSize || '';
+    hint.style.lineHeight = ta.style.lineHeight || '';
+    hint.style.fontWeight = ta.style.fontWeight || '';
+    hint.style.fontFamily = ta.style.fontFamily || '';
+    hint.style.display = 'block';
+    ta.classList.add('has-hint');
+  }else{
+    hint.style.display = 'none';
+    hint.innerHTML = '';
+    ta.classList.remove('has-hint');
+  }
+}
 
 /* ---- 渲染 ---- */
 function renderLive(){
@@ -1676,7 +1806,9 @@ function blockEl(raw, i, only){
   const ta = document.createElement('textarea');
   ta.className = 'blk-src'; ta.value = raw; ta.rows = 1;
   ta.spellcheck = false; ta.dataset.i = i;
-  el.appendChild(view); el.appendChild(ta);
+  const hint = document.createElement('div');
+  hint.className = 'blk-hint'; hint.setAttribute('aria-hidden','true');
+  el.appendChild(view); el.appendChild(ta); el.appendChild(hint);
 
   view.addEventListener('mousedown', e=>{
     if(e.target.closest && e.target.closest('a')) return;
@@ -1685,7 +1817,7 @@ function blockEl(raw, i, only){
     // 不阻止默认行为：允许像普通网页一样拖过多个块选中文字
     SELDOWN = { i, x:e.clientX, y:e.clientY };
   });
-  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); });
+  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); updateBlockHint(ta); });
   ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));
   ta.addEventListener('blur', ()=>{ closeWikiPop(); if(el.isConnected && el.classList.contains('editing')) commitBlock(i); });
   ta.addEventListener('paste', onBlockPaste);
@@ -1727,6 +1859,7 @@ function editBlock(i, x, y, caret){
   ta.focus();
   off = Math.max(0, Math.min(off, ta.value.length));
   try{ ta.setSelectionRange(off, off); }catch(e){}
+  updateBlockHint(ta);
 }
 
 function closeEditing(){

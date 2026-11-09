@@ -295,6 +295,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .shelf-open.show ~ .paper .tabbar{padding-left:48px}
 .pa-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;color:rgb(var(--muted));transition:background .15s,color .15s}
 .pa-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+/* 触屏（iPad/手机）没有 hover：按下的瞬间给同样的颜色反馈 */
+.pa-btn:active{background:rgb(var(--hover));color:rgb(var(--ink))}
 .pa-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pa-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 
@@ -306,10 +308,12 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 正文偏左居中：左侧留白固定得小一些，剩余空间留给右侧（悬浮大纲），
    避免宽屏下整块居中导致离左边书架太远 */
 .doc{
-  /* v33: 760 → 840。宽屏下 760 会在正文与右侧悬浮大纲之间留出一大块空白，加宽后白区明显收窄；
-     再宽（>860）大纲卡片展开时会盖住正文右缘的字，840 时只压住 36px 内边距里的几个像素 */
-  max-width:840px;
-  margin:0 auto 0 clamp(24px, 5.5vw, 96px);
+  /* v34: 正文加宽并整体居中。
+     - 840px 保底：窄屏 / iPad 行为与旧版一致，不会变窄；
+     - 有富余时按「可用宽度 − 208px」取宽，右侧白区比旧版（760/840 + 左固定边距）小一半以上；
+     - 书架折叠多出来的宽度由左右均摊，不会再全堆在大纲一侧 */
+  max-width:min(1060px, max(calc(100% - 208px), 840px));
+  margin:0 auto;
   padding:52px 36px 140px;
 }
 .doc-title{
@@ -914,7 +918,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v33', at: '2026-11-10 02:45' };
+window.IVY_BUILD = { id: 'v34', at: '2026-11-10 03:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1548,6 +1552,8 @@ function wireSplitSync(){
       lock = now;
       b.scrollTop = mapSplitPos(a, b, SPLIT_ANCH, reverse);
     }, { passive:true });
+    // 双栏各自滚动时同步大纲高亮 / 右缘刻度（#scroll 本身不动，监听不到）
+    a.addEventListener('scroll', ()=>updateOutlineActive(), { passive:true });
   };
   bind(src, prose, false);
   bind(prose, src, true);
@@ -3059,6 +3065,7 @@ function renderOutline(){
   if(close) close.onclick = ()=>setOutlinePanel(false);
   outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
     jumpToHeading(b.dataset.h);
+    updateOutlineActive();
     // 触屏上跳完把面板收起，别挡住正文（固定状态下保持展开）
     if(OL_TOUCH && !S.outlineOpen) setOutlinePanel(false);
   });
@@ -3118,40 +3125,53 @@ document.getElementById('scroll').addEventListener('scroll', ()=>{
   olScrollRaf = requestAnimationFrame(()=>{ olScrollRaf = 0; updateOutlineActive(); });
 }, { passive:true });
 
+/* 把某个滚动容器滚到 y：触屏瞬时（iOS 会把触摸事件里触发的 smooth 静默丢弃），
+   桌面平滑滚，180ms 没动再兜底直赋 */
+function setScrollTo(el, y){
+  y = Math.max(0, Math.round(y));
+  if(OL_TOUCH){
+    const prev = el.style.scrollBehavior; el.style.scrollBehavior = 'auto';
+    el.scrollTop = y;
+    setTimeout(()=>{ el.style.scrollBehavior = prev || ''; }, 60);
+    return;
+  }
+  try{ el.scrollTo({ top:y, behavior:'smooth' }); }catch(_){ el.scrollTop = y; }
+  const y0 = el.scrollTop;
+  setTimeout(()=>{ if(Math.abs(el.scrollTop - y0) < 1) el.scrollTop = y; }, 180);
+}
+/* 标题元素真正在哪个容器里滚：双栏模式 .prose / .source 各自 overflow-y:auto，
+   不是外层 #scroll —— 跳转必须滚对容器，否则点了没反应（v34 修复） */
+function scrollableAncestor(el){
+  let p = el.parentElement;
+  while(p && p !== document.body){
+    const cs = getComputedStyle(p);
+    if((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && p.scrollHeight > p.clientHeight + 2) return p;
+    p = p.parentElement;
+  }
+  return document.getElementById('scroll');
+}
+
 /* 点大纲跳转：页面里可能有多个同名 id（即时预览副本是隐藏的），要挑真正可见的那个 */
 function jumpToHeading(id){
-  const all = [...document.querySelectorAll('[id="'+String(id).replace(/"/g,'\\"')+'"]')];
-  const t = all.find(el=>el.getClientRects().length);
-  if(!t) return;
-  const sc = document.getElementById('scroll');
   if(S.mode === 'source'){
-    // 源码模式没有标题元素，按行号估算位置
+    // 源码模式没有标题元素，按行号估算位置（滚的是外层 #scroll，textarea 本身 overflow:hidden）
     const n = noteById(S.active); const src = document.getElementById('source');
-    if(!n || !src) return;
+    const sc = document.getElementById('scroll');
+    if(!n || !src || !sc) return;
     const heads = mdToHtml(n.body).headings;
     const idx = heads.findIndex(h=>h.id===id);
     if(idx < 0) return;
     const ratio = (idx + 1) / (heads.length + 1);
-    const y = Math.max(0, src.scrollHeight * ratio - 80);
-    if(OL_TOUCH){ src.scrollTop = y; return; }
-    try{ src.scrollTo({ top: y, behavior:'smooth' }); }catch(_){ src.scrollTop = y; }
+    const srcTop = src.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+    setScrollTo(sc, srcTop + src.scrollHeight * ratio - 90);
     return;
   }
-  if(!sc) return;
+  const all = [...document.querySelectorAll('[id="'+String(id).replace(/"/g,'\\"')+'"]')];
+  const t = all.find(el=>el.getClientRects().length);
+  if(!t) return;
+  const sc = scrollableAncestor(t);
   const top = t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 28;
-  const target = Math.max(0, top);
-  /* iOS/iPadOS Safari 的平滑滚动不可靠：老版本不支持 behavior，新版本在触摸事件里
-     触发的 smooth 会被静默丢弃。触屏直接瞬时定位；桌面平滑滚，180ms 没动再兜底 */
-  if(OL_TOUCH){
-    /* 临时关掉 CSS 的 scroll-behavior:smooth，保证一定瞬时到位 */
-    const prev = sc.style.scrollBehavior; sc.style.scrollBehavior = 'auto';
-    sc.scrollTop = target;
-    setTimeout(()=>{ sc.style.scrollBehavior = prev || ''; }, 60);
-    return;
-  }
-  try{ sc.scrollTo({ top: target, behavior:'smooth' }); }catch(_){ sc.scrollTop = target; }
-  const y0 = sc.scrollTop;
-  setTimeout(()=>{ if(Math.abs(sc.scrollTop - y0) < 1) sc.scrollTop = target; }, 180);
+  setScrollTo(sc, top);
 }
 
 /* ---- 回收站 ---- */
@@ -3951,6 +3971,12 @@ function popover(anchor, items, opts){
     r = { left: LAST_POINTER.x, right: LAST_POINTER.x, top: LAST_POINTER.y, bottom: LAST_POINTER.y };
   }
   po._lastRect = { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
+  /* 菜单开着时，锚点按钮保持选中色（触屏上尤其需要：没有 hover，不然看不出点了哪个） */
+  if(anchor && anchor.classList){
+    if(po._anchor && po._anchor !== anchor) po._anchor.classList.remove('on');
+    anchor.classList.add('on');
+    po._anchor = anchor;
+  }
   po.innerHTML = items.map((it,idx)=>{
     if(it[0]==='-') return '<div class="po-sep"></div>';
     if(it[0]==='#') return it[1];
@@ -3966,6 +3992,7 @@ function popover(anchor, items, opts){
     b.onclick = ()=>{
       const it = items[+b.dataset.i];
       po.classList.remove('open');
+      if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
       if(it[4]) it[4]();
     };
   });
@@ -3975,6 +4002,7 @@ function popover(anchor, items, opts){
     if(!po.contains(ev.target)){
       po.classList.remove('open');
       document.removeEventListener('mousedown', off);
+      if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
       if(po._off === off) po._off = null;
     }
   };

@@ -1004,9 +1004,22 @@ function renderMain(){
 }
 
 /* ---- 编辑器 ---- */
+// 使用说明这篇固定用双栏打开（源码 + 预览对照），其它笔记沿用各自的视图
+const GUIDE_ID = 'guide';
+let lastActiveNote = null;
+function applyNoteMode(n){
+  if(!n) return;
+  if(n.id === GUIDE_ID){
+    if(lastActiveNote !== GUIDE_ID) S.mode = 'split';
+  }else if(lastActiveNote === GUIDE_ID){
+    S.mode = 'live';
+  }
+  lastActiveNote = n.id;
+}
 function renderEditor(){
   if(trashView){ renderTrash(); outlineEl.classList.add('hidden'); return; }
   const n = S.active ? noteById(S.active) : null;
+  applyNoteMode(n);
 
   paperActions.innerHTML = `
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>

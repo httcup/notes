@@ -3087,9 +3087,35 @@ function importDoc(){
 function importMd(){ importDoc(); }
 
 /* ========== 菜单 ========== */
+/* 锚点可能在打开菜单的过程中被重绘掉（同步、切换笔记都会 renderAll），
+   这时 getBoundingClientRect 全是 0，菜单会飞左上角 —— 依次找回：同名元素 → 上次菜单位置 → 鼠标位置 */
+let LAST_POINTER = { x: window.innerWidth - 80, y: 64 };
+document.addEventListener('mousedown', e=>{ LAST_POINTER = { x:e.clientX, y:e.clientY }; }, true);
+function liveAnchor(anchor, id){
+  if(anchor && anchor.isConnected) return anchor;
+  const again = id ? document.getElementById(id) : null;
+  if(again) return again;
+  // 找不到就地造一个不可见的锚点，位置取上次菜单展开处
+  const ghost = document.createElement('div');
+  const r = $('#popover')._lastRect || { left: LAST_POINTER.x - 1, right: LAST_POINTER.x, top: LAST_POINTER.y, bottom: LAST_POINTER.y };
+  ghost.style.cssText = `position:fixed;left:${r.right-2}px;top:${r.bottom}px;width:2px;height:2px;pointer-events:none;opacity:0`;
+  document.body.appendChild(ghost);
+  setTimeout(()=>ghost.remove(), 30000);
+  return ghost;
+}
 function popover(anchor, items, opts){
   const po = $('#popover');
-  const r = anchor.getBoundingClientRect();
+  let r = null;
+  if(anchor && anchor.isConnected) r = anchor.getBoundingClientRect();
+  if(!r || (!r.width && !r.height)){
+    const again = anchor && anchor.id ? document.getElementById(anchor.id) : null;
+    if(again) r = again.getBoundingClientRect();
+  }
+  if((!r || (!r.width && !r.height)) && po._lastRect) r = po._lastRect;
+  if(!r || (!r.width && !r.height)){
+    r = { left: LAST_POINTER.x, right: LAST_POINTER.x, top: LAST_POINTER.y, bottom: LAST_POINTER.y };
+  }
+  po._lastRect = { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
   po.innerHTML = items.map((it,idx)=>{
     if(it[0]==='-') return '<div class="po-sep"></div>';
     if(it[0]==='#') return it[1];
@@ -3152,7 +3178,7 @@ function openNoteMenu(anchor){
     ['源码', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
-    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(anchor)],
+    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(liveAnchor(anchor, 'paMore'))],
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);

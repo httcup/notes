@@ -304,12 +304,11 @@ a{color:inherit;text-decoration:none}
 .doc.mode-live #prose{display:none}
 .doc.mode-live .source{display:none}
 .doc.mode-live .live{display:block;min-height:360px;cursor:text}
-.blk{position:relative;border-radius:7px;transition:box-shadow .12s,background .12s}
-.blk.editing{background:rgb(var(--hover));box-shadow:0 0 0 9px rgb(var(--hover))}
+.blk{position:relative}
 .blk-src{
   display:none;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
-  font-family:var(--font-mono);font-size:15px;line-height:2.24;color:rgb(var(--ink));
-  padding:0;margin:0;field-sizing:content;
+  font-family:var(--font-serif);font-size:17.5px;line-height:1.95;color:rgb(var(--ink));
+  padding:0;margin:0;field-sizing:content;caret-color:rgb(var(--ivy));
 }
 .blk.editing .blk-src{display:block}
 .blk.editing .blk-view{display:none}
@@ -1348,6 +1347,17 @@ function editBlock(i, x, y, caret){
   if(caret==='end') off = ta.value.length;
   else if(typeof caret === 'number') off = caret;
   else off = offsetFromPoint(el.querySelector('.blk-view'), ta.value, x, y);
+  // 换源码态时沿用这一块渲染后的字号/行高/字重，视觉上不跳
+  const ref = el.querySelector('.blk-view').firstElementChild;
+  if(ref){
+    try{
+      const cs = getComputedStyle(ref);
+      ta.style.fontSize = cs.fontSize;
+      ta.style.lineHeight = cs.lineHeight;
+      ta.style.fontWeight = cs.fontWeight;
+      ta.style.fontFamily = cs.fontFamily;
+    }catch(e){}
+  }
   el.classList.add('editing');
   LIVE.editing = i; LIVE.ta = ta;
   growTa(ta);

@@ -894,6 +894,15 @@ try{
   }
 }catch(e){}
 
+/* 视图是全局偏好，所有笔记一视同仁，默认即时渲染；
+   旧版本曾把「使用说明」强制成双栏，这里一次性把遗留的 split 重置回来 */
+try{
+  if(!localStorage.getItem('ivy.guideLiveV1')){
+    if(S.mode === 'split'){ S.mode = 'live'; persistLocal(); }
+    localStorage.setItem('ivy.guideLiveV1','1');
+  }
+}catch(e){}
+
 const noteById = id => S.notes.find(n=>n.id===id);
 const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt);
 
@@ -1232,18 +1241,6 @@ function renderMain(){
 }
 
 /* ---- 编辑器 ---- */
-// 使用说明这篇固定用双栏打开（源码 + 预览对照），其它笔记沿用各自的视图
-const GUIDE_ID = 'guide';
-let modeManual = null;      // 用户在这篇笔记里手动切过视图
-function applyNoteMode(n){
-  if(!n) return;
-  if(n.id === GUIDE_ID){
-    if(modeManual !== n.id) S.mode = 'split';
-  }else if(modeManual === GUIDE_ID){
-    S.mode = 'live';
-    modeManual = null;
-  }
-}
 function renderEditor(){
   if(trashView){
     renderTrash(); outlineEl.classList.add('hidden');
@@ -1252,7 +1249,6 @@ function renderEditor(){
     return;
   }
   const n = S.active ? noteById(S.active) : null;
-  applyNoteMode(n);
 
   paperActions.innerHTML = `
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
@@ -2718,7 +2714,6 @@ function setMode(m){
   const doc = document.getElementById('doc'); if(!doc) return;
   commitAnyEditing();
   S.mode = m;
-  modeManual = S.active;      // 用户主动切过视图，别再被「说明页固定双栏」拉回去
   doc.classList.remove('mode-live','mode-preview','mode-edit','mode-split');
   doc.classList.add(modeClass(m));
   document.body.classList.toggle('split-mode', m==='split');

@@ -464,7 +464,7 @@ body.split-mode .outline{display:none}
 
 /* popover */
 .popover{
-  position:fixed;z-index:70;min-width:196px;padding:5px;background:rgb(var(--surface));
+  position:fixed;z-index:70;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
   border-radius:10px;box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   opacity:0;transform:translateY(-4px) scale(.98);pointer-events:none;transition:opacity .14s,transform .16s var(--spring);
 }
@@ -474,6 +474,8 @@ body.split-mode .outline{display:none}
 .po-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:rgb(var(--faint))}
 .po-item.danger{color:rgb(var(--danger))}
 .po-item.danger svg{color:rgb(var(--danger))}
+.po-item.muted{color:rgb(var(--faint));pointer-events:none}
+.po-item>span:first-of-type{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .po-sep{height:1px;margin:4px 6px;background:rgb(var(--line))}
 .po-key{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--faint))}
 .hl-row{display:flex;align-items:center;gap:7px;padding:6px 8px 5px}
@@ -2930,10 +2932,17 @@ function popover(anchor, items, opts){
       if(it[4]) it[4]();
     };
   });
-  setTimeout(()=>{
-    const off = (ev)=>{ if(!po.contains(ev.target)){ po.classList.remove('open'); document.removeEventListener('mousedown',off);} };
-    document.addEventListener('mousedown', off);
-  },0);
+  // 二级菜单会在同一个 #popover 上重绘，先把上一次的外部点击监听摘掉，避免越积越多
+  if(po._off) document.removeEventListener('mousedown', po._off);
+  const off = (ev)=>{
+    if(!po.contains(ev.target)){
+      po.classList.remove('open');
+      document.removeEventListener('mousedown', off);
+      if(po._off === off) po._off = null;
+    }
+  };
+  po._off = off;
+  setTimeout(()=>{ if(po._off === off) document.addEventListener('mousedown', off); }, 0);
 }
 function openShareMenu(anchor){
   const n = noteById(S.active);
@@ -2960,13 +2969,55 @@ function copyShareUrl(){
   navigator.clipboard.writeText(url).then(()=>toast('链接已复制：' + url), ()=>toast(url));
 }
 function openNoteMenu(anchor){
+  const n = noteById(S.active);
+  const nb = n && S.notebooks.find(x=>x.id===n.notebookId && !x.deleted);
   popover(anchor, [
     ['即时渲染', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
     ['源码', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
+    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(anchor)],
+    '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);
+}
+/* 笔记归属：选笔记本 / 移出 / 新建并移入 */
+function moveNoteTo(n, notebookId){
+  if(!n) return;
+  n.notebookId = notebookId || null;
+  n.updatedAt = Date.now();
+  if(notebookId){
+    const nb = S.notebooks.find(x=>x.id===notebookId);
+    if(nb) nb.open = true;
+  }
+  renderAll(); save();
+  const nb = notebookId ? S.notebooks.find(x=>x.id===notebookId) : null;
+  toast(nb ? '已移动到「' + nb.name + '」' : '已移出笔记本');
+}
+function openMoveMenu(anchor){
+  const n = noteById(S.active); if(!n) return;
+  const nbs = S.notebooks.filter(x=>!x.deleted);
+  const items = nbs.map(nb=>[
+    nb.name,
+    n.notebookId === nb.id ? '✓' : '',
+    '',
+    'book',
+    ()=>moveNoteTo(n, nb.id)
+  ]);
+  if(!nbs.length) items.push(['（还没有笔记本）','','muted','book',null]);
+  popover(anchor, [
+    ...items,
+    '-',
+    ['移出笔记本', n.notebookId ? '' : '✓', '', 'minus', ()=>moveNoteTo(n, null)],
+    ['新建笔记本…', '', '', 'plus', ()=>{
+      const name = prompt('新建笔记本，这篇笔记会移进去', '新笔记本');
+      if(!name || !name.trim()) return;
+      const now = Date.now();
+      const nb = { id:'nb'+now.toString(36), name:name.trim(), open:true, deleted:false, updatedAt:now };
+      S.notebooks.push(nb);
+      moveNoteTo(n, nb.id);
+    }]
+  ], { align:'left' });
 }
 function openUserMenu(anchor){
   popover(anchor, [

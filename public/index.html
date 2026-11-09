@@ -255,6 +255,8 @@ a{color:inherit;text-decoration:none}
 .prose h2{font-size:1.34em}
 .prose h3{font-size:1.14em}
 .prose h4{font-size:1em}
+.prose h5{font-size:.94em;color:rgb(var(--ink-2))}
+.prose h6{font-size:.9em;color:rgb(var(--muted))}
 .prose ul,.prose ol{margin:0 0 1.05em;padding-left:1.35em}
 .prose li{margin:.3em 0}
 .prose li::marker{color:rgb(var(--faint))}
@@ -1050,7 +1052,7 @@ function countWords(md){
 
 /* ---- 标题下的 Markdown 工具条 ---- */
 const FMT_GROUPS = [
-  [['h2','H2','二级标题'],['h3','H3','三级标题']],
+  [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['code','代码','行内代码']],
   [['ul','列表','无序列表'],['ol','编号','有序列表'],['todo','待办','待办清单'],['quote','引用','引用块']],
   [['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
@@ -1064,8 +1066,19 @@ function renderFmtBar(){
   ).join('');
   bar.querySelectorAll('[data-fmt]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
-    b.onclick = ()=>applyFormat(b.dataset.fmt);
+    b.onclick = ()=>{ b.dataset.fmt==='h' ? openHeadingMenu(b) : applyFormat(b.dataset.fmt); };
   });
+}
+
+function openHeadingMenu(anchor){
+  popover(anchor, [
+    ['一号标题','H1','','',()=>applyFormat('h1')],
+    ['二号标题','H2','','',()=>applyFormat('h2')],
+    ['三号标题','H3','','',()=>applyFormat('h3')],
+    ['四号标题','H4','','',()=>applyFormat('h4')],
+    ['五号标题','H5','','',()=>applyFormat('h5')],
+    ['六号标题','H6','','',()=>applyFormat('h6')]
+  ], { align:'left' });
 }
 function applyFormat(kind){
   const n = S.active ? noteById(S.active) : null;
@@ -1111,8 +1124,12 @@ function applyFormat(kind){
   };
 
   switch(kind){
+    case 'h1': prefixLines('# '); break;
     case 'h2': prefixLines('## '); break;
     case 'h3': prefixLines('### '); break;
+    case 'h4': prefixLines('#### '); break;
+    case 'h5': prefixLines('##### '); break;
+    case 'h6': prefixLines('###### '); break;
     case 'b': wrapSel('**','**','加粗文字'); break;
     case 'i': wrapSel('*','*','斜体文字'); break;
     case 's': wrapSel('~~','~~','删除线'); break;
@@ -1176,7 +1193,7 @@ function applyFormat(kind){
     growTa(src);
     syncBody();
     // 结构性改动（标题/列表/引用…）立刻渲染出来，看得到效果
-    if(['h2','h3','ul','ol','todo','quote','table','hr','pre'].includes(kind)) commitBlock(i);
+    if(['h1','h2','h3','h4','h5','h6','ul','ol','todo','quote','table','hr','pre'].includes(kind)) commitBlock(i);
   } else {
     src.style.height = 'auto';
     src.style.height = Math.max(src.scrollHeight, 240) + 'px';
@@ -2416,7 +2433,7 @@ function importMd(){
 }
 
 /* ========== 菜单 ========== */
-function popover(anchor, items){
+function popover(anchor, items, opts){
   const po = $('#popover');
   const r = anchor.getBoundingClientRect();
   po.innerHTML = items.map((it,idx)=>{
@@ -2425,12 +2442,16 @@ function popover(anchor, items){
   }).join('');
   po.classList.add('open');
   const pw = po.offsetWidth, ph = po.offsetHeight;
-  po.style.left = Math.min(r.right-pw, window.innerWidth-pw-12)+'px';
+  const wantLeft = opts && opts.align === 'left' ? r.left : r.right - pw;
+  po.style.left = Math.min(Math.max(12, wantLeft), window.innerWidth-pw-12)+'px';
   po.style.top = Math.min(r.bottom+6, window.innerHeight-ph-12)+'px';
-  po.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
-    const it = items[+b.dataset.i];
-    po.classList.remove('open');
-    if(it[4]) it[4]();
+  po.querySelectorAll('[data-i]').forEach(b=>{
+    b.onmousedown = ev=>ev.preventDefault();   // 别把正文的选区/焦点抢走
+    b.onclick = ()=>{
+      const it = items[+b.dataset.i];
+      po.classList.remove('open');
+      if(it[4]) it[4]();
+    };
   });
   setTimeout(()=>{
     const off = (ev)=>{ if(!po.contains(ev.target)){ po.classList.remove('open'); document.removeEventListener('mousedown',off);} };

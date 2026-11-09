@@ -153,22 +153,28 @@ a{color:inherit;text-decoration:none}
 .note-item .tags{display:flex;gap:3px;flex:0 0 auto}
 .dot-tag{width:5px;height:5px;border-radius:50%}
 
-/* 左侧标签分类 */
-.tag-filter-bar{
-  display:flex;align-items:center;gap:6px;margin:2px 8px 8px;padding:6px 9px;
-  border-radius:8px;background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));
-  font-size:11.5px;font-weight:500;line-height:1.3;
-}
-.tag-filter-bar .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tag-filter-bar button{font-size:11px;color:inherit;opacity:.72;white-space:nowrap}
-.tag-filter-bar button:hover{opacity:1;text-decoration:underline}
+/* 左侧标签分类（可折叠树：标签 → 该标签下的笔记） */
 .tag-sec{margin-top:12px}
-.tag-sec .sec-label{margin-bottom:4px}
-.tag-sec-clear{font-size:11px;color:rgb(var(--ivy));font-weight:500}
-.tag-sec-clear:hover{text-decoration:underline}
-.shelf-row.tag-row{padding:5px 8px;gap:9px}
-.shelf-row.tag-row.active{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:500}
-.tag-dot{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+.tag-sec-head{
+  display:flex;align-items:center;gap:6px;width:calc(100% - 16px);text-align:left;
+  margin:10px 8px 6px;padding:2px 0;
+  font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));
+}
+.tag-sec-head:hover{color:rgb(var(--ink-2))}
+.tag-sec-head .caret,.tag-caret{
+  flex:0 0 auto;width:9px;text-align:center;font-size:8px;line-height:1;
+  color:rgb(var(--faint));transition:transform .18s;
+}
+.tag-sec-head.open .caret,.tag-row.open .tag-caret{transform:rotate(90deg)}
+.tag-sec-head svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.tag-sec-head .count{margin-left:auto;font-weight:500;color:rgb(var(--faint))}
+.tag-group{margin:1px 0}
+.shelf-row.tag-row{padding:5px 8px;gap:7px;color:rgb(var(--ink-2))}
+.shelf-row.tag-row:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.tag-hash{font-size:12.5px;line-height:1;flex:0 0 auto;font-weight:500}
+.tag-dot{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
+.tag-notes{margin-left:17px;padding-left:10px;border-left:1px solid rgb(var(--line))}
+.tag-notes .note-item{padding:5px 8px;font-size:12.8px}
 .tag-empty{font-size:11.5px;color:rgb(var(--faint));padding:4px 8px 6px;line-height:1.6}
 
 /* 单篇笔记的标签选择器 */
@@ -801,6 +807,8 @@ function seed(){
     mode: 'live',
     tagFilter: '',
     tagLibrary: [],
+    tagSectionClosed: false,
+    tagClosed: {},
     media: []
   };
 }
@@ -818,6 +826,8 @@ function load(){
     if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
     if(typeof s.tagFilter !== 'string') s.tagFilter = '';
     if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
+    if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
+    if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
     // 老数据 / 云端数据可能没有 tags 字段，统一补成数组
     s.notes.forEach(n=>{ if(!Array.isArray(n.tags)) n.tags = []; });
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
@@ -946,6 +956,20 @@ function allTags(){
 function tagCount(t){
   return S.notes.filter(n=>!n.trashed && !n.deleted && tagOf(n).includes(t)).length;
 }
+/* 「没有标签」是一个虚拟分组，用内部 key，避免和真实标签重名 */
+const NO_TAG = '__no_tag__';
+const tagGroupName = k => k === NO_TAG ? '没有标签' : k;
+function tagGroupNotes(k, notes){
+  return k === NO_TAG ? notes.filter(n=>!tagOf(n).length) : notes.filter(n=>tagOf(n).includes(k));
+}
+function isTagGroupOpen(k){
+  return !(S.tagClosed && S.tagClosed[k]);      // 默认展开，收起过的记在 S.tagClosed 里
+}
+function tagNoteRow(n){
+  return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
+    ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
+  </button>`;
+}
 function rememberTag(t){
   if(!t) return;
   if(!Array.isArray(S.tagLibrary)) S.tagLibrary = [];
@@ -969,17 +993,12 @@ function renderShelf(){
 
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
-  // 点标签分类时，书架里只列带这个标签的笔记
-  let tagFilter = S.tagFilter || '';
-  if(tagFilter && !allTags().includes(tagFilter)){ tagFilter = ''; S.tagFilter = ''; }
-  const shown = tagFilter ? notes.filter(n=>tagOf(n).includes(tagFilter)) : notes;
-  let html = `<div class="sec-label"><span>笔记</span><span class="count">${shown.length}</span></div>`;
-  if(tagFilter) html += `<div class="tag-filter-bar"><span class="t">标签 · ${esc(tagFilter)}</span><button data-act="clear-tag">查看全部</button></div>`;
+  let html = `<div class="sec-label"><span>笔记</span><span class="count">${notes.length}</span></div>`;
   html += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
-  shown.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
-  const loose = shown.filter(n=>!n.notebookId);
+  notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
+  const loose = notes.filter(n=>!n.notebookId);
 
   function noteRow(n){
     const dots = tagOf(n).slice(0,3).map(t=>`<span class="dot-tag" style="background:${tagColor(t)}"></span>`).join('');
@@ -1005,18 +1024,30 @@ function renderShelf(){
 
   if(loose.length) html += `<div class="nb-notes" style="padding-left:0">${loose.map(noteRow).join('')}</div>`;
 
-  // 笔记本下面：标签分类
-  const tags = allTags().sort((a,b)=> tagCount(b)-tagCount(a) || a.localeCompare(b,'zh-CN'));
+  // 笔记本下面：标签分类（每个标签可展开，列出打了该标签的笔记）
+  const keys = allTags().slice();
+  keys.push(NO_TAG);                                   // 「没有标签」固定分组
+  keys.sort((a,b)=> tagGroupName(a).localeCompare(tagGroupName(b), 'zh-CN'));
+  const secOpen = !S.tagSectionClosed;
+  const tagTree = keys.map(k=>{
+    const list = tagGroupNotes(k, notes);
+    const open = isTagGroupOpen(k);
+    return `<div class="tag-group">
+      <button class="shelf-row tag-row ${open?'open':''}" data-tagfold="${esc(k)}">
+        <span class="tag-caret">&#9654;</span>
+        <span class="tag-hash" style="color:${k===NO_TAG?'rgb(var(--faint))':tagColor(k)}">#</span>
+        <span class="t">${esc(tagGroupName(k))}</span><span class="meta">${list.length}</span>
+      </button>
+      ${open ? `<div class="tag-notes">${list.length
+        ? list.map(tagNoteRow).join('')
+        : `<div class="tag-empty">这个标签下还没有笔记</div>`}</div>` : ''}
+    </div>`;
+  }).join('');
   html += `<div class="tag-sec">
-    <div class="sec-label"><span>标签</span>${tagFilter
-      ? `<button class="tag-sec-clear" data-act="clear-tag">清除筛选</button>`
-      : `<span class="count">${tags.length}</span>`}</div>
-    ${tags.length ? tags.map(t=>`
-      <button class="shelf-row tag-row ${tagFilter===t?'active':''}" data-tag="${esc(t)}">
-        <span class="tag-dot" style="background:${tagColor(t)}"></span>
-        <span class="t">${esc(t)}</span><span class="meta">${tagCount(t)}</span>
-      </button>`).join('')
-      : `<div class="tag-empty">还没有标签。打开一篇笔记，点标题下方「+ 标签」新建。</div>`}
+    <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
+      <span class="caret">&#9654;</span>${ic('tag')}<span>标签</span>
+    </button>
+    ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
   </div>`;
 
   html += `<div style="height:6px"></div>
@@ -1027,8 +1058,10 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
-  shelfBody.querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{
-    S.tagFilter = (S.tagFilter === b.dataset.tag) ? '' : b.dataset.tag;
+  shelfBody.querySelectorAll('[data-tagfold]').forEach(b=>b.onclick=()=>{
+    const k = b.dataset.tagfold;
+    if(!S.tagClosed || typeof S.tagClosed !== 'object') S.tagClosed = {};
+    if(S.tagClosed[k]) delete S.tagClosed[k]; else S.tagClosed[k] = true;
     renderShelf(); save();
   });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
@@ -1044,7 +1077,7 @@ function bindShelf(){
     const a = b.dataset.act;
     if(a==='new-nb') newNotebook();
     if(a==='trash') openTrashView();
-    if(a==='clear-tag'){ S.tagFilter = ''; renderShelf(); save(); }
+    if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
 }

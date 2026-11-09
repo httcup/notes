@@ -285,11 +285,10 @@ a{color:inherit;text-decoration:none}
 
 /* 右上角操作图标与标题栏（标签 + 新建）同一行、垂直居中：44px 行高里对称留白 */
 .paper-actions{position:absolute;top:7px;right:12px;display:flex;align-items:center;gap:2px;z-index:6}
-/* 手机/窄屏/触屏才出现的大纲按钮（.pa-btn 有 display:grid，这里用双类名压住） */
-.pa-btn.pa-ol{display:none}
+/* 顶部「大纲」按钮：桌面 / 窄屏 / 触屏全部显示（.pa-btn 有 display:grid，用双类名保持一致权重） */
+.pa-btn.pa-ol{display:grid}
 body.ol-open .pa-ol{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
-/* 所有触屏设备（含 iPad Safari 桌面模式）都显示大纲按钮、关闭按钮，并放大点击区 */
-body.ol-touch .pa-btn.pa-ol{display:grid}
+/* 所有触屏设备（含 iPad Safari 桌面模式）放大关闭按钮与条目点击区 */
 body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
@@ -751,8 +750,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* 右上角图标缩小一点，并给标签栏留出它的宽度，别互相压 */
   .paper-actions{top:8px;right:8px;gap:0}
   .pa-btn{width:28px;height:28px}
-  .pa-btn.pa-ol{display:grid}
   .tabbar{padding-right:154px}
+  /* 手机上去掉右边缘的刻度悬浮图标，大纲只从顶部按钮进出 */
+  .outline-zone{display:none}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
@@ -872,7 +872,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v29', at: '2026-11-10 01:40' };
+window.IVY_BUILD = { id: 'v30', at: '2026-11-10 01:35' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3033,8 +3033,10 @@ function setOutlinePanel(on){
 }
 function toggleOutlinePanel(){ setOutlinePanel(!document.body.classList.contains('ol-open')); }
 
-/* 右边缘刻度：点某根跳标题；桌面点空白处固定，触屏点空白处展开/收起大纲 */
+/* 右边缘刻度：桌面点某根跳标题、点空白处固定；触屏（含 iPad）点边缘一律弹出/收起大纲，
+   不做刻度跳转——触摸很难精确落在某根刻度上，点了没反应像「坏了」 */
 document.getElementById('outlineZone').addEventListener('click', e=>{
+  if(OL_TOUCH){ toggleOutlinePanel(); return; }
   const mini = document.getElementById('olMini'); if(!mini) return;
   const y = e.clientY - mini.getBoundingClientRect().top;
   let best = null, bd = Infinity;
@@ -3042,8 +3044,7 @@ document.getElementById('outlineZone').addEventListener('click', e=>{
     const d = Math.abs((+t.dataset.y || 0) - y);
     if(d < bd){ bd = d; best = t; }
   });
-  if(best && bd <= (OL_TOUCH ? 14 : 9)){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
-  else if(OL_TOUCH){ toggleOutlinePanel(); }
+  if(best && bd <= 9){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
   else toggleOutlinePin();
 });
 /* 触屏：点面板外面收起，避免一直盖住正文 */
@@ -3057,9 +3058,9 @@ if(OL_TOUCH){
 /* 鼠标移到卡片上时，刻度也让位；滚动时同步高亮当前标题 */
 outlineEl.addEventListener('mouseenter', ()=>document.body.classList.add('ol-peek'));
 outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-peek'));
-/* 桌面上「靠边滑出」的展开态交给鼠标位置判断：
-   只靠 CSS :hover 会跟 pointer-events 互相依赖，鼠标从边缘移进卡片时容易闪回去 */
-if(!OL_TOUCH){
+/* 「靠边滑出」的展开态交给鼠标位置判断（mousemove 只对真实鼠标触发，纯触摸设备不会误开）：
+   不限定 !OL_TOUCH —— iPad 接鼠标/触控板时 hover:hover 媒体查询也成立，需要同样的驱动 */
+{
   let olHover = false;
   document.addEventListener('mousemove', e=>{
     const near = e.clientX >= window.innerWidth - 34;      // 右边缘刻度区

@@ -245,7 +245,7 @@ a{color:inherit;text-decoration:none}
 
 .doc-body{position:relative}
 .prose{
-  font-family:var(--font-serif);font-size:17.5px;line-height:1.95;color:rgb(var(--ink));
+  font-family:var(--font-serif);font-size:17.5px;line-height:1.8;color:rgb(var(--ink));
   word-break:break-word;
 }
 .prose>*:first-child{margin-top:0}
@@ -283,8 +283,12 @@ a{color:inherit;text-decoration:none}
 }
 /* 统一垂直节奏：块与块之间只留一个间距，标题不再叠加 1.7em 的上边距 */
 .prose > *, .blk-view > *{margin-top:0 !important;margin-bottom:0 !important}
-.prose > * + *, .blk + .blk, .blk-view > * + *{margin-top:.62em !important}
+.prose > * + *, .blk + .blk, .blk-view > * + *{margin-top:0 !important}
 .prose > hr, .blk-view > hr{margin-top:1.15em !important;margin-bottom:1.15em !important}
+/* 有边框/底色的块（代码块、表格、引用）留一点呼吸，否则会和相邻文字粘在一起 */
+.prose > pre, .prose > table, .prose > blockquote,
+.blk-view > pre, .blk-view > table, .blk-view > blockquote{margin-top:.34em !important;margin-bottom:.34em !important}
+.prose > ul, .prose > ol, .blk-view > ul, .blk-view > ol{margin-top:.16em !important;margin-bottom:.16em !important}
 .prose table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.94em}
 .prose th,.prose td{border:1px solid rgb(var(--line));padding:7px 10px;text-align:left}
 .prose th{background:rgb(var(--sunken));font-weight:600}
@@ -293,7 +297,7 @@ a{color:inherit;text-decoration:none}
 .prose .empty{color:rgb(var(--faint));font-size:15px}
 .source{
   display:none;width:100%;min-height:360px;border:0;outline:none;background:none;resize:none;overflow:hidden;
-  font-family:var(--font-serif);font-size:17.5px;line-height:1.95;color:rgb(var(--ink));padding:0;
+  font-family:var(--font-serif);font-size:17.5px;line-height:1.8;color:rgb(var(--ink));padding:0;
 }
 .doc.mode-edit .prose{display:none}
 .doc.mode-edit .source{display:block}
@@ -305,7 +309,7 @@ body.split-mode .outline{display:none}
 .doc.mode-split .source{
   display:block;grid-column:1;grid-row:1;min-height:420px;padding-right:28px;
   border-right:1px solid rgb(var(--line));
-  font-family:var(--font-mono);font-size:13.5px;line-height:1.95;
+  font-family:var(--font-mono);font-size:13.5px;line-height:1.8;
 }
 .doc.mode-split #live{display:none}
 .doc.mode-split .prose{
@@ -323,7 +327,7 @@ body.split-mode .outline{display:none}
 .blk{position:relative}
 .blk-src{
   display:none;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
-  font-family:var(--font-serif);font-size:17.5px;line-height:1.95;color:rgb(var(--ink));
+  font-family:var(--font-serif);font-size:17.5px;line-height:1.8;color:rgb(var(--ink));
   padding:0;margin:0;field-sizing:content;caret-color:rgb(var(--ivy));
 }
 .blk.editing .blk-src{display:block}
@@ -468,6 +472,13 @@ body.split-mode .outline{display:none}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .sheet-head h3{margin:0;font-size:15px;font-weight:600;letter-spacing:.01em}
 .sheet-sub{margin:0 0 16px;font-size:12.5px;line-height:1.75;color:rgb(var(--muted))}
+.reg-hint{
+  margin:0 0 16px;padding:11px 13px;border-radius:10px;
+  background:rgb(var(--ivy-soft));border:1px solid rgb(var(--ivy)/.24);
+}
+.reg-hint-t{font-size:12.5px;line-height:1.72;color:rgb(var(--ink-2))}
+.reg-hint-t b{color:rgb(var(--ivy-ink));font-weight:600}
+.reg-hint-s{margin-top:6px;font-size:11.5px;line-height:1.7;color:rgb(var(--muted))}
 .field{display:block;margin-bottom:14px}
 .field span{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));margin-bottom:6px}
 .field input{
@@ -2363,7 +2374,7 @@ function syncSave(){
   }catch(e){}
 }
 const isConnected = ()=> !!(SYNC.token || SYNC.key);
-const accountLabel = ()=> SYNC.account || '主人';
+const accountLabel = ()=> SYNC.account || '默认账号';
 
 function syncTip(){
   if(!isConnected()) return '云同步未连接 · 点击设置';
@@ -2511,7 +2522,7 @@ async function syncNow(opts={}){
     persistLocal();
   }catch(e){
     SYNC.state = 'error';
-    SYNC.error = e.status===401 ? '登录已过期，请重新输入口令' : (e.message||'网络错误');
+    SYNC.error = e.status===401 ? '登录已过期，请重新输入密码' : (e.message||'网络错误');
     if(e.status !== 401){ syncFails++; syncDirty = true; scheduleRetry(); }
     renderDock();
   }finally{
@@ -2551,7 +2562,7 @@ async function pullRemote(){
     if(changed){ S.notes = S.notes.filter(n=>!n.deleted); renderAfterSync(true, false); persistLocal(); }
     SYNC.state = 'ok'; SYNC.last = Date.now(); syncSave(); renderDock(); updateSyncBadge();
   }catch(e){
-    SYNC.state = 'error'; SYNC.error = e.status===401 ? '登录已过期，请重新输入口令' : (e.message||'网络错误');
+    SYNC.state = 'error'; SYNC.error = e.status===401 ? '登录已过期，请重新输入密码' : (e.message||'网络错误');
     renderDock(); updateSyncBadge();
   }
 }
@@ -2644,8 +2655,15 @@ function updateSyncBadge(){
   el.title = syncTip();
 }
 
+const REG_HINT_NEW = `<div class="reg-hint-t">第一次使用？填「用户名 + 自设密码」后点<b>注册新账号</b>，就能开出独立空间，别人看不到你的笔记。</div>
+  <div class="reg-hint-s">密码是唯一的钥匙，服务端只存加密哈希，忘了找不回，请一定记好。</div>`;
+const REG_HINT_ON = `<div class="reg-hint-t">已连接云端，编辑会自动保存到你的空间。</div>
+  <div class="reg-hint-s">要换账号，改上面的用户名和密码后点「立即同步」即可切换。</div>`;
+
 function paintSyncPanel(){
   const line = $('#syncStatusLine');
+  const hint = $('#regHint');
+  if(hint) hint.innerHTML = isConnected() ? REG_HINT_ON : REG_HINT_NEW;
   if(!line) return;
   const n = S.notes.filter(x=>!x.trashed).length;
   const m = allMedia().length;
@@ -2658,7 +2676,7 @@ function paintSyncPanel(){
   } else if(isConnected()){
     line.innerHTML = `已保存账号 <b>${esc(accountLabel())}</b>，点「登录并同步」开始。`;
   } else {
-    line.innerHTML = '尚未登录。账号留空 = 主人账号（用主人口令）；填账号名 + 注册 = 独立空间，数据互相看不到。';
+    line.innerHTML = '尚未登录。填好用户名和密码后点「登录并同步」，之后编辑会自动上传到云端。';
   }
   const login = $('#syncLogin'); if(login) login.textContent = isConnected() ? '立即同步' : '登录并同步';
   const out = $('#syncLogout'); if(out) out.disabled = !isConnected();
@@ -2668,11 +2686,11 @@ function openSyncPanel(){
   ov.innerHTML = `<div class="sheet">
     <div class="sheet-head"><h3>账号与云同步</h3>
       <button class="pa-btn" id="syncClose" title="关闭">${ic('x')}</button></div>
-    <p class="sheet-sub">笔记存在 Cloudflare D1，图片存在 KV。账号留空就用主人口令；填一个账号名再注册，就是独立空间，别人看不到内容。</p>
-    <label class="field"><span>账号（留空 = 主人）</span>
-      <input id="syncNameInput" type="text" placeholder="例如 xiaohu" autocomplete="off" spellcheck="false" value="${esc(SYNC.account)}"></label>
-    <label class="field"><span>口令</span>
-      <input id="syncKeyInput" type="password" placeholder="至少 4 位" autocomplete="off" spellcheck="false" value="${esc(SYNC.key)}"></label>
+    <div class="reg-hint" id="regHint"></div>
+    <label class="field"><span>用户名</span>
+      <input id="syncNameInput" type="text" placeholder="给自己起个名字，例如 xiaohu" autocomplete="off" spellcheck="false" value="${esc(SYNC.account)}"></label>
+    <label class="field"><span>密码</span>
+      <input id="syncKeyInput" type="password" placeholder="自己设定的密码，至少 4 位" autocomplete="off" spellcheck="false" value="${esc(SYNC.key)}"></label>
     <div class="sheet-row">
       <button class="btn-primary" id="syncLogin">登录并同步</button>
       <button class="btn-ghost" id="syncRegister">注册新账号</button>
@@ -2689,8 +2707,8 @@ function openSyncPanel(){
   });
   const run = async (create)=>{
     const {name, key} = readForm();
-    if(!key){ toast('请先填写口令'); return; }
-    if(create && !name){ toast('注册新账号需要填写账号名'); return; }
+    if(!key){ toast('请先填写密码'); return; }
+    if(create && !name){ toast('注册新账号需要填写用户名'); return; }
     const btn = create ? $('#syncRegister') : $('#syncLogin');
     btn.disabled = true;
     try{
@@ -2698,7 +2716,7 @@ function openSyncPanel(){
       SYNC.state = 'busy'; paintSyncPanel(); renderDock();
       await syncNow({rerender:true});
       paintSyncPanel();
-      if(SYNC.state==='ok') toast((create?'已创建账号「':'已登录「')+ (name||'主人') +'」');
+      if(SYNC.state==='ok') toast((create?'已创建账号「':'已登录「')+ (name||'默认账号') +'」');
     }catch(e){
       SYNC.state = 'off'; SYNC.error = '';
       toast(e.message || '登录失败');
@@ -2739,7 +2757,7 @@ if(qs.get('mode')==='preview') setTimeout(()=>setMode('preview'), 60);
 if(qs.get('mode')==='live') setTimeout(()=>setMode('live'), 60);
 if(qs.get('cmd')==='1') setTimeout(()=>openPalette(), 60);
 if(qs.get('sync')==='1') setTimeout(()=>openSyncPanel(), 60);
-// 已有口令时后台安静同步一次
+// 已有密码时后台安静同步一次
 if(isConnected()){
   setTimeout(async ()=>{
     if(!SYNC.token && SYNC.key){

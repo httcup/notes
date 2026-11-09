@@ -306,9 +306,11 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 正文偏左居中：左侧留白固定得小一些，剩余空间留给右侧（悬浮大纲），
    避免宽屏下整块居中导致离左边书架太远 */
 .doc{
-  max-width:760px;
+  /* v33: 760 → 840。宽屏下 760 会在正文与右侧悬浮大纲之间留出一大块空白，加宽后白区明显收窄；
+     再宽（>860）大纲卡片展开时会盖住正文右缘的字，840 时只压住 36px 内边距里的几个像素 */
+  max-width:840px;
   margin:0 auto 0 clamp(24px, 5.5vw, 96px);
-  padding:52px 32px 140px;
+  padding:52px 36px 140px;
 }
 .doc-title{
   display:block;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
@@ -753,10 +755,13 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   .paper-actions{top:8px;right:8px;gap:0}
   .pa-btn{width:28px;height:28px}
   .tabbar{padding-right:154px}
-  /* 手机上去掉右边缘的刻度悬浮图标，大纲只从顶部按钮进出 */
-  .outline-zone{display:none}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
+}
+/* 只在手机（<=640px）去掉右边缘的刻度悬浮图标，大纲只从顶部按钮进出；
+   iPad 竖屏（744px 起）不能落进这个区间，否则边缘悬浮图标会被误杀（v33 修复） */
+@media (max-width:640px){
+  .outline-zone{display:none}
 }
 .ol-close{display:none;margin-right:auto}
 /* 触屏设备：没有稳定 hover，改用显式展开状态，并放大刻度点击热区 */
@@ -909,7 +914,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v32', at: '2026-11-10 01:45' };
+window.IVY_BUILD = { id: 'v33', at: '2026-11-10 02:45' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

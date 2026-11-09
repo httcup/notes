@@ -215,7 +215,7 @@ a{color:inherit;text-decoration:none}
   color:rgb(var(--ink));padding:0;margin:0 0 2px;
 }
 .doc-title::placeholder{color:rgb(var(--faint));opacity:.75}
-.doc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 30px;font-size:12.5px;color:rgb(var(--faint))}
+.doc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 24px;font-size:12.5px;color:rgb(var(--faint))}
 .doc-meta .sep{opacity:.6}
 .meta-btn{padding:2px 4px;border-radius:5px;color:rgb(var(--faint));transition:background .14s,color .14s;font-size:12.5px}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
@@ -285,6 +285,10 @@ a{color:inherit;text-decoration:none}
   color:rgb(var(--ivy-ink));background:rgb(var(--ivy-soft));text-decoration:none;
   padding:1.5px 5px;border-radius:5px;font-size:.94em;white-space:nowrap;
 }
+/* 统一垂直节奏：块与块之间只留一个间距，标题不再叠加 1.7em 的上边距 */
+.prose > *, .blk-view > *{margin-top:0 !important;margin-bottom:0 !important}
+.prose > * + *, .blk + .blk, .blk-view > * + *{margin-top:.62em !important}
+.prose > hr, .blk-view > hr{margin-top:1.15em !important;margin-bottom:1.15em !important}
 .prose table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.94em}
 .prose th,.prose td{border:1px solid rgb(var(--line));padding:7px 10px;text-align:left}
 .prose th{background:rgb(var(--sunken));font-weight:600}

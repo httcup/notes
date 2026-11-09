@@ -491,10 +491,16 @@ body.split-mode .outline{display:none}
 .hl-sw{width:22px;height:22px;border-radius:6px;background:var(--sw);box-shadow:inset 0 0 0 1px rgb(var(--ink) / .10);transition:transform .12s var(--spring)}
 .hl-sw:hover{transform:scale(1.14)}
 .hl-sw:active{transform:scale(.96)}
-.emoji-grid{display:grid;grid-template-columns:repeat(8,28px);gap:1px;padding:5px}
-.emo{width:28px;height:28px;border-radius:6px;font-size:17px;line-height:1;display:grid;place-items:center;transition:background .12s}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,34px);gap:1px;padding:6px 4px;max-height:210px;overflow-y:auto;scrollbar-width:thin}
+.emoji-grid::-webkit-scrollbar{width:6px}
+.emoji-grid::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.16);border-radius:6px;border:1px solid transparent;background-clip:content-box}
+.emo{width:34px;height:32px;border-radius:6px;font-size:18px;line-height:1;display:grid;place-items:center;transition:background .12s}
 .emo:hover{background:rgb(var(--hover))}
 .emo:active{transform:scale(.92)}
+.emo-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:2px 3px 5px;border-bottom:1px solid rgb(var(--line))}
+.emo-tab{font-size:11.5px;padding:4px 2px;border-radius:5px;color:rgb(var(--muted));line-height:1.25;text-align:center;transition:background .12s,color .12s}
+.emo-tab:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.emo-tab.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 
 /* toast */
 .toasts{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
@@ -1159,25 +1165,49 @@ function openHighlightMenu(anchor){
     b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hl); };
   });
 }
-/* 表情选择器：点一下插到光标处 */
-const EMOJIS = [
-  '😀','😁','😂','🤣','😊','😍','😘','😎',
-  '🤔','😅','😇','🙂','😉','😌','😴','🥳',
-  '🤩','🥺','😭','😢','😡','😱','🤗','🫶',
-  '👍','👎','👌','✌️','🙏','💪','👏','🤝',
-  '❤️','🧡','💛','💚','💙','💜','🖤','💯',
-  '🎉','🎈','🔥','✨','⭐','💡','📌','✅',
-  '📝','📖','📚','💻','🚀','⏰','☕','🍀'
+/* 表情选择器：分类 + 点一下插到光标处 */
+const EMOJI_GROUPS = [
+  ['常用', ['😀','😁','😂','🤣','😊','😍','😘','😎','🤔','😅','😇','🙂','😉','😌','😴','🥳','🤩','🥺','😭','😢','😡','😱','🤗','🫶','👍','👎','👌','✌️','🙏','💪','👏','🤝','❤️','🧡','💛','💚','💙','💜','🖤','💯','🎉','🔥','✨','⭐','💡','📌','✅','⚠️']],
+  ['笑脸', ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','💩','🤡','👻','👽','🤖']],
+  ['手势', ['👍','👎','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','👇','☝️','🫵','✋','🤚','🖐️','🖖','👋','🤝','🙏','💪','🦾','🫶','👏','🙌','🫂','👐','🤲','🤜','🤛','✊','👊','🫱','🫲','🖕','☜','☞']],
+  ['心情', ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','💢','💥','💫','💦','💨','💬','💭','🗯️','💤','💯','🔥','✨','🌟','⭐','🪐','🌈','☀️','🌤️','🌙','🌚','🌝','🥳','🎊','🎈']],
+  ['动物', ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🐢','🐍','🦎','🐙','🦑','🦀','🦞','🐠','🐟','🐬','🐳','🦭','🐊','🦓','🦒','🐘','🦔','🐾']],
+  ['美食', ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🥦','🥬','🥒','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🌮','🌯','🥗','🍿','🍱','🍣','🍜','🍲','🍰','🎂','🍩','🍪','🍫','🍬','🍭','☕','🍵','🧋','🍺','🍻','🥂','🍷']],
+  ['活动', ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🏋️','🤸','🤺','⛹️','🤾','🏌️','🚴','🏊','🏄','🧘','🎯','🎮','🎲','🎰','🎳','🎼','🎵','🎶','🎤','🎧','🎷','🎸','🎹','🎺','🎻','🥁','🎨','🎬','🎭','🩰','🎪']],
+  ['物品', ['📝','📖','📚','💻','📱','🖥️','⌨️','🖱️','🖨️','🎧','🎤','📷','📸','📹','📼','📞','📟','📠','📺','📻','🧭','⏰','⏱️','⏲️','⌚','🔋','🔌','💡','🔦','🕯️','🧯','💸','💵','💰','💳','🧾','✉️','📦','📫','📮','📌','📎','🔗','🔒','🔑','🔨','🪛','🔧','🔩','⚙️','🧲','🧪','🔬','🔭','📡','💊','💉','🩹','🧬','🗂️','📁','📅','🗓️','📊','📈','📉','🗒️','📋','🖊️','✏️','🖍️','📏','📐','✂️','🗑️']],
+  ['符号', ['✅','❌','❗','❓','⚠️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔶','🔷','🔸','🔹','🔔','🔕','🔇','🔊','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','➰','➿','✔️','☑️','🔘','🔲','🔳','⬛','⬜','◼️','◽','▪️','🔅','🔆','🔱','⚜️','🏁','🚩','🎌','🏴','🏳️','⭐','🌟','💠','⭕','🆗','🆕','🆒','🆓','🔝','🔙','🔜','🔚']]
 ];
-function openEmojiMenu(anchor){
-  const grid = `<div class="emoji-grid">${EMOJIS.map(e=>
+function emojiGridHtml(gi){
+  return EMOJI_GROUPS[gi][1].map(e=>
     `<button class="emo" type="button" data-e="${e}">${e}</button>`
-  ).join('')}</div>`;
-  popover(anchor, [['#', grid]]);
-  const po = $('#popover');
-  po.querySelectorAll('.emo').forEach(b=>{
+  ).join('');
+}
+function bindEmojiGrid(scope, po){
+  scope.querySelectorAll('.emo').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();   // 保住光标/选区
     b.onclick = ()=>{ po.classList.remove('open'); insertPlain(b.dataset.e); };
+  });
+}
+function openEmojiMenu(anchor){
+  const tabs = EMOJI_GROUPS.map((g,i)=>
+    `<button class="emo-tab${i?'':' on'}" type="button" data-g="${i}">${g[0]}</button>`
+  ).join('');
+  const html = `<div class="emo-wrap">
+    <div class="emo-tabs">${tabs}</div>
+    <div class="emoji-grid" id="emoGrid">${emojiGridHtml(0)}</div>
+  </div>`;
+  popover(anchor, [['#', html]]);
+  const po = $('#popover');
+  const grid = po.querySelector('#emoGrid');
+  bindEmojiGrid(grid, po);
+  po.querySelectorAll('.emo-tab').forEach(t=>{
+    t.onmousedown = e=>e.preventDefault();
+    t.onclick = ()=>{
+      po.querySelectorAll('.emo-tab').forEach(x=>x.classList.toggle('on', x===t));
+      grid.innerHTML = emojiGridHtml(+t.dataset.g);
+      grid.scrollTop = 0;
+      bindEmojiGrid(grid, po);
+    };
   });
 }
 function insertPlain(text){

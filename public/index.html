@@ -513,6 +513,10 @@ body.ol-hidden .outline-zone{display:none}
 .outline:hover,
 .outline.pinned{transform:none;opacity:1;pointer-events:auto}
 .outline.hidden{display:none}
+/* Chrome 会把「可滚动/可聚焦」的浮层当成可聚焦控件，画一圈原生焦点环（黑框），Safari 不画。
+   大纲是纯浮层，不需要这圈；键盘焦点改用下面的内描边，仍然可见。 */
+.outline,.outline-body{outline:none!important}
+.outline-body:focus-visible,.ol-item:focus-visible{outline:none!important;box-shadow:inset 0 0 0 1.5px rgb(var(--ivy)/.55);border-radius:6px}
 .outline-head{display:flex;align-items:center;justify-content:flex-end;gap:1px;padding:3px 3px 5px;flex:0 0 auto}
 .ol-btn{
   width:26px;height:26px;display:grid;place-items:center;border-radius:7px;
@@ -718,10 +722,27 @@ body.ol-hidden .outline-zone{display:none}
 .ex-row button:hover{background:rgb(var(--sunken))}
 .ex-row button:active{transform:scale(.97)}
 
+/* 窄屏（含 iPad 竖屏）不再隐藏大纲，只把卡片收窄；触屏靠点击展开 */
 @media (max-width:900px){
-  .outline,.outline-zone{display:none}
   .doc{padding:40px 20px 120px}
+  .outline{width:min(240px,62vw)}
 }
+.ol-close{display:none;margin-right:auto}
+/* 触屏设备：没有稳定 hover，改用显式展开状态，并放大刻度点击热区 */
+@media (hover:none){
+  .outline-zone{width:30px}
+  .ol-mini{right:11px}
+  .ol-tick{height:2px}
+  .ol-tick::after{content:'';position:absolute;left:-8px;right:0;top:-10px;bottom:-10px}
+  /* iPad Safari 的 tap 只模拟一次 hover，点完就撤销，会把面板闪回去 */
+  .outline-zone:hover ~ .outline,
+  .outline:hover{transform:translateX(10px);opacity:0;pointer-events:none}
+  body .outline.pinned,
+  body.ol-open .outline{transform:none;opacity:1;pointer-events:auto}
+  .ol-close{display:grid}
+}
+body.ol-open .outline{transform:none;opacity:1;pointer-events:auto}
+body.ol-open .ol-mini{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -820,7 +841,9 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v22', at: '2026-11-09 19:49' };
+window.IVY_BUILD = { id: 'v24', at: '2026-11-10 00:45' };
+/* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
+const OL_TOUCH = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 /* ========== 状态 ========== */
@@ -2939,6 +2962,7 @@ function renderOutline(){
   const heads = S.outlineTop ? pairs.filter(h=>h.level <= 2) : pairs;
   outlineItems = heads;
   outlineEl.innerHTML = `<div class="outline-head">
+      <button class="ol-btn ol-close" id="olClose" title="关闭大纲">${ic('x')}</button>
       <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" title="${S.outlineTop?'显示全部标题':'只看一、二级标题'}">${ic('filter')}</button>
       <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" title="${S.outlineOpen?'取消固定（鼠标移开自动收起）':'固定在页面上'}">${ic('pin')}</button>
     </div>
@@ -2952,11 +2976,17 @@ function renderOutline(){
   if(pin) pin.onclick = toggleOutlinePin;
   const top = outlineEl.querySelector('#olTop');
   if(top) top.onclick = ()=>{ S.outlineTop = !S.outlineTop; renderOutline(); save(); };
-  outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>jumpToHeading(b.dataset.h));
+  const close = outlineEl.querySelector('#olClose');
+  if(close) close.onclick = ()=>document.body.classList.remove('ol-open');
+  outlineEl.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{
+    jumpToHeading(b.dataset.h);
+    // 触屏上跳完把面板收起，别挡住正文（固定状态下保持展开）
+    if(OL_TOUCH && !S.outlineOpen) document.body.classList.remove('ol-open');
+  });
   updateOutlineActive();
 }
 
-/* 右边缘刻度：点某根跳到对应标题，点空白处固定/取消固定大纲 */
+/* 右边缘刻度：点某根跳标题；桌面点空白处固定，触屏点空白处展开/收起大纲 */
 document.getElementById('outlineZone').addEventListener('click', e=>{
   const mini = document.getElementById('olMini'); if(!mini) return;
   const y = e.clientY - mini.getBoundingClientRect().top;
@@ -2965,9 +2995,21 @@ document.getElementById('outlineZone').addEventListener('click', e=>{
     const d = Math.abs((+t.dataset.y || 0) - y);
     if(d < bd){ bd = d; best = t; }
   });
-  if(best && bd <= 9){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
+  if(best && bd <= (OL_TOUCH ? 14 : 9)){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
+  else if(OL_TOUCH){
+    document.body.classList.toggle('ol-open');
+    updateOutlineActive();
+  }
   else toggleOutlinePin();
 });
+/* 触屏：点面板外面收起，避免一直盖住正文 */
+if(OL_TOUCH){
+  document.addEventListener('pointerdown', e=>{
+    if(!document.body.classList.contains('ol-open')) return;
+    if(e.target.closest && (e.target.closest('#outline') || e.target.closest('#outlineZone'))) return;
+    document.body.classList.remove('ol-open');
+  }, true);
+}
 /* 鼠标移到卡片上时，刻度也让位；滚动时同步高亮当前标题 */
 outlineEl.addEventListener('mouseenter', ()=>document.body.classList.add('ol-peek'));
 outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-peek'));

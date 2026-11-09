@@ -169,8 +169,22 @@ a{color:inherit;text-decoration:none}
 .tag-sec-head svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 .tag-sec-head .count{margin-left:auto;font-weight:500;color:rgb(var(--faint))}
 .tag-group{margin:1px 0}
-.shelf-row.tag-row{padding:5px 8px;gap:7px;color:rgb(var(--ink-2))}
-.shelf-row.tag-row:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.tag-line{position:relative;border-radius:7px}
+.tag-line:hover{background:rgb(var(--hover))}
+.shelf-row.tag-row{padding:5px 8px;padding-right:30px;gap:7px;color:rgb(var(--ink-2))}
+.shelf-row.tag-row:hover{background:transparent;color:rgb(var(--ink))}
+.tag-row .meta{transition:opacity .12s}
+.tag-line:hover .tag-row .meta{opacity:0}
+.tag-more{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
+  color:rgb(var(--muted));opacity:0;pointer-events:none;
+  transition:opacity .12s,background .12s,color .12s;
+}
+.tag-line:hover .tag-more{opacity:1;pointer-events:auto}
+.tag-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
+.tag-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.po-note{font-size:11.5px;line-height:1.55;color:rgb(var(--faint));padding:4px 8px 6px;max-width:230px}
 .tag-hash{font-size:12.5px;line-height:1;flex:0 0 auto;font-weight:500}
 .tag-dot{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
 .tag-notes{margin-left:17px;padding-left:10px;border-left:1px solid rgb(var(--line))}
@@ -965,9 +979,36 @@ function allTags(){
 function tagCount(t){
   return S.notes.filter(n=>!n.trashed && !n.deleted && tagOf(n).includes(t)).length;
 }
+/* 左侧标签树只列「当前确实有笔记在用」的标签；
+   单篇笔记的选择器仍用 allTags()，能翻出摘掉过的历史标签 */
+function usedTags(notes){
+  const set = new Set();
+  notes.forEach(n=>tagOf(n).forEach(t=>{ if(t) set.add(t); }));
+  return [...set];
+}
+/* 删除标签 = 把它从所有笔记上摘掉，笔记本身保留 */
+function deleteTag(t){
+  if(!t || t === NO_TAG) return;
+  const affected = S.notes.filter(n=>tagOf(n).includes(t));
+  if(!confirm('删除标签「'+t+'」？\n\n会从 '+affected.length+' 篇笔记上移除这个标签，笔记本身不会删除。')) return;
+  const now = Date.now();
+  affected.forEach(n=>{ n.tags = tagOf(n).filter(x=>x!==t); n.updatedAt = now; });
+  S.tagLibrary = (S.tagLibrary||[]).filter(x=>x!==t);
+  if(S.tagClosed) delete S.tagClosed[t];
+  renderAll(); save();
+  toast('已删除标签「'+t+'」，'+affected.length+' 篇笔记已更新');
+}
+function openTagMenu(anchor, t){
+  if(!t || t === NO_TAG) return;
+  popover(anchor, [
+    ['#', `<div class="po-note">会从 ${tagCount(t)} 篇笔记上移除「${esc(t)}」，笔记本身保留。</div>`],
+    ['删除标签', '', 'danger', 'trash', ()=>deleteTag(t)]
+  ]);
+}
 /* 「没有标签」是一个虚拟分组，用内部 key，避免和真实标签重名 */
 const NO_TAG = '__no_tag__';
-const tagGroupName = k => k === NO_TAG ? '没有标签' : k;
+let NO_TAG_LABEL = '没有标签';
+const tagGroupName = k => k === NO_TAG ? NO_TAG_LABEL : k;
 function tagGroupNotes(k, notes){
   return k === NO_TAG ? notes.filter(n=>!tagOf(n).length) : notes.filter(n=>tagOf(n).includes(k));
 }
@@ -1034,19 +1075,25 @@ function renderShelf(){
   if(loose.length) html += `<div class="nb-notes" style="padding-left:0">${loose.map(noteRow).join('')}</div>`;
 
   // 笔记本下面：标签分类（每个标签可展开，列出打了该标签的笔记）
-  const keys = allTags().slice();
-  keys.push(NO_TAG);                                   // 「没有标签」固定分组
+  const keys = usedTags(notes);
+  // 万一真有标签名叫「没有标签」，虚拟分组临时改名，避免左侧出现两行同名
+  NO_TAG_LABEL = keys.includes('没有标签') ? '未添加标签' : '没有标签';
+  keys.push(NO_TAG);                                   // 固定分组
   keys.sort((a,b)=> tagGroupName(a).localeCompare(tagGroupName(b), 'zh-CN'));
   const secOpen = !S.tagSectionClosed;
   const tagTree = keys.map(k=>{
     const list = tagGroupNotes(k, notes);
     const open = isTagGroupOpen(k);
+    const virtual = k === NO_TAG;
     return `<div class="tag-group">
-      <button class="shelf-row tag-row ${open?'open':''}" data-tagfold="${esc(k)}">
-        <span class="tag-caret">&#9654;</span>
-        <span class="tag-hash" style="color:${k===NO_TAG?'rgb(var(--faint))':tagColor(k)}">#</span>
-        <span class="t">${esc(tagGroupName(k))}</span><span class="meta">${list.length}</span>
-      </button>
+      <div class="tag-line">
+        <button class="shelf-row tag-row ${open?'open':''}" data-tagfold="${esc(k)}">
+          <span class="tag-caret">&#9654;</span>
+          <span class="tag-hash" style="color:${virtual?'rgb(var(--faint))':tagColor(k)}">#</span>
+          <span class="t">${esc(tagGroupName(k))}</span><span class="meta">${list.length}</span>
+        </button>
+        ${virtual ? '' : `<button class="tag-more" data-tagmenu="${esc(k)}" title="标签操作">${ic('more')}</button>`}
+      </div>
       ${open ? `<div class="tag-notes">${list.length
         ? list.map(tagNoteRow).join('')
         : `<div class="tag-empty">这个标签下还没有笔记</div>`}</div>` : ''}
@@ -1067,11 +1114,17 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
-  shelfBody.querySelectorAll('[data-tagfold]').forEach(b=>b.onclick=()=>{
-    const k = b.dataset.tagfold;
-    if(!S.tagClosed || typeof S.tagClosed !== 'object') S.tagClosed = {};
-    if(S.tagClosed[k]) delete S.tagClosed[k]; else S.tagClosed[k] = true;
-    renderShelf(); save();
+  shelfBody.querySelectorAll('[data-tagfold]').forEach(b=>{
+    b.onclick=()=>{
+      const k = b.dataset.tagfold;
+      if(!S.tagClosed || typeof S.tagClosed !== 'object') S.tagClosed = {};
+      if(S.tagClosed[k]) delete S.tagClosed[k]; else S.tagClosed[k] = true;
+      renderShelf(); save();
+    };
+    b.oncontextmenu = e=>{ e.preventDefault(); openTagMenu(b, b.dataset.tagfold); };
+  });
+  shelfBody.querySelectorAll('[data-tagmenu]').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); openTagMenu(b, b.dataset.tagmenu); };
   });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
     const nb = S.notebooks.find(x=>x.id===b.dataset.nb);

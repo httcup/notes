@@ -217,16 +217,16 @@ a{color:inherit;text-decoration:none}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
 /* 标题下的 Markdown 工具条 */
-.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:1px;margin:12px 0 0;user-select:none}
+.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 0;user-select:none}
 .fmt-bar button{
-  height:26px;min-width:26px;padding:0 8px;border-radius:6px;font-size:12.5px;color:rgb(var(--muted));
+  height:26px;min-width:24px;padding:0 6px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
   transition:background .14s,color .14s,transform .1s;
 }
 .fmt-bar button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .fmt-bar button:active{transform:scale(.95)}
 .fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
-.fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 7px;flex:0 0 auto}
+.fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 5px;flex:0 0 auto}
 .meta-sync{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgb(var(--faint))}
 .meta-sync .sd{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
 .meta-sync .sd.ok{background:rgb(var(--ivy));opacity:1}
@@ -1053,7 +1053,7 @@ const FMT_GROUPS = [
   [['h2','H2','二级标题'],['h3','H3','三级标题']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['code','代码','行内代码']],
   [['ul','列表','无序列表'],['ol','编号','有序列表'],['todo','待办','待办清单'],['quote','引用','引用块']],
-  [['link','链接','插入链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
+  [['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
 ];
 function renderFmtBar(){
   const bar = document.getElementById('fmtBar');
@@ -1088,6 +1088,7 @@ function applyFormat(kind){
   // 只有「文本框没被聚焦」时才插到末尾；双栏/源码里要尊重光标位置
   if(!inLive && document.activeElement !== src){ s = e = v.length; }
   const sel = v.slice(s, e);
+  let wantWiki = false;
   let ns = s, ne = e;
   const setRange = (a,b)=>{ ns = a; ne = b; };
   const wrapSel = (before, after, ph)=>{
@@ -1120,6 +1121,18 @@ function applyFormat(kind){
     case 'ol': prefixLines('1. '); break;
     case 'todo': prefixLines('- [ ] '); break;
     case 'quote': prefixLines('> '); break;
+    case 'wiki': {
+      if(sel){
+        // 选中了文字 → 直接包成 [[文字]]，不弹面板
+        v = v.slice(0,s) + '[[' + sel + ']]' + v.slice(e);
+        setRange(s + 2, s + 2 + sel.length);
+      } else {
+        v = v.slice(0,s) + '[[' + v.slice(e);
+        setRange(s + 2, s + 2);
+        wantWiki = true;
+      }
+      break;
+    }
     case 'link': {
       const text = sel || '链接文字';
       const url = 'https://';
@@ -1155,6 +1168,7 @@ function applyFormat(kind){
   src.value = v;
   try{ src.setSelectionRange(ns, ne); }catch(e2){}
   src.focus();
+  if(wantWiki && inLive) detectWiki(src);
 
   if(inLive){
     const i = parseInt(src.dataset.i, 10) || 0;
@@ -1914,11 +1928,26 @@ function renderOutline(){
 }
 
 /* ---- 回收站 ---- */
+function purgeNote(id, quiet){
+  const n = noteById(id);
+  if(!n) return;
+  if(!quiet && !confirm('彻底删除「'+(n.title||'无标题')+'」？删除后不可恢复。')) return;
+  // 关键：留一个墓碑并排队上传，否则服务端那条还在，下次同步会被拉回来
+  S.pendingDeletes = (S.pendingDeletes||[]).filter(x=>x!==id).concat([id]);
+  S.notes = S.notes.filter(x=>x.id!==id);
+  S.tabs = (S.tabs||[]).filter(t=>t!==id);
+  if(S.active===id) S.active = S.tabs[0] || null;
+  if(!quiet){ renderAll(); save(); toast('已彻底删除'); }
+}
+
 function renderTrash(){
   const list = S.notes.filter(n=>n.trashed);
   scrollEl.innerHTML = `<div class="view-pad">
     <h2 style="font-family:var(--font-serif);font-size:22px;margin:0 0 4px">回收站</h2>
-    <p style="color:var(--faint);font-size:12.5px;margin:0 0 22px">删除的笔记会留在这里，可以随时恢复。</p>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 0 22px">
+      <p style="color:rgb(var(--faint));font-size:12.5px;margin:0">删除的笔记会留在这里，可以随时恢复。</p>
+      ${list.length ? `<button class="meta-btn" id="trashEmpty" style="margin-left:auto;color:rgb(var(--danger))">清空回收站</button>` : ''}
+    </div>
     ${list.length ? list.map(n=>`<div class="note-item" style="cursor:default">
         ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
         <button class="meta-btn" data-restore="${n.id}">恢复</button>
@@ -1926,9 +1955,15 @@ function renderTrash(){
       </div>`).join('') : `<div style="color:var(--faint);font-size:13.5px">回收站是空的。</div>`}
   </div>`;
   scrollEl.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{ toggleTrash(b.dataset.restore); });
-  scrollEl.querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>{
-    S.notes = S.notes.filter(x=>x.id!==b.dataset.purge); renderAll(); save(); toast('已彻底删除');
-  });
+  scrollEl.querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>purgeNote(b.dataset.purge));
+  const all = scrollEl.querySelector('#trashEmpty');
+  if(all) all.onclick = ()=>{
+    const ids = S.notes.filter(n=>n.trashed).map(n=>n.id);
+    if(!ids.length) return;
+    if(!confirm('清空回收站？这 '+ids.length+' 篇笔记将被彻底删除，不可恢复。')) return;
+    ids.forEach(id=>purgeNote(id, true));
+    renderAll(); save(); toast('回收站已清空');
+  };
 }
 
 /* ========== Markdown ========== */

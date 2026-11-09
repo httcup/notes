@@ -1,0 +1,13 @@
+name = "notes"
+compatibility_date = "2026-01-01"
+
+# 说明：这里刻意不写 pages_build_output_dir。
+# 一旦写上，Cloudflare 会把本文件当作 Pages 项目配置，覆盖控制台里的
+# 构建目录、环境变量与绑定；本项目的 IVY_KEY 是控制台里的 Secret，
+# 因此构建配置统一放在 Pages 控制台（输出目录 public）。
+
+# 云同步数据库（D1）
+[[d1_databases]]
+binding = "DB"
+database_name = "ivynote"
+database_id = "8c48bad2-ad7d-4c4b-bb79-4e4bda6d464e"

@@ -1691,7 +1691,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v59', at: '2026-11-10 16:54' };
+window.IVY_BUILD = { id: 'v60', at: '2026-11-10 17:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7934,6 +7934,106 @@ function copyShareUrl(){
   const url = location.origin + '/s/' + n.shareSlug;
   navigator.clipboard.writeText(url).then(()=>toast('链接已复制：' + url), ()=>toast(url));
 }
+
+/* ========== 同步到苹果备忘录：iOS 快捷指令单向推送 ========== */
+let NPF = { on:false, token:'', url:'' }, npfBusy = false;
+function closeNotesPush(){
+  const ov = document.getElementById('npfOv');
+  if(ov) ov.classList.remove('open');
+}
+async function npfApi(opts){
+  opts = opts || {};
+  if(!isConnected()){ toast('先用左下角云同步登录，链接才有地方存'); return null; }
+  if(npfBusy) return null;
+  npfBusy = true;
+  try{
+    const hasBody = !!(opts.body && Object.keys(opts.body).length);
+    const d = await apiCall('/api/notesfeed', hasBody ? { method:'POST', body:opts.body } : {});
+    NPF = d && d.on ? { on:true, token:d.token, url:d.url } : { on:false, token:'', url:'' };
+    return d;
+  }catch(e){
+    toast('没成功：' + (e.message || '网络错误'));
+    return null;
+  } finally { npfBusy = false; }
+}
+function openNotesPush(){
+  let ov = document.getElementById('npfOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'npfOv'; ov.className = 'due-ov';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeNotesPush(); });
+  }
+  ov.classList.add('open');
+  paintNotesPush();
+  npfApi().then(()=>{ if(ov.classList.contains('open')) paintNotesPush(); });
+}
+function paintNotesPush(){
+  const ov = document.getElementById('npfOv'); if(!ov) return;
+  const steps = [
+    '1. 点上面「生成取数链接」并复制 → iPhone 打开「快捷指令」App，右上角 + 新建',
+    '2. 添加动作「URL」粘贴链接，再加「获取 URL 内容」，类型选「JSON」',
+    '3. 加「重复每个项目」，重复项选「notes」',
+    '4. 循环里加「创建备忘录」：标题取「重复项的 title」，正文取「重复项的 body」',
+    '5. 只推某个笔记本：链接末尾加 &nb=笔记本名；只推最近更新：加 &since=毫秒时间戳',
+    '6. 手动点一次推一次；也可在快捷指令里建「自动化」定时跑'
+  ];
+  const feedBlock = NPF.token
+    ? `<code class="rc-link" id="npfLink">${esc(NPF.url)}
+         <button class="rc-copy" id="npfCopy" title="复制链接">${ic('link')}</button></code>
+       <div class="rc-acts">
+         <button class="rc-btn primary" id="npfCopyBtn">复制链接</button>
+         <button class="rc-btn" id="npfReset">重新生成</button>
+         <button class="rc-btn danger" id="npfOff">关闭推送</button>
+       </div>`
+    : `<div class="rc-acts">
+         <button class="rc-btn primary" id="npfMake">生成取数链接</button>
+       </div>`;
+  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="同步到苹果备忘录">
+    <div class="rc-title">${ic('notebook')}<span>同步到苹果备忘录</span></div>
+    <div class="rc-box">
+      <div class="rc-box-h"><b>iOS 快捷指令 · 单向推送</b></div>
+      <div class="rc-p">苹果备忘录没有公开接口，无法像日历那样订阅自动同步；可行办法是给快捷指令一条取数链接，由它把笔记批量「创建备忘录」到备忘录 App。链接本身就是凭证，请勿分享。</div>
+      ${feedBlock}
+    </div>
+    <div class="rc-box">
+      <div class="rc-box-h"><b>快捷指令这样搭（一次性，两分钟）</b></div>
+      ${steps.map(s=>`<div class="rc-note" style="margin-top:0">${s}</div>`).join('')}
+      <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇，正文按 Markdown 纯文本推过去。</div>
+    </div>
+    <div class="rc-foot"><button class="rc-close" id="npfClose">关闭</button></div>
+  </div>`;
+  const q = s=>ov.querySelector(s);
+  if(q('#npfClose')) q('#npfClose').onclick = closeNotesPush;
+  if(q('#npfMake')) q('#npfMake').onclick = async ()=>{
+    const b = q('#npfMake'); b.disabled = true; b.textContent = '正在生成…';
+    const d = await npfApi({ body:{ on:true } });
+    toast(d && d.on ? '链接已生成，复制到快捷指令里用' : '生成失败');
+    paintNotesPush();
+  };
+  if(q('#npfCopyBtn')) q('#npfCopyBtn').onclick = ()=>{
+    if(!NPF.url) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(NPF.url).then(()=>toast('链接已复制，去快捷指令粘贴'), ()=>toast(NPF.url));
+    else toast(NPF.url);
+  };
+  if(q('#npfCopy')) q('#npfCopy').onclick = ()=>{
+    if(!NPF.url) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(NPF.url).then(()=>toast('链接已复制'), ()=>toast(NPF.url));
+    else toast(NPF.url);
+  };
+  if(q('#npfReset')) q('#npfReset').onclick = async ()=>{
+    if(!confirm('重新生成后，快捷指令里填的旧链接会立即失效，要在快捷指令里换新链接。继续吗？')) return;
+    await npfApi({ body:{ reset:true } });
+    paintNotesPush();
+    toast('已换新链接，记得更新快捷指令里的 URL');
+  };
+  if(q('#npfOff')) q('#npfOff').onclick = async ()=>{
+    if(!confirm('关闭后链接立即失效，快捷指令将拉不到数据。笔记本身不受影响。继续吗？')) return;
+    await npfApi({ body:{ off:true } });
+    paintNotesPush();
+    toast('已关闭推送');
+  };
+}
 function openNoteMenu(anchor){
   const n = noteById(S.active);
   const nb = n && S.notebooks.find(x=>x.id===n.notebookId && !x.deleted);
@@ -7990,6 +8090,7 @@ function openMoveMenu(anchor){
 function openUserMenu(anchor){
   popover(anchor, [
     ['云同步设置', '', '', 'cloud', openSyncPanel],
+    ['同步到苹果备忘录', '', '', 'notebook', ()=>openNotesPush()],
     ['切换主题', '', '', 'moon', toggleTheme],
     ['导入 Markdown / HTML', '', '', 'upload', importDoc],
     ['导出全部笔记', '', '', 'download', ()=>{

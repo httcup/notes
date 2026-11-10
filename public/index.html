@@ -1364,7 +1364,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v44', at: '2026-11-10 10:52' };
+window.IVY_BUILD = { id: 'v45', at: '2026-11-10 11:06' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2865,12 +2865,13 @@ function paintRemindCenter(){
   if(q('#rcOpen')) q('#rcOpen').onclick = ()=>{
     const url = FEED.webcal || FEED.url || '';
     if(!url) return;
-    if(/^https?:/.test(url) === false || /iPad|iPhone|Macintosh/.test(navigator.userAgent)){
+    if(navigator.clipboard) navigator.clipboard.writeText(url).catch(()=>{});
+    const apple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+    if(apple){
       location.href = url;                          // webcal 交给系统日历
-      toast('已交给系统日历，没反应就用复制链接');
+      toast('已复制链接，并交给系统日历；没弹出订阅就用粘贴');
     } else {
-      if(navigator.clipboard) navigator.clipboard.writeText(url);
-      toast('链接已复制，粘到日历的「订阅日历」里即可');
+      toast('订阅链接已复制，日历里选「通过网址添加」再粘贴');
     }
   };
   if(q('#rcExport')) q('#rcExport').onclick = ()=>exportTodoIcs();

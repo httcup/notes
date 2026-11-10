@@ -249,6 +249,14 @@ a{color:inherit;text-decoration:none}
 .dock-item.active{background:rgb(var(--ink) / .06);color:rgb(var(--ink));font-weight:500}
 .dock-item .lbl{white-space:nowrap}
 .dock-spacer{flex:1}
+/* 待办逾期红点 */
+.dock-item .todo-dot{
+  min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:rgb(var(--danger));
+  color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;flex:0 0 auto;
+}
+/* 从待办跳过去时，闪一下那一块 */
+@keyframes todoFlash{0%{background:rgb(var(--ivy)/.16)}100%{background:transparent}}
+.blk.todo-flash{animation:todoFlash 1.3s ease-out;border-radius:8px}
 .avatar{
   width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
   font-family:var(--font-serif);font-size:13px;font-weight:700;
@@ -345,6 +353,147 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
 .fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 5px;flex:0 0 auto}
+
+/* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
+.tbl-pick{padding:5px 3px 0;user-select:none;touch-action:none}
+.tbl-grid{display:grid;grid-template-columns:repeat(10,17px);gap:3px}
+.tbl-grid i{width:17px;height:17px;border-radius:4px;background:rgb(var(--hover));transition:background .1s,box-shadow .1s}
+.tbl-grid i.on{background:rgb(var(--ivy)/.2);box-shadow:inset 0 0 0 1px rgb(var(--ivy)/.55)}
+.tbl-info{margin-top:10px;text-align:center;font-size:11.5px;color:rgb(var(--muted));font-variant-numeric:tabular-nums}
+
+/* ---- 待办提醒时间小标签 ---- */
+.prose .due-chip{
+  display:inline-block;font-size:.84em;line-height:1.5;padding:0 6px;border-radius:5px;
+  background:rgb(var(--sunken));color:rgb(var(--muted));vertical-align:1px;white-space:nowrap;
+}
+.prose .due-chip.late{background:rgb(var(--danger-soft));color:rgb(var(--danger))}
+
+/* ---- Mermaid 图表块 ---- */
+.mb{margin:1.35em 0;padding:16px 10px;border-radius:12px;background:rgb(var(--sunken));text-align:center;overflow:auto;min-height:44px}
+.mb svg{max-width:100%;height:auto;display:inline-block}
+.mb-hint{font-size:12.5px;color:rgb(var(--faint));padding:8px 0}
+.mb-err{font-size:12.5px;color:rgb(var(--danger));padding:4px;text-align:left}
+.mb-src{margin:8px 0 0;padding:10px 12px;border-radius:8px;background:rgb(var(--hover));font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre-wrap;color:rgb(var(--muted));text-align:left}
+.blk .mb{margin:.2em 0}
+
+/* ---- Markdown / 快捷键帮助面板 ---- */
+.help-ov{
+  position:fixed;inset:0;z-index:130;background:rgb(16 24 32 / .34);
+  display:grid;place-items:center;padding:24px;opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+}
+.help-ov.open{opacity:1;pointer-events:auto}
+.help-card{
+  width:min(720px,100%);max-height:min(82vh,780px);display:flex;flex-direction:column;
+  background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;
+  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+}
+.help-ov.open .help-card{transform:none}
+.help-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px}
+.help-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.help-hd p{font-size:12.5px;color:rgb(var(--faint));margin-top:5px}
+.help-x{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:rgb(var(--faint));flex:0 0 auto}
+.help-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.help-x svg{width:15px;height:15px}
+.help-tabs{display:flex;gap:4px;padding:0 18px 10px;border-bottom:1px solid rgb(var(--line))}
+.help-tab{padding:6px 11px;border-radius:8px;font-size:13px;color:rgb(var(--muted))}
+.help-tab.on{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:500}
+.help-body{overflow:auto;padding:6px 22px 24px;overscroll-behavior:contain}
+.help-p{font-size:13px;line-height:1.9;color:rgb(var(--ink-2));padding:6px 2px 2px}
+.help-p code{font-family:var(--font-mono);font-size:11.5px;padding:1px 5px;border-radius:4px;background:rgb(var(--code-bg));color:rgb(var(--ivy-ink))}
+.help-code{margin:8px 0 0;padding:12px 14px;border-radius:9px;background:rgb(var(--code-bg));font-family:var(--font-mono);font-size:12px;line-height:1.95;color:rgb(var(--ink-2));white-space:pre-wrap;overflow:auto}
+.help-sec{margin-top:20px}
+.help-sec>h4{font-size:11.5px;font-weight:600;color:rgb(var(--faint));letter-spacing:.06em;margin-bottom:4px}
+.help-row{display:flex;align-items:center;gap:12px;padding:8px 2px;border-bottom:1px solid rgb(var(--line)/.55);font-size:13.5px;color:rgb(var(--ink-2))}
+.help-row:last-child{border-bottom:0}
+.help-row .syn{
+  font-family:var(--font-mono);font-size:11.5px;line-height:1.5;padding:3px 7px;border-radius:6px;
+  background:rgb(var(--code-bg));color:rgb(var(--ivy-ink));flex:0 0 auto;max-width:210px;
+  white-space:pre-wrap;word-break:break-all;
+}
+.help-row .di{margin-left:auto;text-align:right;color:rgb(var(--muted));font-size:12.5px;flex:0 0 auto}
+.help-row .kbd{margin-left:auto;flex:0 0 auto}
+
+/* ---- 日程（左侧书架里的分组列表） ---- */
+.todo-shelf{display:flex;flex-direction:column;min-height:100%}
+.tsh-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 6px 4px}
+.tsh-t{font-size:15px;font-weight:600;letter-spacing:-.01em;color:rgb(var(--ink));padding:2px 0;border-radius:6px}
+.tsh-t.on{color:rgb(var(--ivy))}
+.tsh-sw{display:flex;align-items:center;gap:5px;font-size:10.5px;color:rgb(var(--faint));cursor:pointer;user-select:none}
+.tsh-sw input{position:absolute;opacity:0;pointer-events:none}
+.tsh-sw i{width:22px;height:13px;border-radius:8px;background:rgb(var(--line));position:relative;transition:background .18s;flex:0 0 auto}
+.tsh-sw i::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.tsh-sw input:checked + i{background:rgb(var(--ivy))}
+.tsh-sw input:checked + i::after{transform:translateX(9px)}
+.tsh-meta{padding:0 6px 10px;font-size:11px;color:rgb(var(--faint))}
+.tsg{position:relative}
+.tsg-h{display:flex;align-items:center;gap:6px;width:100%;padding:6px;border-radius:7px;font-size:12px;color:rgb(var(--ink-2));font-weight:500}
+.tsg-h:hover{background:rgb(var(--hover))}
+.tsg-h .gchev{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(0);transition:transform .16s;flex:0 0 auto}
+.tsg-h .gchev.open{transform:rotate(90deg)}
+.tsg-h .ttl{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsg-h .n{font-size:10.5px;color:rgb(var(--faint));font-weight:400;flex:0 0 auto}
+.tsi{display:flex;align-items:flex-start;gap:7px;padding:4px 6px 6px 19px;border-radius:7px;cursor:pointer;transition:background .12s}
+.tsi:hover{background:rgb(var(--hover))}
+.tsi.sel{background:rgb(var(--ivy-soft))}
+.tsi input{width:13px;height:13px;margin-top:2px;accent-color:rgb(var(--ivy));flex:0 0 auto;cursor:pointer}
+.tsi .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.tsi .t{font-size:12.5px;line-height:1.5;color:rgb(var(--ink-2));word-break:break-word}
+.tsi.done .t{color:rgb(var(--faint));text-decoration:line-through}
+.tsi .src{font-size:10px;color:rgb(var(--faint));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsi .tm{font-size:10.5px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;margin-top:1px}
+.tsi .tm.late{color:rgb(var(--danger))}
+.tsi .rep{color:rgb(var(--ivy));font-size:10.5px}
+.tsh-empty{padding:26px 10px;text-align:center;font-size:12px;color:rgb(var(--faint));line-height:1.9}
+.tsh-sub{display:flex;align-items:center;gap:7px;margin:10px 6px 0;padding:8px;border-radius:8px;font-size:12px;color:rgb(var(--muted));text-align:left}
+.tsh-sub:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.tsh-sub svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;flex:0 0 auto}
+/* 右侧空状态 */
+.todo-blank{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;color:rgb(var(--faint))}
+.todo-blank svg{width:40px;height:40px;opacity:.5}
+.todo-blank p{font-size:13px}
+
+/* ---- 待办视图 ---- */
+.todo-wrap{max-width:880px;margin:0 auto;padding:40px 26px 130px}
+.todo-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.todo-hd h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+.todo-hd .sub{font-size:12.5px;color:rgb(var(--faint))}
+.todo-stats{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 24px}
+.todo-stat{padding:9px 13px;border-radius:11px;background:rgb(var(--sunken));font-size:12.5px;color:rgb(var(--muted))}
+.todo-stat b{font-size:16px;font-weight:600;color:rgb(var(--ink));margin-right:5px;font-variant-numeric:tabular-nums}
+.todo-stat.alert{background:rgb(var(--danger-soft));color:rgb(var(--danger))}
+.todo-stat.alert b{color:rgb(var(--danger))}
+.todo-group{margin-bottom:24px}
+.todo-group>h3{font-size:11.5px;font-weight:600;letter-spacing:.06em;color:rgb(var(--faint));margin:0 0 8px;padding-left:2px}
+.todo-item{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:9px;transition:background .14s}
+.todo-item:hover{background:rgb(var(--hover))}
+.todo-item .cb{width:15px;height:15px;margin-top:3px;flex:0 0 auto;accent-color:rgb(var(--ivy));cursor:pointer}
+.todo-item .mid{flex:1;min-width:0}
+.todo-item .tx{font-size:14px;line-height:1.6;color:rgb(var(--ink-2));cursor:pointer;word-break:break-word}
+.todo-item .tx:hover{color:rgb(var(--ink))}
+.todo-item.done .tx{color:rgb(var(--faint));text-decoration:line-through}
+.todo-item .src{font-size:11.5px;color:rgb(var(--faint));margin-top:2px;display:flex;align-items:center;gap:6px}
+.todo-item .src svg{width:11px;height:11px;flex:0 0 auto}
+.todo-item .due{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;padding:1.5px 7px;border-radius:5px;background:rgb(var(--sunken));color:rgb(var(--muted));white-space:nowrap}
+.todo-item .due.late{background:rgb(var(--danger-soft));color:rgb(var(--danger))}
+.todo-item .due.soon{background:rgb(var(--warn-soft));color:rgb(var(--warn-ink))}
+.todo-item .bell{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:rgb(var(--faint));flex:0 0 auto;opacity:0;transition:opacity .14s,background .14s}
+.todo-item:hover .bell,.todo-item .due+.bell{opacity:1}
+.todo-item .bell svg{width:14px;height:14px}
+.todo-item .bell:hover{background:rgb(var(--sunken));color:rgb(var(--ink))}
+.todo-empty{padding:38px 10px;text-align:center;color:rgb(var(--faint));font-size:13px;line-height:1.9}
+.todo-empty svg{width:34px;height:34px;margin:0 auto 10px;display:block;opacity:.5}
+/* 待办浮层（右上角按钮） */
+.todo-pop{padding:2px 0;width:280px;max-height:min(60vh,420px);overflow:auto}
+.todo-pop .tp-hd{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 8px;font-size:11.5px;color:rgb(var(--faint))}
+.todo-pop .tp-i{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:7px;font-size:13px;line-height:1.55;color:rgb(var(--ink-2));cursor:pointer}
+.todo-pop .tp-i:hover{background:rgb(var(--hover))}
+.todo-pop .tp-i input{width:14px;height:14px;margin-top:2px;accent-color:rgb(var(--ivy));flex:0 0 auto}
+.todo-pop .tp-i .tpt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo-pop .tp-i .due{font-size:10.5px;padding:0 5px;border-radius:4px;background:rgb(var(--sunken));color:rgb(var(--muted));white-space:nowrap;flex:0 0 auto;margin-top:2px}
+.todo-pop .tp-i .due.late{background:rgb(var(--danger-soft));color:rgb(var(--danger))}
+.todo-pop .tp-i.done span{color:rgb(var(--faint));text-decoration:line-through}
+.todo-pop .tp-empty{padding:14px 8px;font-size:12.5px;color:rgb(var(--faint))}
 .meta-sync{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgb(var(--faint))}
 .meta-sync .sd{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
 .meta-sync .sd.ok{background:rgb(var(--ivy));opacity:1}
@@ -775,6 +924,14 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
    iPad 竖屏（744px 起）不能落进这个区间，否则边缘悬浮图标会被误杀（v33 修复） */
 @media (max-width:640px){
   .outline-zone{display:none}
+  /* 手机上书架改成抽屉：展开时盖在笔记上，而不是把正文挤成一条 */
+  .shelf{
+    position:fixed;left:0;top:0;bottom:0;z-index:80;
+    width:min(88vw,330px);flex:0 0 auto;margin-left:0;
+    background:rgb(var(--canvas));
+    box-shadow:24px 0 60px -22px rgb(16 24 32 / .22);
+  }
+  .shelf.collapsed{margin-left:calc(min(88vw,330px) * -1)}
 }
 .ol-close{display:none;margin-right:auto}
 /* 触屏设备：没有稳定 hover，改用显式展开状态，并放大刻度点击热区 */
@@ -919,6 +1076,10 @@ const ICONS = {
   info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
   columns:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/>',
   code:'<path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>',
+  codeBlock:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m8.5 9.5-2 2.5 2 2.5M15.5 9.5l2 2.5-2 2.5"/>',
+  bell:'<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10 18a2 2 0 0 0 4 0"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  todo:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7 9.5 1.6 1.6L11.5 8"/><path d="M14 9.5h4M7 15.5h11"/>',
   link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>'
 };
 function ic(name, cls){
@@ -927,7 +1088,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v38', at: '2026-11-10 08:34' };
+window.IVY_BUILD = { id: 'v39', at: '2026-11-10 09:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1170,8 +1331,9 @@ function toggleNoteTag(t){
 }
 
 function renderShelf(){
-  brandName.textContent = S.view==='notes' ? '小胡小胡的笔记' : (S.view==='media' ? '媒体库' : '关系图');
+  brandName.textContent = ({notes:'小胡小胡的笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '小胡小胡的笔记';
 
+  if(S.view==='todo'){ shelfBody.innerHTML = todoShelf(); bindShelf(); return; }
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
 
@@ -1276,6 +1438,612 @@ function bindShelf(){
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
+  shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
+    todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
+  });
+  /* ---- 日程侧栏 ---- */
+  shelfBody.querySelectorAll('[data-tsg]').forEach(b=>b.onclick=()=>{
+    const k = 's' + b.dataset.tsg;
+    S.todoFolded[k] = !S.todoFolded[k]; save(); renderShelf();
+  });
+  shelfBody.querySelectorAll('.tsi').forEach(el=>{
+    let t; try{ t = JSON.parse(el.dataset.tsi); }catch(e){ return; }
+    const cb = el.querySelector('[data-tsi-cb]');
+    if(cb){
+      cb.onclick = ev=>ev.stopPropagation();
+      cb.onchange = ()=>{ setTodoDone(t, cb.checked); renderShelf(); updateTodoBadge(); };
+    }
+    el.onclick = (ev)=>{
+      if(ev.target === cb) return;
+      jumpToTodo(t);
+      renderShelf();
+    };
+  });
+  const sw = document.getElementById('todoShowDone');
+  if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
+  const ics = document.getElementById('todoIcs');
+  if(ics) ics.onclick = ()=>exportTodoIcs();
+}
+/* 把带日期的待办导成 .ics，手机日历打开就能收提醒 */
+function exportTodoIcs(){
+  const list = collectTodos().filter(t=>!t.done && t.due);
+  if(!list.length){ toast('还没有带时间的待办可以导出'); return; }
+  const pad = n=>String(n).padStart(2, '0');
+  const fmt = ts=>{
+    const d = new Date(ts);
+    return d.getUTCFullYear() + pad(d.getUTCMonth()+1) + pad(d.getUTCDate()) + 'T'
+      + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
+  };
+  const esc2 = s=>String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+  const RR = {
+    day:'FREQ=DAILY', weekday:'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+    week:'FREQ=WEEKLY', month:'FREQ=MONTHLY', year:'FREQ=YEARLY'
+  };
+  const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ivy Notes//Todo//CN','CALSCALE:GREGORIAN'];
+  list.forEach(t=>{
+    out.push('BEGIN:VEVENT');
+    out.push('UID:' + t.noteId + '-' + t.line + '-' + t.due + '@ivynote');
+    out.push('DTSTAMP:' + fmt(Date.now()));
+    out.push('DTSTART:' + fmt(t.due));
+    out.push('DTEND:' + fmt(t.due + 30*60000));
+    out.push('SUMMARY:' + esc2(t.text || '待办'));
+    out.push('DESCRIPTION:' + esc2('来自笔记：' + t.noteTitle));
+    if(t.repeat && RR[t.repeat]) out.push('RRULE:' + RR[t.repeat]);
+    out.push('BEGIN:VALARM','TRIGGER:-PT10M','ACTION:DISPLAY','DESCRIPTION:待办提醒','END:VALARM');
+    out.push('END:VEVENT');
+  });
+  out.push('END:VCALENDAR');
+  const blob = new Blob([out.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '待办日程.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  toast('已导出 ' + list.length + ' 条日程，用手机日历打开即可');
+}
+
+/* ========== 待办与提醒 ==========
+   写法与 Obsidian Tasks 插件一致，日期就是普通文字：
+     - [ ] 交房租 ⏰ 2026-11-15 18:00 🔁 every month
+     - [ ] 体检预约 @明天 9点
+     - [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08                                  */
+const TODO_RE = /^(\s*)([-*+]|\d+\.)\s+\[([ xX])\]\s+(.*)$/;
+/* ⏰ 显式时间（年月日 可选 时:分） */
+const DUE_TIME_RE = /⏰\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/;
+/* @今天 / @明天 9点 / @周五下午3点 / @11月20日 / @3天后 / @2026-11-20 */
+const DUE_AT_RE = /@\s*(今天|明天|后天|大后天|today|tomorrow|下周[一二三四五六日天]|周[一二三四五六日天]|\d{1,2}月\d{1,2}日|\d{4}-\d{1,2}-\d{1,2}|\d{1,3}\s*天后)(?:\s*(上午|下午|晚上|中午)?\s*(\d{1,2})(?::(\d{2})|点|时)?\s*(am|pm)?)?/i;
+/* 🔁 / 📅 后面跟重复规则 */
+const REPEAT_RE = /(?:🔁|📅)\s*(every\s+day|every\s+weekday|every\s+week|every\s+month|every\s+year|每天|每个工作日|每周|每月|每年|工作日)/i;
+const DONE_DATE_RE = /✅\s*(\d{4})-(\d{1,2})-(\d{1,2})/;
+const TODO_REMIND_STORE = 'ivy.todo.reminded';
+let todoFilter = 'open';
+
+const WEEK_CN = { '一':1, '二':2, '三':3, '四':4, '五':5, '六':6, '日':0, '天':0 };
+/* 把 @今天 / @周五 / @3天后 这类自然语言算成时间戳 */
+function parseAtDue(text){
+  const m = String(text || '').match(DUE_AT_RE);
+  if(!m) return 0;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const w = m[1];
+  const wl = w.toLowerCase();
+  if(wl === 'tomorrow' || w === '明天') d.setDate(d.getDate() + 1);
+  else if(w === '后天') d.setDate(d.getDate() + 2);
+  else if(w === '大后天') d.setDate(d.getDate() + 3);
+  else if(/^下周/.test(w)){
+    const target = WEEK_CN[w.slice(2)];
+    const delta = ((target - d.getDay() + 7) % 7) + 7;
+    d.setDate(d.getDate() + delta);
+  } else if(/^周/.test(w)){
+    const target = WEEK_CN[w.slice(1)];
+    let delta = (target - d.getDay() + 7) % 7;
+    if(delta === 0) delta = 7;              // 说「周五」但今天就是周五 → 指下周
+    d.setDate(d.getDate() + delta);
+  } else if(/\d+\s*天后/.test(w)){
+    d.setDate(d.getDate() + parseInt(w, 10));
+  } else if(/^\d{1,2}月\d{1,2}日$/.test(w)){
+    const mm = w.match(/^(\d{1,2})月(\d{1,2})日$/);
+    d.setMonth(+mm[1] - 1, +mm[2]);
+    if(d.getTime() < now.getTime()) d.setFullYear(d.getFullYear() + 1);
+  } else if(/^\d{4}-/.test(w)){
+    const p = w.split('-');
+    d.setFullYear(+p[0], +p[1] - 1, +p[2]);
+  }
+  let hh = 9, mi = 0;
+  if(m[3]){
+    hh = +m[3];
+    if(m[2] === '下午' || m[2] === '晚上') hh = hh < 12 ? hh + 12 : hh;
+    else if(m[2] === '中午') hh = 12;
+    else if(m[2] === '上午' && hh === 12) hh = 0;
+    mi = m[4] ? +m[4] : 0;
+  }
+  if(m[5]){
+    const ap = m[5].toLowerCase();
+    if(ap === 'pm' && hh < 12) hh += 12;
+    if(ap === 'am' && hh === 12) hh = 0;
+  }
+  d.setHours(hh, mi, 0, 0);
+  return d.getTime();
+}
+function parseDue(s){
+  const m = String(s || '').match(DUE_TIME_RE);
+  if(m){
+    const d = new Date(+m[1], +m[2]-1, +m[3], m[4] ? +m[4] : 9, m[5] ? +m[5] : 0, 0, 0);
+    if(!isNaN(d.getTime())) return d.getTime();
+  }
+  return parseAtDue(s);
+}
+/* 重复规则归一化：day / weekday / week / month / year */
+function parseRepeat(s){
+  const m = String(s || '').match(REPEAT_RE);
+  if(!m) return '';
+  const k = m[1].toLowerCase().replace(/\s+/g, ' ');
+  if(k === '每天' || k === 'every day') return 'day';
+  if(k === '工作日' || k === '每个工作日' || k === 'every weekday') return 'weekday';
+  if(k === '每周' || k === 'every week') return 'week';
+  if(k === '每月' || k === 'every month') return 'month';
+  if(k === '每年' || k === 'every year') return 'year';
+  return '';
+}
+const REPEAT_LABEL = { day:'每天', weekday:'每个工作日', week:'每周', month:'每月', year:'每年' };
+function parseDoneDate(s){
+  const m = String(s || '').match(DONE_DATE_RE);
+  if(!m) return 0;
+  return new Date(+m[1], +m[2]-1, +m[3], 12, 0, 0, 0).getTime();
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function dueLabel(ts){
+  const d = new Date(ts), now = new Date();
+  const same = (a,b)=>a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  const tomorrow = new Date(now.getTime() + 86400000);
+  const hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  if(same(d, now)) return '今天 ' + hm;
+  if(same(d, tomorrow)) return '明天 ' + hm;
+  if(d.getFullYear() === now.getFullYear()) return (d.getMonth()+1) + '月' + d.getDate() + '日 ' + hm;
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) + ' ' + hm;
+}
+/* 把全库（或某一篇）的待办扫出来 */
+function collectTodos(noteId){
+  const list = [];
+  (S.notes || []).forEach(n=>{
+    if(n.trashed) return;
+    if(noteId && n.id !== noteId) return;
+    const lines = String(n.body || '').split('\n');
+    let inFence = false;
+    lines.forEach((ln, idx)=>{
+      if(/^\s*```/.test(ln)){ inFence = !inFence; return; }
+      if(inFence) return;                       // 代码块里的示例不算待办
+      const m = ln.match(TODO_RE);
+      if(!m) return;
+      const raw = m[4];
+      const due = parseDue(raw);
+      const text = raw
+        .replace(new RegExp(DUE_TIME_RE.source, 'g'), '')
+        .replace(new RegExp(DUE_AT_RE.source, 'g'), '')
+        .replace(new RegExp(REPEAT_RE.source, 'gi'), '')
+        .replace(new RegExp(DONE_DATE_RE.source, 'g'), '')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+      list.push({
+        noteId: n.id,
+        noteTitle: n.title || '无标题',
+        line: idx,
+        indent: m[1].length,
+        done: /[xX]/.test(m[3]),
+        text,
+        due,
+        repeat: parseRepeat(raw),
+        doneDate: parseDoneDate(raw)
+      });
+    });
+  });
+  return list;
+}
+/* 按 逾期 / 今天 / 明天 / 本周每天 / 更远按月 分组 */
+function todoGroups(list){
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const DAY = 86400000;
+  const g = { late:[], byDay:{}, byMonth:{}, none:[], done:[] };
+  list.forEach(t=>{
+    if(t.done) return g.done.push(t);
+    if(!t.due) return g.none.push(t);
+    if(t.due < Date.now()) return g.late.push(t);
+    const dayIdx = Math.floor((new Date(t.due).setHours(0,0,0,0) - startToday) / DAY);
+    if(dayIdx <= 6){
+      const k = String(dayIdx);
+      (g.byDay[k] = g.byDay[k] || []).push(t);
+    } else {
+      const d = new Date(t.due);
+      const k = d.getFullYear() + '-' + pad2(d.getMonth()+1);
+      (g.byMonth[k] = g.byMonth[k] || []).push(t);
+    }
+  });
+  const byDue = (a,b)=> a.due - b.due;
+  g.late.sort(byDue); g.none.sort((a,b)=> (a.noteId+a.line).localeCompare(b.noteId+b.line));
+  g.done.sort((a,b)=> (b.doneDate||b.due) - (a.doneDate||a.due));
+  Object.keys(g.byDay).forEach(k=>g.byDay[k].sort(byDue));
+  Object.keys(g.byMonth).forEach(k=>g.byMonth[k].sort(byDue));
+  g.startToday = startToday;
+  g.open = g.late.length + g.none.length + g.done.length * 0 +
+    Object.keys(g.byDay).reduce((a,k)=>a+g.byDay[k].length, 0) +
+    Object.keys(g.byMonth).reduce((a,k)=>a+g.byMonth[k].length, 0);
+  return g;
+}
+function todoCounts(){
+  const g = todoGroups(collectTodos());
+  const dayKeys = Object.keys(g.byDay);
+  const today = (g.byDay['0'] || []).length;
+  const tomorrow = (g.byDay['1'] || []).length;
+  const week = dayKeys.filter(k=>+k > 1).reduce((a,k)=>a + g.byDay[k].length, 0);
+  const later = Object.keys(g.byMonth).reduce((a,k)=>a + g.byMonth[k].length, 0);
+  return {
+    late: g.late.length, today, tomorrow, week, later,
+    none: g.none.length, done: g.done.length, open: g.open
+  };
+}
+/* 分组标题：今天 / 明天 / 后天 / 11月14日 周五 / 2026年12月 */
+function dayGroupTitle(idx, baseTs){
+  const d = new Date(baseTs + idx * 86400000);
+  const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  if(idx === 0) return '今天 · ' + wd;
+  if(idx === 1) return '明天 · ' + wd;
+  if(idx === 2) return '后天 · ' + wd;
+  return (d.getMonth()+1) + '月' + d.getDate() + '日 · ' + wd;
+}
+
+/* 重复规则：把下一次时间算出来 */
+function nextRepeat(ts, rule){
+  const d = new Date(ts || Date.now());
+  if(rule === 'day') d.setDate(d.getDate() + 1);
+  else if(rule === 'weekday'){
+    d.setDate(d.getDate() + 1);
+    while(d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  }
+  else if(rule === 'week') d.setDate(d.getDate() + 7);
+  else if(rule === 'month') d.setMonth(d.getMonth() + 1);
+  else if(rule === 'year') d.setFullYear(d.getFullYear() + 1);
+  return d.getTime();
+}
+/* 正文改动后，如果这篇正开着，把块即时同步过去 */
+function syncLiveAfterTodo(n){
+  if(S.active === n.id && (S.mode || 'live') === 'live'){
+    const blocks = parseBlocks(n.body);
+    LIVE.raws = blocks.length ? blocks.map(b=>b.lines.join('\n')) : [''];
+    LIVE.gaps = blocks.length ? blocks.map((b,i)=> i===0 ? 0 : Math.max(0, b.start - blocks[i-1].end)) : [0];
+    paintLive();
+  }
+  save();
+}
+/* 勾选写回正文：完成时补 ✅ 日期；带 🔁 的自动生成下一次 */
+function setTodoDone(t, next){
+  const n = noteById(t.noteId); if(!n) return;
+  const lines = String(n.body || '').split('\n');
+  const ln = lines[t.line];
+  if(!ln || !TODO_RE.test(ln)) return;
+  if(next){
+    const now = new Date();
+    const stamp = `✅ ${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+    lines[t.line] = ln
+      .replace(/\[[ ]\]/, '[x]')
+      .replace(new RegExp(DONE_DATE_RE.source, 'g'), ' ')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\s+$/, '') + ' ' + stamp;
+    if(t.repeat){
+      // 生成下一次：同一行去掉勾和完成日期，时间换成下一次
+      const nextTs = nextRepeat(t.due || Date.now(), t.repeat);
+      const d = new Date(nextTs);
+      const dueTxt = `⏰ ${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      let tpl = lines[t.line]
+        .replace(/\[[xX]\]/, '[ ]')
+        .replace(new RegExp(DONE_DATE_RE.source, 'g'), ' ')
+        .replace(new RegExp(DUE_TIME_RE.source, 'g'), ' ')
+        .replace(new RegExp(DUE_AT_RE.source, 'g'), ' ')
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/\s+$/, '');
+      lines.splice(t.line + 1, 0, tpl + ' ' + dueTxt);
+    }
+  } else {
+    lines[t.line] = ln
+      .replace(/\[[xX]\]/, '[ ]')
+      .replace(new RegExp(DONE_DATE_RE.source, 'g'), '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\s+$/, '');
+  }
+  n.body = lines.join('\n');
+  n.updatedAt = Date.now();
+  syncLiveAfterTodo(n);
+}
+/* 给待办加/改提醒时间 */
+function setTodoDue(t, ts){
+  const n = noteById(t.noteId); if(!n) return;
+  const lines = String(n.body || '').split('\n');
+  const ln = lines[t.line];
+  if(!ln || !TODO_RE.test(ln)) return;
+  const bare = ln.replace(/\s*⏰\s*\d{4}-\d{1,2}-\d{1,2}(?:[ T]\d{1,2}:\d{2})?\s*$/, '').replace(/\s+$/, '');
+  const d = ts ? new Date(ts) : null;
+  const tail = d ? ` ⏰${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : '';
+  lines[t.line] = bare + tail;
+  n.body = lines.join('\n');
+  n.updatedAt = Date.now();
+  if(S.active === n.id && (S.mode || 'live') === 'live'){
+    const blocks = parseBlocks(n.body);
+    LIVE.raws = blocks.length ? blocks.map(b=>b.lines.join('\n')) : [''];
+    LIVE.gaps = blocks.length ? blocks.map((b,i)=> i===0 ? 0 : Math.max(0, b.start - blocks[i-1].end)) : [0];
+    paintLive();
+  }
+  save();
+  toast(d ? '提醒已设为 ' + dueLabel(ts) : '已取消提醒');
+}
+
+/* 点待办 → 打开那篇笔记并滚到该条（日程视图下右侧开笔记，左侧仍是日程） */
+function jumpToTodo(t){
+  const n = noteById(t.noteId);
+  if(!n) return;
+  if(n.trashed){ toast('该笔记在回收站里'); return; }
+  trashView = false;
+  S.active = n.id;
+  if(!S.tabs.includes(n.id)) S.tabs.push(n.id);
+  if(S.view === 'todo'){
+    S.todoNote = n.id;
+    S.todoSel = n.id + ':' + t.line;
+    // 窄屏书架是满屏的，点完待办得收起书架才看得到笔记
+    if(document.documentElement.clientWidth <= 900 && S.shelfOpen) S.shelfOpen = false;
+    renderAll();
+  } else {
+    S.view = 'notes';
+    renderAll();
+  }
+  save();
+  setTimeout(()=>{
+    if((S.mode || 'live') === 'live'){
+      const host = liveHost();
+      if(!host) return;
+      const blocks = [...host.querySelectorAll('.blk')];
+      const hit = blocks.find(b=>{
+        const raw = LIVE.raws[+b.dataset.i] || '';
+        return raw.includes(t.text);
+      }) || blocks[Math.min(blocks.length-1, t.line)];
+      if(hit) hit.scrollIntoView({ block:'center', behavior: OL_TOUCH ? 'auto' : 'smooth' });
+      if(hit && hit.classList) hit.classList.add('todo-flash');
+      setTimeout(()=>{ if(hit) hit.classList.remove('todo-flash'); }, 1400);
+    } else {
+      const sc = document.getElementById('scroll');
+      if(sc){
+        const total = Math.max(1, String(noteById(t.noteId)?.body || '').split('\n').length);
+        sc.scrollTop = Math.max(0, (t.line / total) * sc.scrollHeight - 120);
+      }
+    }
+  }, 280);
+}
+
+/* 侧边栏筛选 */
+function todoShelf(){
+  const list = collectTodos();
+  const g = todoGroups(list);
+  const c = todoCounts();
+  if(!S.todoFolded || typeof S.todoFolded !== 'object') S.todoFolded = {};
+
+  const timeOf = ts=>{
+    if(!ts) return '';
+    const d = new Date(ts);
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  };
+  const item = t=>`<div class="tsi ${t.done?'done':''} ${S.todoSel === (t.noteId + ':' + t.line) ? 'sel':''}" data-tsi='${esc(JSON.stringify({noteId:t.noteId,line:t.line,text:t.text,due:t.due,repeat:t.repeat}))}'>
+      <input type="checkbox" ${t.done?'checked':''} data-tsi-cb="1">
+      <div class="m">
+        <span class="t">${esc(t.text || '（空）')}${t.repeat?' <span class="rep">↻</span>':''}</span>
+        <span class="src">${esc(t.noteTitle)}</span>
+      </div>
+      ${t.due?`<span class="tm${t.due < Date.now() && !t.done?' late':''}">${timeOf(t.due)}</span>`:''}
+    </div>`;
+  const group = (key, title, arr, withDone)=>{
+    let rows = arr.slice();
+    if(withDone){
+      // 今天分组可以额外显示今天已完成的
+      const doneToday = g.done.filter(t=>t.doneDate && new Date(t.doneDate).toDateString() === new Date().toDateString());
+      if(S.todoShowDoneToday) rows = rows.concat(doneToday);
+    }
+    if(!rows.length) return '';
+    const folded = !!S.todoFolded['s' + key];
+    return `<div class="tsg">
+      <button class="tsg-h" data-tsg="${key}"><svg class="gchev${folded?'':' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+        <span class="ttl">${title}</span><span class="n">${rows.length}</span></button>
+      ${folded ? '' : `<div class="tsg-body">${rows.map(item).join('')}</div>`}
+    </div>`;
+  };
+
+  let body = group('late', '已逾期', g.late);
+  for(let i=0;i<7;i++){
+    const k = String(i);
+    body += group('d'+i, dayTitleShort(i, g.startToday), g.byDay[k] || [], i === 0);
+  }
+  Object.keys(g.byMonth).sort().forEach(k=>{
+    const [y,m] = k.split('-');
+    body += group('m'+k, y + '年' + (+m) + '月', g.byMonth[k]);
+  });
+  body += group('none', '没有日期', g.none);
+
+  return `<div class="todo-shelf">
+    <div class="tsh-bar">
+      <label class="tsh-sw" title="显示今天已完成的待办">
+        <input type="checkbox" id="todoShowDone" ${S.todoShowDoneToday?'checked':''}>
+        <i></i><span>显示今天已完成</span>
+      </label>
+    </div>
+    <div class="tsh-meta">${c.open} 项待办 · 今天 ${c.today} 项 · 逾期 ${c.late} 项</div>
+    <div class="tsg-list">${body || `<div class="tsh-empty">还没有待办。<br>在笔记里写「- [ ] 事项」试试。</div>`}</div>
+    <button class="tsh-sub" id="todoIcs" title="把带日期的待办导出成 .ics，用手机日历订阅">
+      ${ic('cloud')}<span>订阅到手机日历</span></button>
+  </div>`;
+}
+/* 侧边栏用的短标题：今天 · 11月10日 周二 */
+function dayTitleShort(idx, baseTs){
+  const d = new Date(baseTs + idx * 86400000);
+  const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const md = (d.getMonth()+1) + '月' + d.getDate() + '日';
+  if(idx === 0) return '今天 · ' + md + ' ' + wd;
+  if(idx === 1) return '明天 · ' + md + ' ' + wd;
+  return md + ' ' + wd;
+}
+
+/* 待办视图：右侧只显示「选择左侧待办」的空状态；选了待办就打开那篇笔记 */
+function renderTodoView(){
+  outlineEl.classList.add('hidden');
+  paperActions.innerHTML = '';
+  scrollEl.style.display='';
+  scrollEl.innerHTML = `<div class="todo-blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
+        <path d="m8.5 14.5 1.8 1.8L13.6 13"/>
+      </svg>
+      <p>选择左侧的待办查看所在笔记</p>
+    </div>`;
+}
+function monthTitle(k){
+  const [y,m] = String(k).split('-');
+  return y + '年' + (+m) + '月';
+}
+/* 提醒时间选择 */
+function openRemindMenu(anchor, t){
+  const now = new Date();
+  const at = (h, addDay)=>{
+    const d = new Date(now); d.setDate(d.getDate() + (addDay||0)); d.setHours(h, 0, 0, 0);
+    if(d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  };
+  const tonight = (()=>{ const d = new Date(now); d.setHours(18,0,0,0); return d.getTime() > now.getTime() ? d.getTime() : at(18,1); })();
+  const tomorrow9 = (()=>{ const d = new Date(now); d.setDate(d.getDate()+1); d.setHours(9,0,0,0); return d.getTime(); })();
+  const items = [
+    ['今天 18:00', '', '', 'clock', ()=>setTodoDue(t, tonight)],
+    ['明天 09:00', '', '', 'clock', ()=>setTodoDue(t, tomorrow9)],
+    ['下周一 09:00', '', '', 'clock', ()=>{ const d = new Date(now); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(9,0,0,0); setTodoDue(t, d.getTime()); }],
+    ['自定义时间…', '', '', 'pencil', ()=>pickCustomDue(t)],
+    ['-'],
+    ['每天重复', t.repeat === 'day' ? '✓' : '', '', 'restore', ()=>setTodoRepeat(t, 'day')],
+    ['每个工作日', t.repeat === 'weekday' ? '✓' : '', '', 'restore', ()=>setTodoRepeat(t, 'weekday')],
+    ['每周重复', t.repeat === 'week' ? '✓' : '', '', 'restore', ()=>setTodoRepeat(t, 'week')],
+    ['每月重复', t.repeat === 'month' ? '✓' : '', '', 'restore', ()=>setTodoRepeat(t, 'month')],
+    ['每年重复', t.repeat === 'year' ? '✓' : '', '', 'restore', ()=>setTodoRepeat(t, 'year')]
+  ];
+  if(t.repeat) items.push(['取消重复', '', 'danger', 'x', ()=>setTodoRepeat(t, '')]);
+  items.push(['-']);
+  if(t.due) items.push(['取消提醒时间', '', 'danger', 'x', ()=>setTodoDue(t, 0)]);
+  popover(anchor, items, { align:'left' });
+}
+/* 写入/清除重复规则（🔁 every day …） */
+function setTodoRepeat(t, rule){
+  const n = noteById(t.noteId); if(!n) return;
+  const lines = String(n.body || '').split('\n');
+  let ln = lines[t.line];
+  if(!ln || !TODO_RE.test(ln)) return;
+  ln = ln.replace(new RegExp(REPEAT_RE.source, 'gi'), ' ')
+         .replace(/[ \t]{2,}/g, ' ')
+         .replace(/\s+$/, '');
+  if(rule) ln += ' 🔁 every ' + rule;
+  lines[t.line] = ln;
+  n.body = lines.join('\n');
+  n.updatedAt = Date.now();
+  syncLiveAfterTodo(n);
+  toast(rule ? '已设为「' + (REPEAT_LABEL[rule] || rule) + '」重复' : '已取消重复');
+}
+function pickCustomDue(t){
+  let inp = document.getElementById('todoDueIn');
+  if(!inp){
+    inp = document.createElement('input');
+    inp.type = 'datetime-local'; inp.id = 'todoDueIn';
+    inp.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+    document.body.appendChild(inp);
+  }
+  const d = new Date(t.due || Date.now() + 3600000);
+  inp.value = d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  const finish = ()=>{
+    if(inp.value){
+      const ts = new Date(inp.value).getTime();
+      if(!isNaN(ts)) setTodoDue(t, ts);
+    }
+    inp.onchange = null;
+    renderShelf(); renderTodoView();
+  };
+  inp.onchange = finish;
+  try{ inp.showPicker ? inp.showPicker() : inp.click(); }catch(e){ inp.click(); }
+}
+
+/* 右上角：本篇笔记的待办浮层 */
+function openTodoPop(anchor){
+  const n = noteById(S.active);
+  if(!n){ popover(anchor, [['没有打开笔记','','muted']], { align:'right' }); return; }
+  const list = collectTodos(n.id).sort((a,b)=>{
+    if(a.done !== b.done) return a.done ? 1 : -1;
+    if(!!a.due !== !!b.due) return a.due ? -1 : 1;
+    return (a.due||0) - (b.due||0) || a.line - b.line;
+  });
+  const head = `<div class="tp-hd"><span>本篇待办</span><span>${list.filter(t=>!t.done).length} 项未完成</span></div>`;
+  const body = list.length ? list.map((t,i)=>`
+      <div class="tp-i ${t.done?'done':''}" data-tp="${i}">
+        <input type="checkbox" ${t.done?'checked':''} data-tp-cb="${i}">
+        <span class="tpt">${esc(t.text || '（空）')}</span>
+        ${t.due?`<span class="due${t.due < Date.now() && !t.done ? ' late':''}">${dueLabel(t.due)}</span>`:''}
+      </div>`).join('')
+    : `<div class="tp-empty">这篇还没有待办。在正文里写「- [ ] 事项」即可。</div>`;
+  popover(anchor, [['#', `<div class="todo-pop">${head}${body}</div>`]], { align:'right' });
+  const po = $('#popover');
+  po.querySelectorAll('[data-tp-cb]').forEach(cb=>{
+    cb.onchange = ()=>{
+      const t = list[+cb.dataset.tp];
+      setTodoDone(t, cb.checked);
+      updateTodoBadge(); renderShelf && S.view==='todo' && renderShelf();
+      if(S.view === 'todo') renderTodoView();
+      setTimeout(()=>{ if(po.classList.contains('open')) openTodoPop(anchor); }, 30);
+    };
+  });
+}
+
+/* 到点提醒（每分钟看一眼，记在 localStorage 里避免重复弹） */
+function loadReminded(){
+  try{ return JSON.parse(localStorage.getItem(TODO_REMIND_STORE) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function saveReminded(o){
+  try{
+    const keys = Object.keys(o);
+    if(keys.length > 300){
+      const trimmed = {};
+      keys.slice(-200).forEach(k=>trimmed[k] = 1);
+      o = trimmed;
+    }
+    localStorage.setItem(TODO_REMIND_STORE, JSON.stringify(o));
+  }catch(e){}
+}
+function checkTodoReminders(){
+  const now = Date.now();
+  const seen = loadReminded();
+  let changed = false;
+  collectTodos().forEach(t=>{
+    if(t.done || !t.due) return;
+    if(t.due > now) return;
+    if(now - t.due > 86400000) return;           // 过了 24 小时就不再追着提醒
+    const key = t.noteId + '|' + t.text + '|' + t.due;
+    if(seen[key]) return;
+    seen[key] = 1; changed = true;
+    toast('⏰ 待办到期：' + (t.text || '未命名'));
+  });
+  if(changed) saveReminded(seen);
+}
+/* 侧边栏「待办」上的红点：有逾期就亮 */
+function updateTodoBadge(){
+  const btn = document.querySelector('.dock-item[data-view="todo"]');
+  if(!btn) return;
+  const c = todoCounts();
+  let dot = btn.querySelector('.todo-dot');
+  if(c.late > 0){
+    if(!dot){
+      dot = document.createElement('span');
+      dot.className = 'todo-dot';
+      btn.appendChild(dot);
+    }
+    dot.textContent = c.late > 9 ? '9+' : String(c.late);
+  } else if(dot) dot.remove();
 }
 
 const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d'];
@@ -1284,6 +2052,7 @@ const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d']
 function renderDock(){
   const items = [
     {k:'notes', icon:'file', label:'笔记', href:'notes'},
+    {k:'todo', icon:'todo', label:'待办'},
     {k:'media', icon:'image', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];
@@ -1299,6 +2068,7 @@ function renderDock(){
   $('#dock').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
   $('#dockSync').onclick=()=>openSyncPanel();
   $('#avatar').onclick=(e)=>openUserMenu(e.currentTarget);
+  updateTodoBadge();
 }
 
 /* ========== 标签栏 ========== */
@@ -1408,10 +2178,12 @@ const outlineEl = $('#outline');
 const paperActions = $('#paperActions');
 
 function renderAll(){
-  renderShelf(); renderDock(); renderTabs(); renderMain();
+  // 先把书架折叠状态落到 DOM 上，再渲染正文：
+  // 否则手机首屏会按「书架展开时」的窄宽度去算标题高度，标题下面留一大片空白
   const collapsed = !S.shelfOpen;
   document.querySelector('.shelf').classList.toggle('collapsed', collapsed);
   $('#shelfOpen').classList.toggle('show', collapsed);
+  renderShelf(); renderDock(); renderTabs(); renderMain();
 }
 
 function renderMain(){
@@ -1424,6 +2196,12 @@ function renderMain(){
     setOutlinePanel(false);
   }else document.body.classList.remove('ol-hidden');
   if(S.view==='media'){ renderMedia(); return; }
+  if(S.view==='todo'){
+    const tn = S.todoNote ? noteById(S.todoNote) : null;
+    if(tn){ S.active = tn.id; renderEditor(); }
+    else renderTodoView();
+    return;
+  }
   if(S.view==='graph'){ renderGraph(); return; }
   renderEditor();
 }
@@ -1440,11 +2218,13 @@ function renderEditor(){
 
   paperActions.innerHTML = `
     <button class="pa-btn pa-ol" id="paOutline" title="大纲">${ic('outline')}</button>
+    <button class="pa-btn" id="paTodo" title="本篇待办">${ic('todo')}</button>
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
     <button class="pa-btn" id="paShare" title="分享 / 复制 / 导出">${ic('share')}</button>
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paOutline').onclick=()=>toggleOutlinePanel();
+  $('#paTodo').onclick=(e)=>openTodoPop(e.currentTarget);
   $('#paAttach').onclick=()=>pickFiles();
   $('#paShare').onclick=(e)=>openShareMenu(e.currentTarget);
   $('#paTheme').onclick=()=>toggleTheme();
@@ -1479,6 +2259,14 @@ function renderEditor(){
   renderProse();
   if((S.mode||'live')==='live') renderLive();
   wireEditor(n);
+  // 布局稳定后再量一次标题高度：手机上是抽屉式书架，折叠动画期间可用宽度会变，
+  // 只在 renderEditor 里量一次会把标题撑成好几行，下面留一大片空白
+  requestAnimationFrame(()=>{
+    const t = document.getElementById('docTitle');
+    if(!t || !t.isConnected) return;
+    t.style.height = 'auto';
+    t.style.height = t.scrollHeight + 'px';
+  });
   outlineEl.classList.remove('hidden');
   outlineEl.classList.toggle('pinned', !!S.outlineOpen);
   renderOutline();
@@ -1489,6 +2277,18 @@ function renderEditor(){
     wireSplitSync();
   }
 }
+/* 窗口尺寸变了（横竖屏切换、拖窗口），标题高度要重算一次 */
+let titleFitTimer = 0;
+window.addEventListener('resize', ()=>{
+  clearTimeout(titleFitTimer);
+  titleFitTimer = setTimeout(()=>{
+    const t = document.getElementById('docTitle');
+    if(!t || !t.isConnected) return;
+    t.style.height = 'auto';
+    t.style.height = t.scrollHeight + 'px';
+  }, 120);
+});
+
 /* 双栏：以标题为锚点对齐左右，段内按比例插值。
    纯比例联动会让两边越滚越偏（源码一行 = 渲染后一段带间距），锚点法每个标题处严格对齐。*/
 let SPLIT_ANCH = null;
@@ -1673,9 +2473,15 @@ function countWords(md){
 /* ---- 标题下的 Markdown 工具条 ---- */
 const FMT_GROUPS = [
   [['h','H','标题级别（一号～六号）']],
-  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字=='],['code','代码','行内代码']],
-  [['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
-  [['emoji','表情','插入表情符号'],['wiki','双链','插入笔记链接，跳到另一篇笔记'],['link','链接','插入外部链接'],['table','表格','插入表格'],['pre','代码块','代码块'],['hr','分割','分割线']]
+  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
+  [['code','代码','行内代码 / 代码块'],['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
+  [['table','表格','拖动选择行数和列数'],
+   ['chart','图表','插入 Mermaid 图表：流程图、时序图等'],
+   ['emoji','表情','插入表情符号'],
+   ['wiki','双链','插入笔记链接，跳到另一篇笔记'],
+   ['link','链接','插入外部链接'],
+   ['hr','分割','分割线']],
+  [['help','?','Markdown 与快捷键一览']]
 ];
 function renderFmtBar(){
   const bar = document.getElementById('fmtBar');
@@ -1692,6 +2498,10 @@ function renderFmtBar(){
       else if(k==='list') openListMenu(b);
       else if(k==='mark') openHighlightMenu(b);
       else if(k==='emoji') openEmojiMenu(b);
+      else if(k==='code') openCodeMenu(b);
+      else if(k==='table') openTablePicker(b);
+      else if(k==='chart') openChartMenu(b);
+      else if(k==='help') openHelpPanel();
       else applyFormat(k);
     };
   });
@@ -1713,6 +2523,165 @@ function openListMenu(anchor){
     ['有序列表','1.','','',()=>applyFormat('ol')],
     ['待办列表','- [ ]','','',()=>applyFormat('todo')]
   ], { align:'left' });
+}
+
+/* 代码：行内代码 / 代码块二选一 */
+function openCodeMenu(anchor){
+  popover(anchor, [
+    ['行内代码','`code`','', 'code', ()=>applyFormat('code')],
+    ['代码块','```','', 'codeBlock', ()=>applyFormat('pre')]
+  ], { align:'left' });
+}
+
+/* 表格：拖动选行列（像 Notion 那样滑过去自动出预览） */
+function openTablePicker(anchor){
+  const COLS = 10, ROWS = 8;
+  let cells = '';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) cells += `<i data-r="${r}" data-c="${c}"></i>`;
+  popover(anchor, [['#', `<div class="tbl-pick"><div class="tbl-grid" id="tblGrid">${cells}</div>
+      <div class="tbl-info" id="tblInfo">拖动选择行列</div></div>`]], { align:'left' });
+  const po = $('#popover');
+  const grid = po.querySelector('#tblGrid');
+  const info = po.querySelector('#tblInfo');
+  if(!grid) return;
+  let pick = { r:0, c:0 }, dragging = false;
+  const paint = ()=>{
+    grid.querySelectorAll('i').forEach(el=>{
+      const r = +el.dataset.r, c = +el.dataset.c;
+      el.classList.toggle('on', pick.r>0 && r<pick.r && c<pick.c);
+    });
+    info.textContent = pick.r ? `${pick.c} 列 × ${pick.r} 行` : '拖动选择行列';
+  };
+  const at = ev=>{
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    if(el && el.dataset && el.dataset.r != null){
+      pick = { r:+el.dataset.r+1, c:+el.dataset.c+1 }; paint();
+    }
+  };
+  const done = ()=>{
+    if(!pick.r) return;
+    const rows = pick.r, cols = pick.c;
+    po.classList.remove('open');
+    if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
+    if(po._off){ document.removeEventListener('mousedown', po._off); po._off = null; }
+    applyFormat('table', { rows, cols });
+  };
+  grid.addEventListener('pointerdown', ev=>{
+    ev.preventDefault(); dragging = true;
+    try{ grid.setPointerCapture(ev.pointerId); }catch(e){}
+    at(ev);
+  });
+  grid.addEventListener('pointermove', ev=>{ if(dragging) at(ev); });
+  grid.addEventListener('pointerup', ()=>{ if(dragging){ dragging = false; done(); } });
+  grid.addEventListener('pointercancel', ()=>{ dragging = false; });
+  paint();
+}
+
+/* 图表：Mermaid 模板 */
+const CHART_TEMPLATES = {
+  flow: { name:'流程图', icon:'graph', code:'graph TD\n  A[开始] --> B{条件判断}\n  B -->|是| C[执行这一步]\n  B -->|否| D[结束]\n  C --> D' },
+  seq:  { name:'时序图', icon:'sort', code:'sequenceDiagram\n  participant A as 用户\n  participant B as 服务端\n  A->>B: 发起请求\n  B-->>A: 返回结果' },
+  state:{ name:'状态图', icon:'restore', code:'stateDiagram-v2\n  [*] --> 待处理\n  待处理 --> 进行中: 开始\n  进行中 --> 已完成: 完成\n  已完成 --> [*]' },
+  gantt:{ name:'甘特图', icon:'columns', code:'gantt\n  title 项目排期\n  dateFormat YYYY-MM-DD\n  section 设计\n  需求梳理 :a1, 2026-01-06, 5d\n  视觉稿   :a2, after a1, 6d\n  section 开发\n  前端     :b1, after a2, 10d' },
+  pie:  { name:'饼图', icon:'graph', code:'pie title 时间分配\n  "写作" : 45\n  "调研" : 30\n  "整理" : 25' },
+  class:{ name:'类图', icon:'file', code:'classDiagram\n  class 笔记 {\n    +String 标题\n    +String 正文\n    +保存()\n  }\n  class 标签 {\n    +String 名称\n  }\n  笔记 "1" --> "*" 标签' },
+  er:   { name:'ER 图', icon:'columns', code:'erDiagram\n  NOTE ||--o{ TAG : 拥有\n  NOTE {\n    string id\n    string title\n  }\n  TAG {\n    string name\n  }' },
+  mind: { name:'思维导图', icon:'outline', code:'mindmap\n  root((主题))\n    分支一\n      子项 A\n      子项 B\n    分支二\n      子项 C' }
+};
+function openChartMenu(anchor){
+  const keys = Object.keys(CHART_TEMPLATES);
+  popover(anchor, keys.map(k=>[
+    CHART_TEMPLATES[k].name, 'Mermaid', '', CHART_TEMPLATES[k].icon,
+    ()=>applyFormat('mermaid', { code: CHART_TEMPLATES[k].code })
+  ]), { align:'left' });
+}
+
+/* Markdown 与快捷键一览 */
+const HELP_MD = [
+  ['标题', '# 一级 / ## 二级 …', '一到六级，行首加 # 和空格'],
+  ['加粗 / 斜体', '**粗** *斜* ~~删除~~', '删除线用两个波浪号'],
+  ['高亮', '==文字==', '后面可跟 {.yellow} 或 {c:#f59e0b} 换色'],
+  ['行内代码', '`代码`', '反引号包住即可'],
+  ['代码块', '```lang … ```', '三个反引号，可标语言'],
+  ['引用', '> 引用', '行首加 > 和空格'],
+  ['分割线', '---', '单独一行三个短横'],
+  ['无序 / 有序', '- 项 / 1. 项', '行首标记加空格'],
+  ['待办', '- [ ] 未完成\n- [x] 已完成', '点方框可直接勾选'],
+  ['待办提醒', '- [ ] 交稿 ⏰2026-11-12 09:00', '到点在「待办」里标红提醒'],
+  ['表格', '| 列 | 列 |\n| --- | --- |', '第二行是分隔线'],
+  ['链接', '[文字](https://…)', '外链直接打开'],
+  ['双链', '[[另一篇笔记]]', '点开即可跳转，没有就新建'],
+  ['图片', '![](https://…)', '也可以直接粘贴上传'],
+  ['图表', '```mermaid\ngraph TD\n A-->B\n```', '流程图、时序图、甘特图等'],
+  ['标签', '正文里写 #标签', '左上「标签」区自动汇总']
+];
+const HELP_KEYS = [
+  ['搜索笔记', '⌘K'], ['新建笔记', '⌘N'], ['收起 / 展开书架', '⌘\\'],
+  ['切换编辑模式', '⌘E'], ['源码 / 即时渲染', '⌘⇧E'], ['关闭当前标签', '⌥W'],
+  ['关闭浮层', 'Esc'], ['新建块', 'Enter'], ['块内换行', '⇧Enter'],
+  ['删除空块', 'Backspace'], ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
+];
+let helpTab = 'md';
+function openHelpPanel(){
+  let ov = $('#helpOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'helpOv'; ov.className = 'help-ov';
+    ov.innerHTML = `<div class="help-card" role="dialog" aria-label="Markdown 与快捷键">
+        <div class="help-hd">
+          <div><h3>Markdown 与快捷键</h3><p>所有写法与快捷键一览</p></div>
+          <button class="help-x" id="helpClose" title="关闭">${ic('x')}</button>
+        </div>
+        <div class="help-tabs">
+          <button class="help-tab" data-htab="md">Markdown 写法</button>
+          <button class="help-tab" data-htab="key">快捷键</button>
+          <button class="help-tab" data-htab="todo">日程怎么用</button>
+        </div>
+        <div class="help-body" id="helpBody"></div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeHelpPanel(); });
+    $('#helpClose').onclick = closeHelpPanel;
+    ov.querySelectorAll('[data-htab]').forEach(b=>b.onclick=()=>{ helpTab = b.dataset.htab; paintHelp(); });
+  }
+  paintHelp();
+  ov.classList.add('open');
+}
+function closeHelpPanel(){
+  const ov = $('#helpOv'); if(!ov) return;
+  ov.classList.remove('open');
+}
+function paintHelp(){
+  const ov = $('#helpOv'); if(!ov) return;
+  ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
+  const body = $('#helpBody');
+  if(helpTab === 'md'){
+    body.innerHTML = `<div class="help-sec">` + HELP_MD.map(([n,syn,d])=>
+      `<div class="help-row"><span>${n}</span><span class="syn">${esc(syn)}</span><span class="di">${esc(d)}</span></div>`
+    ).join('') + `</div>
+      <div class="help-sec"><h4>小贴士</h4>
+        <div class="help-row"><span>即时渲染</span><span class="syn">点一下就能编辑</span><span class="di">右侧「⋯」里切换模式</span></div>
+        <div class="help-row"><span>大纲</span><span class="syn">右上第一个图标</span><span class="di">鼠标靠右边缘也会滑出</span></div>
+      </div>`;
+  } else if(helpTab === 'todo'){
+    body.innerHTML = `
+      <div class="help-sec"><h4>添加日期</h4>
+        <p class="help-p">在待办 <code>- [ ]</code> 后面写 <code>@</code>，再写时间：<code>@今天</code>、<code>@明天 9点</code>、<code>@周五下午3点</code>、<code>@11月20日</code>、<code>@3天后</code>、<code>@下周一</code>，英文 <code>@tomorrow 3pm</code> 也行。也可以直接写 <code>⏰ 2026-11-15 18:00</code>。点条目右侧的时间可以改。</p></div>
+      <div class="help-sec"><h4>重复</h4>
+        <p class="help-p">点时间，选「每天 / 每个工作日 / 每周 / 每月 / 每年」，会写成 <code>🔁 every month</code>。勾选完成后会自动生成下一次。</p></div>
+      <div class="help-sec"><h4>提醒</h4>
+        <p class="help-p">有时间的待办到点会弹出页面提醒（网页要保持打开）。点左下「订阅到手机日历」可以把日程导出成 .ics，交给手机日历提醒。</p></div>
+      <div class="help-sec"><h4>分组</h4>
+        <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
+      <div class="help-sec"><h4>写法</h4>
+        <pre class="help-code">- [ ] 交房租 ⏰ 2026-11-15 18:00 🔁 every month
+- [ ] 体检预约 @明天 9点
+- [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08</pre></div>`;
+  } else {
+    body.innerHTML = `<div class="help-sec">` + HELP_KEYS.map(([n,k])=>
+      `<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`
+    ).join('') + `</div>`;
+  }
 }
 /* 高亮：27 个预设色 + 自定义取色。语法 ==文字==（绿）/ ==文字=={.yellow} / ==文字=={c:#f59e0b} */
 const HL_HEX = [
@@ -1961,9 +2930,26 @@ function applyFormat(kind, opt){
       break;
     }
     case 'table': {
-      const tpl = '\n| 列 1 | 列 2 | 列 3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |\n';
+      const rows = Math.max(1, Math.min(50, (opt && opt.rows) || 3));
+      const cols = Math.max(1, Math.min(12, (opt && opt.cols) || 3));
+      const line = arr => '| ' + arr.join(' | ') + ' |';
+      const head = line(Array.from({length:cols}, (_,i)=>'列 '+(i+1)));
+      const sep  = line(Array.from({length:cols}, ()=>'---'));
+      const body = [];
+      for(let r=1;r<rows;r++) body.push(line(Array.from({length:cols}, ()=>'内容')));
+      const tpl = '\n' + [head, sep, ...body].join('\n') + '\n';
       v = v.slice(0,s) + tpl + v.slice(e);
-      setRange(s + tpl.length, s + tpl.length);
+      // 光标停到第一个单元格里，方便直接开写
+      const at = s + 1 + 3;
+      setRange(at, at + ('列 1'.length));
+      break;
+    }
+    case 'mermaid': {
+      const code = (opt && opt.code) || 'graph TD\n  A[开始] --> B[结束]';
+      const head = '\n```mermaid\n';
+      v = v.slice(0,s) + head + code + '\n```\n' + v.slice(e);
+      const a = s + head.length;
+      setRange(a, a + code.length);
       break;
     }
     case 'pre': {
@@ -2106,6 +3092,7 @@ function renderProse(){
   });
   outlineItems = out.headings;
   SPLIT_ANCH = null;   // 预览重绘后锚点位置全变了，下一帧重建
+  renderMermaidBlocks(prose);
 }
 
 function openWikiLink(t){
@@ -2451,6 +3438,7 @@ function paintLive(){
   LIVE.raws.forEach((raw,i)=> host.appendChild(blockEl(raw, i, LIVE.raws.length===1)));
   const tail = document.createElement('div'); tail.className = 'lv-tail'; host.appendChild(tail);
   paintHeadings(host);
+  renderMermaidBlocks(host);
   if(!host._wired){
     host._wired = true;
     host.addEventListener('click', e=>{
@@ -3255,6 +4243,22 @@ function inlineMd(s){
     const cls = ['yellow','pink','blue','purple','gray'].includes(k) ? ` class="hl-${k}"` : '';
     return `<mark${cls}>${t}</mark>`;
   });
+  // 先把行内代码抽出来，避免下面的「时间胶囊」把 `@今天` 这种示例也渲染掉
+  const codes = [];
+  s = s.replace(/<code>[\s\S]*?<\/code>/g, m=>{ codes.push(m); return '\u0001' + (codes.length - 1) + '\u0001'; });
+  // 待办提醒时间：渲染成小标签，别让 ⏰2026-11-12 09:00 这串裸文本抢戏
+  s = s.replace(/⏰\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/g, (m)=>{
+    const ts = parseDue(m);
+    const late = ts && ts < Date.now();
+    return `<span class="due-chip${late ? ' late' : ''}">⏰ ${m.replace(/^⏰\s*/, '')}</span>`;
+  });
+  // @今天 / @明天 9点 / @周五下午3点 这类自然语言日期也做成胶囊
+  s = s.replace(new RegExp(DUE_AT_RE.source, 'g'), (m)=>{
+    const ts = parseAtDue(m);
+    const late = ts && ts < Date.now();
+    return `<span class="due-chip${late ? ' late' : ''}">${m}</span>`;
+  });
+  s = s.replace(/\u0001(\d+)\u0001/g, (m, i)=>codes[+i] || '');
   return s;
 }
 function mdToHtml(md){
@@ -3272,7 +4276,12 @@ function mdToHtml(md){
       let buf = []; i++;
       while(i<lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; }
       i++;
-      out.push(`<pre><code${lang?` class="lang-${esc(lang)}"`:''}>${esc(buf.join('\n'))}</code></pre>`);
+      if(/^mermaid$/i.test(lang)){
+        // 图表：先留个占位，等 mermaid 加载完再渲染成 SVG
+        out.push(`<div class="mb" data-mb="${encodeURIComponent(buf.join('\n'))}"><div class="mb-hint">正在渲染图表…</div></div>`);
+      } else {
+        out.push(`<pre><code${lang?` class="lang-${esc(lang)}"`:''}>${esc(buf.join('\n'))}</code></pre>`);
+      }
       continue;
     }
     // heading
@@ -3332,6 +4341,123 @@ function mdToHtml(md){
     out.push(`<p>${buf.map(inlineMd).join('<br>')}</p>`);
   }
   return {html: out.join('\n'), headings};
+}
+
+/* ========== Mermaid 图表 ========== */
+/* 按需加载：只有正文里真的出现 ```mermaid 才去下载 2.5MB 的库，首屏不受影响 */
+const MB_CACHE = new Map();
+let MB_LOADING = null, MB_INITED = false;
+function mbTheme(){ return (S && S.theme === 'dark') ? 'dark' : 'default'; }
+function ensureMermaid(){
+  if(window.mermaid){
+    if(!MB_INITED) initMermaidEngine();
+    return Promise.resolve();
+  }
+  if(MB_LOADING) return MB_LOADING;
+  MB_LOADING = new Promise((res, rej)=>{
+    const sc = document.createElement('script');
+    sc.src = '/vendor/mermaid.min.js';
+    sc.async = true;
+    sc.onload = ()=>{ initMermaidEngine(); res(); };
+    sc.onerror = ()=>{ MB_LOADING = null; rej(new Error('mermaid load failed')); };
+    document.head.appendChild(sc);
+  });
+  return MB_LOADING;
+}
+function initMermaidEngine(){
+  if(!window.mermaid || MB_INITED) return;
+  try{
+    window.mermaid.initialize(mbConfig());
+    MB_INITED = true;
+  }catch(e){ /* 初始化失败就让单块渲染时各自报错 */ }
+}
+/* 图表跟着笔记的绿色调走，别默认那套紫蓝色 */
+function mbConfig(){
+  const dark = (S && S.theme === 'dark');
+  return {
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: dark ? 'dark' : 'base',
+    fontFamily: 'inherit',
+    themeVariables: dark ? {
+      fontSize: '14px',
+      primaryColor: '#25352d', primaryTextColor: '#e4ebe7', primaryBorderColor: '#4c8f6e',
+      secondaryColor: '#2c3a34', tertiaryColor: '#1f2a25',
+      lineColor: '#7d8f86', textColor: '#d6ded9', mainBkg: '#25352d',
+      nodeBorder: '#4c8f6e', clusterBkg: '#1f2a25', clusterBorder: '#3a4a43',
+      titleColor: '#e4ebe7', background: '#171d1a'
+    } : {
+      fontSize: '14px',
+      primaryColor: '#e5f3eb', primaryTextColor: '#1b5c3c', primaryBorderColor: '#5aa17e',
+      secondaryColor: '#f1f6f3', tertiaryColor: '#fbfdfc',
+      lineColor: '#8c9a93', textColor: '#2c3330', mainBkg: '#e5f3eb',
+      nodeBorder: '#5aa17e', clusterBkg: '#f4f9f6', clusterBorder: '#d6e6dd',
+      titleColor: '#1c1f22', background: '#ffffff'
+    },
+    flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: true, padding: 12 },
+    sequence: { useMaxWidth: false },
+    gantt: { useMaxWidth: false },
+    pie: { useMaxWidth: false },
+    er: { useMaxWidth: false },
+    class: { useMaxWidth: false },
+    state: { useMaxWidth: false }
+  };
+}
+/* 把容器里所有未渲染的图表画出来（已经画过的有 data-done 标记，不会重复） */
+async function renderMermaidBlocks(root){
+  const scope = root || document;
+  const boxes = [...scope.querySelectorAll('.mb[data-mb]')].filter(b=>!b.dataset.done && !b.dataset.busy);
+  if(!boxes.length) return;
+  try{
+    await ensureMermaid();
+  }catch(e){
+    boxes.forEach(b=>{
+      b.dataset.done = '1';
+      b.innerHTML = '<div class="mb-err">图表库没加载出来，检查下网络再刷新页面</div>';
+    });
+    return;
+  }
+  if(!window.mermaid) return;
+  for(const box of boxes){
+    if(box.dataset.done || !box.isConnected) continue;
+    box.dataset.busy = '1';
+    let code = '';
+    try{ code = decodeURIComponent(box.dataset.mb); }catch(e){ code = box.dataset.mb || ''; }
+    const key = mbTheme() + '::' + code;
+    if(MB_CACHE.has(key)){
+      box.innerHTML = MB_CACHE.get(key);
+      box.dataset.done = '1'; delete box.dataset.busy;
+      continue;
+    }
+    const id = 'mbx' + Math.random().toString(36).slice(2, 9);
+    try{
+      const out = await window.mermaid.render(id, code);
+      MB_CACHE.set(key, out.svg);
+      box.innerHTML = out.svg;
+      box.dataset.done = '1';
+    }catch(err){
+      const msg = String((err && err.message) || err).split('\n')[0];
+      box.innerHTML = `<div class="mb-err">图表语法有误：${esc(msg)}</div>
+        <pre class="mb-src">${esc(code)}</pre>`;
+      box.dataset.done = '1';
+    }finally{
+      delete box.dataset.busy;
+      const junk = document.getElementById('d' + id);
+      if(junk && junk.parentNode) junk.parentNode.removeChild(junk);
+    }
+  }
+}
+/* 换主题后清缓存重画 */
+function refreshMermaid(){
+  MB_CACHE.clear();
+  if(window.mermaid && MB_INITED){
+    try{ window.mermaid.initialize({ theme: mbTheme(), startOnLoad:false, securityLevel:'loose', fontFamily:'inherit' }); }catch(e){}
+  }
+  document.querySelectorAll('.mb[data-mb]').forEach(b=>{
+    delete b.dataset.done; delete b.dataset.busy;
+    b.innerHTML = '<div class="mb-hint">正在渲染图表…</div>';
+  });
+  renderMermaidBlocks(document);
 }
 
 /* ========== 媒体库 ========== */
@@ -3604,6 +4730,11 @@ function switchView(v){
 /* ========== 主题 / 分享 / 导出 ========== */
 function toggleTheme(){
   S.theme = S.theme==='dark' ? 'light' : 'dark';
+  // 图表是按主题画死的 SVG，换主题要清缓存重画（renderMain 里会重新渲染）
+  MB_CACHE.clear();
+  if(window.mermaid && MB_INITED){
+    try{ window.mermaid.initialize(mbConfig()); }catch(e){}
+  }
   applyTheme(); save(); renderMain();
   toast(S.theme==='dark'?'已切换到深色':'已切换到浅色');
 }
@@ -4634,6 +5765,10 @@ if(isConnected()){
     syncNow({rerender:true});
   }, 350);
 }
+
+/* ---- 待办到点提醒：每分钟扫一次 ---- */
+setTimeout(checkTodoReminders, 2500);
+setInterval(checkTodoReminders, 60000);
 
 /* ---- 版本水印 ----
    常驻显示本页构建版本；正式域名下再对比 GitHub main 上的 version.js，

@@ -389,6 +389,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .sl-tx b{display:block;font-size:13px;font-weight:450;color:rgb(var(--ink-2))}
 .sl-tx i{display:block;font-size:10.5px;font-style:normal;color:rgb(var(--faint));margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sl-key{font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--faint))}
+.sl-key em{font-style:normal;margin-left:5px;color:rgb(var(--ivy-ink))}
 .sl-date{margin-left:auto;font-size:10.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
 
 /* ---- 编辑中把「- [ ] 」显示成真勾选框：一块不透明小牌子盖住原文，文本本身不动 ---- */
@@ -437,8 +438,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .due-tip{font-size:11.5px;line-height:1.6;color:rgb(var(--faint));margin:3px 0 13px;padding-left:44px}
 .due-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end}
-.due-del{margin-right:auto;font-size:12.5px;color:rgb(var(--danger));padding:4px 2px;border-radius:6px}
+.due-del{margin-right:auto;font-size:12.5px;color:rgb(var(--danger));padding:5px 9px;border-radius:7px;transition:background .12s,color .12s}
 .due-del:hover{background:rgb(var(--danger-soft))}
+.due-del[disabled]{color:rgb(var(--faint));opacity:.62;cursor:default}
+.due-del[disabled]:hover{background:none}
 .due-ok{height:33px;padding:0 18px;border-radius:9px;background:rgb(var(--ivy));color:#fff;font-size:13px;font-weight:500}
 .due-ok:hover{background:rgb(var(--ivy-hover))}
 
@@ -616,6 +619,50 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .help-row .di{margin-left:auto;text-align:right;color:rgb(var(--muted));font-size:12.5px;flex:0 0 auto}
 .help-row .kbd{margin-left:auto;flex:0 0 auto}
+
+/* 帮助面板第一页：上面三张「怎么用」，下面一张四列速查表 */
+.help-hero{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px 0 2px}
+.hh{background:rgb(var(--sunken));border-radius:11px;padding:11px 12px}
+.hh.hl{background:rgb(var(--ivy-soft))}
+.hh-t{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:rgb(var(--ink));margin-bottom:5px}
+.hh-t i{
+  font-style:normal;font-family:var(--font-mono);font-size:10.5px;line-height:1;padding:3px 6px;border-radius:5px;
+  background:rgb(var(--surface));color:rgb(var(--ivy-ink));box-shadow:0 0 0 .5px rgb(var(--line));
+}
+.hh.hl .hh-t{color:rgb(var(--ivy-ink))}
+.hh-p{font-size:11.5px;line-height:1.72;color:rgb(var(--muted))}
+.hh.hl .hh-p{color:rgb(var(--ink-2))}
+.help-table{width:100%;border-collapse:collapse;margin-top:14px;table-layout:fixed}
+.help-table th{
+  font-size:11px;font-weight:600;color:rgb(var(--faint));text-align:left;
+  padding:0 8px 7px;border-bottom:1px solid rgb(var(--line));letter-spacing:.02em;
+}
+.help-table td{
+  padding:9px 8px;border-bottom:1px solid rgb(var(--line)/.55);
+  font-size:12.5px;color:rgb(var(--ink-2));vertical-align:middle;
+}
+.help-table tr:last-child td{border-bottom:0}
+.help-table th:nth-child(1),.help-table td:nth-child(1){width:23%}
+.help-table th:nth-child(2),.help-table td:nth-child(2){width:36%}
+.help-table th:nth-child(3),.help-table td:nth-child(3){width:19%}
+.help-table th:nth-child(4),.help-table td:nth-child(4){width:22%}
+.help-table td.ht-n{color:rgb(var(--ink));font-weight:500;white-space:nowrap}
+.help-table code{
+  font-family:var(--font-mono);font-size:11px;padding:1.5px 5px;border-radius:4px;
+  background:rgb(var(--code-bg));color:rgb(var(--ivy-ink));white-space:nowrap;
+}
+.help-table .ht-k span{
+  display:inline-block;font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--muted));
+  background:rgb(var(--sunken));padding:2px 6px;border-radius:5px;margin-right:2px;white-space:nowrap;
+}
+.help-table .ht-eff{color:rgb(var(--muted));font-size:12px}
+.help-table .ht-hl{background:rgb(var(--hl-yellow-bg));color:rgb(var(--hl-yellow-fg));padding:0 3px;border-radius:4px}
+@media (max-width:640px){
+  .help-hero{grid-template-columns:1fr}
+  .help-table{table-layout:auto}
+  .help-table th:nth-child(3),.help-table td:nth-child(3){display:none}
+  .help-table th:nth-child(1),.help-table td:nth-child(1){width:28%}
+}
 
 /* ---- 日程（左侧书架里的分组列表） ---- */
 .todo-shelf{display:flex;flex-direction:column;min-height:100%}
@@ -1366,7 +1413,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v46', at: '2026-11-10 11:20' };
+window.IVY_BUILD = { id: 'v47', at: '2026-11-10 11:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3357,7 +3404,9 @@ const FMT_GROUPS = [
   [['insert','+','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
-  [['code','代码','行内代码 / 代码块'],['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
+  [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],['list','列表','列表样式：无序 / 有序'],
+   ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）'],
+   ['quote','引用','引用块']],
   [['table','表格','拖动选择行数和列数'],
    ['chart','图表','插入 Mermaid 图表：流程图、时序图等'],
    ['emoji','表情','插入表情符号'],
@@ -3380,6 +3429,7 @@ function renderFmtBar(){
       if(k==='insert') openInsertMenu(b);
       else if(k==='h') openHeadingMenu(b);
       else if(k==='list') openListMenu(b);
+      else if(k==='due') openRemindDialog({insert:true});
       else if(k==='mark') openHighlightMenu(b);
       else if(k==='emoji') openEmojiMenu(b);
       else if(k==='code') openCodeMenu(b);
@@ -3404,8 +3454,7 @@ function openHeadingMenu(anchor){
 function openListMenu(anchor){
   popover(anchor, [
     ['无序列表','-','','',()=>applyFormat('ul')],
-    ['有序列表','1.','','',()=>applyFormat('ol')],
-    ['待办列表','- [ ]','','',()=>applyFormat('todo')]
+    ['有序列表','1.','','',()=>applyFormat('ol')]
   ], { align:'left' });
 }
 
@@ -3453,7 +3502,7 @@ const INSERT_ITEMS = [
   {name:'二级标题', keys:['bt2','h2'], glyph:'H2', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
   {name:'三级标题', keys:['bt3','h3'], glyph:'H3', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
   {name:'待办', keys:['db','daiban','todo','task'], icon:'todo', desc:'- [ ] 会自动汇总到「日程」', block:1, run:()=>applyFormat('todo')},
-  {name:'日期与提醒', keys:['rq','riqi','date'], icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
+  {name:'日期与提醒', keys:['rq','riqi','date'], alt:'@', icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
   {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再用工具栏调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
   {name:'代码块', keys:['dmk','daimaikuai','code'], icon:'codeBlock', desc:'``` 围栏代码', block:1, run:()=>applyFormat('pre')},
   {name:'图表', keys:['tb','tubiao','chart','mermaid'], icon:'chart', desc:'Mermaid 流程图、时序图…', block:1, run:()=>applyFormat('mermaid')},
@@ -3535,7 +3584,7 @@ function slItemHtml(it, on, i){
   return `<button class="sl-item ${on?'on':''}" data-si="${i}">
       <span class="sl-ic">${glyph}</span>
       <span class="sl-tx"><b>${esc(it.name)}</b><i>${esc(it.desc || '')}</i></span>
-      <span class="sl-key">/${esc(it.keys[0])}</span>
+      <span class="sl-key">/${esc(it.keys[0])}${it.alt ? `<em>${esc(it.alt)}</em>` : ''}</span>
     </button>`;
 }
 function paintSlash(){
@@ -3971,7 +4020,7 @@ function openRemindDialog(opts){
       </div>
       <div class="due-tip">不填时间：当天按设置中的时间提醒。</div>
       <div class="due-foot">
-        ${opts.todo && opts.todo.due ? '<button class="due-del" id="dueDel">取消提醒</button>' : ''}
+        <button class="due-del" id="dueDel">删除提醒</button>
         <button class="due-ok" id="dueOk">确定</button>
       </div>
     </div>`;
@@ -4004,14 +4053,28 @@ function openRemindDialog(opts){
       syncChips();
     };
   });
-  const close = ()=>ov.classList.remove('open');
-  const del = ov.querySelector('#dueDel');
-  if(del) del.onclick = ()=>{
+  let keyOff = null;
+  const close = ()=>{
+    ov.classList.remove('open');
+    if(keyOff){ document.removeEventListener('keydown', keyOff); keyOff = null; }
+  };
+  /* 删除提醒：把这条待办上的 ⏰ / @ 时间标记和 🔁 重复一起摘掉 */
+  const hasDue = !!(opts.todo && (opts.todo.due || opts.todo.repeat));
+  const doDelete = ()=>{
+    if(!hasDue) return;
     close();
+    setTodoRepeat(opts.todo, '', true);
     setTodoDue(opts.todo, 0, true);
     renderShelf();
-    toast('已取消提醒');
+    toast('已删除提醒');
   };
+  const del = ov.querySelector('#dueDel');
+  if(del){
+    del.disabled = !hasDue;
+    del.title = hasDue ? '删除这条待办的提醒（也可以直接按 Delete 键）'
+      : '这条待办还没有提醒时间';
+    del.onclick = doDelete;
+  }
   ov.querySelector('#dueOk').onclick = ()=>{
     const ds = dateIn.value, ts0 = timeIn.value || '09:00';
     if(!ds){ toast('先选一个日期'); return; }
@@ -4034,8 +4097,17 @@ function openRemindDialog(opts){
   };
   ov.onmousedown = (e)=>{ if(e.target === ov) close(); };
   setTimeout(()=>{
-    const off = (e)=>{ if(e.key === 'Escape'){ close(); document.removeEventListener('keydown', off); } };
-    document.addEventListener('keydown', off);
+    keyOff = (e)=>{
+      if(e.key === 'Escape'){ close(); return; }
+      // 卡片开着时按 Delete / Backspace 直接删掉这个提醒（正在输入日期时间时不算）
+      if(e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if(!ov.classList.contains('open') || !hasDue) return;
+      const ae = document.activeElement;
+      if(ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
+      e.preventDefault();
+      doDelete();
+    };
+    document.addEventListener('keydown', keyOff);
   }, 0);
 }
 function closeDueDialog(){
@@ -4167,26 +4239,35 @@ function openChartMenu(anchor){
 }
 
 /* Markdown 与快捷键一览 */
-const HELP_MD = [
-  ['插入菜单', '行首或空格后输入 /', '弹窗里可继续输入筛选，支持拼音首字母：/bg 表格、/rq 日期、/db 待办；空格或 Esc 关闭'],
-  ['选中工具条', '用鼠标选中文字', '上方浮出工具条：加粗、斜体、高亮、加链接、设为标题'],
-  ['标题', '# 一级 / ## 二级 …', '一到六级，行首加 # 和空格'],
-  ['加粗 / 斜体', '**粗** *斜* ~~删除~~', '删除线用两个波浪号'],
-  ['高亮', '==文字==', '后面可跟 {.yellow} 或 {c:#f59e0b} 换色'],
-  ['行内代码', '`代码`', '反引号包住即可'],
-  ['代码块', '```lang … ```', '三个反引号，可标语言'],
-  ['引用', '> 引用', '行首加 > 和空格'],
-  ['分割线', '---', '单独一行三个短横'],
-  ['无序 / 有序', '- 项 / 1. 项', '行首标记加空格'],
-  ['待办', '- [ ] 未完成\n- [x] 已完成', '点方框可直接勾选'],
-  ['待办提醒', '- [ ] 交稿 @明天 9点', '输入 @ 直接选时间；也支持 ⏰2026-11-12 09:00'],
-  ['重复待办', '- [ ] 交房租 🔁 every month', '在提醒卡片里选重复，勾完自动生成下一次'],
-  ['表格', '| 列 | 列 |\n| --- | --- |', '第二行是分隔线'],
-  ['链接', '[文字](https://…)', '外链直接打开'],
-  ['双链', '[[另一篇笔记]]', '点开即可跳转，没有就新建'],
-  ['图片', '![](https://…)', '也可以直接粘贴上传'],
-  ['图表', '```mermaid\ngraph TD\n A-->B\n```', '流程图、时序图、甘特图等'],
-  ['标签', '正文里写 #标签', '左上「标签」区自动汇总']
+/* 帮助面板第一页：上面三张「怎么用」，下面一张四列速查表。
+   表里写到的快捷键都真的实现了（见全局 keydown），别写没做的。 */
+const HELP_HERO = [
+  { sym:'/', t:'输入 / 插入', hl:1,
+    d:'在行首或空格后输入 /，再打几个字筛选（支持拼音首字母，如 /bg 表格、/rq 日期），回车插入。' },
+  { sym:'+', t:'点 + 选择',
+    d:'不想记语法？点笔记右上角或手机工具栏的 +，或按 ⌘/，从同一个菜单里选。' },
+  { sym:'', t:'选中文字',
+    d:'用鼠标选中文字，上方会出现格式工具条：加粗、高亮、链接、标题等。' }
+];
+const HELP_TABLE = [
+  ['标题', '<code>#</code> / <code>##</code> / <code>###</code>', '⌥⌘1/2/3', '一到三级标题'],
+  ['加粗', '<code>**文字**</code>', '⌘B', '<b>加粗</b>'],
+  ['斜体', '<code>*文字*</code>', '⌘I', '<i>斜体</i>'],
+  ['删除线', '<code>~~文字~~</code>', '⌘⇧X', '<s>删除</s>'],
+  ['高亮', '<code>==文字==</code>', '⌘⇧H', '<mark class="ht-hl">高亮</mark>'],
+  ['行内代码', '<code>`代码`</code>', '', '<code>code</code>'],
+  ['待办', '<code>- [ ]</code>', '⌘⇧9', '可勾选的方框'],
+  ['无序 / 有序列表', '<code>-</code> / <code>1.</code>', '⌘⇧8 / ⌘⇧7', '回车自动续写'],
+  ['引用', '<code>&gt;</code>', '', '左侧竖线'],
+  ['链接到笔记', '<code>[[标题]]</code>', '⌘⇧K', '行内输入时补全笔记'],
+  ['网页链接', '<code>[文字](https://…)</code>', '', '外链直接打开'],
+  ['代码块', '<code>```</code>', '', '三个反引号成块'],
+  ['表格', '<code>/表格</code>', '', '点格子直接改，Tab 下一格'],
+  ['图片', '<code>![](url)</code>', '', '也可以直接粘贴上传'],
+  ['图表', '<code>```mermaid</code>', '', '流程图、时序图'],
+  ['分割线', '<code>---</code>', '', '单独一行三个短横'],
+  ['待办提醒', '<code>@明天 9点</code> / <code>⏰2026-11-12 09:00</code>', '', '到点弹通知，也能订阅到日历'],
+  ['标签', '<code>#标签</code>', '', '左上「标签」区自动汇总']
 ];
 const HELP_KEYS = [
   ['搜索笔记', '⌘K'], ['新建笔记', '⌘N'], ['收起 / 展开书架', '⌘\\'],
@@ -4230,13 +4311,20 @@ function paintHelp(){
   ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
   const body = $('#helpBody');
   if(helpTab === 'md'){
-    body.innerHTML = `<div class="help-sec">` + HELP_MD.map(([n,syn,d])=>
-      `<div class="help-row"><span>${n}</span><span class="syn">${esc(syn)}</span><span class="di">${esc(d)}</span></div>`
-    ).join('') + `</div>
-      <div class="help-sec"><h4>小贴士</h4>
-        <div class="help-row"><span>即时渲染</span><span class="syn">点一下就能编辑</span><span class="di">右侧「⋯」里切换模式</span></div>
-        <div class="help-row"><span>大纲</span><span class="syn">右上第一个图标</span><span class="di">鼠标靠右边缘也会滑出</span></div>
-      </div>`;
+    body.innerHTML = `<div class="help-hero">` + HELP_HERO.map(c=>`
+        <div class="hh${c.hl ? ' hl' : ''}">
+          <div class="hh-t">${c.sym ? `<i>${esc(c.sym)}</i>` : ''}${esc(c.t)}</div>
+          <div class="hh-p">${esc(c.d)}</div>
+        </div>`).join('') + `</div>
+      <table class="help-table">
+        <thead><tr><th>格式</th><th>直接输入</th><th>快捷键</th><th>效果</th></tr></thead>
+        <tbody>${HELP_TABLE.map(([n, syn, k, eff])=>`<tr>
+          <td class="ht-n">${esc(n)}</td>
+          <td>${syn}</td>
+          <td class="ht-k">${k ? k.split(' / ').map(x=>`<span>${esc(x)}</span>`).join(' ') : ''}</td>
+          <td class="ht-eff">${eff}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
   } else if(helpTab === 'todo'){
     body.innerHTML = `
       <div class="help-sec"><h4>添加日期</h4>
@@ -6934,6 +7022,26 @@ document.addEventListener('keydown', e=>{
     if(e.key==='ArrowDown'){ e.preventDefault(); paletteSel = Math.min(paletteSel+1, paletteRows.length-1); paintPaletteSel(); return; }
     if(e.key==='ArrowUp'){ e.preventDefault(); paletteSel = Math.max(paletteSel-1, 0); paintPaletteSel(); return; }
     if(e.key==='Enter'){ e.preventDefault(); paletteRows[paletteSel]?.f(); return; }
+  }
+  /* 格式化快捷键：和「Markdown 与快捷键」面板里写的保持一致 */
+  if(meta && !e.altKey){
+    const code = e.code || '';
+    if(e.shiftKey){
+      if(code === 'KeyX'){ e.preventDefault(); applyFormat('s'); return; }
+      if(code === 'KeyH'){ e.preventDefault(); applyFormat('mark'); return; }
+      if(code === 'KeyK'){ e.preventDefault(); applyFormat('wiki'); return; }
+      if(code === 'Digit9'){ e.preventDefault(); applyFormat('todo'); return; }
+      if(code === 'Digit8'){ e.preventDefault(); applyFormat('ul'); return; }
+      if(code === 'Digit7'){ e.preventDefault(); applyFormat('ol'); return; }
+    } else {
+      if(code === 'KeyB'){ e.preventDefault(); applyFormat('b'); return; }
+      if(code === 'KeyI'){ e.preventDefault(); applyFormat('i'); return; }
+    }
+  } else if(meta && e.altKey){
+    const code = e.code || '';
+    if(code === 'Digit1'){ e.preventDefault(); applyFormat('h1'); return; }
+    if(code === 'Digit2'){ e.preventDefault(); applyFormat('h2'); return; }
+    if(code === 'Digit3'){ e.preventDefault(); applyFormat('h3'); return; }
   }
   if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu(document.querySelector('#fmtBar [data-fmt="insert"]')); return; }
   if(meta && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }

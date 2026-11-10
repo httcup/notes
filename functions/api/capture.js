@@ -8,9 +8,10 @@
 //       不需要改数据库、不需要改 444KB 的 public/index.html、不需要发前端版本。
 //
 // POST /api/capture?k=<CAPTURE_KEY>   或请求头 x-capture-key
-//   body { url, title, text, source, notebook }
+//   body { url, title, text, source, notebook }；也兼容表单、纯文本、嵌套 JSON（webhook）
 //   url 与 text 至少给一个；text 是分享时带上的标题/摘要/选中文字，最关键
 //   → { ok, noteId, title, notebook, mode }   mode: full=抓到正文 / link=只存了链接
+// GET  /api/capture?k=<CAPTURE_KEY>&url=<文章地址>  → 直接剪藏（给只能发 GET 的 webhook）
 // GET  /api/capture?k=<CAPTURE_KEY>  → 手机浏览器里粘贴链接用的极简表单
 //
 // 已登录的浏览器也可以不带 key 直接调（走 currentUser），方便以后在前端加按钮。
@@ -352,6 +353,117 @@ async function identity(request, url, env) {
   return user ? { uid: user.uid, via: 'login' } : null;
 }
 
+// ---- Webhook / 任意来源的输入归一化 -------------------------------------
+// 同一条端点接所有上游：JSON、表单、纯文本、query、以及 data/payload/event 包一层的结构。
+// 只要消息里有一个 http(s) 地址就能触发剪藏，其余文字当摘抄一起存。
+const FIELD = {
+  url: ['url', 'link', 'href', 'target', 'article_url', 'articleUrl', 'content_url', 'page_url', '地址', '链接'],
+  text: ['text', 'content', 'body', 'message', 'desc', 'description', 'summary', 'excerpt', '摘要', '正文', '内容'],
+  title: ['title', 'subject', 'name', 'headline', '标题'],
+  source: ['source', 'from', 'channel', 'provider', 'origin', '来源'],
+  notebook: ['notebook', 'folder', '笔记本']
+};
+const SOURCE_LABEL = { wechat: '微信', weibo: '微博', web: '网页', manual: '手动', webhook: 'Webhook' };
+const URL_RE = /https?:\/\/[^\s<>"')\]}$，。！？、；]+/i;
+
+function firstUrl(s) {
+  const m = URL_RE.exec(String(s || ''));
+  return m ? m[0].replace(/[.,;:!?]+$/, '') : '';
+}
+
+function cleanLabel(s) {
+  return String(s || '').replace(/[\r\n\t<>`*\[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+}
+
+function pickField(o, keys) {
+  if (!o || typeof o !== 'object') return '';
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+
+/** 常见 webhook 会把字段包在 data / payload / event 里，向下找几层 */
+function deepField(root, keys) {
+  const seen = new Set();
+  const walk = (o, depth) => {
+    if (!o || typeof o !== 'object' || depth > 4 || seen.has(o)) return '';
+    seen.add(o);
+    const direct = pickField(o, keys);
+    if (direct) return direct;
+    const vals = Array.isArray(o) ? o.slice(0, 5) : Object.values(o).slice(0, 30);
+    for (const v of vals) {
+      if (v && typeof v === 'object') { const r = walk(v, depth + 1); if (r) return r; }
+    }
+    return '';
+  };
+  return walk(root, 0);
+}
+
+/** 把任意结构里的字符串拼起来，处理「整段文本里只出现一个链接」的情况 */
+function deepText(root) {
+  const out = [];
+  const seen = new Set();
+  const walk = (o, depth) => {
+    if (depth > 4 || out.join(' ').length > 20000) return;
+    if (typeof o === 'string') { out.push(o); return; }
+    if (!o || typeof o !== 'object' || seen.has(o)) return;
+    seen.add(o);
+    for (const v of Object.values(o).slice(0, 40)) walk(v, depth + 1);
+  };
+  walk(root, 0);
+  return out.join(' ');
+}
+
+function fromQuery(q, keys) {
+  for (const k of keys) { const v = q.get(k); if (v && v.trim()) return v.trim(); }
+  return '';
+}
+
+async function parseIncoming(request, url) {
+  const q = url.searchParams;
+  const ct = (request.headers.get('content-type') || '').toLowerCase();
+  let obj = null, raw = '', format = 'query';
+
+  if (request.method === 'POST') {
+    if (/multipart\/form-data/i.test(ct)) {
+      const fd = await request.formData().catch(() => null);
+      if (fd) { obj = {}; for (const [k, v] of fd) if (typeof v === 'string') obj[k] = v; }
+      format = 'form';
+    } else {
+      raw = (await request.text().catch(() => '')).slice(0, 60000);
+      const t = raw.trim();
+      const looksJson = t.startsWith('{') || t.startsWith('[') || t.startsWith('"');
+      if (/json/i.test(ct) || looksJson) {
+        try { obj = JSON.parse(t); } catch (e) { obj = null; }
+        format = 'json';
+      } else if (/x-www-form-urlencoded/i.test(ct) || (/^[\w.-]+=[^\s]*$/.test(t) && !/\s/.test(t))) {
+        obj = Object.fromEntries(new URLSearchParams(t));
+        format = 'form';
+      } else {
+        format = 'text';
+      }
+    }
+  }
+
+  if (typeof obj === 'string') { raw = obj; obj = null; format = 'text'; }
+
+  const field = (keys) => fromQuery(q, keys) || deepField(obj, keys);
+  let link = field(FIELD.url);
+  let text = field(FIELD.text);
+  const title = field(FIELD.title);
+  const source = field(FIELD.source);
+  const notebook = field(FIELD.notebook);
+
+  if (format === 'text' && !text) text = raw.trim();
+  if (!link) link = firstUrl(raw) || firstUrl(text) || firstUrl(deepText(obj));
+  if (format === 'text' && link && text === raw.trim()) text = text.replace(link, '').trim();
+  if (text === link) text = '';
+
+  return { url: link, text, title, source, notebook, format };
+}
+
 function formPage() {
   return new Response(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>存到我的笔记</title>
@@ -394,23 +506,29 @@ export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_OPEN });
   const url = new URL(request.url);
 
-  if (request.method === 'GET') return formPage();
-  if (request.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
+  const q = url.searchParams;
+  // 只能发 GET 的 webhook / 浏览器书签：带 url 或 text 参数就直接剪藏
+  const webhookGet = request.method === 'GET'
+    && [...FIELD.url, ...FIELD.text].some((k) => q.get(k));
+
+  if (request.method === 'GET' && !webhookGet) return formPage();
+  if (request.method !== 'POST' && !webhookGet) return reply({ error: 'Method not allowed' }, 405);
   if (!env.DB) return reply({ error: '还没绑定 D1 数据库（变量名 DB）' }, 503);
 
   const me = await identity(request, url, env);
   if (!me) return reply({ error: '缺少剪藏密钥：请配置 CAPTURE_KEY，或先在笔记站登录' }, 401);
 
-  const body = await request.json().catch(() => ({}));
-  const text = str(body.text, 20000).trim();
-  const rawUrl = str(body.url, 2000).trim();
-  const clientTitle = str(body.title, 300).trim();
-  if (!rawUrl && !text) return reply({ error: 'url 和 text 至少给一个' }, 400);
+  const incoming = await parseIncoming(request, url);
+  const text = str(incoming.text, 20000).trim();
+  const rawUrl = str(incoming.url, 2000).trim();
+  const clientTitle = str(incoming.title, 300).trim();
+  if (!rawUrl && !text) return reply({ error: 'url 和 text 至少给一个；消息里要有文章地址' }, 400);
   if (rawUrl && !safeUrl(rawUrl)) return reply({ error: '这个链接不能抓取' }, 400);
 
-  const source = ['wechat', 'weibo', 'web', 'manual'].includes(body.source) ? body.source : 'web';
-  const sourceLabel = { wechat: '微信', weibo: '微博', web: '网页', manual: '手动' }[source];
-  const notebook = str(body.notebook, 60).trim() || '剪藏';
+  const src = str(incoming.source, 40).trim();
+  const defaultSource = webhookGet || incoming.format !== 'json' ? 'Webhook' : '网页';
+  const sourceLabel = SOURCE_LABEL[src] || cleanLabel(src) || defaultSource;
+  const notebook = str(incoming.notebook, 60).trim() || '剪藏';
 
   // 客户端带过来的内容优先；服务端抓取只用来补全，抓不到就降级
   const grabbed = rawUrl ? await grab(rawUrl, env) : { title: '', md: '', mode: 'link', via: 'link' };
@@ -456,7 +574,7 @@ export async function onRequest({ request, env }) {
     return reply({ error: String((err && err.message) || err) }, 500);
   }
 
-  const out = { ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', via: grabbed.via || 'link', noteUrl: url.origin + '/?n=' + id };
+  const out = { ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', via: grabbed.via || 'link', format: incoming.format, noteUrl: url.origin + '/?n=' + id };
   if (url.searchParams.get('debug') === '1') out.diag = grabbed.diag || [];
   return reply(out);
 }

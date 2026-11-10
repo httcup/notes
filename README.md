@@ -69,11 +69,12 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `GET /api/media/:uid/:id` → 文件本体（公开，靠 32 位随机 key 不可猜）
 `DELETE /api/media/:uid/:id` → 需本人令牌
 
-`POST /api/capture` body `{ url, title, text, source, notebook }`（需 `x-capture-key` 或登录态）→ 把外部网页/微博/微信文章写成一条笔记，落在「剪藏」笔记本，返回 `{ noteId, mode, via }`。同一链接重复保存会更新同一篇（id 由链接哈希生成）。
+`POST /api/capture` body `{ url, title, text, source, notebook }`（需 `x-capture-key` 或登录态）→ 把外部网页/微博/微信文章写成一条笔记，落在「剪藏」笔记本，返回 `{ noteId, mode, via, format }`。同一链接重复保存会更新同一篇（id 由链接哈希生成）。除 JSON 外也接受表单、纯文本、嵌套 JSON。
+`GET /api/capture?k=<CAPTURE_KEY>&url=<文章地址>` → 直接剪藏，给只能发 GET 的 webhook 用。
 `GET /api/capture?k=<CAPTURE_KEY>` → 手机浏览器里粘贴链接的极简表单页。
 
 > `/api/capture` 是唯一「往里写」的入口，其余接口都是往外读或全量同步。
-> `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（网页直连）、`weibo-api`（微博官方移动端接口）、`reader`（第三方 Reader 兜底）、`link`（降级）。请求加 `?debug=1` 会额外返回 `diag` 数组，记录每一路抓取的状态，线上排障用。
+> `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（网页直连）、`weibo-api`（微博官方移动端接口）、`reader`（第三方 Reader 兜底）、`link`（降级）；`format=json|form|text|query` 表示这次请求是怎么被解析的。请求加 `?debug=1` 会额外返回 `diag` 数组，记录每一路抓取的状态，线上排障用。
 
 抓取策略（踩过的坑）：
 
@@ -95,6 +96,36 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 4. 不想配快捷指令，也可以直接在手机浏览器打开 `https://n.139t.cn/api/capture?k=<CAPTURE_KEY>` 粘贴链接提交；**这个链接带密钥，别外发**。
 
 > 微信「收藏夹」和微博「收藏」没有开放导出接口，做不到把收藏夹自动同步过来；这里实现的是「看到就推一条」的剪藏，和印象笔记官方机器人账号的机制一致，只是把机器人换成了分享菜单里的快捷指令。
+
+### 用 Webhook 推送文章地址
+
+`/api/capture` 本身就是 webhook 接收端点。任何能发 HTTP 请求的地方都能当上游：n8n、Make、IFTTT Webhooks、GitHub Actions、RSSHub + 定时器、Server 酱、企业微信/飞书/Telegram 机器人（需一层中转）、iOS 快捷指令、浏览器书签小工具、curl。密钥放请求头 `x-capture-key`，或放 URL `?k=`（只能改 URL 的服务用后者）。
+
+四种格式都认，消息里只要有一个 http(s) 地址就能触发：
+
+```bash
+# 1. JSON（推荐）
+curl -X POST 'https://n.139t.cn/api/capture' \
+  -H 'content-type: application/json' -H 'x-capture-key: <KEY>' \
+  -d '{"url":"https://mp.weixin.qq.com/s/...","title":"可选标题","text":"可选摘抄","source":"n8n"}'
+
+# 2. 表单（IFTTT 及大多数表单型 webhook）
+curl -X POST 'https://n.139t.cn/api/capture' -H 'x-capture-key: <KEY>' \
+  -d 'url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2F...&text=备注'
+
+# 3. 纯文本 / 只发一个链接
+curl -X POST 'https://n.139t.cn/api/capture' -H 'x-capture-key: <KEY>' \
+  --data-binary '看这篇 https://mp.weixin.qq.com/s/... 不错'
+
+# 4. GET（只能发 GET 的服务、书签小工具）
+# https://n.139t.cn/api/capture?k=<KEY>&url=https%3A%2F%2Fmp.weixin.qq.com%2Fs%2F...
+```
+
+- 字段别名：`url / link / href / target`、`text / content / message / summary`、`title / subject`、`source`、`notebook`；字段包在 `data` / `payload` / `event` 里也能自动找到。
+- 没有显式字段时，会从整段消息里抽第一个 http(s) 链接，其余文字作为摘抄一起存；`source` 可填任意来源名（如 `n8n`、`RSSHub`），会写进标签。
+- **幂等**：同一地址重复推送只会更新同一篇笔记，webhook 重投不会产生重复笔记。返回 JSON 里看 `mode` 与 `format` 即可确认结果。
+- 微博 / 微信自身不会主动推送「新收藏」，上游得是你自己的自动化（RSS、定时任务、机器人中转）或分享菜单。
+- ⚠️ `?k=` 形式的 URL 含密钥，别贴到公开仓库、群聊或日志里。
 
 ## 部署
 

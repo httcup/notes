@@ -7,9 +7,54 @@
 //                               &nb=笔记本名  只取某个笔记本
 //                               &since=毫秒   只取这之后更新过的
 //                               &limit=N      最多返回几篇（默认 100，上限 300）
+//                               &raw=1        text 直接给 Markdown 原文（默认给渲染后的纯文本）
+//   返回里 body=Markdown 原文，text=给备忘录用的正文（默认渲染后纯文本）
 import { json, preflight, currentUser, randomHex } from '../_lib.js';
 
 const MAX_NOTES = 300;
+
+/* ---------- Markdown → 渲染后纯文本（给苹果备忘录用） ---------- */
+function mdToPlain(src) {
+  if (!src) return '';
+  let s = String(src).replace(/\r\n?/g, '\n');
+  // 围栏代码块：去掉 ``` 行，代码内容原样保留
+  s = s.replace(/```[^\n]*\n([\s\S]*?)```/g, (m, code) => '\n' + code.replace(/\n$/, '') + '\n');
+  s = s.replace(/~~~[^\n]*\n([\s\S]*?)~~~/g, (m, code) => '\n' + code.replace(/\n$/, '') + '\n');
+  const out = [];
+  for (const raw of s.split('\n')) {
+    let ln = raw;
+    // 表格行 → 单元格用制表符隔开；分隔行丢弃
+    if (/^\s*\|.*\|\s*$/.test(ln)) {
+      const cells = ln.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+      if (cells.every((c) => /^:?-{3,}:?$/.test(c) || c === '')) continue;
+      out.push(cells.join('\t'));
+      continue;
+    }
+    ln = ln
+      .replace(/^#{1,6}\s+(.*?)\s*#*$/, '$1')                 // 标题
+      .replace(/^\s*>\s?/, '')                                 // 引用
+      .replace(/^\s*[-*+]\s+\[ \]\s*/, '□ ')                   // 未完成待办
+      .replace(/^\s*[-*+]\s+\[[xX]\]\s*/, '☑ ')                // 已完成待办
+      .replace(/^(\s*)[-*+]\s+/, '$1· ');                      // 无序列表
+    if (/^\s*([-*_]\s?){3,}$/.test(ln)) { out.push('———'); continue; }  // 水平线
+    ln = ln
+      .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (m, a, u) => a ? `${a}（图：${u}）` : `（图：${u}）`)
+      .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, t, alias) => (alias || t).trim())
+      .replace(/\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (m, t, u) => (t && t !== u) ? `${t}（${u}）` : (t || u))
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/(^|\W)_([^_\n]+)_(?=\W|$)/g, '$1$2')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/==([^=]+)==/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    out.push(ln);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
 
 export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return preflight();
@@ -30,6 +75,7 @@ export async function onRequest({ request, env }) {
     const nb = String(url.searchParams.get('nb') || '').trim().slice(0, 120);
     const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
     const limit = Math.min(MAX_NOTES, Math.max(1, Number(url.searchParams.get('limit')) || 100));
+    const raw = /^(1|true|yes)$/i.test(String(url.searchParams.get('raw') || ''));
 
     const [notesRes, nbsRes] = await env.DB.batch([
       env.DB.prepare('SELECT * FROM notes WHERE user_id = ?1').bind(uid),
@@ -47,6 +93,7 @@ export async function onRequest({ request, env }) {
       id: r.id,
       title: r.title || '无标题',
       body: r.body || '',
+      text: raw ? (r.body || '') : mdToPlain(r.body),
       notebook: nbName.get(r.notebook_id) || '',
       updatedAt: r.updated_at || 0,
       createdAt: r.created_at || 0

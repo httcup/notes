@@ -75,7 +75,9 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 
 `POST /api/pdf`（需 `x-pdf-key: <PDF_IMPORT_KEY>` 或 `x-capture-key`）→ 把 PDF 转成结构化 Markdown 写进「PDF 导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, pdfUrl, mode, chars, tokens }`。原始 PDF 同时存进媒体库，笔记末尾附链接；扫描件转不出文字时只存原件（`mode=original`）。同一份 PDF 重复推送按内容哈希只更新同一篇笔记。
 
-> `/api/capture`（网页剪藏）和 `/api/pdf`（PDF 转 Markdown）是两条「往里写」的入口，其余接口都是往外读或全量同步。
+`POST /api/note` body `{ markdown, title, notebook, source, id }` → 把**已经转好的 Markdown** 直接写进「导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, chars }`。长图、截图、聊天里整理好的文字都走这里；不给 `id` 时按内容哈希幂等。
+
+> `/api/capture`（网页剪藏）、`/api/pdf`（PDF 转 Markdown）、`/api/note`（现成 Markdown 入库）是三条「往里写」的入口，其余接口都是往外读或全量同步。
 > `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（网页直连）、`weibo-api`（微博官方移动端接口）、`reader`（第三方 Reader 兜底）、`link`（降级）；`format=json|form|text|query` 表示这次请求是怎么被解析的。请求加 `?debug=1` 会额外返回 `diag` 数组，记录每一路抓取的状态，线上排障用。
 
 抓取策略（踩过的坑）：
@@ -179,6 +181,20 @@ curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
 - `GET /api/pdf?k=<KEY>` 是手机浏览器里选 PDF 上传的表单页，不想配快捷指令时用它。
 - 上限 20MB；扫描件（图片型 PDF）转不出文字时降级为 `mode=original`，只建一条带原件链接的笔记，不写脏正文。
 - 正文是 Markdown，笔记本里可以直接编辑；标题依次取 `title` 字段 → 正文第一个标题 → 文件名。
+
+### 长图 / 任意 Markdown → 笔记本
+
+`/api/note` 只负责**入库**，不负责识别。把长图或截图交给 WorkBuddy，由它看图转成 Markdown，再调这个端点写进笔记站（中文长图这样最准，也不用付 Workers AI 视觉模型的费用）：
+
+```bash
+curl -X POST 'https://n.139t.cn/api/note' \
+  -H 'content-type: application/json' -H 'x-pdf-key: <KEY>' \
+  -d '{"title":"读书笔记","markdown":"# 第一章\n\n……","notebook":"资料库","source":"长图"}'
+```
+
+- 字段别名 `markdown / md / text / content / body`，也接受表单和纯文本；可选 `title`、`notebook`、`source`、`id`。
+- 鉴权和 `/api/pdf` 一样；`?format=html` 返回排版预览页。
+- 不给 `id` 时按正文哈希生成 noteId，重复推送只更新同一篇，不会产生重复笔记。
 
 ## 部署
 

@@ -308,12 +308,13 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 正文偏左居中：左侧留白固定得小一些，剩余空间留给右侧（悬浮大纲），
    避免宽屏下整块居中导致离左边书架太远 */
 .doc{
-  /* v35: 编辑框往左挪、左右留白同时收窄（保底 840 / 上限 1060 不变）。
-     有富余时按「可用宽度 − 120px」取宽，1440 书架开时左右各约 60px；
-     书架折叠多出来的宽度仍由左右均摊（上限 1060 挡住，右侧不会又被拉大） */
-  max-width:min(1060px, max(calc(100% - 120px), 840px));
+  /* v36: 不再「保底 840 + 居中均分」，改成吃满可用宽度的满版排布：
+     - 左右各固定留 44px（= (100% - 88px) 的余量），左侧空白从 ~97px 收到 44px，编辑框整体左移；
+     - 上限 1200px 吸收书架折叠多出来的宽度，右侧不会又被拉出一大块空白；
+     - 窄屏（≤900px）由媒体查询改回铺满 */
+  max-width:min(1200px, max(calc(100% - 88px), 840px));
   margin:0 auto;
-  padding:52px 36px 140px;
+  padding:52px 30px 140px;
 }
 .doc-title{
   display:block;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
@@ -744,7 +745,8 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 
 /* 窄屏（含 iPad 竖屏、手机）不再隐藏大纲：卡片改成可读的浮层，点大纲按钮或右边缘刻度展开 */
 @media (max-width:900px){
-  .doc{padding:40px 20px 120px}
+  /* 窄屏（iPad 竖屏 / 手机）维持铺满，不要两侧 44px 的空隙 */
+  .doc{max-width:none;padding:40px 20px 120px}
   /* 浮层盖在正文上，手机上看不清透明底，这里给一层毛玻璃底（仍无边框）；
      v35: 手机上卡片收窄（64vw、右缘 8px），条目文字离右侧短横线不再空一大片 */
   .outline{
@@ -918,7 +920,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v35', at: '2026-11-10 03:32' };
+window.IVY_BUILD = { id: 'v36', at: '2026-11-10 08:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

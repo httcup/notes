@@ -113,10 +113,10 @@ body.view-todo .head-actions .notes-only{display:none}
 .shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 64px;scrollbar-gutter:stable}
 .sec-label{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
-  font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));
+  font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
   margin:10px 8px 6px;
 }
-.sec-label .count{font-weight:500;color:rgb(var(--faint))}
+.sec-label .count{font-size:11px;font-weight:500;color:rgb(var(--faint))}
 .shelf-row{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
   padding:6px 8px;border-radius:7px;color:rgb(var(--ink-2));
@@ -124,9 +124,11 @@ body.view-todo .head-actions .notes-only{display:none}
 }
 .shelf-row:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .shelf-row svg{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:rgb(var(--faint))}
-.shelf-row .t{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.shelf-row .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .shelf-row .meta{font-size:11px;color:rgb(var(--faint));flex:0 0 auto}
-.shelf-row.new-nb{color:rgb(var(--ivy));font-size:13px;padding:6px 8px}
+/* 回收站和「笔记 / 标签」同属大类，别混进次级字号里 */
+.shelf-row[data-act="trash"] .t{font-size:13.5px;font-weight:600;color:rgb(var(--ink-2))}
+.shelf-row.new-nb{color:rgb(var(--ivy));font-size:12.5px;padding:6px 8px}
 .shelf-row.new-nb:hover{background:rgb(var(--ivy-soft))}
 .shelf-row.new-nb svg{color:currentColor}
 
@@ -142,9 +144,10 @@ body.view-todo .head-actions .notes-only{display:none}
 .nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nb-head{
   display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;
-  color:rgb(var(--muted));font-size:12px;font-weight:600;letter-spacing:.02em;
+  color:rgb(var(--ink-2));font-size:13.5px;font-weight:600;letter-spacing:0;
 }
-.nb-row:hover .nb-head{color:rgb(var(--ink-2))}
+.nb-row:hover .nb-head{color:rgb(var(--ink))}
+.nb-head .meta{font-size:11px;font-weight:400;color:rgb(var(--faint));margin-left:auto;flex:0 0 auto}
 .nb-head svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 .nb-head.open svg.chev{transform:rotate(90deg)}
 .nb-head .t{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -153,7 +156,7 @@ body.view-todo .head-actions .notes-only{display:none}
 
 .note-item{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
-  padding:7px 8px;border-radius:8px;color:rgb(var(--ink-2));font-size:13.5px;
+  padding:7px 8px;border-radius:8px;color:rgb(var(--ink-2));font-size:12.5px;
   transition:background .14s,color .14s;
 }
 .note-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
@@ -169,16 +172,16 @@ body.view-todo .head-actions .notes-only{display:none}
 .tag-sec-head{
   display:flex;align-items:center;gap:6px;width:calc(100% - 16px);text-align:left;
   margin:10px 8px 6px;padding:2px 0;
-  font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));
+  font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
 }
-.tag-sec-head:hover{color:rgb(var(--ink-2))}
+.tag-sec-head:hover{color:rgb(var(--ink))}
 .tag-sec-head .caret,.tag-caret{
   flex:0 0 auto;width:9px;text-align:center;font-size:8px;line-height:1;
   color:rgb(var(--faint));transition:transform .18s;
 }
 .tag-sec-head.open .caret,.tag-row.open .tag-caret{transform:rotate(90deg)}
 .tag-sec-head svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
-.tag-sec-head .count{margin-left:auto;font-weight:500;color:rgb(var(--faint))}
+.tag-sec-head .count{margin-left:auto;font-size:11px;font-weight:500;color:rgb(var(--faint))}
 .tag-group{margin:1px 0}
 .tag-line{position:relative;border-radius:7px}
 .tag-line:hover{background:rgb(var(--hover))}
@@ -199,7 +202,7 @@ body.view-todo .head-actions .notes-only{display:none}
 .tag-hash{font-size:12.5px;line-height:1;flex:0 0 auto;font-weight:500}
 .tag-dot{width:7px;height:7px;border-radius:2px;flex:0 0 auto}
 .tag-notes{margin-left:17px;padding-left:10px;border-left:1px solid rgb(var(--line))}
-.tag-notes .note-item{padding:5px 8px;font-size:12.8px}
+.tag-notes .note-item{padding:5px 8px;font-size:12.5px}
 .tag-empty{font-size:11.5px;color:rgb(var(--faint));padding:4px 8px 6px;line-height:1.6}
 
 /* 单篇笔记的标签选择器 */
@@ -369,9 +372,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .trash-hint{flex:1 1 100%}
   .trash-head #trashEmpty{margin-left:0;padding:4px 0}
 }
-/* 标题下的 Markdown 工具条 */
-/* 格式工具条收进右上角「+」菜单里，这一行不再占正文空间 */
-.fmt-bar{display:none !important}
+/* 标题下的 Markdown 工具条：和右上角「+」菜单并存，两个入口都能用 */
+.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 0;user-select:none}
 .fmt-bar button{
   height:26px;min-width:24px;padding:0 6px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
   transition:background .14s,color .14s,transform .1s;
@@ -572,7 +574,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
   .slash{width:min(258px,86vw)}
   /* 格式工具条收进 + 之后，手机上必须保留右上角这个插入入口 */
-  .paper .tabbar{padding-right:232px}
+  .paper .tabbar{padding-right:200px}
 }
 
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
@@ -695,17 +697,17 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 
 /* ---- 日程（左侧书架里的分组列表） ---- */
 .todo-shelf{display:flex;flex-direction:column;min-height:100%}
-.tsh-t{font-size:15px;font-weight:600;letter-spacing:-.01em;color:rgb(var(--ink));padding:2px 0;border-radius:6px}
+.tsh-t{font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));padding:2px 0;border-radius:6px}
 .tsh-t.on{color:rgb(var(--ivy))}
 .tsh-meta{padding:2px 6px 10px;font-size:11px;color:rgb(var(--faint))}
 .tsg{position:relative}
-.tsg-h{display:flex;align-items:center;gap:6px;width:100%;padding:6px;border-radius:7px;font-size:12px;color:rgb(var(--ink-2));font-weight:500}
+.tsg-h{display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;font-size:13.5px;color:rgb(var(--ink-2));font-weight:600;letter-spacing:0}
 .tsg-h:hover{background:rgb(var(--hover))}
 .tsg-h .gchev{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(0);transition:transform .16s;flex:0 0 auto}
 .tsg-h .gchev.open{transform:rotate(90deg)}
 .tsg-h .ttl{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tsg-h .n{font-size:10.5px;color:rgb(var(--faint));font-weight:400;flex:0 0 auto}
-.tsi{display:flex;align-items:flex-start;gap:7px;padding:4px 6px 6px 19px;border-radius:7px;cursor:pointer;transition:background .12s}
+.tsg-h .n{font-size:11px;color:rgb(var(--faint));font-weight:400;flex:0 0 auto}
+.tsi{display:flex;align-items:flex-start;gap:7px;padding:4px 8px 6px 19px;border-radius:7px;cursor:pointer;transition:background .12s}
 .tsi:hover{background:rgb(var(--hover))}
 .tsi.sel{background:rgb(var(--ivy-soft))}
 .tsi input{width:13px;height:13px;margin-top:2px;accent-color:rgb(var(--ivy));flex:0 0 auto;cursor:pointer}
@@ -723,7 +725,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsi-bell:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .tsi-bell svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media (hover:none){ .tsi-bell{opacity:.6} }
-.tsh-empty{padding:26px 10px;text-align:center;font-size:12px;color:rgb(var(--faint));line-height:1.9}
+.tsh-empty{padding:26px 10px;text-align:center;font-size:12.5px;color:rgb(var(--faint));line-height:1.9}
 /* 苹果日历那一组：条目同样可以勾掉（只在本应用记，不回写日历） */
 .ics-row{padding-left:19px}
 .ics-row .t{transition:color .12s}
@@ -1194,6 +1196,64 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
 .toast.out{opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s}
 .hint{position:fixed;bottom:14px;right:16px;font-size:11px;color:rgb(var(--faint));z-index:5}
+
+/* ---- 番茄钟：顶部图标开设置，倒计时作右下角背景水印 ---- */
+.pomo{--pc:rgb(var(--ivy))}
+.pomo.rest{--pc:#e2924c}
+.pomo-bg{
+  position:fixed;right:24px;bottom:24px;width:152px;height:152px;z-index:3;
+  display:grid;place-items:center;pointer-events:none;user-select:none;
+  color:rgb(var(--ink) / .13);
+}
+[data-theme=dark] .pomo-bg{color:rgb(var(--ink) / .24)}
+.pomo-bg-ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.pomo-bg-ring circle{fill:none;stroke-width:2}
+.pomo-bg-track{stroke:rgb(var(--ink) / .055)}
+.pomo-bg-arc{stroke:rgb(var(--ivy) / .42);stroke-linecap:round;stroke-dasharray:333.01;
+  stroke-dashoffset:0;transition:stroke-dashoffset .4s linear,stroke .25s}
+.pomo.rest .pomo-bg-arc{stroke:#e2924c66}
+.pomo-bg-time{font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;position:relative}
+.pomo-bg-label{position:absolute;bottom:27px;font-size:9.5px;letter-spacing:.2em}
+.pomo-panel{
+  position:fixed;right:12px;top:44px;width:250px;z-index:86;padding:13px 14px 12px;display:none;
+  border-radius:15px;border:.5px solid rgb(var(--line));background:rgb(var(--surface));
+  box-shadow:var(--shadow-lift);animation:pomoIn .2s var(--spring);
+}
+.pomo.open .pomo-panel{display:block}
+@keyframes pomoIn{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.pomo-ph{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:rgb(var(--ink));margin-bottom:10px}
+.pomo-ph b{font-weight:600;color:var(--pc);font-variant-numeric:tabular-nums}
+.pomo-x{width:22px;height:22px;border-radius:6px;color:rgb(var(--faint));font-size:16px;line-height:1}
+.pomo-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.pomo-tabs{display:flex;gap:3px;padding:3px;background:rgb(var(--sunken));border-radius:9px;margin-bottom:11px}
+.pomo-tabs button{flex:1;height:27px;border-radius:7px;font-size:12px;color:rgb(var(--muted))}
+.pomo-tabs button.on{background:rgb(var(--surface));color:var(--pc);font-weight:600;box-shadow:0 1px 3px rgb(0 0 0/.08)}
+.pomo-set{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:rgb(var(--ink-2))}
+.pomo-set>span{flex:1}
+.pomo-step{display:flex;align-items:center;gap:2px;border:.5px solid rgb(var(--line));border-radius:8px;overflow:hidden}
+.pomo-step button{width:24px;height:25px;font-size:14px;color:rgb(var(--muted));background:rgb(var(--sunken))}
+.pomo-step button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.pomo-step input{width:36px;height:25px;border:0;background:transparent;text-align:center;font-size:12.5px;
+  color:rgb(var(--ink));font-variant-numeric:tabular-nums;appearance:textfield}
+.pomo-step input::-webkit-inner-spin-button,.pomo-step input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.pomo-unit{font-size:10.5px;color:rgb(var(--faint));width:24px;font-style:normal}
+.pomo-auto{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgb(var(--muted));margin:10px 0;cursor:pointer}
+.pomo-auto input{accent-color:rgb(var(--ivy));width:13px;height:13px}
+.pomo-main{width:100%;height:34px;border-radius:9px;background:var(--pc);color:#fff;
+  font-size:12.5px;font-weight:600;transition:filter .15s,transform .1s}
+.pomo-main:hover{filter:brightness(1.08)}
+.pomo-main:active{transform:scale(.98)}
+.pomo-acts{display:flex;gap:6px;margin-top:7px}
+.pomo-acts button{flex:1;height:29px;border-radius:8px;background:rgb(var(--sunken));font-size:11.5px;color:rgb(var(--ink-2))}
+.pomo-acts button:hover{background:rgb(var(--hover))}
+.pomo-stat{margin-top:10px;padding-top:9px;border-top:.5px solid rgb(var(--line));font-size:11px;color:rgb(var(--faint));text-align:center}
+@media (max-width:640px){
+  .pomo-bg{right:14px;bottom:66px;width:112px;height:112px;z-index:86}
+  .pomo-bg-time{font-size:22px}
+  .pomo-bg-label{bottom:20px;font-size:8.5px}
+  .pomo-panel{right:10px;top:42px;width:min(250px,86vw)}
+}
 /* ============ 云同步面板 ============ */
 .dock-item .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.3;margin-left:1px;transition:opacity .2s,background .2s}
 .dock-item.sync-ok{color:rgb(var(--ivy))}
@@ -1274,10 +1334,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
     box-shadow:var(--shadow-float);
   }
   /* 右上角图标缩小一点，并给标签栏留出它的宽度，别互相压 */
-  .paper-actions{top:8px;right:8px;gap:0}
+  /* right 收到 2px：书架抽屉宽 330px，让番茄钟和「⋯」在抽屉打开时也点得到 */
+  .paper-actions{top:8px;right:2px;gap:0}
   .pa-btn{width:28px;height:28px}
-  /* 右上角 7 个图标（含插入）占 196px，标签栏要让出这段，别压着标签 */
-  .tabbar{padding-right:206px}
+  /* 右上角 6 个图标占 168px，标签栏要让出这段，别压着标签 */
+  .tabbar{padding-right:180px}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
@@ -1404,6 +1465,35 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 <div class="overlay" id="syncOverlay"></div>
 <div class="toasts" id="toasts"></div>
 
+<div class="pomo" id="pomo">
+  <div class="pomo-bg" id="pomoBg" aria-hidden="true">
+    <svg class="pomo-bg-ring" viewBox="0 0 120 120">
+      <circle class="pomo-bg-track" cx="60" cy="60" r="53"/>
+      <circle class="pomo-bg-arc" id="pomoBgArc" cx="60" cy="60" r="53"/>
+    </svg>
+    <div class="pomo-bg-time" id="pomoBgTime">25:00</div>
+    <div class="pomo-bg-label" id="pomoBgLabel">专注</div>
+  </div>
+  <div class="pomo-panel" id="pomoPanel">
+    <div class="pomo-ph"><span>番茄钟 · <b id="pomoNow">25:00</b></span><button class="pomo-x" id="pomoClose" aria-label="关闭">×</button></div>
+    <div class="pomo-tabs">
+      <button data-pp="focus">专注</button><button data-pp="rest">休息</button>
+    </div>
+    <div class="pomo-set"><span>专注时长</span>
+      <div class="pomo-step"><button data-pa="focus:-5">−</button><input type="number" id="pomoFocus" min="1" max="180" value="25"><button data-pa="focus:5">+</button></div>
+      <em class="pomo-unit">分钟</em>
+    </div>
+    <div class="pomo-set"><span>休息时长</span>
+      <div class="pomo-step"><button data-pa="rest:-1">−</button><input type="number" id="pomoRest" min="1" max="60" value="5"><button data-pa="rest:1">+</button></div>
+      <em class="pomo-unit">分钟</em>
+    </div>
+    <label class="pomo-auto"><input type="checkbox" id="pomoAuto" checked> 结束后自动开始下一阶段</label>
+    <button class="pomo-main" id="pomoToggle">开始专注</button>
+    <div class="pomo-acts"><button id="pomoReset">重置本轮</button><button id="pomoSkip">跳过</button></div>
+    <div class="pomo-stat" id="pomoStat">今天完成 0 个番茄</div>
+  </div>
+</div>
+
 <script>
 /* ========== 图标 ========== */
 const ICONS = {
@@ -1438,6 +1528,7 @@ const ICONS = {
   fit:'<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
   tag:'<path d="M4 11V5.5A1.5 1.5 0 0 1 5.5 4H11l8.5 8.5a1.6 1.6 0 0 1 0 2.3l-4.7 4.7a1.6 1.6 0 0 1-2.3 0z"/><circle cx="8" cy="8" r="1.2"/>',
   restore:'<path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/>',
+  copy:'<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.2"/><path d="M15.5 8.5V6.2A2.2 2.2 0 0 0 13.3 4H6.2A2.2 2.2 0 0 0 4 6.2v7.1a2.2 2.2 0 0 0 2.2 2.2h2.3"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   globe:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
   info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
@@ -1462,7 +1553,8 @@ const ICONS = {
   strike:'<path d="M5 12h14M8.5 8.2a3.7 3 0 0 1 7 0M8.5 15.8a3.7 3 0 0 0 7 0"/>',
   smile:'<circle cx="12" cy="12" r="8.6"/><path d="M8.6 14.2a4.4 4.4 0 0 0 6.8 0M9.3 9.6h.01M14.7 9.6h.01"/>',
   help:'<circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.3a2.4 2.4 0 1 1 3.3 2.2c-.7.3-1 .9-1 1.7M12 16.8h.01"/>',
-  insert:'<path d="M12 5v14M5 12h14"/>'
+  insert:'<path d="M12 5v14M5 12h14"/>',
+  timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.6 1.7M9.5 2.5h5M12 2.5v2.2"/>'
 };
 function ic(name, cls){
   const p = ICONS[name] || '';
@@ -1470,7 +1562,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v54', at: '2026-11-10 15:22' };
+window.IVY_BUILD = { id: 'v55', at: '2026-11-10 15:48' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3580,6 +3672,30 @@ function newNote(notebookId){
   setTimeout(()=>{ const t=$('#docTitle'); if(t) t.focus(); }, 30);
   return n;
 }
+/* 创建笔记副本：正文、标签、笔记本归属都带过来，分享链接不共用 */
+function duplicateNote(){
+  const src = noteById(S.active);
+  if(!src) return;
+  const now = Date.now();
+  const copy = Object.assign({}, src, {
+    id: 'n' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+    title: (src.title || '无标题') + ' 副本',
+    tags: Array.isArray(src.tags) ? src.tags.slice() : [],
+    trashed: false,
+    createdAt: now,
+    updatedAt: now
+  });
+  delete copy.shareSlug;                     // 副本不继承分享链接，避免两个入口指向同一篇
+  S.notes.unshift(copy);
+  S.active = copy.id;
+  if(!S.tabs.includes(copy.id)) S.tabs.push(copy.id);
+  S.view = 'notes';
+  trashView = false;
+  renderAll(); save();
+  try{ recordVersion(copy, true); }catch(e){}
+  toast('已创建副本：' + copy.title);
+  return copy;
+}
 function openNote(id){
   const n = noteById(id); if(!n) return;
   if(n.trashed){ toast('该笔记在回收站中'); return; }
@@ -3697,16 +3813,13 @@ function renderEditor(){
   paperActions.innerHTML = `
     <button class="pa-btn pa-ins" id="paInsert" title="插入内容（⌘/ 或 Ctrl+/）">${ic('insert')}</button>
     <button class="pa-btn pa-ol" id="paOutline" title="大纲">${ic('outline')}</button>
-    <button class="pa-btn" id="paTodo" title="本篇待办">${ic('todo')}</button>
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
-    <button class="pa-btn" id="paShare" title="分享 / 复制 / 导出">${ic('share')}</button>
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
+    <button class="pa-btn" id="paPomo" title="番茄钟：设置时长、开始 / 暂停">${ic('timer')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paInsert').onclick=(e)=>openInsertMenu(e.currentTarget);
   $('#paOutline').onclick=()=>toggleOutlinePanel();
-  $('#paTodo').onclick=(e)=>openTodoPop(e.currentTarget);
   $('#paAttach').onclick=()=>pickFiles();
-  $('#paShare').onclick=(e)=>openShareMenu(e.currentTarget);
   $('#paTheme').onclick=()=>toggleTheme();
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
@@ -4060,22 +4173,22 @@ const INSERT_ITEMS = [
   {name:'斜体', keys:['xt','xieti','italic'], glyph:'/', icon:'italic', desc:'*斜体文字*', run:()=>applyFormat('i')},
   {name:'删除线', keys:['scx','shanchuxian','strike'], glyph:'S', icon:'strike', desc:'~~删除线~~', run:()=>applyFormat('s')},
   {name:'高亮', keys:['gl','gaoliang','mark'], icon:'hl', desc:'==高亮文字==', run:()=>applyFormat('mark')},
-  {name:'高亮颜色…', keys:['ys','yanse','hlcolor'], icon:'hl', desc:'27 种预设色 + 自定义取色', run:()=>openHighlightMenu($('#paInsert'))},
+  {name:'高亮颜色…', keys:['ys','yanse','hlcolor'], icon:'hl', desc:'27 种预设色 + 自定义取色', run:()=>openHighlightMenu(insertAnchor())},
   {name:'行内代码', keys:['hndm','hangneidaima','icode'], icon:'code', desc:'`行内代码`', run:()=>applyFormat('code')},
 
   {name:'待办', keys:['db','daiban','todo','task'], icon:'todo', desc:'- [ ] 会自动汇总到「日程」', block:1, run:()=>applyFormat('todo')},
   {name:'日期与提醒', keys:['rq','riqi','date'], alt:'@', icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
   {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再拖动调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
-  {name:'表格尺寸…', keys:['bgdx','tabledim'], icon:'table', desc:'拖动选择几行几列', run:()=>openTablePicker($('#paInsert'))},
+  {name:'表格尺寸…', keys:['bgdx','tabledim'], icon:'table', desc:'拖动选择几行几列', run:()=>openTablePicker(insertAnchor())},
   {name:'代码块', keys:['dmk','daimaikuai','code'], icon:'codeBlock', desc:'``` 围栏代码', block:1, run:()=>applyFormat('pre')},
   {name:'图表', keys:['tb','tubiao','chart','mermaid'], icon:'chart', desc:'Mermaid 流程图、时序图…', block:1, run:()=>applyFormat('mermaid')},
-  {name:'图表类型…', keys:['tblx','charttype'], icon:'chart', desc:'流程图 / 时序图 / 甘特图等', run:()=>openChartMenu($('#paInsert'))},
+  {name:'图表类型…', keys:['tblx','charttype'], icon:'chart', desc:'流程图 / 时序图 / 甘特图等', run:()=>openChartMenu(insertAnchor())},
   {name:'链接笔记', keys:['lj','lianjie','cx','wiki'], icon:'search', desc:'[[ 链接到另一篇笔记，没有就新建 ]]', run:()=>applyFormat('wiki')},
   {name:'图片和附件', keys:['tp','tupian','img','fj','fujian'], icon:'image', desc:'从媒体库选择，或上传新文件', run:()=>pickFiles()},
   {name:'无序列表', keys:['wxlb','ul','lb'], icon:'menu', desc:'- 项目符号列表', block:1, run:()=>applyFormat('ul')},
   {name:'有序列表', keys:['yxlb','ol'], icon:'menu', desc:'1. 编号列表', block:1, run:()=>applyFormat('ol')},
   {name:'引用', keys:['yy','yinyong','quote'], icon:'quote', desc:'> 引用块', block:1, run:()=>applyFormat('quote')},
-  {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu($('#paInsert'))},
+  {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu(insertAnchor())},
   {name:'外部链接', keys:['wblj','link','url'], icon:'link', desc:'[文字](https://…)', run:()=>applyFormat('link')},
   {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')},
   {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'Markdown 语法与全部快捷键', run:()=>openHelpPanel()}
@@ -4095,7 +4208,13 @@ function runInsertItem(it){
   it.run();
 }
 /* + 按钮：和斜杠菜单同一个清单 */
+let LAST_INSERT_ANCHOR = null;
+function insertAnchor(){
+  return (LAST_INSERT_ANCHOR && LAST_INSERT_ANCHOR.isConnected)
+    ? LAST_INSERT_ANCHOR : ($('#paInsert') || document.querySelector('#fmtBar [data-fmt="insert"]'));
+}
 function openInsertMenu(anchor){
+  LAST_INSERT_ANCHOR = anchor || null;
   popover(anchor, INSERT_ITEMS.map(it=>[
     it.name, '/' + it.keys[0], '', it.icon || '', ()=>runInsertItem(it)
   ]), { align:'left' });
@@ -4887,7 +5006,7 @@ const HELP_HERO = [
   { sym:'/', t:'输入 / 插入', hl:1,
     d:'在行首或空格后输入 /，再打几个字筛选（支持拼音首字母，如 /bg 表格、/rq 日期），回车插入。' },
   { sym:'+', t:'点 + 选择',
-    d:'所有插入和格式工具都在右上角（手机是顶部）的 + 菜单里，⌘/ 也能打开；原来的格式工具条已收进这里。' },
+    d:'标题下面那排格式按钮，和右上角（手机是顶部）的 + 菜单都在用，⌘/ 也能打开菜单；菜单里 28 项最全，工具条是常用快捷入口。' },
   { sym:'', t:'选中文字',
     d:'选中文字上方浮出工具条：H 标题、B 加粗、/ 斜体、S 删除线、高亮、待办、[[ 笔记链接、加链接。' }
 ];
@@ -7582,12 +7701,18 @@ function copyShareUrl(){
 function openNoteMenu(anchor){
   const n = noteById(S.active);
   const nb = n && S.notebooks.find(x=>x.id===n.notebookId && !x.deleted);
+  const A = ()=>liveAnchor(anchor, 'paMore');
+  let pend = 0;
+  try{ pend = n ? collectTodos().filter(t=>t.noteId===n.id && !t.done).length : 0; }catch(e){}
   popover(anchor, [
     ['预览', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
     ['Markdown', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
-    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(liveAnchor(anchor, 'paMore'))],
+    ['本篇待办', pend ? pend + ' 项未完成' : '', '', 'todo', ()=>openTodoPop(A())],
+    ['分享', n && n.shareSlug ? '已分享' : '', '', 'share', ()=>openShareMenu(A())],
+    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(A())],
+    ['创建笔记副本', '', '', 'copy', ()=>duplicateNote()],
     ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
@@ -8251,6 +8376,118 @@ if('serviceWorker' in navigator){
       };
     })
     .catch(()=>{ clearTimeout(timer); state = '校验不可用'; });
+})();
+
+/* ============ 番茄钟：专注 25 / 休息 5，可自调，刷新不丢 ============ */
+const POMO_KEY = 'ivy.pomo.v1';
+const POMO_BG_R = 2 * Math.PI * 53;
+function pomoDefaults(){
+  return { focus:25, rest:5, phase:'focus', running:false, endAt:0,
+           remain:25 * 60000, auto:true, done:0, day:new Date().toDateString() };
+}
+let POMO = pomoDefaults();
+try{
+  const raw = JSON.parse(localStorage.getItem(POMO_KEY) || '{}');
+  if(raw && typeof raw === 'object') POMO = Object.assign(POMO, raw);
+}catch(e){}
+if(POMO.day !== new Date().toDateString()){
+  POMO.day = new Date().toDateString(); POMO.done = 0;
+}
+function pomoSave(){ try{ localStorage.setItem(POMO_KEY, JSON.stringify(POMO)); }catch(e){} }
+function pomoTotal(){ return Math.max(1, Number(POMO[POMO.phase]) || 25) * 60000; }
+function pomoLeft(){ return POMO.running ? Math.max(0, POMO.endAt - Date.now()) : Math.max(0, POMO.remain); }
+const pomoPad = n => String(n).padStart(2, '0');
+function pomoPaint(){
+  const el = $('#pomo'); if(!el) return;
+  const left = pomoLeft(), total = pomoTotal(), sec = Math.ceil(left / 1000);
+  const txt = pomoPad(Math.floor(sec / 60)) + ':' + pomoPad(sec % 60);
+  const isFocus = POMO.phase === 'focus';
+  $('#pomoBgTime').textContent = txt;
+  $('#pomoBgLabel').textContent = (isFocus ? '专注' : '休息') + (POMO.running ? '中' : ' · 暂停');
+  $('#pomoBgArc').style.strokeDashoffset = String(POMO_BG_R * (1 - Math.min(1, left / total)));
+  $('#pomoNow').textContent = txt;
+  $('#pomoToggle').textContent = POMO.running ? '暂停'
+    : (left < total ? '继续' : (isFocus ? '开始专注' : '开始休息'));
+  el.classList.toggle('rest', !isFocus);
+  el.classList.toggle('running', !!POMO.running);
+  const pb = $('#paPomo'); if(pb) pb.classList.toggle('on', el.classList.contains('open'));
+  const f = $('#pomoFocus'), r = $('#pomoRest'), a = $('#pomoAuto');
+  if(f && document.activeElement !== f) f.value = POMO.focus;
+  if(r && document.activeElement !== r) r.value = POMO.rest;
+  if(a) a.checked = !!POMO.auto;
+  el.querySelectorAll('[data-pp]').forEach(b => b.classList.toggle('on', b.dataset.pp === POMO.phase));
+  $('#pomoStat').textContent = '今天完成 ' + (POMO.done || 0) + ' 个番茄 · 改时长点上面';
+}
+function pomoBeep(){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    const ctx = new AC(), o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination); o.type = 'sine'; o.frequency.value = 660;
+    g.gain.setValueAtTime(.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.14, ctx.currentTime + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .85);
+    o.start(); o.stop(ctx.currentTime + .86);
+    setTimeout(()=>{ try{ ctx.close(); }catch(e){} }, 1200);
+  }catch(e){}
+}
+function pomoFinish(){
+  const was = POMO.phase;
+  if(was === 'focus') POMO.done = (POMO.done || 0) + 1;
+  POMO.phase = was === 'focus' ? 'rest' : 'focus';
+  POMO.remain = pomoTotal();
+  POMO.running = !!POMO.auto;
+  POMO.endAt = POMO.running ? Date.now() + POMO.remain : 0;
+  const msg = was === 'focus' ? ('专注完成，休息 ' + POMO.rest + ' 分钟') : ('休息结束，专注 ' + POMO.focus + ' 分钟');
+  toast(msg);
+  try{ fireNotify('番茄钟 · ' + msg, POMO.auto ? '下一阶段已自动开始' : '点一下开始下一阶段', '', 'ivy-pomo').catch(()=>{}); }catch(e){}
+  pomoBeep(); pomoSave(); pomoPaint();
+}
+function pomoTick(){
+  if(POMO.running && pomoLeft() <= 0){ pomoFinish(); return; }
+  pomoPaint();
+}
+function pomoStart(){ POMO.running = true; POMO.endAt = Date.now() + POMO.remain; pomoSave(); pomoPaint(); }
+function pomoPause(){
+  POMO.remain = Math.max(0, POMO.endAt - Date.now());
+  POMO.running = false; POMO.endAt = 0; pomoSave(); pomoPaint();
+}
+function pomoReset(){ POMO.running = false; POMO.endAt = 0; POMO.remain = pomoTotal(); pomoSave(); pomoPaint(); }
+function pomoPhase(p){ if(p === POMO.phase) return; POMO.phase = p; pomoReset(); }
+function pomoSkip(){
+  POMO.phase = POMO.phase === 'focus' ? 'rest' : 'focus';
+  pomoReset(); toast('已跳到' + (POMO.phase === 'focus' ? '专注' : '休息'));
+}
+function pomoSet(k, v){
+  const max = k === 'focus' ? 180 : 60;
+  POMO[k] = Math.max(1, Math.min(max, Math.round(Number(v) || 1)));
+  if(POMO.phase === k && !POMO.running) POMO.remain = pomoTotal();
+  pomoSave(); pomoPaint();
+}
+(function bindPomo(){
+  const el = $('#pomo'); if(!el) return;
+  $('#pomoClose').onclick = e => { e.stopPropagation(); el.classList.remove('open'); pomoPaint(); };
+  $('#pomoToggle').onclick = e => { e.stopPropagation(); POMO.running ? pomoPause() : pomoStart(); };
+  el.querySelectorAll('[data-pp]').forEach(b => b.onclick = ()=>pomoPhase(b.dataset.pp));
+  el.querySelectorAll('[data-pa]').forEach(b => b.onclick = ()=>{
+    const parts = b.dataset.pa.split(':');
+    pomoSet(parts[0], (Number(POMO[parts[0]]) || 1) + Number(parts[1]));
+  });
+  [['focus','#pomoFocus'],['rest','#pomoRest']].forEach(pair=>{
+    const inp = $(pair[1]);
+    if(inp){ inp.onchange = ()=>pomoSet(pair[0], inp.value); inp.onblur = ()=>pomoSet(pair[0], inp.value); }
+  });
+  $('#pomoAuto').onchange = e => { POMO.auto = e.target.checked; pomoSave(); };
+  $('#pomoReset').onclick = ()=>{ pomoReset(); toast('本轮已重置'); };
+  $('#pomoSkip').onclick = ()=>pomoSkip();
+  /* 顶部番茄钟按钮每次 renderEditor 都会重建，用事件委托；点外面收起面板 */
+  document.addEventListener('click', e => {
+    const hit = e.target && e.target.closest && e.target.closest('#paPomo');
+    if(hit){ el.classList.toggle('open'); pomoPaint(); return; }
+    if(e.target && e.target.closest && e.target.closest('#pomo, #popover')) return;
+    if(el.classList.contains('open')){ el.classList.remove('open'); pomoPaint(); }
+  });
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') pomoTick(); });
+  pomoTick(); setInterval(pomoTick, 250);
 })();
 </script>
 </body>

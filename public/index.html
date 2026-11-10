@@ -427,6 +427,80 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   border:1.6px solid #fff;border-top:0;border-left:0;transform:rotate(42deg);
 }
 
+/* ---- 新建 / 重命名笔记本：应用内对话框 ---- */
+.nb-ov{
+  position:fixed;inset:0;z-index:140;display:none;align-items:center;justify-content:center;
+  padding:16px;background:rgb(16 24 32 / .34);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+}
+.nb-ov.open{display:flex;animation:nbFade .18s ease}
+@keyframes nbFade{from{opacity:0}to{opacity:1}}
+.nb-dlg{
+  width:min(400px,100%);background:rgb(var(--surface));border:.5px solid rgb(var(--line));
+  border-radius:18px;box-shadow:var(--shadow-lift);padding:20px 20px 16px;
+  animation:nbIn .24s var(--spring);
+}
+@keyframes nbIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.nb-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:17px}
+.nb-ico{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;
+  background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));
+}
+.nb-ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nb-tt{flex:1;min-width:0;padding-top:1px}
+.nb-tt h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:rgb(var(--ink))}
+.nb-tt p{margin:4px 0 0;font-size:11.5px;line-height:1.5;color:rgb(var(--muted))}
+.nb-x{width:26px;height:26px;border-radius:8px;color:rgb(var(--faint));font-size:19px;line-height:1;flex:0 0 auto}
+.nb-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.nb-preview{
+  display:flex;align-items:center;gap:11px;padding:11px 12px;margin-bottom:16px;
+  border-radius:12px;background:rgb(var(--sunken));border:.5px solid rgb(var(--line));
+}
+.nb-pv-cover{
+  width:38px;height:44px;border-radius:6px;display:grid;place-items:center;flex:0 0 auto;
+  color:#fff;box-shadow:0 2px 6px rgb(0 0 0 / .12);transition:background .18s;
+}
+.nb-pv-cover svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nb-pv-name{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb-pv-sub{font-size:11px;color:rgb(var(--muted));margin-top:3px}
+.nb-lbl{display:block;font-size:11.5px;font-weight:600;color:rgb(var(--ink-2));margin-bottom:7px}
+.nb-field{
+  display:flex;align-items:center;height:40px;border-radius:10px;padding:0 11px;
+  background:rgb(var(--surface));border:1.5px solid rgb(var(--line));transition:border-color .15s,box-shadow .15s;
+}
+.nb-field:focus-within{border-color:rgb(var(--ivy));box-shadow:0 0 0 3px rgb(var(--ivy) / .12)}
+.nb-field.bad{border-color:rgb(var(--danger));box-shadow:0 0 0 3px rgb(var(--danger) / .1)}
+.nb-field input{flex:1;min-width:0;border:0;background:transparent;outline:0;font:inherit;font-size:13.5px;color:rgb(var(--ink))}
+.nb-field input::placeholder{color:rgb(var(--faint))}
+.nb-count{font-size:10.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto;margin-left:8px}
+.nb-err{font-size:11.5px;color:rgb(var(--danger));margin:6px 1px 0;min-height:15px}
+.nb-sec{display:flex;align-items:center;gap:8px;margin:2px 0 7px}
+.nb-sec span{font-size:11.5px;font-weight:600;color:rgb(var(--ink-2));flex:0 0 auto}
+.nb-sec i{flex:1;height:1px;background:rgb(var(--line))}
+.nb-quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.nb-quick button{height:27px;padding:0 11px;border-radius:8px;background:rgb(var(--sunken));font-size:12px;color:rgb(var(--ink-2));transition:background .12s,color .12s}
+.nb-quick button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.nb-quick button.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:500}
+.nb-sw{display:flex;gap:9px;margin:3px 0 18px;align-items:center}
+.nb-sw button{width:20px;height:20px;border-radius:50%;padding:0;position:relative;transition:transform .14s var(--spring)}
+.nb-sw button:hover{transform:scale(1.14)}
+.nb-sw button.on::after{content:'';position:absolute;inset:-4px;border:1.5px solid currentColor;border-radius:50%}
+.nb-foot{display:flex;align-items:center;gap:8px;padding-top:14px;border-top:.5px solid rgb(var(--line))}
+.nb-tip{font-size:10.5px;color:rgb(var(--faint));flex:1}
+.nb-btn{height:34px;padding:0 15px;border-radius:9px;font-size:12.5px;font-weight:500;transition:background .14s,transform .1s;flex:0 0 auto}
+.nb-btn:active{transform:scale(.97)}
+.nb-btn.ghost{background:rgb(var(--sunken));color:rgb(var(--ink-2))}
+.nb-btn.ghost:hover{background:rgb(var(--hover))}
+.nb-btn.go{background:rgb(var(--ivy));color:#fff;display:flex;align-items:center;gap:6px}
+.nb-btn.go:hover{background:rgb(var(--ivy-hover))}
+.nb-btn.go svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nb-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;opacity:.9}
+@media (max-width:480px){
+  .nb-dlg{padding:17px 16px 14px;border-radius:16px}
+  .nb-tip{display:none}
+  .nb-foot .nb-btn{flex:1}
+}
+
 /* ---- 提醒设置卡片 ---- */
 .due-ov{
   position:fixed;inset:0;z-index:96;display:none;align-items:center;justify-content:center;
@@ -1458,6 +1532,37 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   </div>
 </div>
 <div class="popover" id="popover"></div>
+<div class="nb-ov" id="nbOv">
+  <div class="nb-dlg" role="dialog" aria-modal="true" aria-labelledby="nbTitle">
+    <div class="nb-top">
+      <div class="nb-ico" id="nbIco"></div>
+      <div class="nb-tt"><h3 id="nbTitle">新建笔记本</h3><p id="nbDesc"></p></div>
+      <button class="nb-x" id="nbX" aria-label="关闭">×</button>
+    </div>
+    <div class="nb-preview">
+      <div class="nb-pv-cover" id="nbPvCover"></div>
+      <div style="min-width:0;flex:1">
+        <div class="nb-pv-name" id="nbPvName">新笔记本</div>
+        <div class="nb-pv-sub" id="nbPvSub">0 篇笔记</div>
+      </div>
+    </div>
+    <label class="nb-lbl" for="nbName">名称</label>
+    <div class="nb-field" id="nbField">
+      <input id="nbName" maxlength="24" placeholder="给笔记本起个名字" spellcheck="false" autocomplete="off">
+      <span class="nb-count" id="nbCount">0/24</span>
+    </div>
+    <p class="nb-err" id="nbErr"></p>
+    <div class="nb-sec"><span>快速填写</span><i></i></div>
+    <div class="nb-quick" id="nbQuick"></div>
+    <div class="nb-sec"><span>标记颜色</span><i></i></div>
+    <div class="nb-sw" id="nbSw"></div>
+    <div class="nb-foot">
+      <span class="nb-tip">回车确定 · Esc 取消</span>
+      <button class="nb-btn ghost" id="nbCancel">取消</button>
+      <button class="nb-btn go" id="nbOk"></button>
+    </div>
+  </div>
+</div>
 <div class="slash" id="slashMenu"></div>
 <div class="selbar" id="selBar"></div>
 <input type="color" id="hlColorIn" class="hl-color-in" value="#f59e0b" tabindex="-1" aria-hidden="true">
@@ -1562,7 +1667,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v56', at: '2026-11-10 16:02' };
+window.IVY_BUILD = { id: 'v57', at: '2026-11-10 16:18' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2094,10 +2199,12 @@ function renderShelf(){
 
   S.notebooks.filter(nb=>!nb.deleted).forEach(nb=>{
     const list = byNb[nb.id]||[];
+    const dot = /^#[\da-fA-F]{3,8}$/.test(nb.color || '') ? nb.color : '#287a52';
     html += `<div class="nb-group">
       <div class="nb-row">
         <button class="nb-head ${nb.open?'open':''}" data-nb="${nb.id}">
           <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="nb-dot" style="background:${dot}"></span>
           <span class="t">${esc(nb.name)}</span><span class="meta">${list.length}</span>
         </button>
         <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 删除">${ic('more')}</button>
@@ -3713,21 +3820,110 @@ function closeTab(id){
   if(S.active===id) S.active = S.tabs[Math.max(0,i-1)] || null;
   renderAll(); save();
 }
-function newNotebook(){
-  const name = prompt('笔记本名称', '新笔记本');
-  if(!name || !name.trim()) return;
+/* ============ 新建 / 重命名笔记本：应用内对话框（替代浏览器原生 prompt） ============ */
+const NB_COLORS = ['#287a52','#4f6a9a','#c08a2e','#a65a7c','#7a62a8','#6f767d'];
+const NB_QUICK  = ['工作','生活','学习','灵感','项目','读书'];
+let NB_DLG = null;
+function nbDialogOpen(){ const o = $('#nbOv'); return !!o && o.classList.contains('open'); }
+function openNbDialog(opts){
+  const ov = $('#nbOv'); if(!ov) return;
+  NB_DLG = Object.assign({ mode:'create', value:'', original:'', color:NB_COLORS[0], count:0, onDone:null }, opts || {});
+  const rename = NB_DLG.mode === 'rename', move = NB_DLG.mode === 'move';
+  $('#nbTitle').textContent = rename ? '重命名笔记本' : '新建笔记本';
+  $('#nbDesc').textContent  = move ? '创建后，这篇笔记会自动移进去'
+    : (rename ? '改个名字，或顺手换个标记颜色' : '把相关的笔记收在一起，找起来更方便');
+  $('#nbIco').innerHTML = ic(rename ? 'pencil' : 'notebook');
+  $('#nbOk').innerHTML = ic(rename ? 'check' : 'plus') + '<span>' + (rename ? '保存' : (move ? '创建并移入' : '创建笔记本')) + '</span>';
+  $('#nbPvSub').textContent = NB_DLG.count + ' 篇笔记';
+  $('#nbQuick').innerHTML = NB_QUICK.map(x=>`<button type="button" data-nbn="${esc(x)}">${esc(x)}</button>`).join('');
+  $('#nbSw').innerHTML = NB_COLORS.map(c=>`<button type="button" data-nbc="${c}" style="background:${c};color:${c}" aria-label="标记颜色 ${c}"></button>`).join('');
+  const inp = $('#nbName');
+  inp.value = NB_DLG.value || '';
+  $('#nbField').classList.remove('bad'); $('#nbErr').textContent = '';
+  paintNbDialog();
+  ov.classList.add('open');
+  setTimeout(()=>{ try{ inp.focus(); inp.select(); }catch(e){} }, 40);
+}
+function paintNbDialog(){
+  if(!NB_DLG) return;
+  const v = $('#nbName').value;
+  $('#nbCount').textContent = v.length + '/24';
+  $('#nbPvName').textContent = v.trim() || '未命名笔记本';
+  $('#nbPvCover').style.background = NB_DLG.color;
+  $('#nbPvCover').innerHTML = ic('notebook');
+  $('#nbSw').querySelectorAll('[data-nbc]').forEach(b=>b.classList.toggle('on', b.dataset.nbc === NB_DLG.color));
+  $('#nbQuick').querySelectorAll('[data-nbn]').forEach(b=>b.classList.toggle('on', b.dataset.nbn === v.trim()));
+}
+function nbDlgError(msg){
+  $('#nbField').classList.add('bad'); $('#nbErr').textContent = msg;
+  $('#nbName').focus();
+}
+function closeNbDialog(){
+  const ov = $('#nbOv'); if(ov) ov.classList.remove('open');
+  NB_DLG = null;
+}
+function submitNbDialog(){
+  if(!NB_DLG) return;
+  const name = $('#nbName').value.trim();
+  if(!name){ nbDlgError('先给笔记本起个名字吧'); return; }
+  if(S.notebooks.some(nb=>!nb.deleted && nb.name === name && name !== NB_DLG.original)){
+    nbDlgError('已经有同名的笔记本了'); return;
+  }
+  const d = NB_DLG, color = d.color;
+  closeNbDialog();
+  if(d.onDone) d.onDone(name, color);
+}
+(function bindNbDialog(){
+  const ov = $('#nbOv'); if(!ov) return;
+  $('#nbX').onclick = closeNbDialog;
+  $('#nbCancel').onclick = closeNbDialog;
+  $('#nbOk').onclick = submitNbDialog;
+  ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeNbDialog(); });
+  $('#nbName').addEventListener('input', ()=>{
+    $('#nbField').classList.remove('bad'); $('#nbErr').textContent = ''; paintNbDialog();
+  });
+  $('#nbQuick').addEventListener('click', e=>{
+    const b = e.target.closest && e.target.closest('[data-nbn]'); if(!b) return;
+    const inp = $('#nbName');
+    inp.value = b.dataset.nbn;
+    inp.dispatchEvent(new Event('input', {bubbles:true}));
+    inp.focus();
+  });
+  $('#nbSw').addEventListener('click', e=>{
+    const b = e.target.closest && e.target.closest('[data-nbc]'); if(!b || !NB_DLG) return;
+    NB_DLG.color = b.dataset.nbc; paintNbDialog();
+  });
+  /* 捕获阶段接管键盘：弹窗开着时别让全局快捷键把焦点抢走 */
+  document.addEventListener('keydown', e=>{
+    if(!nbDialogOpen() || e.isComposing || e.keyCode === 229) return;
+    if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeNbDialog(); return; }
+    if(e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); submitNbDialog(); return; }
+    if(e.metaKey || e.ctrlKey || e.altKey){ e.stopPropagation(); }
+  }, true);
+})();
+function createNotebook(name, color, noteToMove){
   const now = Date.now();
-  const nb = {id:'nb'+now.toString(36), name:name.trim(), open:true, deleted:false, updatedAt:now};
+  const nb = { id:'nb'+now.toString(36), name, color, open:true, deleted:false, updatedAt:now };
   S.notebooks.push(nb);
-  renderAll(); save(); toast('已创建笔记本「'+nb.name+'」');
+  if(noteToMove) moveNoteTo(noteToMove, nb.id);
+  renderAll(); save();
+  toast(noteToMove ? '已创建「'+name+'」并移入这篇笔记' : '已创建笔记本「'+name+'」');
+  return nb;
+}
+function newNotebook(){
+  openNbDialog({ value:'新笔记本', onDone:(name, color)=>createNotebook(name, color) });
 }
 function renameNotebook(id){
   const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
-  const name = prompt('重命名笔记本', nb.name);
-  if(name==null) return;
-  const v = name.trim(); if(!v || v===nb.name) return;
-  nb.name = v; nb.updatedAt = Date.now();
-  renderAll(); save(); toast('已重命名');
+  openNbDialog({
+    mode:'rename', value:nb.name, original:nb.name, color:nb.color || NB_COLORS[0],
+    count:S.notes.filter(n=>n.notebookId===id && !n.trashed).length,
+    onDone:(name, color)=>{
+      if(name === nb.name && (nb.color || NB_COLORS[0]) === color) return;
+      nb.name = name; nb.color = color; nb.updatedAt = Date.now();
+      renderAll(); save(); toast('已保存');
+    }
+  });
 }
 function delNotebook(id){
   const nb = S.notebooks.find(x=>x.id===id); if(!nb || nb.deleted) return;
@@ -7747,12 +7943,7 @@ function openMoveMenu(anchor){
     '-',
     ['移出笔记本', n.notebookId ? '' : '✓', '', 'minus', ()=>moveNoteTo(n, null)],
     ['新建笔记本…', '', '', 'plus', ()=>{
-      const name = prompt('新建笔记本，这篇笔记会移进去', '新笔记本');
-      if(!name || !name.trim()) return;
-      const now = Date.now();
-      const nb = { id:'nb'+now.toString(36), name:name.trim(), open:true, deleted:false, updatedAt:now };
-      S.notebooks.push(nb);
-      moveNoteTo(n, nb.id);
+      openNbDialog({ mode:'move', value:'新笔记本', onDone:(name, color)=>createNotebook(name, color, n) });
     }]
   ], { align:'left' });
 }
@@ -7980,7 +8171,7 @@ function localPayload(){
   return {
     notes: live.concat(tombs),
     notebooks: S.notebooks.map(nb=>({
-      id:nb.id, name:nb.name, open:nb.open!==false,
+      id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
       deleted:!!nb.deleted, updatedAt:nb.updatedAt||0
     }))
   };
@@ -8001,7 +8192,8 @@ function applyRemote(data){
     else {
       const newer = (r.updatedAt||0) > (cur.updatedAt||0);
       const same  = (r.updatedAt||0) === (cur.updatedAt||0);
-      const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted;
+      const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted
+                    || (cur.color||'')!==(r.color||'');
       if(newer || (same && diff)){ Object.assign(cur, r); changed = true; }
     }
   }

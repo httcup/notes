@@ -33,6 +33,7 @@ async function readAll(env, uid) {
   const notebooks = (nbsRes.results || []).map((r) => ({
     id: r.id,
     name: r.name || '',
+    color: r.color || '',
     open: !!r.open,
     deleted: !!r.deleted,
     updatedAt: r.updated_at || 0
@@ -92,9 +93,10 @@ export async function onRequest({ request, env }) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notebooks (user_id, id, name, open, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            `INSERT INTO notebooks (user_id, id, name, color, open, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT(user_id, id) DO UPDATE SET
                name = excluded.name,
+               color = excluded.color,
                open = excluded.open,
                deleted = excluded.deleted,
                updated_at = excluded.updated_at
@@ -103,6 +105,7 @@ export async function onRequest({ request, env }) {
             uid,
             str(nb.id, 80),
             str(nb.name, 120),
+            /^#[0-9a-fA-F]{3,8}$/.test(nb.color || '') ? nb.color : '',
             nb.open === false ? 0 : 1,
             nb.deleted ? 1 : 0,
             Number(nb.updatedAt) || 0

@@ -1448,7 +1448,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v50', at: '2026-11-10 11:42' };
+window.IVY_BUILD = { id: 'v51', at: '2026-11-10 12:46' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2760,14 +2760,78 @@ function icsAllEvents(){
 }
 function addIcsSource(name, url){
   const clean = String(url || '').trim().replace(/^webcal:\/\//i, 'https://');
-  const s = { id:'c' + Date.now().toString(36), name:(name || '').trim() || '苹果日历', url:clean, on:true, lastSync:0, events:[] };
+  const s = { id:'c' + Date.now().toString(36), name:(name || '').trim() || '苹果日历', url:clean, on:true, lastSync:0, events:[], pendingPush: !isConnected() };
   ICAL.sources = icsSources().filter(x=>x.url !== clean).concat([s]);
   saveIcsCache();
+  icsPushSource(s);                    // 推到账号里，其它设备登录后自动拿到
   return s;
 }
 function removeIcsSource(id){
   ICAL.sources = icsSources().filter(x=>x.id !== id);
   saveIcsCache();
+  icsDropSource(id);
+}
+/* ---- 订阅源存账号级清单：一台设备添加，其它设备自动出现，不用再粘一次链接 ---- */
+let icsPulledAt = 0, icsPulling = false;
+function applyIcsList(items){
+  const local = {};
+  icsSources().forEach(s=>{ local[s.url] = s; });
+  const urls = {};
+  (items || []).forEach(it=>{ urls[it.url] = 1; });
+  const keepLocal = icsSources().filter(s=> !urls[s.url] && s.pendingPush);   // 离线加的，先留着下次推
+  ICAL.sources = (items || []).map(it=>{
+    const old = local[it.url] || {};
+    return Object.assign({ on:true, lastSync:0, events:[] }, old, {
+      id: it.id, name: it.name || '苹果日历', url: it.url, pendingPush: false
+    });
+  }).concat(keepLocal);
+  saveIcsCache();
+}
+async function icsPushSource(s){
+  if(!isConnected() || !s || !s.url) return;
+  try{
+    const r = await fetch('/api/icsrc', {
+      method:'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ name: s.name, url: s.url })
+    });
+    if(!r.ok) return;
+    const d = await r.json().catch(()=>({}));
+    const cur = icsSources().find(x=> x.url === s.url);
+    if(cur && d && d.id && cur.id !== d.id){ cur.id = d.id; saveIcsCache(); }
+    if(cur) cur.pendingPush = false;
+    if(d && d.items) applyIcsList(d.items);
+  }catch(e){}
+}
+async function icsDropSource(id){
+  if(!isConnected() || !id) return;
+  try{
+    const r = await fetch('/api/icsrc', {
+      method:'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ remove: id })
+    });
+    if(r.ok){ const d = await r.json().catch(()=>({})); if(d && d.items) applyIcsList(d.items); }
+  }catch(e){}
+}
+async function icsPullSources(force){
+  if(!isConnected() || icsPulling) return;
+  if(!force && Date.now() - icsPulledAt < 60000) return;
+  icsPulling = true;
+  try{
+    const r = await fetch('/api/icsrc', { headers: authHeaders(false) });
+    if(!r.ok) return;
+    const d = await r.json().catch(()=>({}));
+    const items = (d && d.items) || [];
+    if(!items.length && icsSources().length){
+      for(const s of icsSources()) await icsPushSource(s);   // 老用户：把本地已有的搬上云
+    } else {
+      applyIcsList(items);
+    }
+    icsPulledAt = Date.now();
+    if(S.view === 'todo') renderShelf();
+  }catch(e){}
+  finally{ icsPulling = false; }
 }
 /* ---- ICS 解析：时间、时区、重复全在前端算，服务器只把原文拉回来 ---- */
 function icsUnfold(t){
@@ -2935,8 +2999,16 @@ async function icsSync(force){
           s.error = d.error || ('HTTP ' + r.status);
           continue;
         }
-        s.events = icsParse(await r.text());
+        const text = await r.text();
+        s.events = icsParse(text);
+        // 日历文件自带名字（X-WR-CALNAME）就顺手用上，别一律叫「苹果日历」
+        const nm = text.match(/^X-WR-CALNAME:(.+)$/im);
+        if(nm && (!s.name || s.name === '苹果日历')){
+          const nn = nm[1].trim().replace(/\\(.)/g, '$1').slice(0, 30);
+          if(nn && nn !== s.name){ s.name = nn; icsPushSource(s); }
+        }
         s.lastSync = Date.now();
+        s.count = s.events.length;
         s.error = '';
         saveIcsCache();
       }catch(e){ s.error = e.message || '拉取失败'; }
@@ -3113,6 +3185,7 @@ function openRemindCenter(){
   }
   ov.classList.add('open');
   paintRemindCenter();
+  icsPullSources();                                     // 别的设备加的，这里也能看到
   if(isConnected()) feedRefresh().then(()=>{ if(ov.classList.contains('open')) paintRemindCenter(); });
 }
 function paintRemindCenter(){
@@ -3184,13 +3257,13 @@ function paintRemindCenter(){
 
     <div class="rc-box">
       <div class="rc-box-h">${ic('calendar')}<b>从苹果日历同步</b></div>
-      <div class="rc-p">在日历 App 里把日历「公开共享」，把拿到的 <code>webcal://…</code> 链接粘进来：事件只读显示在左侧「日程」里，到点也会提醒。不会改动你的笔记。</div>
+      <div class="rc-p">在日历 App 里把日历「公开共享」，把拿到的 <code>webcal://…</code> 链接粘进来：事件只读显示在左侧「日程」里，到点也会提醒。不会改动你的笔记。<b>链接存在账号里，其它设备登录后自动出现，不用再填一次。</b></div>
       ${srcList}
       <div class="rc-add">
         <input class="rc-input" id="rcIcsUrl" placeholder="粘贴公开共享的日历链接（webcal:// 或 https://）" spellcheck="false">
         <button class="rc-btn primary" id="rcIcsAdd">添加</button>
       </div>
-      <div class="rc-note">只支持「公开共享」的日历；私有日历要 Apple ID 应用专用密码，这里不碰。同步在打开页面时进行。</div>
+      <div class="rc-note">只支持「公开共享」的日历；私有日历要 Apple ID 应用专用密码，这里不碰。各设备各自拉取、各自缓存，加一次就够。</div>
     </div>
 
     <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
@@ -4803,7 +4876,7 @@ function paintHelp(){
         ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
         ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
       <div class="help-sec"><h4>从苹果日历同步进来</h4>
-        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。事件会<b>只读</b>出现在左侧日程最下面的「来自苹果日历」分组里，到点也会提醒；不会写进你的笔记，改动请在日历 App 里做。</p></div>
+        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。<b>链接存在你的账号里，换手机或另一台电脑登录后自动出现，不用再填一次。</b>事件只读显示在左侧日程最下面的「来自苹果日历」分组，到点也会提醒；不会写进笔记，改动请在日历 App 里做。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>
@@ -7998,6 +8071,7 @@ if(isConnected()){
       catch(e){ SYNC.state='error'; SYNC.error=e.message||'登录失败'; renderDock(); return; }
     }
     syncNow({rerender:true});
+    icsPullSources(true);            // 账号里的日历订阅源，换设备后自动补齐
   }, 350);
 }
 

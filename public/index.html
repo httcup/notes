@@ -353,6 +353,15 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .meta-btn{padding:2px 4px;border-radius:5px;color:rgb(var(--faint));transition:background .14s,color .14s;font-size:12.5px}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
+/* 回收站头部：窄屏要能换行，否则「清空回收站」会被挤出屏幕 */
+.trash-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 22px}
+.trash-hint{color:rgb(var(--faint));font-size:12.5px;margin:0;flex:1 1 auto;min-width:0}
+.trash-head #trashEmpty{margin-left:auto;flex:0 0 auto}
+@media (max-width:560px){
+  .trash-head{gap:4px;margin-bottom:16px}
+  .trash-hint{flex:1 1 100%}
+  .trash-head #trashEmpty{margin-left:0;padding:4px 0}
+}
 /* 标题下的 Markdown 工具条 */
 .fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 0;user-select:none}
 .fmt-bar button{
@@ -1448,7 +1457,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v52', at: '2026-11-10 14:16' };
+window.IVY_BUILD = { id: 'v53', at: '2026-11-10 15:04' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2073,7 +2082,11 @@ function bindShelf(){
   shelfBody.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
     const a = b.dataset.act;
     if(a==='new-nb') newNotebook();
-    if(a==='trash') openTrashView();
+    if(a==='trash'){
+      // 手机 / iPad 竖屏书架是满屏抽屉，不收起就把回收站整个挡住了（连「清空」都点不到）
+      if(document.documentElement.clientWidth <= 900 && S.shelfOpen){ S.shelfOpen = false; save(); }
+      openTrashView();
+    }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
@@ -6505,9 +6518,9 @@ function renderTrash(){
   const list = S.notes.filter(n=>n.trashed);
   scrollEl.innerHTML = `<div class="view-pad">
     <h2 style="font-family:var(--font-serif);font-size:22px;margin:0 0 4px">回收站</h2>
-    <div style="display:flex;align-items:center;gap:10px;margin:0 0 22px">
-      <p style="color:rgb(var(--faint));font-size:12.5px;margin:0">删除的笔记会留在这里，可以随时恢复。</p>
-      ${list.length ? `<button class="meta-btn" id="trashEmpty" style="margin-left:auto;color:rgb(var(--danger))">清空回收站</button>` : ''}
+    <div class="trash-head">
+      <p class="trash-hint">删除的笔记会留在这里，可以随时恢复。</p>
+      ${list.length ? `<button class="meta-btn" id="trashEmpty" style="color:rgb(var(--danger))">清空回收站</button>` : ''}
     </div>
     ${list.length ? list.map(n=>`<div class="note-item" style="cursor:default">
         ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>

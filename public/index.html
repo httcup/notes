@@ -708,9 +708,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsi-bell svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media (hover:none){ .tsi-bell{opacity:.6} }
 .tsh-empty{padding:26px 10px;text-align:center;font-size:12px;color:rgb(var(--faint));line-height:1.9}
-/* 苹果日历那一组：只读条目，用一个小圆点代替勾选框 */
-.ics-row{padding-left:21px}
-.ics-dot{width:7px;height:7px;border-radius:50%;background:rgb(var(--ivy));opacity:.75;flex:0 0 auto;margin-top:7px}
+/* 苹果日历那一组：条目同样可以勾掉（只在本应用记，不回写日历） */
+.ics-row{padding-left:19px}
+.ics-row .t{transition:color .12s}
 .ics-pop{min-width:190px;max-width:260px;padding:2px 2px 4px}
 .ics-pop-t{font-size:13px;font-weight:600;color:rgb(var(--ink));margin-bottom:6px;line-height:1.45;word-break:break-word}
 .ics-pop-r{display:flex;align-items:flex-start;gap:6px;font-size:11.5px;color:rgb(var(--muted));line-height:1.6;margin-top:3px}
@@ -1448,7 +1448,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v51', at: '2026-11-10 12:46' };
+window.IVY_BUILD = { id: 'v52', at: '2026-11-10 14:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2113,8 +2113,14 @@ function bindShelf(){
     S.icsFolded = !S.icsFolded; save(); renderShelf();
   });
   shelfBody.querySelectorAll('[data-icsev]').forEach(el=>{
-    el.onclick = ()=>{
-      const ev = icsAllEvents()[+el.dataset.icsev];
+    const ev = icsAllEvents()[+el.dataset.icsev];
+    const cb = el.querySelector('[data-icscb]');
+    if(cb){
+      cb.onclick = ev2=>ev2.stopPropagation();
+      cb.onchange = ()=>{ if(ev) setIcsDone(ev, cb.checked); };
+    }
+    el.onclick = (ev2)=>{
+      if(ev2.target === cb) return;
       if(ev) openIcsPop(el, ev);
     };
   });
@@ -2749,6 +2755,60 @@ function loadIcsCache(){
 }
 function saveIcsCache(){ try{ localStorage.setItem(ICS_STORE, JSON.stringify(ICAL)); }catch(e){} }
 function icsSources(){ return (ICAL && ICAL.sources) || []; }
+/* 「已完成」是自己记的：不回写苹果日历，但跟着账号同步 */
+const ICS_DONE_STORE = 'ivy.icsdone.v1';
+let ICS_DONE = (function(){
+  try{ return JSON.parse(localStorage.getItem(ICS_DONE_STORE) || '{}') || {}; }catch(e){ return {}; }
+})();
+function saveIcsDone(){
+  try{
+    const keys = Object.keys(ICS_DONE);
+    if(keys.length > 600){
+      const keep = keys.sort((a, b)=> ICS_DONE[a] - ICS_DONE[b]).slice(keys.length - 400);
+      const o = {};
+      keep.forEach(k=>{ o[k] = ICS_DONE[k]; });
+      ICS_DONE = o;
+    }
+    localStorage.setItem(ICS_DONE_STORE, JSON.stringify(ICS_DONE));
+  }catch(e){}
+}
+const icsDoneKey = ev => ev.uid + '|' + ev.start;
+const icsIsDone = ev => !!ICS_DONE[icsDoneKey(ev)];
+function setIcsDone(ev, on){
+  const k = icsDoneKey(ev);
+  if(on) ICS_DONE[k] = Date.now();
+  else delete ICS_DONE[k];
+  saveIcsDone();
+  icsPushDone(k, on);
+  if(S.view === 'todo') renderShelf();
+}
+async function icsPushDone(key, on){
+  if(!isConnected()) return;
+  try{
+    await fetch('/api/icsrc', {
+      method:'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify(on ? { done:key } : { undone:key })
+    });
+  }catch(e){}
+}
+async function icsPullDone(){
+  if(!isConnected()) return;
+  try{
+    const r = await fetch('/api/icsrc?marks=1', { headers: authHeaders(false) });
+    if(!r.ok) return;
+    const d = await r.json().catch(()=>({}));
+    const remote = (d && d.done) || {};
+    let changed = false;
+    Object.keys(remote).forEach(k=>{
+      if(ICS_DONE[k] !== remote[k]){ ICS_DONE[k] = remote[k]; changed = true; }
+    });
+    // 本地有、服务端没有的，顺手推上去（第一次开这个功能时的迁移）
+    const push = Object.keys(ICS_DONE).filter(k=> !(k in remote)).slice(0, 200);
+    if(push.length){ changed = true; push.forEach(k=> icsPushDone(k, true)); }
+    if(changed){ saveIcsDone(); if(S.view === 'todo') renderShelf(); }
+  }catch(e){}
+}
 function icsAllEvents(){
   const out = [];
   icsSources().forEach(s=>{
@@ -3027,8 +3087,9 @@ function icsShelfHtml(){
     const idx = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - dayStart.getTime()) / ICS_DAY);
     const dayTxt = idx === 0 ? '' : (idx === 1 ? '明天' : (d.getMonth() + 1) + '月' + d.getDate() + '日');
     const time = ev.allDay ? '全天' : pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-    return `<div class="tsi ics-row" data-icsev="${i}" title="${esc(ev.location || ev.cal)}">
-      <span class="ics-dot"></span>
+    const done = icsIsDone(ev);
+    return `<div class="tsi ics-row ${done ? 'done' : ''}" data-icsev="${i}" title="${esc(ev.location || ev.cal)}">
+      <input type="checkbox" ${done ? 'checked' : ''} data-icscb="1" aria-label="标记已完成">
       <div class="m">
         <span class="t">${esc(ev.title)}</span>
         <span class="src">${esc([dayTxt, ev.cal].filter(Boolean).join(' · '))}</span>
@@ -3036,10 +3097,11 @@ function icsShelfHtml(){
       <span class="tm">${time}</span>
     </div>`;
   }).join('');
+  const openCount = list.filter(ev=> !icsIsDone(ev)).length;
   return `<div class="tsg">
     <button class="tsg-h" data-icsg="1">
       <svg class="gchev${folded ? '' : ' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
-      <span class="ttl">来自苹果日历</span><span class="n">${list.length}</span></button>
+      <span class="ttl">来自苹果日历</span><span class="n">${openCount}</span></button>
     ${folded ? '' : `<div class="tsg-body">${rows}</div>`}
   </div>`;
 }
@@ -3186,6 +3248,7 @@ function openRemindCenter(){
   ov.classList.add('open');
   paintRemindCenter();
   icsPullSources();                                     // 别的设备加的，这里也能看到
+  icsPullDone();
   if(isConnected()) feedRefresh().then(()=>{ if(ov.classList.contains('open')) paintRemindCenter(); });
 }
 function paintRemindCenter(){
@@ -3393,6 +3456,7 @@ function checkTodoReminders(){
   /* 苹果日历的日程也一起到点提醒（全天日程不按分钟叫） */
   icsAllEvents().forEach(ev=>{
     if(ev.allDay) return;
+    if(icsIsDone(ev)) return;                       // 已经勾掉的就不再叫
     if(ev.start > now) return;
     if(now - ev.start > 10 * 60000) return;
     const key = 'ics|' + ev.uid + '|' + ev.start;
@@ -4876,7 +4940,7 @@ function paintHelp(){
         ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
         ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
       <div class="help-sec"><h4>从苹果日历同步进来</h4>
-        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。<b>链接存在你的账号里，换手机或另一台电脑登录后自动出现，不用再填一次。</b>事件只读显示在左侧日程最下面的「来自苹果日历」分组，到点也会提醒；不会写进笔记，改动请在日历 App 里做。</p></div>
+        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。<b>链接存在你的账号里，换手机或另一台电脑登录后自动出现，不用再填一次。</b>事件出现在左侧日程最下面的「来自苹果日历」分组，每条前面都有勾选框；<b>勾选只记在这边（也跟着账号同步），不会写回日历</b>，标题时间要改还是到日历 App 里改。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>
@@ -8072,6 +8136,7 @@ if(isConnected()){
     }
     syncNow({rerender:true});
     icsPullSources(true);            // 账号里的日历订阅源，换设备后自动补齐
+    icsPullDone();                   // 哪些日历事件已经勾掉，也跟着账号走
   }, 350);
 }
 

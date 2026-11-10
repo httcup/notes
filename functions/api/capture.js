@@ -15,8 +15,11 @@
 //
 // 已登录的浏览器也可以不带 key 直接调（走 currentUser），方便以后在前端加按钮。
 //
-// 已知限制：微博头条文章需要访客 Cookie，服务端抓不到正文；微信公众号文章通常能抓到
-// #js_content。抓不到时自动降级为「标题 + 原链接 + 分享时带过来的文字」，笔记照样建得起来。
+// 抓取策略：
+//   微信公众号 / 普通网页 → 直连。先在全量 HTML 上剔除脚本，再按 div 标签栈精确切出
+//   #js_content 容器（微信页面 3MB+，正文常在 600KB 之后，粗暴 slice 会把 JS 当正文写进笔记）。
+//   微博 → 直连必被 Sina Visitor System 拦，改用 r.jina.ai Reader 拿正文（CAPTURE_JINA=0 可关闭）。
+//   任何一路抓不到或不干净，都降级为「标题 + 原链接 + 分享时带过来的文字」。
 
 import { currentUser, safeEqual, CORS } from '../_lib.js';
 
@@ -27,6 +30,7 @@ const CORS_OPEN = {
 
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 const MAX_BODY = 60000;
+const MAX_HTML = 4000000; // 微信图文单页可达 3.6MB，正文位置远在 400KB 之后
 
 function reply(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -40,11 +44,19 @@ function str(v, max) {
 }
 
 function decodeEntities(s) {
-  const map = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', mdash: '—', ndash: '–', hellip: '…' };
+  const map = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', mdash: '—', ndash: '–', hellip: '…', ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’', middot: '·', times: '×' };
+  const cp = (n) => { try { return String.fromCodePoint(n); } catch (e) { return ''; } };
   return String(s || '')
-    .replace(/&#(\d+);/g, (m, n) => String.fromCharCode(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCharCode(parseInt(n, 16)))
-    .replace(/&([a-z]+);/gi, (m, k) => (k in map ? map[k.toLowerCase()] : m));
+    .replace(/&#(\d+);/g, (m, n) => cp(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (m, n) => cp(parseInt(n, 16)))
+    .replace(/&([a-z]+);/gi, (m, k) => (k.toLowerCase() in map ? map[k.toLowerCase()] : m));
+}
+
+/** 访客验证页 / 平台通用占位标题，绝不能拿来当笔记标题 */
+function cleanTitle(t) {
+  const s = String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  if (/^(sina visitor system|微博正文|微博|微博-随时随地发现新鲜事|微信公众平台|页面不存在|访问验证|环境异常|验证码)/i.test(s)) return '';
+  return s.slice(0, 200);
 }
 
 function attr(html, re) {
@@ -61,20 +73,20 @@ export function pickMeta(html) {
     || attr(h, /<title[^>]*>([\s\S]*?)<\/title>/i);
   const desc = attr(h, /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)/i)
     || attr(h, /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)/i);
-  return { title: title.replace(/<[^>]+>/g, '').trim(), desc: desc.trim() };
+  return { title: cleanTitle(title), desc: desc.trim() };
 }
 
 /** 极简 HTML → Markdown：够用于公众号长文，不做完整 DOM 解析 */
 export function htmlToMd(html) {
   let s = String(html || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '');
   s = s.replace(/<img\b[^>]*>/gi, (tag) => {
     const src = /data-src=["']([^"']+)/i.exec(tag)
       || /\bsrc=["']([^"']+)/i.exec(tag);
     if (!src) return '';
-    const u = src[1].trim();
+    const u = decodeEntities(src[1].trim());
     return /^(https?:)?\/\//i.test(u) ? `\n![](${u})\n` : '';
   });
   s = s
@@ -91,7 +103,9 @@ export function htmlToMd(html) {
     .replace(/<a\b[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
       (m, href, label) => `[${label.replace(/<[^>]+>/g, '').trim() || href}](${href})`)
     .replace(/<[^>]+>/g, '');
-  return decodeEntities(s).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return decodeEntities(s).replace(/[ \t]+\n/g, '\n')
+    .replace(/^\s*[-*·]\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** 只留 http(s)，挡掉内网 / 云元数据地址，避免这个「能写库的端点」被拿去探内网 */
@@ -104,51 +118,152 @@ export function safeUrl(raw) {
   return u;
 }
 
-/** 微博头条文章把 id 藏在 hash 里，服务端 fetch 收不到 hash，转成带 query 的地址再试 */
+/** 微博 → 交给 Reader 的规范化地址：普通状态转移动端详情页，头条文章转 p/show */
+function jinaTargets(u) {
+  const s = u.toString();
+  const article = /(?:id=|\/)(2309\d{13,})/.exec(s);
+  if (article) return [`https://weibo.com/ttarticle/p/show?id=${article[1]}`];
+  const nums = (s.match(/\d{10,20}/g) || []).sort((a, b) => b.length - a.length);
+  return nums.length ? [`https://m.weibo.cn/detail/${nums[0]}`] : [];
+}
+
+/** 直连候选；微博把 id 藏在 hash 里时服务端收不到，转成带 query 的地址再试 */
 function fetchCandidates(u) {
   const out = [u.toString()];
   if (/weibo\.(com|cn)/i.test(u.hostname)) {
-    const id = /(?:^|[#/&?])(?:id=)?(2309\d{13,})/.exec(u.toString());
+    const id = /(?:id=|\/)(2309\d{13,})/.exec(u.toString());
     if (id) out.push(`https://weibo.com/ttarticle/p/show?id=${id[1]}`);
   }
   return [...new Set(out)];
 }
 
+async function fetchText(target, headers, timeoutMs) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    return await fetch(target, { headers, redirect: 'follow', signal: ctl.signal });
+  } finally { clearTimeout(timer); }
+}
+
+/** 在【完整】HTML 上先剔掉脚本/样式。切片段之后再剔，一定会漏掉被截断的 <script> */
+function stripNoise(html) {
+  return String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript\s*>/gi, '')
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, '')
+    .replace(/<template\b[^>]*>[\s\S]*?<\/template\s*>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '');
+}
+
+/** 按标签栈切出容器内部 HTML，避免把容器之后的整页脚本一起带进笔记 */
+function sliceContainer(html, tag, openRe) {
+  const m = openRe.exec(html);
+  if (!m) return '';
+  const start = m.index + m[0].length;
+  const re = new RegExp('<(/?)' + tag + '\\b[^>]*>', 'gi');
+  re.lastIndex = start;
+  let depth = 1, t;
+  while ((t = re.exec(html))) {
+    if (/\/>$/.test(t[0])) continue;
+    depth += t[1] ? -1 : 1;
+    if (!depth) return html.slice(start, t.index);
+  }
+  return html.slice(start, start + MAX_BODY);
+}
+
 function mainContent(html) {
   const h = String(html || '');
-  const wx = /id=["']js_content["']/i.exec(h);
-  if (wx) return h.slice(wx.index, wx.index + MAX_BODY);
-  const art = /<article\b[^>]*>([\s\S]*?)<\/article>/i.exec(h);
-  if (art) return art[1].slice(0, MAX_BODY);
+  const wx = sliceContainer(h, 'div', /<div\b[^>]*\bid=["']js_content["'][^>]*>/i);
+  if (wx) return wx.slice(0, MAX_BODY);
+  const art = sliceContainer(h, 'article', /<article\b[^>]*>/i);
+  if (art) return art.slice(0, MAX_BODY);
   const body = /<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(h);
   return (body ? body[1] : h).slice(0, MAX_BODY);
 }
 
-async function grab(rawUrl) {
+/** 抓到的是脚本碎片、访客验证页、还是解码失败的乱码？宁可只存链接，也不写脏正文 */
+function looksLikeGarbage(md) {
+  const s = String(md || '');
+  if (!s) return true;
+  if (/Sina Visitor System|请输入验证码|访问验证|环境异常|页面不存在/i.test(s)) return true;
+  if ((s.match(/\uFFFD/g) || []).length > 3) return true;
+  const marks = [/\bfunction\s*\(/, /\btypeof\s+[a-z]/i, /Object\.defineProperty/,
+    /\bmodule\.exports/, /\bvar\s+\w+\s*=/, /document\.addEventListener/, /window\.\w+\s*=/,
+    /=>/, /\}\)\s*\(/];
+  let hits = 0;
+  for (const re of marks) if (re.test(s)) hits++;
+  if (hits >= 2) return true;
+  const cjk = (s.match(/[\u4e00-\u9fa5]/g) || []).length;
+  if (hits >= 1 && s.length > 200 && cjk / s.length < 0.02) return true;
+  return false;
+}
+
+/** 按页面声明的 charset 解码。GBK 页面用 UTF-8 硬解会得到「锟斤拷」，这里判失败降级 */
+async function readHtml(res) {
+  const buf = await res.arrayBuffer();
+  const ct = res.headers.get('content-type') || '';
+  let cs = (/charset\s*=\s*([\w-]+)/i.exec(ct) || [])[1] || '';
+  if (!cs) {
+    const head = new TextDecoder('utf-8').decode(buf.slice(0, 4096));
+    cs = (/<meta[^>]+charset\s*=\s*["']?([\w-]+)/i.exec(head) || [])[1] || 'utf-8';
+  }
+  const c = cs.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const want = ['gbk', 'gb2312', 'gb18030'].includes(c) ? 'gb18030' : 'utf-8';
+  let dec;
+  try { dec = new TextDecoder(want, { fatal: true }); }
+  catch (e) { dec = new TextDecoder('utf-8', { fatal: false }); }
+  try { return dec.decode(buf.slice(0, MAX_HTML)); }
+  catch (e) { return '\uFFFD\uFFFD\uFFFD\uFFFD'; }
+}
+
+/** 微博直连必被访客系统挡，用公开 Reader 拿渲染后的 Markdown（可用 CAPTURE_JINA=0 关闭） */
+async function grabViaJina(target) {
+  try {
+    const res = await fetchText('https://r.jina.ai/' + target,
+      { 'user-agent': UA, 'accept': 'text/plain' }, 12000);
+    if (!res.ok) return null;
+    const raw = (await res.text()).slice(0, MAX_BODY * 2);
+    const title = (/^Title:\s*(.+)$/m.exec(raw) || [])[1] || '';
+    const i = raw.search(/^Markdown Content:\s*$/m);
+    if (i < 0) return null;
+    let md = raw.slice(i).replace(/^Markdown Content:\s*/m, '').trim();
+    // 微博详情页的 ### 作者 / #### 时间 / #### 关注 都是元信息，不是正文也不是标题
+    if (/m\.weibo\.cn\/(detail|status)/.test(target)) {
+      md = md.replace(/^#{1,6}[^\n]*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+    }
+    if (md.length < 40 || looksLikeGarbage(md)) return null;
+    return { title: cleanTitle(title), md: md.slice(0, MAX_BODY), mode: 'full', via: 'reader' };
+  } catch (e) { return null; }
+}
+
+async function grab(rawUrl, env) {
   const u = safeUrl(rawUrl);
   if (!u) return { title: '', md: '', mode: 'link' };
+  if (/weibo\.(com|cn)/i.test(u.hostname) && (!env || env.CAPTURE_JINA !== '0')) {
+    for (const target of jinaTargets(u)) {
+      const got = await grabViaJina(target);
+      if (got) return got;
+    }
+  }
   for (const target of fetchCandidates(u)) {
     try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), 8000);
-      let res;
-      try {
-        res = await fetch(target, {
-          headers: { 'user-agent': UA, 'accept-language': 'zh-CN,zh;q=0.9', 'accept': 'text/html,*/*' },
-          redirect: 'follow',
-          signal: ctl.signal
-        });
-      } finally { clearTimeout(timer); }
+      const res = await fetchText(target, {
+        'user-agent': UA, 'accept-language': 'zh-CN,zh;q=0.9', 'accept': 'text/html,*/*'
+      }, 8000);
       if (!res.ok) continue;
       const ct = res.headers.get('content-type') || '';
       if (!/html|text/i.test(ct)) continue;
-      const html = (await res.text()).slice(0, 400000);
-      const meta = pickMeta(html);
-      const md = htmlToMd(mainContent(html));
-      // 访客验证页 / SPA 空壳：文字太少，或只有「Sina Visitor System」这类提示
-      const shell = /Sina Visitor System|请输入验证码|页面不存在/i.test(md);
-      if (md.length >= 60 && !shell) return { title: meta.title, md: md.slice(0, MAX_BODY), mode: 'full' };
-      if (meta.title) return { title: meta.title, md: '', mode: 'link' };
+      const raw = await readHtml(res);
+      const meta = pickMeta(raw);           // head 里的 og:title 要在剔脚本之前取
+      const md = htmlToMd(mainContent(stripNoise(raw)));
+      if (looksLikeGarbage(md)) {
+        if (meta.title) return { title: meta.title, md: '', mode: 'link', via: 'link' };
+        continue;
+      }
+      if (md.length >= 60) return { title: meta.title, md: md.slice(0, MAX_BODY), mode: 'full', via: 'direct' };
+      if (meta.title) return { title: meta.title, md: '', mode: 'link', via: 'link' };
     } catch (e) { /* 超时 / 反爬 → 试下一个，最后降级 */ }
   }
   return { title: '', md: '', mode: 'link' };
@@ -234,8 +349,12 @@ export async function onRequest({ request, env }) {
   const notebook = str(body.notebook, 60).trim() || '剪藏';
 
   // 客户端带过来的内容优先；服务端抓取只用来补全，抓不到就降级
-  const grabbed = rawUrl ? await grab(rawUrl) : { title: '', md: '', mode: 'link' };
-  const title = (clientTitle || grabbed.title || text.split('\n')[0] || '剪藏 ' + stamp(Date.now()))
+  const grabbed = rawUrl ? await grab(rawUrl, env) : { title: '', md: '', mode: 'link', via: 'link' };
+  // 微博详情页没有可用 <title>，从正文里挑第一行像话的文字当标题
+  const autoTitle = (grabbed.md || '').split('\n')
+    .map((l) => l.replace(/^[#>*\-\s]+/, '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim())
+    .find((l) => l.length >= 8 && !/^https?:/.test(l)) || '';
+  const title = (clientTitle || grabbed.title || text.split('\n')[0] || autoTitle || '剪藏 ' + stamp(Date.now()))
     .replace(/[\r\n]+/g, ' ').slice(0, 200);
 
   const lines = [`> 来源：${sourceLabel}`, `> 保存于：${stamp(Date.now())}`];
@@ -272,5 +391,5 @@ export async function onRequest({ request, env }) {
     return reply({ error: String((err && err.message) || err) }, 500);
   }
 
-  return reply({ ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', noteUrl: url.origin + '/?n=' + id });
+  return reply({ ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', via: grabbed.via || 'link', noteUrl: url.origin + '/?n=' + id });
 }

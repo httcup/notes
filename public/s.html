@@ -104,6 +104,71 @@ h1.title{
   h1.title{font-size:24px}
   .body{font-size:16.5px}
 }
+
+/* ===== 右侧悬浮大纲（与主应用同一套视觉：刻度 → 悬停滑出卡片） ===== */
+.ol-zone{
+  position:fixed;right:0;top:50%;margin-top:-66px;z-index:40;
+  width:26px;height:132px;display:none;
+  flex-direction:column;align-items:flex-end;justify-content:center;gap:10px;
+  padding:6px 9px 6px 0;cursor:pointer;
+}
+body.has-ol .ol-zone{display:flex}
+.ol-zone i{display:block;width:15px;height:1.5px;border-radius:2px;background:rgb(var(--ink)/.2);transition:background .16s,width .16s}
+.ol-zone:hover i{width:18px;background:rgb(var(--ink)/.4)}
+.ol-card{
+  position:fixed;right:4px;top:66px;z-index:41;
+  width:210px;max-height:min(66vh,calc(100vh - 130px));
+  display:flex;flex-direction:column;outline:none;
+  padding:6px 8px 8px;border-radius:14px;
+  background:rgb(var(--surface));
+  box-shadow:0 10px 34px rgb(var(--ink)/.13),0 2px 8px rgb(var(--ink)/.07);
+  opacity:0;transform:translateX(12px);pointer-events:none;
+  transition:transform .26s cubic-bezier(.34,1.25,.64,1),opacity .16s;
+}
+/* 鼠标在右侧刻度上、或移进卡片后保持展开 */
+.ol-zone:hover ~ .ol-card,
+.ol-card:hover,
+.ol-card.open{opacity:1;transform:none;pointer-events:auto}
+.ol-head{
+  flex:0 0 auto;padding:6px 8px 7px;
+  font-size:11px;font-weight:700;letter-spacing:.09em;color:rgb(var(--faint));
+}
+.ol-list{position:relative;overflow-y:auto;overscroll-behavior:contain;padding:0 1px 2px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.ol-list::-webkit-scrollbar{width:7px}
+.ol-list::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.12);border-radius:7px;border:2px solid transparent;background-clip:content-box}
+.ol-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:0;background:none;cursor:pointer;font-family:inherit;
+  font-size:12.8px;line-height:1.55;color:rgb(var(--ink-2));
+  padding:5px 8px;border-radius:7px;margin:0;
+  transition:background .16s,color .16s,transform .2s,padding-left .2s;
+}
+.ol-item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ol-item .dash{flex:0 0 auto;width:9px;height:1px;border-radius:1px;background:rgb(var(--ink)/.17);transition:width .18s,background .18s,height .18s}
+.ol-card .ol-item:hover{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:600;transform:translateX(3px)}
+.ol-item.l1{font-weight:500;color:rgb(var(--ink))}
+.ol-item.l2{padding-left:21px}
+.ol-item.l3{padding-left:34px;font-size:12.3px}
+.ol-item.l4{padding-left:47px;font-size:12.3px;color:rgb(var(--muted))}
+.ol-item.on{color:rgb(var(--ink));font-weight:600}
+.ol-item.on .dash{width:18px;height:1.5px;background:rgb(var(--ivy))}
+@media (max-width:900px){
+  .ol-card{width:min(206px,62vw);right:8px;top:60px;max-height:min(64vh,calc(100vh - 140px))}
+}
+@media (prefers-color-scheme: dark){
+  .ol-card{box-shadow:0 10px 34px rgb(0 0 0/.5),0 2px 8px rgb(0 0 0/.35)}
+}
+/* 触屏没有 hover，只认点开的 .open。
+   注意 tap 结束后元素会残留 :hover 状态，那条「悬停即展开」的规则特异性比 .ol-card.open 高，
+   所以这里要用同样带兄弟组合器的写法把它压回去，否则点了也打不开 */
+@media (hover:none){
+  .ol-zone{width:30px}
+  .ol-zone:hover ~ .ol-card,
+  .ol-card:hover{opacity:0;transform:translateX(12px);pointer-events:none}
+  .ol-zone:hover ~ .ol-card.open,
+  .ol-card.open{opacity:1;transform:none;pointer-events:auto}
+}
+
 </style>
 </head>
 <body>
@@ -112,6 +177,12 @@ h1.title{
     <div class="state" id="state"><span class="spin"></span>正在打开笔记…</div>
   </div>
 </div>
+<!-- 右侧悬浮大纲：平时是一列细刻度，鼠标靠过去滑出卡片（触屏点一下切换） -->
+<div class="ol-zone" id="olZone" role="button" tabindex="-1" aria-label="展开大纲"></div>
+<aside class="ol-card" id="olCard" aria-label="大纲">
+  <div class="ol-head">大纲</div>
+  <nav class="ol-list" id="olList"></nav>
+</aside>
 <script>
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -218,6 +289,96 @@ function fail(msg){
     '<div class="state"><span class="big">' + esc(msg) + '</span>这个链接可能已经失效，或者作者取消了分享。</div>';
 }
 
+/* ===== 悬浮大纲 ===== */
+const olTouch = () => matchMedia('(hover:none)').matches || (navigator.maxTouchPoints > 0 && matchMedia('(pointer:coarse)').matches);
+const OL = { heads: [], items: [], active: -1 };
+
+function buildOutline(){
+  const heads = [...document.querySelectorAll('.body h1,.body h2,.body h3,.body h4,.body h5,.body h6')];
+  // 只有一个标题的话大纲没意义，入口也不出现
+  if (heads.length < 2) return;
+  const lv = heads.map(h => +h.tagName[1]);
+  const base = Math.min(...lv);
+  const list = document.getElementById('olList');
+  OL.items = [];
+  heads.forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    h.style.scrollMarginTop = '28px';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ol-item l' + Math.min(4, lv[i] - base + 1);
+    const t = document.createElement('span'); t.className = 't';
+    t.textContent = (h.textContent || '').trim() || '（无标题）';
+    const d = document.createElement('span'); d.className = 'dash';
+    b.append(t, d);
+    b.addEventListener('click', () => {
+      jumpTo(h);
+      if (olTouch()) document.getElementById('olCard').classList.remove('open');
+    });
+    list.appendChild(b);
+    OL.items.push(b);
+  });
+  OL.heads = heads;
+  // 右侧刻度条数量跟标题数走（3~6 条）
+  const z = document.getElementById('olZone');
+  const n = Math.max(3, Math.min(6, heads.length));
+  z.innerHTML = '';
+  for (let i = 0; i < n; i++) z.appendChild(document.createElement('i'));
+  document.body.classList.add('has-ol');
+  updateActive();
+}
+
+function jumpTo(el){
+  const y = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 28);
+  if (olTouch()) {
+    // iOS Safari 在触摸事件里会静默丢弃 smooth，这里瞬时到位
+    const de = document.documentElement;
+    const prev = de.style.scrollBehavior;
+    de.style.scrollBehavior = 'auto';
+    window.scrollTo(0, y);
+    setTimeout(() => { de.style.scrollBehavior = prev; }, 60);
+    return;
+  }
+  try { window.scrollTo({ top: y, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, y); }
+}
+
+function updateActive(){
+  if (!OL.heads.length) return;
+  const y = window.scrollY + 150;
+  let cur = 0;
+  OL.heads.forEach((h, i) => { if (h.getBoundingClientRect().top + window.scrollY <= y) cur = i; });
+  // 滚到底时选最后一条：末个标题可能永远到不了 150px 那条线
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = OL.heads.length - 1;
+  if (cur === OL.active) return;
+  OL.active = cur;
+  OL.items.forEach((b, i) => b.classList.toggle('on', i === cur));
+  const card = document.getElementById('olCard');
+  if (!card.classList.contains('open') && getComputedStyle(card).opacity === '0') return;
+  const list = document.getElementById('olList'), b = OL.items[cur];
+  if (!b) return;
+  const lr = list.getBoundingClientRect(), br = b.getBoundingClientRect();
+  if (br.top < lr.top) list.scrollTop -= (lr.top - br.top) + 6;
+  else if (br.bottom > lr.bottom) list.scrollTop += (br.bottom - lr.bottom) + 6;
+}
+
+let olTick = 0;
+window.addEventListener('scroll', () => {
+  if (olTick) return;
+  olTick = requestAnimationFrame(() => { olTick = 0; updateActive(); });
+}, { passive: true });
+window.addEventListener('resize', updateActive);
+// 触屏：点右侧刻度切换展开，点卡片外收起
+document.getElementById('olZone').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('olCard').classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  const card = document.getElementById('olCard');
+  if (!card.classList.contains('open')) return;
+  if (card.contains(e.target) || document.getElementById('olZone').contains(e.target)) return;
+  card.classList.remove('open');
+});
+
 async function boot(){
   const slug = getSlug();
   if (!slug) return fail('链接不完整');
@@ -241,6 +402,7 @@ async function boot(){
       catch (e) { btn.textContent = '复制失败'; }
       setTimeout(() => { btn.textContent = '复制链接'; }, 1600);
     };
+    buildOutline();
   } catch (e) {
     fail('网络错误');
   }

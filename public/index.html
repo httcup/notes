@@ -314,17 +314,13 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   max-width:min(1500px, max(93%, 840px));
   margin:0 auto;
   padding:52px clamp(16px, 2.4vw, 40px) 140px;
-  /* 大纲展开/收起时正文右侧让位是平滑位移，不是硬跳 */
-  transition:padding-right .2s cubic-bezier(.22,.61,.36,1);
 }
-/* 大纲卡片展开时给正文让出一条右侧通道，卡片只压在留白上、不再盖住文字。
-   只在「有真实 hover + 宽度够」的桌面生效（窄屏让位会把文字挤得太窄）；
-   展开带 120ms 延迟，鼠标只是扫过右边缘时正文不会跟着抽动，收起则不延迟 */
-@media (hover:hover) and (min-width:1100px){
-  body.ol-hover .doc,
-  body.outline-pinned .doc{
-    padding-right:220px;
-    transition:padding-right .2s cubic-bezier(.22,.61,.36,1) .12s;
+/* 宽屏：右侧常驻一条 250px 的「大纲通道」，正文宽度固定不变。
+   卡片展开时正好落在这条空位里 —— 既压不到字，也不会让正文突然变窄 */
+@media (min-width:1200px){
+  .doc{
+    max-width:min(1340px, calc(100% - 264px));
+    margin:0 auto 0 clamp(20px, 2.6vw, 48px);
   }
 }
 .doc-title{
@@ -528,7 +524,7 @@ body.ol-hidden .outline-zone{display:none}
   /* right 仍是 4px：保持和右边缘刻度连续的鼠标热区，否则鼠标从边缘移进卡片会闪回去；
      视觉上的间距靠 padding-right 让内容左移实现 */
   position:fixed;right:4px;top:66px;z-index:56;
-  width:240px;max-height:min(620px,calc(100vh - 116px));
+  width:210px;max-height:min(620px,calc(100vh - 116px));
   display:flex;flex-direction:column;
   padding:5px 17px 7px 9px;border:0;border-radius:14px;
   /* 底色与笔记纸面一致（--surface），浮在正文上时加一层柔和阴影分离 */
@@ -761,7 +757,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* 浮层盖在正文上，手机上看不清透明底，这里给一层毛玻璃底（仍无边框）；
      v35: 手机上卡片收窄（64vw、右缘 8px），条目文字离右侧短横线不再空一大片 */
   .outline{
-    width:min(238px,64vw);right:8px;top:60px;
+    width:min(212px,60vw);right:8px;top:60px;
     max-height:min(72vh,calc(100dvh - 150px));
     padding:6px 6px 8px 8px;border-radius:14px;
     background:rgb(var(--surface)/.97);
@@ -931,7 +927,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v37', at: '2026-11-10 08:26' };
+window.IVY_BUILD = { id: 'v38', at: '2026-11-10 08:34' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

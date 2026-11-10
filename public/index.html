@@ -354,6 +354,56 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
 .fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 5px;flex:0 0 auto}
 
+/* ---- 斜杠插入菜单（正文里输入 /） ---- */
+.slash{
+  position:fixed;z-index:78;width:256px;max-height:312px;overflow:auto;padding:5px;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));border-radius:11px;
+  box-shadow:var(--shadow-lift);opacity:0;transform:translateY(-4px) scale(.985);
+  pointer-events:none;transition:opacity .13s,transform .16s var(--spring);
+  overscroll-behavior:contain;
+}
+.slash.open{opacity:1;transform:none;pointer-events:auto}
+.slash-hd{padding:5px 8px 6px;font-size:11px;color:rgb(var(--faint));line-height:1.4}
+.slash-hd b{font-weight:600;color:rgb(var(--muted))}
+.sl-item{display:flex;align-items:center;gap:9px;width:100%;padding:6px 7px;border-radius:7px;text-align:left}
+.sl-item.on,.sl-item:hover{background:rgb(var(--hover))}
+.sl-ic{
+  width:22px;height:22px;flex:0 0 auto;display:grid;place-items:center;border-radius:6px;
+  background:rgb(var(--sunken));color:rgb(var(--muted));
+  font-size:11px;font-weight:600;font-family:var(--font-mono);line-height:1;
+}
+.sl-item.on .sl-ic,.sl-item:hover .sl-ic{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.sl-ic svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sl-tx{min-width:0;flex:1}
+.sl-tx b{display:block;font-size:13px;font-weight:450;color:rgb(var(--ink-2))}
+.sl-tx i{display:block;font-size:10.5px;font-style:normal;color:rgb(var(--faint));margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sl-key{font-family:var(--font-mono);font-size:10.5px;color:rgb(var(--faint))}
+.sl-empty{padding:11px 9px;font-size:12px;color:rgb(var(--faint));line-height:1.6}
+
+/* ---- 选中文字后的浮动工具条 ---- */
+.selbar{
+  position:fixed;z-index:82;display:flex;align-items:center;gap:1px;padding:3px;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));border-radius:9px;
+  box-shadow:var(--shadow-lift);opacity:0;transform:translateY(4px) scale(.97);
+  pointer-events:none;transition:opacity .12s,transform .14s var(--spring);
+}
+.selbar.open{opacity:1;transform:none;pointer-events:auto}
+.selbar button{
+  height:26px;min-width:26px;padding:0 7px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
+  display:flex;align-items:center;gap:4px;transition:background .12s,color .12s;
+}
+.selbar button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.selbar button b{font-size:13px;font-weight:700}
+.selbar button svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.selbar .sb-sep{width:1px;height:14px;background:rgb(var(--line));margin:0 3px;flex:0 0 auto}
+@media (max-width:640px){
+  .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
+  .slash{width:min(258px,86vw)}
+  /* 手机上顶部图标已经很挤：插入入口用工具栏里的 +，右上角不再重复放一个 */
+  .paper-actions #paInsert{display:none}
+  .paper .tabbar{padding-right:200px}
+}
+
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
 .tbl-pick{padding:5px 3px 0;user-select:none;touch-action:none}
 .tbl-grid{display:grid;grid-template-columns:repeat(10,17px);gap:3px}
@@ -976,7 +1026,8 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* 右上角图标缩小一点，并给标签栏留出它的宽度，别互相压 */
   .paper-actions{top:8px;right:8px;gap:0}
   .pa-btn{width:28px;height:28px}
-  .tabbar{padding-right:154px}
+  /* 右上角 7 个图标（含插入）占 196px，标签栏要让出这段，别压着标签 */
+  .tabbar{padding-right:206px}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
@@ -1092,6 +1143,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   </div>
 </div>
 <div class="popover" id="popover"></div>
+<div class="slash" id="slashMenu"></div>
+<div class="selbar" id="selBar"></div>
 <input type="color" id="hlColorIn" class="hl-color-in" value="#f59e0b" tabindex="-1" aria-hidden="true">
 <div class="export-pop" id="exportPop"></div>
 <div class="overlay" id="syncOverlay"></div>
@@ -1140,7 +1193,12 @@ const ICONS = {
   bell:'<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10 18a2 2 0 0 0 4 0"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   todo:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7 9.5 1.6 1.6L11.5 8"/><path d="M14 9.5h4M7 15.5h11"/>',
-  link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>'
+  link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
+  heading:'<path d="M6 5v14M18 5v14M6 12h12"/>',
+  table:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M9.5 10v9M15 10v9"/>',
+  chart:'<path d="M4 4v16h16"/><path d="M8 16v-3.5M12 16V9M16 16v-6"/>',
+  quote:'<path d="M9.5 7H6a1.5 1.5 0 0 0-1.5 1.5V12h4.5V7z"/><path d="M19.5 7H16a1.5 1.5 0 0 0-1.5 1.5V12H19V7z"/><path d="M4.5 12v2.5A1.5 1.5 0 0 0 6 16h1.5M14.5 12v2.5A1.5 1.5 0 0 0 16 16h1.5"/>',
+  insert:'<path d="M12 5v14M5 12h14"/>'
 };
 function ic(name, cls){
   const p = ICONS[name] || '';
@@ -1148,7 +1206,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v40', at: '2026-11-10 09:18' };
+window.IVY_BUILD = { id: 'v41', at: '2026-11-10 09:34' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2540,12 +2598,14 @@ function renderEditor(){
   const n = S.active ? noteById(S.active) : null;
 
   paperActions.innerHTML = `
+    <button class="pa-btn pa-ins" id="paInsert" title="插入内容（⌘/ 或 Ctrl+/）">${ic('insert')}</button>
     <button class="pa-btn pa-ol" id="paOutline" title="大纲">${ic('outline')}</button>
     <button class="pa-btn" id="paTodo" title="本篇待办">${ic('todo')}</button>
     <button class="pa-btn" id="paAttach" title="从媒体库选择，或上传新文件">${ic('paperclip')}</button>
     <button class="pa-btn" id="paShare" title="分享 / 复制 / 导出">${ic('share')}</button>
     <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
+  $('#paInsert').onclick=(e)=>openInsertMenu(e.currentTarget);
   $('#paOutline').onclick=()=>toggleOutlinePanel();
   $('#paTodo').onclick=(e)=>openTodoPop(e.currentTarget);
   $('#paAttach').onclick=()=>pickFiles();
@@ -2795,6 +2855,7 @@ function countWords(md){
 
 /* ---- 标题下的 Markdown 工具条 ---- */
 const FMT_GROUPS = [
+  [['insert','+','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
   [['code','代码','行内代码 / 代码块'],['list','列表','列表样式：无序 / 有序 / 待办'],['quote','引用','引用块']],
@@ -2817,7 +2878,8 @@ function renderFmtBar(){
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
     b.onclick = ()=>{
       const k = b.dataset.fmt;
-      if(k==='h') openHeadingMenu(b);
+      if(k==='insert') openInsertMenu(b);
+      else if(k==='h') openHeadingMenu(b);
       else if(k==='list') openListMenu(b);
       else if(k==='mark') openHighlightMenu(b);
       else if(k==='emoji') openEmojiMenu(b);
@@ -2847,6 +2909,422 @@ function openListMenu(anchor){
     ['待办列表','- [ ]','','',()=>applyFormat('todo')]
   ], { align:'left' });
 }
+
+/* ========== 插入菜单：正文里输入 / ，或点右上角 +（⌘/） ==========
+   同一份清单供两处使用：斜杠菜单（可输入筛选、支持拼音首字母）和 + 按钮的 popover */
+/* 从 + 菜单插「块级」内容时，先落到一个空块：
+   即时渲染里当前块有字就新建一块，源码模式就在光标后补一个换行——
+   否则会把正在看的这一段直接变成标题/待办，改掉人原有的内容 */
+function insertBlockAtCaret(){
+  let ta = document.activeElement;
+  if(!(ta && ta.classList && ta.classList.contains('blk-src'))){
+    ta = curMode() === 'live' ? ensureLiveInput() : document.getElementById('source');
+  }
+  if(!ta) return;
+  if(curMode() === 'live' && ta.classList && ta.classList.contains('blk-src')){
+    const i = +ta.dataset.i;
+    LIVE.raws[i] = ta.value;
+    if(String(ta.value).trim()){
+      LIVE.raws.splice(i + 1, 0, '');
+      LIVE.gaps.splice(i + 1, 0, 0);
+      rebuild(i + 1, 0);
+    }else{
+      ta.focus();
+      try{ ta.setSelectionRange(0, 0); }catch(_){ }
+    }
+    return;
+  }
+  const v = ta.value;
+  let s = ta.selectionStart, e = ta.selectionEnd;
+  if(typeof s !== 'number'){ s = e = v.length; }
+  const ls = v.lastIndexOf('\n', s - 1) + 1;
+  const nl = v.indexOf('\n', s);
+  const lineEnd = nl === -1 ? v.length : nl;
+  if(!v.slice(ls, lineEnd).trim()){
+    try{ ta.setSelectionRange(ls, ls); }catch(_){ }
+    return;
+  }
+  ta.value = v.slice(0, s) + '\n' + v.slice(e);
+  try{ ta.setSelectionRange(s + 1, s + 1); }catch(_){ }
+  const n = noteById(S.active);
+  if(n) n.body = ta.value;
+}
+const INSERT_ITEMS = [
+  {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
+  {name:'二级标题', keys:['bt2','h2'], glyph:'H2', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
+  {name:'三级标题', keys:['bt3','h3'], glyph:'H3', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
+  {name:'待办', keys:['db','daiban','todo','task'], icon:'todo', desc:'- [ ] 会自动汇总到「日程」', block:1, run:()=>applyFormat('todo')},
+  {name:'日期与提醒', keys:['rq','riqi','date'], icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
+  {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再用工具栏调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
+  {name:'代码块', keys:['dmk','daimaikuai','code'], icon:'codeBlock', desc:'``` 围栏代码', block:1, run:()=>applyFormat('pre')},
+  {name:'图表', keys:['tb','tubiao','chart','mermaid'], icon:'chart', desc:'Mermaid 流程图、时序图…', block:1, run:()=>applyFormat('mermaid')},
+  {name:'笔记查询', keys:['cx','biji','bjcx','wiki'], icon:'search', desc:'[[ 链接到另一篇笔记 ]]', run:()=>applyFormat('wiki')},
+  {name:'图片和附件', keys:['tp','tupian','img','fj','fujian'], icon:'image', desc:'从媒体库选择，或上传新文件', run:()=>pickFiles()},
+  {name:'无序列表', keys:['wxlb','ul','lb'], icon:'menu', desc:'- 项目符号列表', block:1, run:()=>applyFormat('ul')},
+  {name:'有序列表', keys:['yxlb','ol'], icon:'menu', desc:'1. 编号列表', block:1, run:()=>applyFormat('ol')},
+  {name:'引用', keys:['yy','yinyong','quote'], icon:'quote', desc:'> 引用块', block:1, run:()=>applyFormat('quote')},
+  {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')}
+];
+function insertFilter(q){
+  q = String(q || '').trim().toLowerCase();
+  if(!q) return INSERT_ITEMS.slice();
+  return INSERT_ITEMS.filter(it=>{
+    if(it.name.toLowerCase().includes(q)) return true;
+    if(it.glyph && it.glyph.toLowerCase().startsWith(q)) return true;
+    return (it.keys || []).some(k=> k.startsWith(q) || (q.length > 1 && k.includes(q)));
+  });
+}
+function runInsertItem(it){
+  if(!it) return;
+  if(it.block) insertBlockAtCaret();
+  it.run();
+}
+/* + 按钮：和斜杠菜单同一个清单 */
+function openInsertMenu(anchor){
+  popover(anchor, INSERT_ITEMS.map(it=>[
+    it.name, '/' + it.keys[0], '', it.icon || '', ()=>runInsertItem(it)
+  ]), { align:'left' });
+}
+
+/* ---- 斜杠菜单 ---- */
+const SLASH = { open:false, idx:0, items:[], ta:null, start:0, end:0, q:'' };
+function slashEl(){ return document.getElementById('slashMenu'); }
+
+/* 用一个隐藏的镜像元素量出光标在 textarea 里的坐标，菜单就贴在光标下面 */
+function caretXY(ta, pos){
+  const rect = ta.getBoundingClientRect();
+  const cs = getComputedStyle(ta);
+  const mir = document.createElement('div');
+  mir.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;box-sizing:border-box;';
+  mir.style.width = Math.max(40, ta.clientWidth) + 'px';
+  ['fontFamily','fontSize','fontWeight','fontStyle','letterSpacing','lineHeight',
+   'paddingTop','paddingRight','paddingBottom','paddingLeft','textIndent','textTransform']
+    .forEach(p=>{ mir.style[p] = cs[p]; });
+  mir.textContent = ta.value.slice(0, Math.max(0, pos));
+  const sp = document.createElement('span'); sp.textContent = '\u200b';
+  mir.appendChild(sp);
+  document.body.appendChild(mir);
+  const lh = parseFloat(cs.lineHeight) || 20;
+  const x = rect.left + sp.offsetLeft - ta.scrollLeft;
+  const y = rect.top + sp.offsetTop - ta.scrollTop;
+  mir.remove();
+  return { x, y, h: lh };
+}
+/* 行首或空格后的 / 才触发（避免把网址、路径里的斜杠当成命令） */
+function slashMaybe(ta){
+  const v = ta.value;
+  const pos = ta.selectionStart;
+  if(typeof pos !== 'number'){ closeSlashMenu(); return; }
+  const before = v.slice(0, pos);
+  const m = before.match(/(^|[\s\u3000])\/([a-zA-Z0-9]*)$/);
+  if(!m){ closeSlashMenu(); return; }
+  const q = m[2];
+  if(q.length > 12){ closeSlashMenu(); return; }
+  SLASH.open = true; SLASH.ta = ta;
+  SLASH.start = before.length - q.length - 1;
+  SLASH.end = pos; SLASH.q = q;
+  SLASH.items = insertFilter(q);
+  SLASH.idx = 0;
+  paintSlash();
+}
+function closeSlashMenu(){
+  SLASH.open = false; SLASH.ta = null; SLASH.items = [];
+  const el = slashEl(); if(el){ el.classList.remove('open'); el.innerHTML = ''; }
+}
+function slItemHtml(it, on, i){
+  const glyph = it.glyph ? esc(it.glyph) : ic(it.icon || 'file');
+  return `<button class="sl-item ${on?'on':''}" data-si="${i}">
+      <span class="sl-ic">${glyph}</span>
+      <span class="sl-tx"><b>${esc(it.name)}</b><i>${esc(it.desc || '')}</i></span>
+      <span class="sl-key">/${esc(it.keys[0])}</span>
+    </button>`;
+}
+function paintSlash(){
+  const el = slashEl(); if(!el) return;
+  if(!SLASH.open){ el.classList.remove('open'); el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="slash-hd">插入 <b>/${esc(SLASH.q)}</b> · ↑↓ 选择 · 回车插入 · Esc / 空格关闭</div>` +
+    (SLASH.items.length
+      ? SLASH.items.map((it,i)=>slItemHtml(it, i===SLASH.idx, i)).join('')
+      : `<div class="sl-empty">没有匹配项。试试 <b>/bg</b> 表格、<b>/rq</b> 日期、<b>/db</b> 待办</div>`);
+  el.querySelectorAll('[data-si]').forEach(b=>{
+    b.onmousedown = ev=>ev.preventDefault();
+    b.onclick = ()=>{ const it = SLASH.items[+b.dataset.si]; if(it) pickSlash(it); };
+  });
+  el.classList.add('open');
+  const ta = SLASH.ta;
+  if(ta && ta.isConnected){
+    const tr = ta.getBoundingClientRect();
+    let px, py, lh = 20;
+    if(tr.width > 4){
+      const p = caretXY(ta, SLASH.end);
+      px = p.x; py = p.y; lh = p.h;
+    }else{
+      /* 输入框还没显示出来（比如刚切进来）→ 退到块本身的位置 */
+      const blk = ta.closest ? ta.closest('.blk') : null;
+      const br = (blk || ta).getBoundingClientRect();
+      px = br.left + 6; py = br.top; lh = 20;
+    }
+    const w = el.offsetWidth || 256, h = el.offsetHeight || 260;
+    el.style.left = Math.round(Math.max(12, Math.min(px, window.innerWidth - w - 12))) + 'px';
+    const below = py + lh + 6;
+    el.style.top = Math.round(below + h > window.innerHeight - 10 ? Math.max(10, py - h - 6) : below) + 'px';
+    const act = el.querySelector('.sl-item.on');
+    if(act){
+      const top = act.offsetTop, bot = top + act.offsetHeight;
+      if(top < el.scrollTop) el.scrollTop = top - 4;
+      else if(bot > el.scrollTop + el.clientHeight) el.scrollTop = bot - el.clientHeight + 4;
+    }
+  }
+}
+/* 斜杠菜单开着时接管方向键 / 回车 / Esc；空格只负责关掉菜单，空格本身照常输入 */
+function slashKey(e, ta){
+  if(!SLASH.open || SLASH.ta !== ta) return false;
+  if(e.key === 'ArrowDown'){ e.preventDefault(); moveSlash(1); return true; }
+  if(e.key === 'ArrowUp'){ e.preventDefault(); moveSlash(-1); return true; }
+  if(e.key === 'Enter' || e.key === 'Tab'){
+    e.preventDefault();
+    pickSlash(SLASH.items[SLASH.idx]);
+    return true;
+  }
+  if(e.key === 'Escape'){ e.preventDefault(); closeSlashMenu(); return true; }
+  if(e.key === ' '){ closeSlashMenu(); return false; }
+  return false;
+}
+function moveSlash(dir){
+  if(!SLASH.items.length) return;
+  const n = SLASH.items.length;
+  SLASH.idx = (SLASH.idx + dir + n) % n;
+  paintSlash();
+}
+function pickSlash(it){
+  const ta = SLASH.ta, s = SLASH.start, e = SLASH.end;
+  closeSlashMenu();
+  if(!it || !ta || !ta.isConnected) return;
+  /* 先把「/xx」这段查询删掉，再让格式函数在光标处插入 */
+  ta.value = ta.value.slice(0, s) + ta.value.slice(e);
+  try{ ta.setSelectionRange(s, s); }catch(_){ }
+  if(ta.classList && ta.classList.contains('blk-src')){
+    const i = +ta.dataset.i;
+    LIVE.raws[i] = ta.value;
+    growTa(ta); syncBody(); updateBlockHint(ta);
+  } else {
+    const n = noteById(S.active);
+    if(n){ n.body = ta.value; }
+  }
+  ta.focus();
+  try{ runInsertItem(it); }catch(err){ console.warn(err); }
+}
+
+/* ---- 选中文字后的浮动工具条 ---- */
+const SELBAR = { ctx:null };
+function selBarEl(){ return document.getElementById('selBar'); }
+function hideSelBar(){
+  const b = selBarEl(); if(b) b.classList.remove('open');
+}
+function selCtx(){
+  const ae = document.activeElement;
+  if(ae && ae.tagName === 'TEXTAREA' && (ae.id === 'source' || (ae.classList && ae.classList.contains('blk-src')))){
+    if(typeof ae.selectionStart === 'number' && ae.selectionEnd - ae.selectionStart >= 1){
+      return {kind:'ta', ta:ae, s:ae.selectionStart, e:ae.selectionEnd,
+        text: ae.value.slice(ae.selectionStart, ae.selectionEnd)};
+    }
+  }
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const txt = String(sel);
+  if(!txt.trim()) return null;
+  const range = sel.getRangeAt(0);
+  let node = range.commonAncestorContainer;
+  if(node.nodeType === 3) node = node.parentElement;
+  if(!node || !node.closest) return null;
+  if(node.closest('#selBar') || node.closest('#slashMenu')) return null;
+  const host = node.closest('#live .blk-view') || node.closest('#prose');
+  if(!host) return null;
+  return {kind:'dom', sel, range, host, text:txt};
+}
+function buildSelBar(){
+  const bar = selBarEl();
+  if(!bar || bar._built) return;
+  bar.innerHTML = `
+    <button data-sb="b" title="加粗（**文字**）"><b>B</b></button>
+    <button data-sb="i" title="斜体（*文字*）"><b style="font-style:italic;font-family:var(--font-serif)">I</b></button>
+    <button data-sb="mark" title="高亮（==文字==）">高亮</button>
+    <button data-sb="link" title="加链接">${ic('link')}链接</button>
+    <span class="sb-sep"></span>
+    <button data-sb="h2" title="设为二级标题">H2</button>
+    <button data-sb="h1" title="设为一级标题">H1</button>`;
+  bar.querySelectorAll('[data-sb]').forEach(b=>{
+    b.onmousedown = e=>e.preventDefault();          // 别把选区弄丢
+    b.onclick = ()=>applySelFormat(b.dataset.sb);
+  });
+  bar._built = true;
+}
+function maybeShowSelBar(){
+  if(S.view !== 'notes'){ hideSelBar(); return; }
+  const bar = selBarEl(); if(!bar) return;
+  const c = selCtx();
+  if(!c){ hideSelBar(); return; }
+  SELBAR.ctx = c;
+  buildSelBar();
+  let r = null;
+  if(c.kind === 'ta'){
+    const p = caretXY(c.ta, c.e);
+    r = { left:p.x, right:p.x, top:p.y, bottom:p.y + p.h, width:0 };
+  } else {
+    const rects = c.range.getClientRects();
+    r = rects.length ? rects[0] : c.range.getBoundingClientRect();
+  }
+  if(!r || (!r.width && !r.height && !r.top)){ hideSelBar(); return; }
+  bar.classList.add('open');
+  const bw = bar.offsetWidth || 210, bh = bar.offsetHeight || 32;
+  const left = Math.max(10, Math.min(r.left, window.innerWidth - bw - 10));
+  let top = r.top - bh - 8;
+  if(top < 8) top = r.bottom + 8;
+  bar.style.left = Math.round(left) + 'px';
+  bar.style.top = Math.round(top) + 'px';
+}
+/* 把 markdown 摊平成「纯文本 + 每个字对应的原文下标」，用于把 DOM 选区映射回源码 */
+function plainMapOf(raw){
+  let plain = '', map = [];
+  const push = (ch, ri)=>{ plain += ch; map.push(ri); };
+  let i = 0, lineStart = true;
+  while(i < raw.length){
+    if(lineStart){
+      const m = raw.slice(i).match(/^(#{1,6}\s+|>\s+|-\s\[[ xX]\]\s+|[-*+]\s+|\d+\.\s+)/);
+      if(m){ i += m[0].length; lineStart = false; continue; }
+      lineStart = false;
+    }
+    const ch = raw[i];
+    if(ch === '\n'){ push('\n', i); i++; lineStart = true; continue; }
+    const two = raw.slice(i, i+2);
+    if(two === '**' || two === '__' || two === '~~' || two === '=='){ i += 2; continue; }
+    if(ch === '*' || ch === '_' || ch === '`' || ch === '=' ){ i++; continue; }
+    if(ch === '['){ i++; continue; }
+    if(ch === ']'){
+      if(raw[i+1] === '('){ const close = raw.indexOf(')', i+2); i = close < 0 ? i+1 : close+1; }
+      else i++;
+      continue;
+    }
+    if(ch === '\\' && i+1 < raw.length){ push(raw[i+1], i+1); i += 2; continue; }
+    push(ch, i); i++;
+  }
+  return {plain, map};
+}
+function mapSelToRaw(raw, text){
+  const target = String(text || '').replace(/\s+/g, '');
+  if(!target) return null;
+  const {plain, map} = plainMapOf(raw);
+  let chars = '', idx = [];
+  for(let i=0;i<plain.length;i++){
+    if(!/\s/.test(plain[i])){ chars += plain[i]; idx.push(i); }
+  }
+  let p = chars.indexOf(target);
+  if(p < 0 && target.length > 20) p = chars.indexOf(target.slice(0, 20));
+  if(p < 0) return null;
+  const len = Math.min(target.length, chars.length - p);
+  if(len <= 0) return null;
+  return { start: map[idx[p]], end: map[idx[p + len - 1]] + 1, partial: len < target.length };
+}
+function applyInlineRaw(raw, rg, kind){
+  const s = rg.start, e = rg.end;
+  if(s >= e) return raw;
+  const pre = raw.slice(Math.max(0, s-2), s), post = raw.slice(e, e+2);
+  if(kind === 'b'){
+    if(pre === '**' && post === '**') return raw.slice(0, s-2) + raw.slice(s, e) + raw.slice(e+2);
+    return raw.slice(0, s) + '**' + raw.slice(s, e) + '**' + raw.slice(e);
+  }
+  if(kind === 'i'){
+    if(pre === '*' && post === '*' && pre !== '**') return raw.slice(0, s-1) + raw.slice(s, e) + raw.slice(e+1);
+    return raw.slice(0, s) + '*' + raw.slice(s, e) + '*' + raw.slice(e);
+  }
+  if(kind === 'mark'){
+    if(pre === '==' && post === '==') return raw.slice(0, s-2) + raw.slice(s, e) + raw.slice(e+2);
+    return raw.slice(0, s) + '==' + raw.slice(s, e) + '==' + raw.slice(e);
+  }
+  if(kind === 'link'){
+    return raw.slice(0, s) + '[' + raw.slice(s, e) + '](https://)' + raw.slice(e);
+  }
+  return raw;
+}
+function headingRaw(raw, lvl){
+  const bare = String(raw || '').replace(/^\s*#{1,6}\s+/, '');
+  return '#'.repeat(lvl) + ' ' + bare;
+}
+function selBarToast(kind){
+  if(kind === 'b') toast('已加粗');
+  else if(kind === 'i') toast('已设为斜体');
+  else if(kind === 'mark') toast('已高亮');
+  else if(kind === 'link') toast('已加链接，改掉 https:// 就行');
+  else toast('已设为' + (kind === 'h1' ? '一' : '二') + '级标题');
+}
+function applySelFormat(kind){
+  const c = SELBAR.ctx;
+  if(!c) return;
+  hideSelBar();
+  if(c.kind === 'ta'){
+    c.ta.focus();
+    try{ c.ta.setSelectionRange(c.s, c.e); }catch(_){ }
+    applyFormat(kind);
+    return;
+  }
+  /* 渲染区：把 DOM 选区还原成原文区间再改 */
+  const blk = c.host.classList.contains('blk-view') ? c.host.closest('.blk') : null;
+  const isHeading = kind === 'h1' || kind === 'h2';
+  if(blk){
+    const i = +blk.dataset.i;
+    let raw = LIVE.raws[i] || '';
+    if(isHeading){
+      LIVE.raws[i] = headingRaw(raw, +kind[1]);
+      paintLive(); syncBody();
+      selBarToast(kind);
+      return;
+    }
+    const rg = mapSelToRaw(raw, c.text);
+    if(!rg){ toast('这段文字夹着格式，切到源码模式改更稳'); return; }
+    const out = applyInlineRaw(raw, rg, kind);
+    if(out === raw){ toast('没有变化'); return; }
+    LIVE.raws[i] = out;
+    paintLive(); syncBody();
+    selBarToast(kind);
+    return;
+  }
+  const n = noteById(S.active);
+  if(!n) return;
+  if(isHeading){
+    const rg = mapSelToRaw(n.body, c.text);
+    if(!rg){ toast('定位不到这段文字，切到源码模式改更稳'); return; }
+    const ls = n.body.lastIndexOf('\n', rg.start - 1) + 1;
+    let le = n.body.indexOf('\n', rg.end);
+    if(le === -1) le = n.body.length;
+    n.body = n.body.slice(0, ls) + headingRaw(n.body.slice(ls, le), +kind[1]) + n.body.slice(le);
+  } else {
+    const rg = mapSelToRaw(n.body, c.text);
+    if(!rg){ toast('定位不到这段文字，切到源码模式改更稳'); return; }
+    n.body = applyInlineRaw(n.body, rg, kind);
+  }
+  n.updatedAt = Date.now();
+  const src = document.getElementById('source');
+  if(src && src.value !== n.body) src.value = n.body;
+  renderProse(); renderOutline(); renderMeta(); save();
+  selBarToast(kind);
+}
+/* 选区变了就显隐工具条（keyup / mouseup 兜底，兼容部分浏览器 textarea 不发 selectionchange） */
+let selBarTimer = 0;
+function queueSelBar(delay){
+  clearTimeout(selBarTimer);
+  selBarTimer = setTimeout(maybeShowSelBar, delay == null ? 140 : delay);
+}
+document.addEventListener('selectionchange', ()=>queueSelBar(150));
+document.addEventListener('mouseup', ()=>queueSelBar(60));
+document.addEventListener('keyup', (e)=>{
+  if(e.shiftKey || e.key === 'Shift' || /^Arrow/.test(e.key)) queueSelBar(60);
+});
+document.addEventListener('mousedown', (e)=>{
+  if(e.target && e.target.closest && (e.target.closest('#selBar') || e.target.closest('#slashMenu'))) return;
+  hideSelBar();
+  if(!(e.target && e.target.closest && e.target.closest('.blk-src, #source'))) closeSlashMenu();
+}, true);
+document.addEventListener('scroll', ()=>{ hideSelBar(); }, true);
 
 /* 代码：行内代码 / 代码块二选一 */
 function openCodeMenu(anchor){
@@ -2921,6 +3399,8 @@ function openChartMenu(anchor){
 
 /* Markdown 与快捷键一览 */
 const HELP_MD = [
+  ['插入菜单', '行首或空格后输入 /', '弹窗里可继续输入筛选，支持拼音首字母：/bg 表格、/rq 日期、/db 待办；空格或 Esc 关闭'],
+  ['选中工具条', '用鼠标选中文字', '上方浮出工具条：加粗、斜体、高亮、加链接、设为标题'],
   ['标题', '# 一级 / ## 二级 …', '一到六级，行首加 # 和空格'],
   ['加粗 / 斜体', '**粗** *斜* ~~删除~~', '删除线用两个波浪号'],
   ['高亮', '==文字==', '后面可跟 {.yellow} 或 {c:#f59e0b} 换色'],
@@ -2940,6 +3420,7 @@ const HELP_MD = [
 ];
 const HELP_KEYS = [
   ['搜索笔记', '⌘K'], ['新建笔记', '⌘N'], ['收起 / 展开书架', '⌘\\'],
+  ['插入菜单', '⌘/ 或 Ctrl+/'], ['输入斜杠命令', '/'],
   ['切换编辑模式', '⌘E'], ['源码 / 即时渲染', '⌘⇧E'], ['关闭当前标签', '⌥W'],
   ['关闭浮层', 'Esc'], ['新建块', 'Enter'], ['块内换行', '⇧Enter'],
   ['删除空块', 'Backspace'], ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
@@ -3227,6 +3708,13 @@ function applyFormat(kind, opt){
       break;
     }
     case 'code': wrapSel('`','`','代码'); break;
+    case 'due': {
+      // 日期与提醒：插一个今天 9 点的提醒标记，用户接着改成想要的时间
+      const ins = '@今天 9点';
+      v = v.slice(0,s) + ins + v.slice(e);
+      setRange(s, s + ins.length);
+      break;
+    }
     case 'ul': prefixLines('- '); break;
     case 'ol': prefixLines('1. '); break;
     case 'todo': prefixLines('- [ ] '); break;
@@ -3802,10 +4290,11 @@ function blockEl(raw, i, only){
     // 不阻止默认行为：允许像普通网页一样拖过多个块选中文字
     SELDOWN = { i, x:e.clientX, y:e.clientY };
   });
-  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); updateBlockHint(ta); });
+  ta.addEventListener('input', ()=>{ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); detectWiki(ta); updateBlockHint(ta); slashMaybe(ta); });
   ta.addEventListener('keydown', e=>onBlockKey(e, i, ta, el));
   ta.addEventListener('blur', ()=>{
     closeWikiPop();
+    closeSlashMenu();
     if(HOLD_BLUR) return;   // 正在取色，先留着这一块的编辑态
     if(el.isConnected && el.classList.contains('editing')) commitBlock(i);
     // 只是点了工具栏加了前缀、什么都没写：别把它一直留在正文里
@@ -4015,6 +4504,8 @@ function pickWiki(){
 
 function onBlockKey(e, i, ta, el){
   if(e.isComposing || e.keyCode===229) return;
+
+  if(slashKey(e, ta)) return;
 
   if(WIKI.open && WIKI.ta === ta){
     if(e.key==='ArrowDown' || e.key==='ArrowUp'){
@@ -4273,11 +4764,14 @@ function wireEditor(n){
     n.body = src.value; n.updatedAt = Date.now();
     grow(src); renderMeta(); save();
     if(curMode()==='split'){ livePreviewSoon(); }
+    slashMaybe(src);
   });
   src.addEventListener('keydown', e=>{
+    if(slashKey(e, src)) return;
     if(e.key==='Tab'){ e.preventDefault(); const s=src.selectionStart,en=src.selectionEnd;
       src.setRangeText('  ', s, en, 'end'); n.body = src.value; save(); }
   });
+  src.addEventListener('blur', ()=>closeSlashMenu());
   src.addEventListener('paste', handlePaste);
   doc.addEventListener('dragover', e=>e.preventDefault());
   doc.addEventListener('drop', handleDrop);
@@ -5655,13 +6149,14 @@ document.addEventListener('keydown', e=>{
     if(e.key==='ArrowUp'){ e.preventDefault(); paletteSel = Math.max(paletteSel-1, 0); paintPaletteSel(); return; }
     if(e.key==='Enter'){ e.preventDefault(); paletteRows[paletteSel]?.f(); return; }
   }
+  if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu(document.querySelector('#fmtBar [data-fmt="insert"]')); return; }
   if(meta && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
   if(meta && e.key.toLowerCase()==='n'){ e.preventDefault(); newNote(); return; }
   if(meta && e.key==='\\'){ e.preventDefault(); toggleShelf(); return; }
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ $('#popover').classList.remove('open'); closeExportPanel(); if(syncPanelOpen) closeSyncPanel(); }
+  if(e.key==='Escape'){ $('#popover').classList.remove('open'); closeExportPanel(); closeSlashMenu(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));

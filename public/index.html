@@ -512,6 +512,16 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .rc-select:focus{outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09)}
 .rc-note{font-size:11px;line-height:1.6;color:rgb(var(--faint));margin-top:7px}
 .rc-note a{color:rgb(var(--ivy-ink));cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.rc-src{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;background:rgb(var(--sunken));margin-top:7px}
+.rc-src-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rc-src-m b{font-size:12px;font-weight:500;color:rgb(var(--ink))}
+.rc-src-m span{font-size:10.5px;color:rgb(var(--faint));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-add{display:flex;gap:6px;margin-top:8px}
+.rc-input{
+  flex:1;min-width:0;height:33px;padding:0 10px;border-radius:9px;font-size:12px;
+  border:.5px solid rgb(var(--line));background:rgb(var(--sunken));color:rgb(var(--ink));
+}
+.rc-input:focus{outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09)}
 .rc-link{position:relative;padding-right:30px}
 .rc-copy{
   position:absolute;right:5px;top:6px;width:24px;height:24px;border-radius:6px;
@@ -698,6 +708,14 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsi-bell svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media (hover:none){ .tsi-bell{opacity:.6} }
 .tsh-empty{padding:26px 10px;text-align:center;font-size:12px;color:rgb(var(--faint));line-height:1.9}
+/* 苹果日历那一组：只读条目，用一个小圆点代替勾选框 */
+.ics-row{padding-left:21px}
+.ics-dot{width:7px;height:7px;border-radius:50%;background:rgb(var(--ivy));opacity:.75;flex:0 0 auto;margin-top:7px}
+.ics-pop{min-width:190px;max-width:260px;padding:2px 2px 4px}
+.ics-pop-t{font-size:13px;font-weight:600;color:rgb(var(--ink));margin-bottom:6px;line-height:1.45;word-break:break-word}
+.ics-pop-r{display:flex;align-items:flex-start;gap:6px;font-size:11.5px;color:rgb(var(--muted));line-height:1.6;margin-top:3px}
+.ics-pop-r svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.7;flex:0 0 auto;margin-top:2px}
+.ics-pop-n{margin-top:8px;font-size:10.5px;color:rgb(var(--faint));line-height:1.6}
 .tsh-sub{display:flex;align-items:center;gap:7px;margin:10px 6px 0;padding:8px;border-radius:8px;font-size:12px;color:rgb(var(--muted));text-align:left}
 .tsh-sub:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .tsh-sub svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;flex:0 0 auto}
@@ -1051,11 +1069,21 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 .media-empty svg{width:32px;height:32px;stroke:rgb(var(--faint));fill:none;stroke-width:1.4;opacity:.7}
 .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:18px}
-.media-card{border-radius:10px;overflow:hidden;border:.5px solid rgb(var(--line));background:rgb(var(--sunken));transition:transform .2s var(--spring),box-shadow .2s}
+.media-card{position:relative;border-radius:10px;overflow:hidden;border:.5px solid rgb(var(--line));background:rgb(var(--sunken));transition:transform .2s var(--spring),box-shadow .2s;cursor:pointer}
 .media-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-float)}
 .media-thumb{aspect-ratio:4/3;display:grid;place-items:center;font-size:11px;color:rgb(var(--faint))}
 .media-thumb img{width:100%;height:100%;object-fit:cover}
-.media-name{padding:7px 9px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgb(var(--surface))}
+.media-name{padding:7px 26px 7px 9px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgb(var(--surface))}
+.media-del{
+  position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:7px;
+  display:grid;place-items:center;background:rgb(var(--surface)/.92);color:rgb(var(--muted));
+  box-shadow:0 1px 4px rgb(0 0 0 / .16);opacity:0;transform:scale(.9);
+  transition:opacity .14s,transform .14s var(--spring),background .14s,color .14s;
+}
+.media-del svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.media-card:hover .media-del,.media-card:focus-within .media-del{opacity:1;transform:none}
+.media-del:hover{background:rgb(var(--danger));color:#fff}
+@media (hover:none){ .media-del{opacity:1;transform:none} }
 
 /* ============ graph ============ */
 #graphWrap{position:absolute;inset:0;overflow:hidden;cursor:grab}
@@ -1401,7 +1429,9 @@ const ICONS = {
   codeBlock:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m8.5 9.5-2 2.5 2 2.5M15.5 9.5l2 2.5-2 2.5"/>',
   bell:'<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10 18a2 2 0 0 0 4 0"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  todo:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m7 9.5 1.6 1.6L11.5 8"/><path d="M14 9.5h4M7 15.5h11"/>',
+  notebook:'<rect x="6" y="3" width="13.2" height="18" rx="2.2"/><path d="M6 7.6H3.4M6 12H3.4M6 16.4H3.4"/><path d="M9.8 8h5.8M9.8 11.4h5.8"/><path d="M4.7 3v18"/>',
+  folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
+  todo:'<circle cx="6.4" cy="6.4" r="2.7"/><path d="m5.3 6.4.9.9 1.7-1.9"/><circle cx="6.4" cy="12" r="2.7"/><circle cx="6.4" cy="17.6" r="2.7"/><path d="M11.6 6.4h8.6M11.6 12h8.6M11.6 17.6h8.6"/>',
   link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
   heading:'<path d="M6 5v14M18 5v14M6 12h12"/>',
   table:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M9.5 10v9M15 10v9"/>',
@@ -1418,7 +1448,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v49', at: '2026-11-10 11:32' };
+window.IVY_BUILD = { id: 'v50', at: '2026-11-10 11:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2055,7 +2085,7 @@ function bindShelf(){
     const k = 's' + b.dataset.tsg;
     S.todoFolded[k] = !S.todoFolded[k]; save(); renderShelf();
   });
-  shelfBody.querySelectorAll('.tsi').forEach(el=>{
+  shelfBody.querySelectorAll('.tsi[data-tsi]').forEach(el=>{
     let t; try{ t = JSON.parse(el.dataset.tsi); }catch(e){ return; }
     const cb = el.querySelector('[data-tsi-cb]');
     if(cb){
@@ -2078,6 +2108,16 @@ function bindShelf(){
   if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
   const hsw = document.getElementById('headDoneSw');
   if(hsw) hsw.onchange = ()=>{ S.todoShowDoneToday = hsw.checked; save(); renderShelf(); };
+  /* ---- 来自苹果日历（只读，不能勾） ---- */
+  shelfBody.querySelectorAll('[data-icsg]').forEach(b=>b.onclick=()=>{
+    S.icsFolded = !S.icsFolded; save(); renderShelf();
+  });
+  shelfBody.querySelectorAll('[data-icsev]').forEach(el=>{
+    el.onclick = ()=>{
+      const ev = icsAllEvents()[+el.dataset.icsev];
+      if(ev) openIcsPop(el, ev);
+    };
+  });
   const ics = document.getElementById('todoIcs');
   if(ics) ics.onclick = ()=>openRemindCenter();
 }
@@ -2537,6 +2577,7 @@ function todoShelf(){
     body += group('m'+k, y + '年' + (+m) + '月', g.byMonth[k]);
   });
   body += group('none', '没有日期', g.none);
+  body += icsShelfHtml();
 
   return `<div class="todo-shelf">
     <div class="tsh-meta">${c.open} 项待办 · 今天 ${c.today} 项 · 逾期 ${c.late} 项</div>
@@ -2691,6 +2732,260 @@ function loadFeedCache(){
   try{ return JSON.parse(localStorage.getItem(FEED_STORE) || '{}') || {}; }catch(e){ return {}; }
 }
 function saveFeedCache(){ try{ localStorage.setItem(FEED_STORE, JSON.stringify(FEED || {})); }catch(e){} }
+
+/* ---------- 苹果日历（公开共享的 .ics）→ 只读进日程侧栏 ---------- */
+const ICS_STORE = 'ivy.icsrc.v1';
+const ICS_DAY = 86400000;
+const ICS_WINDOW = 45 * ICS_DAY;          // 往后看 45 天
+let ICAL = loadIcsCache();
+let icsBusy = false;
+
+function loadIcsCache(){
+  try{
+    const o = JSON.parse(localStorage.getItem(ICS_STORE) || 'null');
+    if(o && Array.isArray(o.sources)) return o;
+  }catch(e){}
+  return { sources: [] };
+}
+function saveIcsCache(){ try{ localStorage.setItem(ICS_STORE, JSON.stringify(ICAL)); }catch(e){} }
+function icsSources(){ return (ICAL && ICAL.sources) || []; }
+function icsAllEvents(){
+  const out = [];
+  icsSources().forEach(s=>{
+    if(s.on === false) return;
+    (s.events || []).forEach(ev=>out.push(Object.assign({ srcId:s.id, cal:s.name || '苹果日历' }, ev)));
+  });
+  out.sort((a, b)=> a.start - b.start);
+  return out;
+}
+function addIcsSource(name, url){
+  const clean = String(url || '').trim().replace(/^webcal:\/\//i, 'https://');
+  const s = { id:'c' + Date.now().toString(36), name:(name || '').trim() || '苹果日历', url:clean, on:true, lastSync:0, events:[] };
+  ICAL.sources = icsSources().filter(x=>x.url !== clean).concat([s]);
+  saveIcsCache();
+  return s;
+}
+function removeIcsSource(id){
+  ICAL.sources = icsSources().filter(x=>x.id !== id);
+  saveIcsCache();
+}
+/* ---- ICS 解析：时间、时区、重复全在前端算，服务器只把原文拉回来 ---- */
+function icsUnfold(t){
+  return String(t || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '');
+}
+function icsUnesc(s){
+  return String(s || '').replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+}
+function icsProp(line){
+  const i = line.indexOf(':');
+  if(i <= 0) return null;
+  const head = line.slice(0, i), value = line.slice(i + 1);
+  const seg = head.split(';');
+  const name = (seg.shift() || '').toUpperCase();
+  const params = {};
+  seg.forEach(p=>{ const j = p.indexOf('='); if(j > 0) params[p.slice(0, j).toUpperCase()] = p.slice(j + 1).replace(/^"|"$/g, ''); });
+  return { name, params, value };
+}
+function icsTzOffset(ts, tz){
+  try{
+    const dtf = new Intl.DateTimeFormat('en-US', { timeZone:tz, hour12:false,
+      year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const p = {};
+    dtf.formatToParts(new Date(ts)).forEach(x=>{ if(x.type !== 'literal') p[x.type] = x.value; });
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute, +p.second);
+    return asUTC - ts;
+  }catch(e){ return 0; }
+}
+function icsZoned(y, mo, d, h, mi, s, tz){
+  const naive = Date.UTC(y, mo - 1, d, h, mi, s || 0);
+  if(!tz) return naive;
+  const off = icsTzOffset(naive, tz);
+  let t = naive - off;
+  const off2 = icsTzOffset(t, tz);
+  if(off2 !== off) t = naive - off2;
+  return t;
+}
+function icsDate(p){
+  if(!p) return null;
+  const v = String(p.value || '').trim();
+  if(!v) return null;
+  if(p.params.VALUE === 'DATE' || /^\d{8}$/.test(v)){
+    if(!/^\d{8}$/.test(v)) return null;
+    return { ts: new Date(+v.slice(0, 4), +v.slice(4, 6) - 1, +v.slice(6, 8)).getTime(), allDay:true };
+  }
+  const m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/);
+  if(!m) return null;
+  const [, Y, Mo, D, H, Mi, S, Z] = m;
+  if(Z) return { ts: Date.UTC(+Y, +Mo - 1, +D, +H, +Mi, +S), allDay:false };
+  if(p.params.TZID) return { ts: icsZoned(+Y, +Mo, +D, +H, +Mi, +S, p.params.TZID), allDay:false };
+  return { ts: new Date(+Y, +Mo - 1, +D, +H, +Mi, +S).getTime(), allDay:false };
+}
+function icsRRule(s){
+  const o = {};
+  String(s || '').split(';').forEach(kv=>{ const j = kv.indexOf('='); if(j > 0) o[kv.slice(0, j).toUpperCase()] = kv.slice(j + 1); });
+  return o;
+}
+const ICS_WD = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };
+/* 把一条事件按 RRULE 摊到 [from, to] 窗口里 */
+function icsExpand(ev, from, to){
+  const out = [];
+  const start = ev.start;
+  const dur = Math.max(0, (ev.end || ev.start) - ev.start);
+  const r = ev.rrule ? icsRRule(ev.rrule) : null;
+  if(!r){
+    if(start + dur >= from && start <= to){
+      out.push({ uid:ev.uid, title:ev.title, start, end:start + dur, allDay:ev.allDay, location:ev.location });
+    }
+    return out;
+  }
+  const interval = Math.max(1, parseInt(r.INTERVAL || '1', 10) || 1);
+  const until = r.UNTIL ? ((icsDate({ value:r.UNTIL, params:{} }) || {}).ts || 0) : 0;
+  const count = r.COUNT ? parseInt(r.COUNT, 10) : 0;
+  const byday = r.BYDAY ? String(r.BYDAY).split(',').map(x=> ICS_WD[String(x).slice(-2).toUpperCase()]).filter(x=> x !== undefined) : null;
+  const bymd = r.BYMONTHDAY ? String(r.BYMONTHDAY).split(',').map(Number) : null;
+  const s0 = new Date(start);
+  const startDay = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate()).getTime();
+  const hh = s0.getHours(), mi = s0.getMinutes(), ss = s0.getSeconds();
+  const freq = String(r.FREQ || '').toUpperCase();
+  const baseWd = new Date(startDay).getDay();
+  const fromDay = Math.floor((from - startDay) / ICS_DAY) - 1;
+  const toDay = Math.ceil((to - startDay) / ICS_DAY) + 1;
+  let n = 0;
+  for(let k = Math.max(0, fromDay); k <= toDay && k < 3000; k++){
+    const dayTs = startDay + k * ICS_DAY;
+    const d = new Date(dayTs);
+    let hit = false, idx = 0;
+    if(freq === 'DAILY'){ idx = k; hit = (k % interval === 0); }
+    else if(freq === 'WEEKLY'){
+      const wk = Math.floor(k / 7), wd = d.getDay();
+      idx = wk;
+      hit = (wk % interval === 0) && (byday ? byday.indexOf(wd) >= 0 : wd === baseWd);
+    }
+    else if(freq === 'MONTHLY'){
+      const months = (d.getFullYear() - s0.getFullYear()) * 12 + (d.getMonth() - s0.getMonth());
+      idx = months;
+      const dom = (bymd && bymd.length) ? bymd.indexOf(d.getDate()) >= 0 : d.getDate() === s0.getDate();
+      hit = months >= 0 && (months % interval === 0) && dom;
+    }
+    else if(freq === 'YEARLY'){
+      const years = d.getFullYear() - s0.getFullYear();
+      idx = years;
+      hit = years >= 0 && (years % interval === 0) && d.getMonth() === s0.getMonth() && d.getDate() === s0.getDate();
+    }
+    if(!hit) continue;
+    if(count && idx >= count) continue;
+    const ts = dayTs + hh * 3600000 + mi * 60000 + ss * 1000;
+    if(until && ts > until) continue;
+    if(ts + dur < from || ts > to) continue;
+    out.push({ uid:ev.uid, title:ev.title, start:ts, end:ts + dur, allDay:ev.allDay, location:ev.location, recurring:true });
+    if(++n > 200) break;
+  }
+  return out;
+}
+function icsParse(text){
+  const raws = [];
+  let cur = null;
+  icsUnfold(text).split('\n').forEach(raw=>{
+    const line = raw.trim();
+    if(!line) return;
+    if(/^BEGIN:VEVENT$/i.test(line)){ cur = {}; return; }
+    if(/^END:VEVENT$/i.test(line)){ if(cur) raws.push(cur); cur = null; return; }
+    if(!cur) return;
+    const p = icsProp(line);
+    if(!p) return;
+    if(p.name === 'SUMMARY') cur.title = icsUnesc(p.value);
+    else if(p.name === 'UID') cur.uid = p.value;
+    else if(p.name === 'LOCATION') cur.location = icsUnesc(p.value);
+    else if(p.name === 'STATUS') cur.status = String(p.value || '').toUpperCase();
+    else if(p.name === 'RRULE') cur.rrule = p.value;
+    else if(p.name === 'DTSTART') cur.dtStart = icsDate(p);
+    else if(p.name === 'DTEND') cur.dtEnd = icsDate(p);
+  });
+  const now = Date.now();
+  const from = now - ICS_DAY, to = now + ICS_WINDOW;
+  const out = [];
+  raws.forEach(r=>{
+    if(!r.dtStart || r.status === 'CANCELLED') return;
+    const ev = {
+      uid: r.uid || ('e' + r.dtStart.ts),
+      title: String(r.title || '（无标题日程）').trim(),
+      start: r.dtStart.ts,
+      end: (r.dtEnd && r.dtEnd.ts) || r.dtStart.ts,
+      allDay: !!r.dtStart.allDay,
+      location: r.location || '',
+      rrule: r.rrule || ''
+    };
+    icsExpand(ev, from, to).forEach(x=>out.push(x));
+  });
+  out.sort((a, b)=> a.start - b.start);
+  return out.slice(0, 800);
+}
+async function icsSync(force){
+  if(icsBusy) return;
+  const list = icsSources().filter(s=> s.on !== false);
+  if(!list.length || !isConnected()) return;
+  icsBusy = true;
+  try{
+    for(const s of list){
+      if(!force && s.lastSync && Date.now() - s.lastSync < 20 * 60000) continue;
+      try{
+        const r = await fetch('/api/ics?u=' + encodeURIComponent(s.url), { headers: authHeaders(false) });
+        if(!r.ok){
+          const d = await r.json().catch(()=>({}));
+          s.error = d.error || ('HTTP ' + r.status);
+          continue;
+        }
+        s.events = icsParse(await r.text());
+        s.lastSync = Date.now();
+        s.error = '';
+        saveIcsCache();
+      }catch(e){ s.error = e.message || '拉取失败'; }
+    }
+  }finally{ icsBusy = false; }
+  if(S.view === 'todo'){ renderShelf(); }
+}
+/* 侧栏里的「来自苹果日历」分组：只读，点开看详情 */
+function icsShelfHtml(){
+  const list = icsAllEvents();
+  if(!list.length) return '';
+  const folded = !!S.icsFolded;
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const rows = list.slice(0, 40).map((ev, i)=>{
+    const d = new Date(ev.start);
+    const idx = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - dayStart.getTime()) / ICS_DAY);
+    const dayTxt = idx === 0 ? '' : (idx === 1 ? '明天' : (d.getMonth() + 1) + '月' + d.getDate() + '日');
+    const time = ev.allDay ? '全天' : pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    return `<div class="tsi ics-row" data-icsev="${i}" title="${esc(ev.location || ev.cal)}">
+      <span class="ics-dot"></span>
+      <div class="m">
+        <span class="t">${esc(ev.title)}</span>
+        <span class="src">${esc([dayTxt, ev.cal].filter(Boolean).join(' · '))}</span>
+      </div>
+      <span class="tm">${time}</span>
+    </div>`;
+  }).join('');
+  return `<div class="tsg">
+    <button class="tsg-h" data-icsg="1">
+      <svg class="gchev${folded ? '' : ' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+      <span class="ttl">来自苹果日历</span><span class="n">${list.length}</span></button>
+    ${folded ? '' : `<div class="tsg-body">${rows}</div>`}
+  </div>`;
+}
+/* 点一下看详情（只读，改动要在日历 App 里做） */
+function openIcsPop(anchor, ev){
+  const d = new Date(ev.start);
+  const dayTxt = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  const timeTxt = ev.allDay ? '全天' : pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  const html = `<div class="ics-pop">
+      <div class="ics-pop-t">${esc(ev.title)}</div>
+      <div class="ics-pop-r">${ic('clock')}<span>${esc(dayTxt + ' ' + timeTxt)}${ev.recurring ? ' · 重复日程' : ''}</span></div>
+      ${ev.location ? `<div class="ics-pop-r">${ic('link')}<span>${esc(ev.location)}</span></div>` : ''}
+      <div class="ics-pop-r">${ic('calendar')}<span>${esc(ev.cal)}</span></div>
+      <div class="ics-pop-n">只读：来自苹果日历，要改请到日历 App</div>
+    </div>`;
+  popover(anchor, [['#', html]], { align:'left' });
+}
+
 /* 只写日期的待办，当天几点提醒 */
 function dayRemindTime(){
   const m = String(S.dayRemindAt || '09:00').match(/^(\d{1,2}):(\d{2})$/);
@@ -2834,6 +3129,16 @@ function paintRemindCenter(){
     : perm === 'unsupported' ? '<b class="rc-no">此浏览器不支持</b>'
     : '<b class="rc-no">还没允许</b>';
 
+  const srcList = icsSources().length ? icsSources().map(s=>`
+      <div class="rc-src">
+        <div class="rc-src-m"><b>${esc(s.name)}</b>
+          <span>${s.error ? `<b class="rc-no">${esc(s.error)}</b>`
+            : (s.lastSync ? `已同步 ${s.count || 0} 条 · ${new Date(s.lastSync).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' })}` : '还没同步')}</span>
+        </div>
+        <button class="rc-mini" data-ics-sync="${esc(s.id)}">同步</button>
+        <button class="rc-mini" data-ics-del="${esc(s.id)}" style="color:rgb(var(--danger))">删除</button>
+      </div>`).join('') : '';
+
   const feedBlock = FEED.token
     ? `<code class="rc-link" id="rcLink">${esc(FEED.webcal || FEED.url || '')}
          <button class="rc-copy" id="rcCopy" title="复制订阅链接">${ic('link')}</button></code>
@@ -2875,6 +3180,17 @@ function paintRemindCenter(){
       <div class="rc-box-h">${ic('clock')}<b>日历订阅</b></div>
       <div class="rc-p">把带日期的待办同步到 iPhone、Mac、Google 或 Outlook 日历，由日历负责提醒，即使不打开笔记也不会错过。链接本身就是凭证，请勿分享。</div>
       ${feedBlock}
+    </div>
+
+    <div class="rc-box">
+      <div class="rc-box-h">${ic('calendar')}<b>从苹果日历同步</b></div>
+      <div class="rc-p">在日历 App 里把日历「公开共享」，把拿到的 <code>webcal://…</code> 链接粘进来：事件只读显示在左侧「日程」里，到点也会提醒。不会改动你的笔记。</div>
+      ${srcList}
+      <div class="rc-add">
+        <input class="rc-input" id="rcIcsUrl" placeholder="粘贴公开共享的日历链接（webcal:// 或 https://）" spellcheck="false">
+        <button class="rc-btn primary" id="rcIcsAdd">添加</button>
+      </div>
+      <div class="rc-note">只支持「公开共享」的日历；私有日历要 Apple ID 应用专用密码，这里不碰。同步在打开页面时进行。</div>
     </div>
 
     <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
@@ -2937,6 +3253,40 @@ function paintRemindCenter(){
     }
   };
   if(q('#rcExport')) q('#rcExport').onclick = ()=>exportTodoIcs();
+  if(q('#rcIcsAdd')) q('#rcIcsAdd').onclick = async ()=>{
+    const inp = q('#rcIcsUrl');
+    const url = (inp.value || '').trim();
+    if(!url){ toast('先把日历链接粘进来'); inp.focus(); return; }
+    if(!/^(https?|webcal):\/\//i.test(url)){ toast('链接要以 webcal:// 或 https:// 开头'); return; }
+    const s = addIcsSource('苹果日历', url);
+    const b = q('#rcIcsAdd');
+    b.disabled = true; b.textContent = '同步中…';
+    await icsSync(true);
+    const now = icsSources().find(x=>x.id === s.id) || {};
+    paintRemindCenter();
+    if(now.error) toast('同步失败：' + now.error);
+    else toast('已同步 ' + (now.count || 0) + ' 条日程，看左侧「日程」最下面');
+    if(S.view === 'todo') renderShelf();
+  };
+  ov.querySelectorAll('[data-ics-sync]').forEach(b=>{
+    b.onclick = async ()=>{
+      b.disabled = true; b.textContent = '同步中…';
+      await icsSync(true);
+      const s = icsSources().find(x=>x.id === b.dataset.icsSync) || {};
+      paintRemindCenter();
+      if(S.view === 'todo') renderShelf();
+      toast(s.error ? ('同步失败：' + s.error) : ('已同步 ' + (s.count || 0) + ' 条日程'));
+    };
+  });
+  ov.querySelectorAll('[data-ics-del]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!confirm('删除这个日历订阅？左侧「日程」里来自它的条目会消失，日历本身不受影响。')) return;
+      removeIcsSource(b.dataset.icsDel);
+      paintRemindCenter();
+      if(S.view === 'todo') renderShelf();
+      toast('已删除这个日历订阅');
+    };
+  });
   ov.querySelectorAll('[data-rc]').forEach(a=>{
     a.onclick = ()=>{
       const base = FEED.url || '';
@@ -2967,17 +3317,29 @@ function checkTodoReminders(){
     seen[key] = 1; changed = true;
     hits.push(t);
   });
+  /* 苹果日历的日程也一起到点提醒（全天日程不按分钟叫） */
+  icsAllEvents().forEach(ev=>{
+    if(ev.allDay) return;
+    if(ev.start > now) return;
+    if(now - ev.start > 10 * 60000) return;
+    const key = 'ics|' + ev.uid + '|' + ev.start;
+    if(seen[key]) return;
+    seen[key] = 1; changed = true;
+    hits.push({ ics:true, text:ev.title, due:ev.start, noteTitle:ev.cal, noteId:'' });
+  });
   if(changed) saveReminded(seen);
   if(!hits.length) return;
 
   if(notifyWanted() && notifyPermission() === 'granted'){
     hits.slice(0, 5).forEach(t=>{
-      fireNotify('⏰ ' + (t.text || '待办到时间了'),
-        dueLabel(t.due) + ' · ' + t.noteTitle, t.noteId, 'ivy-' + t.noteId + '-' + t.due);
+      fireNotify((t.ics ? '📅 ' : '⏰ ') + (t.text || (t.ics ? '日程开始了' : '待办到时间了')),
+        dueLabel(t.due) + ' · ' + t.noteTitle, t.noteId, 'ivy-' + (t.noteId || 'ics') + '-' + t.due);
     });
   } else {
-    toast(hits.length === 1 ? '⏰ 待办到期：' + (hits[0].text || '未命名')
-      : '⏰ 有 ' + hits.length + ' 条待办到期');
+    const first = hits[0];
+    toast(hits.length === 1
+      ? (first.ics ? '📅 日程开始：' : '⏰ 待办到期：') + (first.text || '未命名')
+      : (first.ics ? '📅 有 ' : '⏰ 有 ') + hits.length + ' 项到时间了');
   }
 }
 /* 侧边栏「待办」上的红点：有逾期就亮 */
@@ -3001,9 +3363,9 @@ const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d']
 /* ========== Dock ========== */
 function renderDock(){
   const items = [
-    {k:'notes', icon:'file', label:'笔记', href:'notes'},
+    {k:'notes', icon:'notebook', label:'笔记', href:'notes'},
     {k:'todo', icon:'todo', label:'待办'},
-    {k:'media', icon:'image', label:'媒体库'},
+    {k:'media', icon:'folder', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];
   const cloudBtn = `<button class="dock-item sync-${SYNC.state}" id="dockSync" title="${syncTip()}">
@@ -3751,29 +4113,49 @@ function openSelHeadingMenu(anchor){
     ['正文','去标题','','',()=>applySelFormat('p')]
   ], { align:'left' });
 }
-function maybeShowSelBar(){
-  if(S.view !== 'notes'){ hideSelBar(); return; }
+/* 正文是否正显示在右边：笔记视图，以及「日程」视图里点了待办打开笔记时 */
+function editorOnScreen(){
+  if(trashView) return false;
+  if(S.view === 'notes') return true;
+  if(S.view === 'todo') return !!(S.todoNote && noteById(S.todoNote));
+  return false;
+}
+function selBarPlace(c){
   const bar = selBarEl(); if(!bar) return;
-  const c = selCtx();
-  if(!c){ hideSelBar(); return; }
-  SELBAR.ctx = c;
-  buildSelBar();
   let r = null;
   if(c.kind === 'ta'){
     const p = caretXY(c.ta, c.e);
-    r = { left:p.x, right:p.x, top:p.y, bottom:p.y + p.h, width:0 };
+    r = { left:p.x, right:p.x, top:p.y, bottom:p.y + p.h, width:0, height:p.h };
   } else {
     const rects = c.range.getClientRects();
     r = rects.length ? rects[0] : c.range.getBoundingClientRect();
+    // 少数浏览器（iOS Safari 跨元素选区）会给出全 0，退回用选区起点的行框
+    if(!r || (!r.width && !r.height && !r.top)){
+      try{
+        const el = c.range.startContainer.nodeType === 3 ? c.range.startContainer.parentElement : c.range.startContainer;
+        if(el && el.getBoundingClientRect) r = el.getBoundingClientRect();
+      }catch(e){}
+    }
   }
   if(!r || (!r.width && !r.height && !r.top)){ hideSelBar(); return; }
+  if(r.bottom < -2 || r.top > window.innerHeight + 2){ hideSelBar(); return; }   // 选区滚出视口就别飘着了
   bar.classList.add('open');
   const bw = bar.offsetWidth || 210, bh = bar.offsetHeight || 32;
   const left = Math.max(10, Math.min(r.left, window.innerWidth - bw - 10));
   let top = r.top - bh - 8;
   if(top < 8) top = r.bottom + 8;
+  if(top > window.innerHeight - bh - 10) top = Math.max(8, window.innerHeight - bh - 10);
   bar.style.left = Math.round(left) + 'px';
   bar.style.top = Math.round(top) + 'px';
+}
+function maybeShowSelBar(){
+  if(!editorOnScreen()){ hideSelBar(); return; }
+  const bar = selBarEl(); if(!bar) return;
+  const c = selCtx();
+  if(!c){ hideSelBar(); return; }
+  SELBAR.ctx = c;
+  try{ buildSelBar(); }catch(e){ console.warn('selbar build failed', e); }
+  selBarPlace(c);
 }
 /* 把 markdown 摊平成「纯文本 + 每个字对应的原文下标」，用于把 DOM 选区映射回源码 */
 function plainMapOf(raw){
@@ -3922,13 +4304,19 @@ function applySelFormat(kind){
   selBarToast(kind);
 }
 /* 选区变了就显隐工具条（keyup / mouseup 兜底，兼容部分浏览器 textarea 不发 selectionchange） */
-let selBarTimer = 0;
+let selBarTimer = 0, selBarTimer2 = 0, selScrollRaf = 0;
 function queueSelBar(delay){
-  clearTimeout(selBarTimer);
-  selBarTimer = setTimeout(maybeShowSelBar, delay == null ? 140 : delay);
+  clearTimeout(selBarTimer); clearTimeout(selBarTimer2);
+  const d = delay == null ? 140 : delay;
+  selBarTimer = setTimeout(maybeShowSelBar, d);
+  // 触屏长按选词、拖动选择手柄时，选区往往晚一步才稳定，再补一次
+  selBarTimer2 = setTimeout(maybeShowSelBar, d + 420);
 }
 document.addEventListener('selectionchange', ()=>queueSelBar(150));
 document.addEventListener('mouseup', ()=>queueSelBar(60));
+document.addEventListener('pointerup', ()=>queueSelBar(80));
+document.addEventListener('touchend', ()=>queueSelBar(220));
+document.addEventListener('contextmenu', ()=>queueSelBar(320));      // iOS 长按弹系统菜单的那一刻
 document.addEventListener('keyup', (e)=>{
   if(e.shiftKey || e.key === 'Shift' || /^Arrow/.test(e.key)) queueSelBar(60);
 });
@@ -3937,7 +4325,21 @@ document.addEventListener('mousedown', (e)=>{
   hideSelBar();
   if(!(e.target && e.target.closest && e.target.closest('.blk-src, #source'))) closeSlashMenu();
 }, true);
-document.addEventListener('scroll', ()=>{ hideSelBar(); }, true);
+document.addEventListener('touchstart', (e)=>{
+  if(e.target && e.target.closest && e.target.closest('#selBar')) return;
+  hideSelBar();
+}, { capture:true, passive:true });
+/* 滚动时不再粗暴藏掉，而是跟着选区走；选区滚出视口才收起来 */
+document.addEventListener('scroll', ()=>{
+  const bar = selBarEl();
+  if(!bar || !bar.classList.contains('open') || selScrollRaf) return;
+  selScrollRaf = requestAnimationFrame(()=>{
+    selScrollRaf = 0;
+    const c = SELBAR.ctx;
+    if(c && editorOnScreen()) selBarPlace(c);
+    else hideSelBar();
+  });
+}, true);
 
 /* ========== 日期与提醒：@ 菜单 / 提醒卡片 / 编辑中的勾选框 ========== */
 const DUE_PRESETS = [
@@ -4400,6 +4802,8 @@ function paintHelp(){
         <p class="help-p">提醒事项不支持订阅日历链接，但有两条路：<br>
         ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
         ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
+      <div class="help-sec"><h4>从苹果日历同步进来</h4>
+        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。事件会<b>只读</b>出现在左侧日程最下面的「来自苹果日历」分组里，到点也会提醒；不会写进你的笔记，改动请在日历 App 里做。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>
@@ -6258,10 +6662,11 @@ function renderMedia(){
   scrollEl.innerHTML = `<div class="view-pad" style="position:relative;height:100%">
       <div class="media-search">${ic('search')}
         <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
-      ${list.length? `<div class="media-grid" id="mediaGrid">${list.map(m=>`
-        <div class="media-card" data-name="${esc(m.name.toLowerCase())}">
-          <div class="media-thumb">${m.type.startsWith('image')?`<img src="${m.url}" alt="">`:kindOf(m).toUpperCase()}</div>
+      ${list.length? `<div class="media-grid" id="mediaGrid">${list.map((m,i)=>`
+        <div class="media-card" data-name="${esc(m.name.toLowerCase())}" data-mi="${i}">
+          <div class="media-thumb">${m.type.startsWith('image')?`<img src="${m.url}" alt="" loading="lazy">`:kindOf(m).toUpperCase()}</div>
           <div class="media-name" title="${esc(m.name)}">${esc(m.name)}</div>
+          <button class="media-del" data-mdel="${i}" title="删除这个文件" aria-label="删除">${ic('trash')}</button>
         </div>`).join('')}</div>`
       : `<div class="media-empty">
           ${ic('image')}<span>还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。</span>
@@ -6275,12 +6680,60 @@ function renderMedia(){
     });
   };
   scrollEl.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat=b.dataset.mediaCat; renderShelf(); renderMain(); });
+  scrollEl.querySelectorAll('[data-mdel]').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); deleteMedia(list[+b.dataset.mdel]); };
+  });
+  scrollEl.querySelectorAll('.media-card').forEach(c=>{
+    c.onclick = ()=>{ const m = list[+c.dataset.mi]; if(m) window.open(m.url, '_blank', 'noopener'); };
+  });
   // 首次进入异步拉一次云端列表
   if(isConnected() && !remoteMedia && !mediaLoading){
     loadRemoteMedia(true).then(()=>{ if(S.view==='media'){ renderShelf(); renderMedia(); } });
   }
 }
 
+/* 删除媒体文件：云端走 DELETE /api/media/:uid/:id，本机 blob 直接从 S.media 摘掉 */
+function mediaRefs(m){
+  const key = m.url;
+  return (S.notes || []).filter(n=>!n.trashed && n.body && n.body.indexOf(key) >= 0);
+}
+async function deleteMedia(m){
+  if(!m) return;
+  const refs = mediaRefs(m);
+  let msg = '删除「' + m.name + '」？';
+  if(refs.length){
+    const names = refs.slice(0, 3).map(n=>n.title || '无标题').join('、');
+    msg += '\n\n有 ' + refs.length + ' 篇笔记还在用它（' + names + (refs.length > 3 ? ' 等' : '') + '），删掉之后那些位置会变成裂图。';
+  } else {
+    msg += '\n\n没有笔记在用它，删了就没了，不能恢复。';
+  }
+  if(!confirm(msg)) return;
+
+  if(m.remote){
+    if(!isConnected()){ toast('没连上云端，删不了云端文件'); return; }
+    try{
+      const r = await fetch(m.url, { method:'DELETE', headers: authHeaders(false) });
+      if(!r.ok){
+        const d = await r.json().catch(()=>({}));
+        throw new Error(d.error || ('HTTP ' + r.status));
+      }
+    }catch(e){
+      toast('删除失败：' + (e.message || '网络错误'));
+      return;
+    }
+    remoteMedia = null;
+    await loadRemoteMedia(true);
+  } else {
+    const i = (S.media || []).findIndex(x=>x.id === m.id || x.url === m.url);
+    if(i >= 0){
+      try{ URL.revokeObjectURL(S.media[i].url); }catch(e){}
+      S.media.splice(i, 1);
+    }
+    save();
+  }
+  toast('已删除「' + m.name + '」');
+  if(S.view === 'media'){ renderShelf(); renderMedia(); }
+}
 function pickFiles(){
   const inp = document.createElement('input');
   inp.type='file'; inp.multiple = true;
@@ -6481,6 +6934,7 @@ function renderGraph(){
 function switchView(v){
   S.view = v; trashView=false;
   if(v!=='notes') { /* 保留 tabs */ }
+  hideSelBar();
   renderAll(); save();
 }
 
@@ -7552,6 +8006,12 @@ setTimeout(checkTodoReminders, 2500);
 setInterval(checkTodoReminders, 60000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') checkTodoReminders();
+});
+/* ---- 苹果日历订阅：进页面拉一次，之后每 20 分钟 ---- */
+setTimeout(()=>{ icsSync(); }, 6000);
+setInterval(()=>{ icsSync(); }, 20 * 60000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') icsSync();
 });
 /* 通知用的 Service Worker：只用来弹通知，不接管请求 */
 if('serviceWorker' in navigator) setTimeout(()=>{ ensureSW(); }, 1200);

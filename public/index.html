@@ -537,6 +537,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .selbar button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .selbar button b{font-size:13px;font-weight:700}
 .selbar button svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.selbar button b.sb-sl{font-size:15px;font-weight:600;line-height:1}
+.selbar button b.sb-br{font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:-.5px}
 .selbar .sb-sep{width:1px;height:14px;background:rgb(var(--line));margin:0 3px;flex:0 0 auto}
 @media (max-width:640px){
   .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
@@ -1405,6 +1407,8 @@ const ICONS = {
   chart:'<path d="M4 4v16h16"/><path d="M8 16v-3.5M12 16V9M16 16v-6"/>',
   quote:'<path d="M9.5 7H6a1.5 1.5 0 0 0-1.5 1.5V12h4.5V7z"/><path d="M19.5 7H16a1.5 1.5 0 0 0-1.5 1.5V12H19V7z"/><path d="M4.5 12v2.5A1.5 1.5 0 0 0 6 16h1.5M14.5 12v2.5A1.5 1.5 0 0 0 16 16h1.5"/>',
   calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
+  hl:'<path d="M5 15.4 14.6 5.8a2.3 2.3 0 0 1 3.2 0l.4.4a2.3 2.3 0 0 1 0 3.2L8.6 19H5z"/><path d="M4 21h7"/>',
+  tbox:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="m8 12 2.6 2.6L16 9.4"/>',
   insert:'<path d="M12 5v14M5 12h14"/>'
 };
 function ic(name, cls){
@@ -1413,7 +1417,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v47', at: '2026-11-10 11:10' };
+window.IVY_BUILD = { id: 'v48', at: '2026-11-10 11:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3403,7 +3407,7 @@ function countWords(md){
 const FMT_GROUPS = [
   [['insert','+','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
-  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
+  [['b','B','加粗'],['i','/','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
   [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],['list','列表','列表样式：无序 / 有序'],
    ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）'],
    ['quote','引用','引用块']],
@@ -3698,18 +3702,32 @@ function buildSelBar(){
   const bar = selBarEl();
   if(!bar || bar._built) return;
   bar.innerHTML = `
+    <button data-sb="h" title="设为标题（一级 / 二级 / 三级）"><b>H</b></button>
     <button data-sb="b" title="加粗（**文字**）"><b>B</b></button>
-    <button data-sb="i" title="斜体（*文字*）"><b style="font-style:italic;font-family:var(--font-serif)">I</b></button>
-    <button data-sb="mark" title="高亮（==文字==）">高亮</button>
-    <button data-sb="link" title="加链接">${ic('link')}链接</button>
+    <button data-sb="i" title="斜体（*文字*）"><b class="sb-sl">/</b></button>
+    <button data-sb="s" title="删除线（~~文字~~）"><b>S</b></button>
     <span class="sb-sep"></span>
-    <button data-sb="h2" title="设为二级标题">H2</button>
-    <button data-sb="h1" title="设为一级标题">H1</button>`;
+    <button data-sb="mark" title="高亮（==文字==）">${ic('hl')}</button>
+    <button data-sb="todo" title="设为待办（- [ ]）">${ic('tbox')}</button>
+    <button data-sb="wiki" title="链接到笔记（[[标题]]）"><b class="sb-br">[[</b></button>
+    <button data-sb="link" title="加链接">${ic('link')}</button>`;
   bar.querySelectorAll('[data-sb]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别把选区弄丢
-    b.onclick = ()=>applySelFormat(b.dataset.sb);
+    b.onclick = ()=>{
+      const k = b.dataset.sb;
+      if(k === 'h') openSelHeadingMenu(b);          // 标题给个级别菜单，别猜
+      else applySelFormat(k);
+    };
   });
   bar._built = true;
+}
+function openSelHeadingMenu(anchor){
+  popover(anchor, [
+    ['一级标题','H1','','',()=>applySelFormat('h1')],
+    ['二级标题','H2','','',()=>applySelFormat('h2')],
+    ['三级标题','H3','','',()=>applySelFormat('h3')],
+    ['正文','去标题','','',()=>applySelFormat('p')]
+  ], { align:'left' });
 }
 function maybeShowSelBar(){
   if(S.view !== 'notes'){ hideSelBar(); return; }
@@ -3793,21 +3811,41 @@ function applyInlineRaw(raw, rg, kind){
     if(pre === '==' && post === '==') return raw.slice(0, s-2) + raw.slice(s, e) + raw.slice(e+2);
     return raw.slice(0, s) + '==' + raw.slice(s, e) + '==' + raw.slice(e);
   }
+  if(kind === 's'){
+    if(pre === '~~' && post === '~~') return raw.slice(0, s-2) + raw.slice(s, e) + raw.slice(e+2);
+    return raw.slice(0, s) + '~~' + raw.slice(s, e) + '~~' + raw.slice(e);
+  }
+  if(kind === 'wiki'){
+    return raw.slice(0, s) + '[[' + raw.slice(s, e) + ']]' + raw.slice(e);
+  }
   if(kind === 'link'){
     return raw.slice(0, s) + '[' + raw.slice(s, e) + '](https://)' + raw.slice(e);
   }
   return raw;
 }
+/* 整行变成待办：选区落在哪行就给哪行加 - [ ] */
+function todoRaw(raw, rg){
+  const ls = raw.lastIndexOf('\n', rg.start - 1) + 1;
+  let le = raw.indexOf('\n', rg.end);
+  if(le === -1) le = raw.length;
+  const line = raw.slice(ls, le);
+  if(/^\s*-\s\[[ xX]\]\s/.test(line)) return raw;
+  return raw.slice(0, ls) + '- [ ] ' + line.replace(/^\s+/, '') + raw.slice(le);
+}
 function headingRaw(raw, lvl){
   const bare = String(raw || '').replace(/^\s*#{1,6}\s+/, '');
-  return '#'.repeat(lvl) + ' ' + bare;
+  return lvl ? '#'.repeat(lvl) + ' ' + bare : bare;
 }
 function selBarToast(kind){
   if(kind === 'b') toast('已加粗');
   else if(kind === 'i') toast('已设为斜体');
+  else if(kind === 's') toast('已加删除线');
   else if(kind === 'mark') toast('已高亮');
+  else if(kind === 'todo') toast('已设为待办');
+  else if(kind === 'wiki') toast('已插入笔记链接，改标题就行');
   else if(kind === 'link') toast('已加链接，改掉 https:// 就行');
-  else toast('已设为' + (kind === 'h1' ? '一' : '二') + '级标题');
+  else if(kind === 'p') toast('已去掉标题');
+  else toast('已设为' + ({h1:'一', h2:'二', h3:'三', h4:'四', h5:'五', h6:'六'}[kind] || '') + '级标题');
 }
 function applySelFormat(kind){
   const c = SELBAR.ctx;
@@ -3821,19 +3859,20 @@ function applySelFormat(kind){
   }
   /* 渲染区：把 DOM 选区还原成原文区间再改 */
   const blk = c.host.classList.contains('blk-view') ? c.host.closest('.blk') : null;
-  const isHeading = kind === 'h1' || kind === 'h2';
+  const isHeading = /^h[1-6]$/.test(kind) || kind === 'p';
+  const lvl = kind === 'p' ? 0 : +kind[1];
   if(blk){
     const i = +blk.dataset.i;
     let raw = LIVE.raws[i] || '';
     if(isHeading){
-      LIVE.raws[i] = headingRaw(raw, +kind[1]);
+      LIVE.raws[i] = headingRaw(raw, lvl);
       paintLive(); syncBody();
       selBarToast(kind);
       return;
     }
     const rg = mapSelToRaw(raw, c.text);
     if(!rg){ toast('这段文字夹着格式，切到源码模式改更稳'); return; }
-    const out = applyInlineRaw(raw, rg, kind);
+    const out = kind === 'todo' ? todoRaw(raw, rg) : applyInlineRaw(raw, rg, kind);
     if(out === raw){ toast('没有变化'); return; }
     LIVE.raws[i] = out;
     paintLive(); syncBody();
@@ -3848,11 +3887,11 @@ function applySelFormat(kind){
     const ls = n.body.lastIndexOf('\n', rg.start - 1) + 1;
     let le = n.body.indexOf('\n', rg.end);
     if(le === -1) le = n.body.length;
-    n.body = n.body.slice(0, ls) + headingRaw(n.body.slice(ls, le), +kind[1]) + n.body.slice(le);
+    n.body = n.body.slice(0, ls) + headingRaw(n.body.slice(ls, le), lvl) + n.body.slice(le);
   } else {
     const rg = mapSelToRaw(n.body, c.text);
     if(!rg){ toast('定位不到这段文字，切到源码模式改更稳'); return; }
-    n.body = applyInlineRaw(n.body, rg, kind);
+    n.body = kind === 'todo' ? todoRaw(n.body, rg) : applyInlineRaw(n.body, rg, kind);
   }
   n.updatedAt = Date.now();
   const src = document.getElementById('source');
@@ -4247,7 +4286,7 @@ const HELP_HERO = [
   { sym:'+', t:'点 + 选择',
     d:'不想记语法？点笔记右上角或手机工具栏的 +，或按 ⌘/，从同一个菜单里选。' },
   { sym:'', t:'选中文字',
-    d:'用鼠标选中文字，上方会出现格式工具条：加粗、高亮、链接、标题等。' }
+    d:'选中文字上方浮出工具条：H 标题、B 加粗、/ 斜体、S 删除线、高亮、待办、[[ 笔记链接、加链接。' }
 ];
 const HELP_TABLE = [
   ['标题', '<code>#</code> / <code>##</code> / <code>###</code>', '⌥⌘1/2/3', '一到三级标题'],
@@ -4539,6 +4578,7 @@ function applyFormat(kind, opt){
     case 'h4': prefixLines('#### '); break;
     case 'h5': prefixLines('##### '); break;
     case 'h6': prefixLines('###### '); break;
+    case 'p': prefixLines(''); break;
     case 'b': wrapSel('**','**','加粗文字'); break;
     case 'i': wrapSel('*','*','斜体文字'); break;
     case 's': wrapSel('~~','~~','删除线'); break;

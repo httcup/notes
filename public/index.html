@@ -305,16 +305,27 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* ============ doc ============ */
 .scroll{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth;scrollbar-width:none}
 .scroll::-webkit-scrollbar{width:0;height:0}
-/* 正文偏左居中：左侧留白固定得小一些，剩余空间留给右侧（悬浮大纲），
-   避免宽屏下整块居中导致离左边书架太远 */
+/* 正文居中排布：宽度按可用空间的百分比自适应（留白随屏幕缩放） */
 .doc{
-  /* v36: 不再「保底 840 + 居中均分」，改成吃满可用宽度的满版排布：
-     - 左右各固定留 44px（= (100% - 88px) 的余量），左侧空白从 ~97px 收到 44px，编辑框整体左移；
-     - 上限 1200px 吸收书架折叠多出来的宽度，右侧不会又被拉出一大块空白；
-     - 窄屏（≤900px）由媒体查询改回铺满 */
-  max-width:min(1200px, max(calc(100% - 88px), 840px));
+  /* v37: 留白不再写死像素，改成百分比——正文恒占可用宽度的 93%，两侧各留 3.5%，
+     窗口一变宽度就按比例跟着缩放（大屏留白略宽、小屏略窄，观感一致）；
+     - 840px 保底：iPad 横屏这类中等宽度不会比之前更窄；
+     - 1500px 上限：超宽屏（2K/4K）挡住行长，否则一行会拉到 80+ 字难以阅读 */
+  max-width:min(1500px, max(93%, 840px));
   margin:0 auto;
-  padding:52px 30px 140px;
+  padding:52px clamp(16px, 2.4vw, 40px) 140px;
+  /* 大纲展开/收起时正文右侧让位是平滑位移，不是硬跳 */
+  transition:padding-right .2s cubic-bezier(.22,.61,.36,1);
+}
+/* 大纲卡片展开时给正文让出一条右侧通道，卡片只压在留白上、不再盖住文字。
+   只在「有真实 hover + 宽度够」的桌面生效（窄屏让位会把文字挤得太窄）；
+   展开带 120ms 延迟，鼠标只是扫过右边缘时正文不会跟着抽动，收起则不延迟 */
+@media (hover:hover) and (min-width:1100px){
+  body.ol-hover .doc,
+  body.outline-pinned .doc{
+    padding-right:220px;
+    transition:padding-right .2s cubic-bezier(.22,.61,.36,1) .12s;
+  }
 }
 .doc-title{
   display:block;width:100%;border:0;outline:none;background:none;resize:none;overflow:hidden;
@@ -920,7 +931,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v36', at: '2026-11-10 08:20' };
+window.IVY_BUILD = { id: 'v37', at: '2026-11-10 08:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

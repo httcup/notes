@@ -1,7 +1,7 @@
 # notes · 小胡小胡的笔记（云同步版）
 
-一个本地优先、云端同步的 Markdown 笔记应用。界面参考 ivyNote 重写，数据存在自己的 Cloudflare 账号里。
-
+一个本地优先、云端同步的 Markdown 笔记应用。界面参考 ivyNote（官网https://ivynote.app/） 重写，
+数据存在自己的 Cloudflare 账号里。
 - 线上地址：https://notes-4fi.pages.dev
 - 前端：单文件 `public/index.html`（原生 HTML/CSS/JS，零构建、零依赖）
 - 后端：Cloudflare Pages Functions（`functions/api/sync.js`）

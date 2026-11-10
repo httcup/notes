@@ -91,6 +91,17 @@ a{color:inherit;text-decoration:none}
   margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .head-actions{display:flex;align-items:center;gap:0;flex:0 0 auto}
+/* 日程视图：不要「新建笔记」，换成使用说明与「显示今天已完成」 */
+.head-actions .todo-only{display:none}
+body.view-todo .head-actions .todo-only{display:flex}
+body.view-todo .head-actions .notes-only{display:none}
+.head-sw{align-items:center;gap:5px;font-size:10.5px;color:rgb(var(--faint));cursor:pointer;user-select:none}
+.head-sw input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.head-sw i{width:22px;height:13px;border-radius:8px;background:rgb(var(--line));position:relative;transition:background .18s;flex:0 0 auto}
+.head-sw i::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.head-sw input:checked + i{background:rgb(var(--ivy))}
+.head-sw input:checked + i::after{transform:translateX(9px)}
+.head-sw span{white-space:nowrap}
 .icon-btn{
   width:28px;height:28px;display:grid;place-items:center;border-radius:7px;
   color:rgb(var(--muted));transition:background .15s,color .15s;
@@ -431,6 +442,81 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .due-ok{height:33px;padding:0 18px;border-radius:9px;background:rgb(var(--ivy));color:#fff;font-size:13px;font-weight:500}
 .due-ok:hover{background:rgb(var(--ivy-hover))}
 
+/* ---- 提醒中心：浏览器通知 + 日历订阅 ---- */
+.rc-card{
+  width:min(432px,93vw);max-height:86vh;overflow:auto;background:rgb(var(--surface));
+  border:.5px solid rgb(var(--line));border-radius:14px;box-shadow:var(--shadow-lift);
+  padding:16px 17px 14px;animation:dueIn .18s var(--spring);
+}
+.rc-title{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:600;color:rgb(var(--ink));margin-bottom:3px}
+.rc-title svg{width:16px;height:16px;stroke:rgb(var(--ivy));fill:none;stroke-width:1.7}
+.rc-sub{font-size:11.5px;line-height:1.65;color:rgb(var(--faint));margin-bottom:13px}
+.rc-box{
+  border:.5px solid rgb(var(--line));border-radius:11px;padding:11px 12px;margin-bottom:10px;
+  background:rgb(var(--sunken)/.55);
+}
+.rc-box-h{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.rc-box-h b{font-size:12.5px;font-weight:600;color:rgb(var(--ink))}
+.rc-badge{
+  margin-left:auto;font-size:11px;padding:1.5px 7px;border-radius:20px;
+  background:rgb(var(--hover));color:rgb(var(--muted));
+}
+.rc-badge.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.rc-badge.no{background:rgb(var(--warn-soft));color:rgb(var(--warn-ink))}
+.rc-p{font-size:11.5px;line-height:1.7;color:rgb(var(--muted));margin-bottom:8px}
+.rc-link{
+  display:block;font-family:var(--font-mono);font-size:11px;line-height:1.55;color:rgb(var(--ink-2));
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));border-radius:8px;
+  padding:7px 8px;margin-bottom:8px;word-break:break-all;user-select:all;
+}
+.rc-acts{display:flex;flex-wrap:wrap;gap:6px}
+.rc-btn{
+  height:29px;padding:0 11px;border-radius:8px;background:rgb(var(--surface));
+  border:.5px solid rgb(var(--line));font-size:12.5px;color:rgb(var(--ink-2));
+  display:inline-flex;align-items:center;gap:5px;
+}
+.rc-btn:hover{background:rgb(var(--hover))}
+.rc-btn.primary{background:rgb(var(--ivy));border-color:transparent;color:#fff;font-weight:500}
+.rc-btn.primary:hover{background:rgb(var(--ivy-hover))}
+.rc-btn.danger{color:rgb(var(--danger))}
+.rc-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+.rc-foot{display:flex;justify-content:flex-end;margin-top:11px}
+.rc-close{height:31px;padding:0 15px;border-radius:9px;background:rgb(var(--sunken));font-size:13px;color:rgb(var(--ink-2))}
+.rc-close:hover{background:rgb(var(--hover))}
+.rc-switch{
+  margin-left:auto;width:38px;height:22px;border-radius:12px;background:rgb(var(--hover));
+  position:relative;transition:background .16s var(--spring);flex:0 0 auto;
+}
+.rc-switch i{
+  position:absolute;left:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgb(16 24 32 / .22);transition:transform .18s var(--spring);
+}
+.rc-switch.on{background:rgb(var(--ivy))}
+.rc-switch.on i{transform:translateX(16px)}
+.rc-perm{display:flex;align-items:center;gap:8px;font-size:12px;color:rgb(var(--muted))}
+.rc-perm b{font-weight:600}
+.rc-ok{color:rgb(var(--ivy-ink))}
+.rc-no{color:rgb(var(--warn-ink))}
+.rc-mini{
+  margin-left:auto;font-size:11.5px;color:rgb(var(--ivy-ink));padding:3px 8px;border-radius:7px;
+  background:rgb(var(--ivy-soft));
+}
+.rc-mini:hover{background:rgb(var(--ivy-soft)/.7)}
+.rc-select{
+  width:100%;height:33px;padding:0 10px;border:1px solid rgb(var(--line));border-radius:8px;
+  background:rgb(var(--surface));font-size:13px;color:rgb(var(--ink));font-family:inherit;
+}
+.rc-select:focus{outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09)}
+.rc-note{font-size:11px;line-height:1.6;color:rgb(var(--faint));margin-top:7px}
+.rc-link{position:relative;padding-right:30px}
+.rc-copy{
+  position:absolute;right:5px;top:6px;width:24px;height:24px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;color:rgb(var(--muted));
+}
+.rc-copy:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.rc-copy svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+.rc-card .rc-box-h svg{width:14px;height:14px;stroke:rgb(var(--muted));fill:none;stroke-width:1.8;flex:0 0 auto}
+
 .sl-empty{padding:11px 9px;font-size:12px;color:rgb(var(--faint));line-height:1.6}
 
 /* ---- 选中文字后的浮动工具条 ---- */
@@ -533,16 +619,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 
 /* ---- 日程（左侧书架里的分组列表） ---- */
 .todo-shelf{display:flex;flex-direction:column;min-height:100%}
-.tsh-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:2px 6px 4px}
 .tsh-t{font-size:15px;font-weight:600;letter-spacing:-.01em;color:rgb(var(--ink));padding:2px 0;border-radius:6px}
 .tsh-t.on{color:rgb(var(--ivy))}
-.tsh-sw{display:flex;align-items:center;gap:5px;font-size:10.5px;color:rgb(var(--faint));cursor:pointer;user-select:none}
-.tsh-sw input{position:absolute;opacity:0;pointer-events:none}
-.tsh-sw i{width:22px;height:13px;border-radius:8px;background:rgb(var(--line));position:relative;transition:background .18s;flex:0 0 auto}
-.tsh-sw i::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
-.tsh-sw input:checked + i{background:rgb(var(--ivy))}
-.tsh-sw input:checked + i::after{transform:translateX(9px)}
-.tsh-meta{padding:0 6px 10px;font-size:11px;color:rgb(var(--faint))}
+.tsh-meta{padding:2px 6px 10px;font-size:11px;color:rgb(var(--faint))}
 .tsg{position:relative}
 .tsg-h{display:flex;align-items:center;gap:6px;width:100%;padding:6px;border-radius:7px;font-size:12px;color:rgb(var(--ink-2));font-weight:500}
 .tsg-h:hover{background:rgb(var(--hover))}
@@ -1181,9 +1260,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <h1 class="brand-name" id="brandName">小胡小胡的笔记</h1>
       </div>
       <div class="head-actions" id="headActions">
+        <button class="icon-btn todo-only" id="btnTodoHelp" title="待办使用说明" aria-label="待办使用说明"></button>
         <button class="icon-btn" id="btnSearch" title="搜索笔记 (⌘K)" aria-label="搜索笔记"></button>
-        <button class="icon-btn" id="btnNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
+        <button class="icon-btn notes-only" id="btnNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
         <button class="icon-btn" id="btnShelf" title="收起书架 (⌘\)" aria-label="收起书架"></button>
+        <label class="head-sw todo-only" title="显示今天已完成">
+          <input type="checkbox" id="headDoneSw"><i></i><span>显示今天已完成</span>
+        </label>
       </div>
     </header>
     <div class="shelf-body" id="shelfBody"></div>
@@ -1272,6 +1355,7 @@ const ICONS = {
   table:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M9.5 10v9M15 10v9"/>',
   chart:'<path d="M4 4v16h16"/><path d="M8 16v-3.5M12 16V9M16 16v-6"/>',
   quote:'<path d="M9.5 7H6a1.5 1.5 0 0 0-1.5 1.5V12h4.5V7z"/><path d="M19.5 7H16a1.5 1.5 0 0 0-1.5 1.5V12H19V7z"/><path d="M4.5 12v2.5A1.5 1.5 0 0 0 6 16h1.5M14.5 12v2.5A1.5 1.5 0 0 0 16 16h1.5"/>',
+  calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
   insert:'<path d="M12 5v14M5 12h14"/>'
 };
 function ic(name, cls){
@@ -1280,7 +1364,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v42', at: '2026-11-10 10:12' };
+window.IVY_BUILD = { id: 'v43', at: '2026-11-10 10:30' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1704,6 +1788,7 @@ function paintRowIcons(){
   $('#btnSearch').innerHTML = ic('search');
   $('#btnNew').innerHTML = ic('plus');
   $('#btnShelf').innerHTML = ic('panelLeft');
+  $('#btnTodoHelp').innerHTML = ic('info');
   $('#shelfOpen').innerHTML = ic('panelLeft');
 }
 
@@ -1784,6 +1869,9 @@ function toggleNoteTag(t){
 
 function renderShelf(){
   brandName.textContent = ({notes:'小胡小胡的笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '小胡小胡的笔记';
+  document.body.classList.toggle('view-todo', S.view === 'todo');
+  const hds = document.getElementById('headDoneSw');
+  if(hds) hds.checked = !!S.todoShowDoneToday;
 
   if(S.view==='todo'){ shelfBody.innerHTML = todoShelf(); bindShelf(); return; }
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
@@ -1820,7 +1908,18 @@ function renderShelf(){
     </div>`;
   });
 
-  if(loose.length) html += `<div class="nb-notes" style="padding-left:0">${loose.map(noteRow).join('')}</div>`;
+  if(loose.length){
+    const lopen = S.looseOpen !== false;          // 未归类默认展开
+    html += `<div class="nb-group">
+      <div class="nb-row">
+        <button class="nb-head ${lopen?'open':''}" data-nb="__loose">
+          <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="t">未归类笔记</span><span class="meta">${loose.length}</span>
+        </button>
+      </div>
+      <div class="nb-notes ${lopen?'':'hidden'}">${loose.map(noteRow).join('')}</div>
+    </div>`;
+  }
 
   // 笔记本下面：标签分类（每个标签可展开，列出打了该标签的笔记）
   const keys = usedTags(notes);
@@ -1875,6 +1974,10 @@ function bindShelf(){
     b.onclick = e=>{ e.stopPropagation(); openTagMenu(b, b.dataset.tagmenu); };
   });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
+    if(b.dataset.nb === '__loose'){                // 未归类笔记：虚拟分组，只记折叠状态
+      b.onclick = ()=>{ S.looseOpen = !(S.looseOpen !== false); save(); renderShelf(); };
+      return;
+    }
     const nb = S.notebooks.find(x=>x.id===b.dataset.nb);
     if(!nb) return;
     b.onclick = ()=>{ nb.open = !nb.open; nb.updatedAt = Date.now(); renderShelf(); save(); };
@@ -1919,45 +2022,86 @@ function bindShelf(){
   });
   const sw = document.getElementById('todoShowDone');
   if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
+  const hsw = document.getElementById('headDoneSw');
+  if(hsw) hsw.onchange = ()=>{ S.todoShowDoneToday = hsw.checked; save(); renderShelf(); };
   const ics = document.getElementById('todoIcs');
-  if(ics) ics.onclick = ()=>exportTodoIcs();
+  if(ics) ics.onclick = ()=>openRemindCenter();
 }
-/* 把带日期的待办导成 .ics，手机日历打开就能收提醒 */
-function exportTodoIcs(){
-  const list = collectTodos().filter(t=>!t.done && t.due);
-  if(!list.length){ toast('还没有带时间的待办可以导出'); return; }
-  const pad = n=>String(n).padStart(2, '0');
-  const fmt = ts=>{
-    const d = new Date(ts);
-    return d.getUTCFullYear() + pad(d.getUTCMonth()+1) + pad(d.getUTCDate()) + 'T'
-      + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + 'Z';
-  };
-  const esc2 = s=>String(s || '').replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
-  const RR = {
-    day:'FREQ=DAILY', weekday:'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
-    week:'FREQ=WEEKLY', month:'FREQ=MONTHLY', year:'FREQ=YEARLY'
-  };
-  const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ivy Notes//Todo//CN','CALSCALE:GREGORIAN'];
+/* ---- 把带日期的待办拼成一份 .ics：导出文件、日历订阅共用同一份内容 ---- */
+const ICS_RRULE = {
+  day:'FREQ=DAILY', weekday:'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+  week:'FREQ=WEEKLY', month:'FREQ=MONTHLY', year:'FREQ=YEARLY'
+};
+function icsPad(n){ return String(n).padStart(2, '0'); }
+function icsStamp(ts){
+  const d = new Date(ts);
+  return d.getUTCFullYear() + icsPad(d.getUTCMonth()+1) + icsPad(d.getUTCDate()) + 'T'
+    + icsPad(d.getUTCHours()) + icsPad(d.getUTCMinutes()) + icsPad(d.getUTCSeconds()) + 'Z';
+}
+function icsEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1').replace(/\r?\n/g, '\\n');
+}
+/* 内容指纹：同一件事刷新多次 UID 不变，日历里不会长出重复条目 */
+function icsHash(s){
+  let h = 5381;
+  for(let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+/* ICS 单行不能超过 75 字节，中文一个字 3 字节，按字符折 */
+function icsFold(line){
+  const enc = new TextEncoder();
+  if(enc.encode(line).length <= 73) return line;
+  const parts = []; let cur = '', len = 0;
+  for(const ch of line){
+    const n = enc.encode(ch).length;
+    if(len + n > 70){ parts.push(cur); cur = ' '; len = 1; }
+    cur += ch; len += n;
+  }
+  parts.push(cur);
+  return parts.join('\r\n');
+}
+function todoIcsText(){
+  const now = Date.now();
+  const all = collectTodos().filter(t=>!t.done && t.due);
+  const list = all.filter(t=> t.due > now - 7 * 86400000);   // 太久远的过期项不再往日历里塞
+  const lines = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//IvyNote//Reminders//CN',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'X-WR-CALNAME:待办提醒','X-WR-CALDESC:来自小胡的笔记的待办',
+    'X-WR-TIMEZONE:Asia/Shanghai',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT30M','X-PUBLISHED-TTL:PT30M'
+  ];
+  const stamp = icsStamp(now);
+  const origin = (typeof location !== 'undefined' && location.origin) || '';
   list.forEach(t=>{
-    out.push('BEGIN:VEVENT');
-    out.push('UID:' + t.noteId + '-' + t.line + '-' + t.due + '@ivynote');
-    out.push('DTSTAMP:' + fmt(Date.now()));
-    out.push('DTSTART:' + fmt(t.due));
-    out.push('DTEND:' + fmt(t.due + 30*60000));
-    out.push('SUMMARY:' + esc2(t.text || '待办'));
-    out.push('DESCRIPTION:' + esc2('来自笔记：' + t.noteTitle));
-    if(t.repeat && RR[t.repeat]) out.push('RRULE:' + RR[t.repeat]);
-    out.push('BEGIN:VALARM','TRIGGER:-PT10M','ACTION:DISPLAY','DESCRIPTION:待办提醒','END:VALARM');
-    out.push('END:VEVENT');
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:t' + icsHash(t.noteId + '|' + (t.text || '') + '|' + t.due) + '@ivynote');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART:' + icsStamp(t.due));
+    lines.push('DTEND:' + icsStamp(t.due + 30 * 60000));
+    lines.push('SUMMARY:' + icsEsc(t.text || '待办'));
+    lines.push('DESCRIPTION:' + icsEsc('来自笔记：' + t.noteTitle));
+    if(origin) lines.push('URL:' + origin + '/?n=' + encodeURIComponent(t.noteId));
+    lines.push('TRANSP:TRANSPARENT');
+    if(t.repeat && ICS_RRULE[t.repeat]) lines.push('RRULE:' + ICS_RRULE[t.repeat]);
+    lines.push('BEGIN:VALARM','TRIGGER:PT0M','ACTION:DISPLAY',
+      'DESCRIPTION:' + icsEsc(t.text || '待办提醒'),'END:VALARM');
+    lines.push('END:VEVENT');
   });
-  out.push('END:VCALENDAR');
-  const blob = new Blob([out.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+  lines.push('END:VCALENDAR');
+  return { text: lines.map(icsFold).join('\r\n') + '\r\n', list, total: all.length };
+}
+function exportTodoIcs(){
+  const r = todoIcsText();
+  if(!r.list.length){ toast('还没有带时间的待办可以导出'); return; }
+  const blob = new Blob([r.text], { type:'text/calendar;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = '待办日程.ics';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
-  toast('已导出 ' + list.length + ' 条日程，用手机日历打开即可');
+  toast('已导出 ' + r.list.length + ' 条日程，用手机日历打开即可');
 }
 
 /* ========== 待办与提醒 ==========
@@ -2015,7 +2159,8 @@ function parseAtDue(text){
     const p = w.split('-');
     d.setFullYear(+p[0], +p[1] - 1, +p[2]);
   }
-  let hh = night ? 20 : 9, mi = 0;
+  const dt = dayRemindTime();
+  let hh = night ? 20 : dt.h, mi = dt.m;
   if(m[3]){
     hh = +m[3];
     if(m[2] === '下午' || m[2] === '晚上') hh = hh < 12 ? hh + 12 : hh;
@@ -2340,16 +2485,10 @@ function todoShelf(){
   body += group('none', '没有日期', g.none);
 
   return `<div class="todo-shelf">
-    <div class="tsh-bar">
-      <label class="tsh-sw" title="显示今天已完成的待办">
-        <input type="checkbox" id="todoShowDone" ${S.todoShowDoneToday?'checked':''}>
-        <i></i><span>显示今天已完成</span>
-      </label>
-    </div>
     <div class="tsh-meta">${c.open} 项待办 · 今天 ${c.today} 项 · 逾期 ${c.late} 项</div>
     <div class="tsg-list">${body || `<div class="tsh-empty">还没有待办。<br>在笔记里写「- [ ] 事项」试试。</div>`}</div>
-    <button class="tsh-sub" id="todoIcs" title="把带日期的待办导出成 .ics，用手机日历订阅">
-      ${ic('cloud')}<span>订阅到手机日历</span></button>
+    <button class="tsh-sub" id="todoIcs" title="提醒与日历：在这台设备上弹通知，或订阅到手机日历">
+      ${ic('bell')}<span>提醒与日历</span></button>
   </div>`;
 }
 /* 侧边栏用的短标题：今天 · 11月10日 周二 */
@@ -2490,10 +2629,259 @@ function saveReminded(o){
     localStorage.setItem(TODO_REMIND_STORE, JSON.stringify(o));
   }catch(e){}
 }
+/* ========== 提醒中心：系统通知 + 日历订阅 ========== */
+const FEED_STORE = 'ivy.calfeed.v1';
+let FEED = loadFeedCache();
+let feedBusy = false, feedTick = 0;
+function loadFeedCache(){
+  try{ return JSON.parse(localStorage.getItem(FEED_STORE) || '{}') || {}; }catch(e){ return {}; }
+}
+function saveFeedCache(){ try{ localStorage.setItem(FEED_STORE, JSON.stringify(FEED || {})); }catch(e){} }
+/* 只写日期的待办，当天几点提醒 */
+function dayRemindTime(){
+  const m = String(S.dayRemindAt || '09:00').match(/^(\d{1,2}):(\d{2})$/);
+  return m ? { h:+m[1], m:+m[2] } : { h:9, m:0 };
+}
+const notifySupported = ()=> typeof Notification !== 'undefined';
+function notifyPermission(){
+  if(!notifySupported()) return 'unsupported';
+  return Notification.permission || 'default';
+}
+const notifyWanted = ()=> S.notifyOn !== false;
+
+let SWREG = null;
+async function ensureSW(){
+  if(!('serviceWorker' in navigator)) return null;
+  if(SWREG) return SWREG;
+  try{ SWREG = await navigator.serviceWorker.register('/sw.js', { scope: '/' }); }
+  catch(e){ SWREG = null; }
+  return SWREG;
+}
+async function askNotifyPermission(){
+  if(!notifySupported()){ toast('这个浏览器不支持网页通知，改用日历订阅更稳'); return 'unsupported'; }
+  if(Notification.permission === 'granted') return 'granted';
+  if(Notification.permission === 'denied'){
+    toast('通知被浏览器拦着，点地址栏左侧的图标允许通知后刷新');
+    return 'denied';
+  }
+  let p = 'denied';
+  try{ p = await Notification.requestPermission(); }catch(e){}
+  if(p === 'granted'){ ensureSW(); toast('已开启浏览器通知'); }
+  else toast('没拿到通知权限，可以先用日历订阅');
+  return p;
+}
+/* 发一条系统通知：优先 Service Worker（安卓、装到主屏的 iOS 只认这条），退回落页面通知 */
+async function fireNotify(title, body, noteId, tag){
+  if(notifyPermission() !== 'granted') return false;
+  const opts = { body, tag: tag || ('ivy-' + (noteId || '')), data: { noteId: noteId || '' } };
+  const reg = SWREG || await ensureSW();
+  if(reg && reg.showNotification){
+    try{ await reg.showNotification(title, opts); return true; }catch(e){}
+  }
+  try{
+    const n = new Notification(title, opts);
+    n.onclick = ()=>{ try{ window.focus(); }catch(e){} if(noteId) openNote(noteId); n.close(); };
+    return true;
+  }catch(e){ return false; }
+}
+
+/* 第一次设提醒时顺手问一次通知权限（必须是用户手势里问，浏览器才给） */
+function maybeAskNotifyOnRemind(){
+  if(S.notifyAsked) return;
+  S.notifyAsked = true;
+  if(notifyPermission() !== 'default'){ save(); return; }
+  save();
+  askNotifyPermission().then(p=>{ if(p === 'granted'){ S.notifyOn = true; save(); } });
+}
+
+/* ---- 订阅源：内容在本地算好，服务器只存和发 ---- */
+async function feedPush(opts){
+  opts = opts || {};
+  if(!isConnected()){ toast('先用左下角云同步登录，订阅链接才有地方存'); return null; }
+  if(feedBusy) return null;
+  feedBusy = true;
+  try{
+    const r = todoIcsText();
+    const body = { ics: r.text, count: r.list.length };
+    if(opts.reset) body.reset = true;
+    if(opts.off) body.off = true;
+    const d = await apiCall('/api/calendar', { method: 'POST', body });
+    if(d && d.on){
+      FEED = { token: d.token, url: d.url, webcal: d.webcal, count: d.count,
+        at: Date.now(), sig: icsHash(r.text) };
+    } else {
+      FEED = {};
+    }
+    saveFeedCache();
+    const ov = document.getElementById('remOv');
+    if(ov && ov.classList.contains('open')) paintRemindCenter();
+    return d;
+  }catch(e){
+    toast('订阅链接没更新成功：' + (e.message || '网络错误'));
+    return null;
+  } finally { feedBusy = false; }
+}
+async function feedRefresh(){
+  if(!isConnected()) return;
+  try{
+    const d = await apiCall('/api/calendar');
+    if(d && d.on){
+      FEED = Object.assign({}, FEED, {
+        token: d.token, url: d.url, webcal: d.webcal, count: d.count, at: d.updatedAt || Date.now()
+      });
+    } else { FEED = {}; }
+    saveFeedCache();
+  }catch(e){}
+}
+/* 笔记改过就顺手更新订阅源，别让日历里的内容停在几天前 */
+async function maybePushFeed(){
+  if(!isConnected() || !FEED.token || feedBusy) return;
+  if(Date.now() - feedTick < 4 * 60000) return;
+  feedTick = Date.now();
+  if(icsHash(todoIcsText().text) === FEED.sig) return;
+  await feedPush();
+}
+
+/* ---- 提醒与日历 面板 ---- */
+function closeRemindCenter(){
+  const ov = document.getElementById('remOv');
+  if(ov) ov.classList.remove('open');
+}
+function openRemindCenter(){
+  let ov = document.getElementById('remOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'remOv'; ov.className = 'due-ov';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e=>{ if(e.target === ov) closeRemindCenter(); });
+  }
+  ov.classList.add('open');
+  paintRemindCenter();
+  if(isConnected()) feedRefresh().then(()=>{ if(ov.classList.contains('open')) paintRemindCenter(); });
+}
+function paintRemindCenter(){
+  const ov = document.getElementById('remOv');
+  if(!ov) return;
+  const perm = notifyPermission();
+  const on = notifyWanted() && perm === 'granted';
+  const dt = dayRemindTime();
+  const hours = [];
+  for(let h = 6; h <= 23; h++) hours.push(pad2(h) + ':00');
+  if(hours.indexOf(pad2(dt.h) + ':00') < 0) hours.push(pad2(dt.h) + ':' + pad2(dt.m));
+  const permText = perm === 'granted' ? '<b class="rc-ok">已允许</b>'
+    : perm === 'denied' ? '<b class="rc-no">已被浏览器拦下</b>'
+    : perm === 'unsupported' ? '<b class="rc-no">此浏览器不支持</b>'
+    : '<b class="rc-no">还没允许</b>';
+
+  const feedBlock = FEED.token
+    ? `<code class="rc-link" id="rcLink">${esc(FEED.webcal || FEED.url || '')}
+         <button class="rc-copy" id="rcCopy" title="复制订阅链接">${ic('link')}</button></code>
+       <div class="rc-acts">
+         <button class="rc-btn primary" id="rcOpen">用日历打开</button>
+         <button class="rc-btn" id="rcReset">重新生成</button>
+         <button class="rc-btn danger" id="rcOff">停止订阅</button>
+       </div>
+       <div class="rc-note">已收录 ${FEED.count || 0} 条带日期的待办 · 日历大约每 30 分钟同步一次</div>`
+    : `<div class="rc-acts">
+         <button class="rc-btn primary" id="rcMake">生成订阅链接</button>
+         <button class="rc-btn" id="rcExport">导出 .ics 文件</button>
+       </div>`;
+
+  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="提醒与日历">
+    <div class="rc-title">${ic('bell')}<span>提醒与日历</span></div>
+
+    <div class="rc-box">
+      <div class="rc-box-h"><b>在这台设备上提醒带日期的待办</b>
+        <button class="rc-switch${on ? ' on' : ''}" id="rcSw" role="switch" aria-checked="${on}"><i></i></button>
+      </div>
+      <div class="rc-p">应用打开时，到点弹出系统通知（没允许通知时只在应用内提示）。想让关闭应用后也能收到提醒，请用下面的日历订阅。</div>
+      <div class="rc-perm">通知权限：${permText}
+        ${perm === 'granted' ? '<button class="rc-mini" id="rcTest">发送测试通知</button>'
+          : perm === 'unsupported' ? '' : '<button class="rc-mini" id="rcAllow">允许通知</button>'}
+      </div>
+    </div>
+
+    <div class="rc-box">
+      <div class="rc-box-h"><b>只有日期的待办在当天何时提醒</b></div>
+      <select class="rc-select" id="rcHour">
+        ${hours.map(h=>`<option value="${h}"${h === pad2(dt.h) + ':' + pad2(dt.m) ? ' selected' : ''}>${h}</option>`).join('')}
+      </select>
+      <div class="rc-note">写「@明天」「@周五」这类没带钟点的待办，按这个时间提醒。</div>
+    </div>
+
+    <div class="rc-box">
+      <div class="rc-box-h">${ic('clock')}<b>日历订阅</b></div>
+      <div class="rc-p">把带日期的待办同步到 iPhone、Mac、Google 或 Outlook 日历，由日历负责提醒，即使不打开笔记也不会错过。链接本身就是凭证，请勿分享。</div>
+      ${feedBlock}
+    </div>
+
+    <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
+  </div>`;
+
+  const q = s=>ov.querySelector(s);
+  if(q('#rcClose')) q('#rcClose').onclick = closeRemindCenter;
+  if(q('#rcSw')) q('#rcSw').onclick = async ()=>{
+    const want = !(notifyWanted() && notifyPermission() === 'granted');
+    if(want){
+      const p = await askNotifyPermission();
+      S.notifyOn = p === 'granted';
+      if(p === 'granted') fireNotify('⏰ 提醒已打开', '到点会在这里通知你', S.active, 'ivy-test');
+    } else {
+      S.notifyOn = false;
+    }
+    save(); paintRemindCenter();
+  };
+  if(q('#rcAllow')) q('#rcAllow').onclick = async ()=>{ await askNotifyPermission(); paintRemindCenter(); };
+  if(q('#rcTest')) q('#rcTest').onclick = ()=>{
+    fireNotify('⏰ 这是一条测试通知', '到点提醒就长这样 · ' + new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }), S.active, 'ivy-test');
+  };
+  if(q('#rcHour')) q('#rcHour').onchange = (e)=>{
+    S.dayRemindAt = e.target.value; save(); toast('只写日期的待办改到 ' + e.target.value + ' 提醒');
+  };
+  if(q('#rcMake')) q('#rcMake').onclick = async ()=>{
+    const b = q('#rcMake'); b.disabled = true; b.textContent = '正在生成…';
+    const d = await feedPush();
+    if(d && d.on) toast('订阅链接已生成，点「用日历打开」就能订阅');
+    paintRemindCenter();
+  };
+  if(q('#rcReset')) q('#rcReset').onclick = async ()=>{
+    if(!confirm('重新生成后，已经订阅到日历里的旧链接会失效，需要重新订阅一次。继续吗？')) return;
+    await feedPush({ reset: true });
+    paintRemindCenter();
+    toast('已换新链接，记得在日历里重新订阅');
+  };
+  if(q('#rcOff')) q('#rcOff').onclick = async ()=>{
+    if(!confirm('停止订阅会让链接立刻失效，日历里也不会再更新。继续吗？')) return;
+    await feedPush({ off: true });
+    paintRemindCenter();
+    toast('已停止订阅');
+  };
+  if(q('#rcCopy')) q('#rcCopy').onclick = ()=>{
+    const url = FEED.webcal || FEED.url || '';
+    if(!url) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>toast('订阅链接已复制'), ()=>toast(url));
+    else toast(url);
+  };
+  if(q('#rcOpen')) q('#rcOpen').onclick = ()=>{
+    const url = FEED.webcal || FEED.url || '';
+    if(!url) return;
+    if(/^https?:/.test(url) === false || /iPad|iPhone|Macintosh/.test(navigator.userAgent)){
+      location.href = url;                          // webcal 交给系统日历
+      toast('已交给系统日历，没反应就用复制链接');
+    } else {
+      if(navigator.clipboard) navigator.clipboard.writeText(url);
+      toast('链接已复制，粘到日历的「订阅日历」里即可');
+    }
+  };
+  if(q('#rcExport')) q('#rcExport').onclick = ()=>exportTodoIcs();
+}
+
+/* 到点提醒（每分钟看一眼，记在 localStorage 里避免重复弹） */
 function checkTodoReminders(){
   const now = Date.now();
   const seen = loadReminded();
   let changed = false;
+  const hits = [];
   collectTodos().forEach(t=>{
     if(t.done || !t.due) return;
     if(t.due > now) return;
@@ -2501,9 +2889,20 @@ function checkTodoReminders(){
     const key = t.noteId + '|' + t.text + '|' + t.due;
     if(seen[key]) return;
     seen[key] = 1; changed = true;
-    toast('⏰ 待办到期：' + (t.text || '未命名'));
+    hits.push(t);
   });
   if(changed) saveReminded(seen);
+  if(!hits.length) return;
+
+  if(notifyWanted() && notifyPermission() === 'granted'){
+    hits.slice(0, 5).forEach(t=>{
+      fireNotify('⏰ ' + (t.text || '待办到时间了'),
+        dueLabel(t.due) + ' · ' + t.noteTitle, t.noteId, 'ivy-' + t.noteId + '-' + t.due);
+    });
+  } else {
+    toast(hits.length === 1 ? '⏰ 待办到期：' + (hits[0].text || '未命名')
+      : '⏰ 有 ' + hits.length + ' 条待办到期');
+  }
 }
 /* 侧边栏「待办」上的红点：有逾期就亮 */
 function updateTodoBadge(){
@@ -3618,6 +4017,7 @@ function openRemindDialog(opts){
     const stamp = new Date(y, mo - 1, dd, hh, mi, 0, 0).getTime();
     const rep = repIn.value;
     close();
+    maybeAskNotifyOnRemind();
     if(opts.todo){
       setTodoDue(opts.todo, stamp, true);
       setTodoRepeat(opts.todo, rep, true);
@@ -3839,7 +4239,9 @@ function paintHelp(){
       <div class="help-sec"><h4>重复</h4>
         <p class="help-p">点时间，选「每天 / 每个工作日 / 每周 / 每月 / 每年」，会写成 <code>🔁 every month</code>。勾选完成后会自动生成下一次。</p></div>
       <div class="help-sec"><h4>提醒</h4>
-        <p class="help-p">有时间的待办到点会弹出页面提醒（网页要保持打开）。点左下「订阅到手机日历」可以把日程导出成 .ics，交给手机日历提醒。</p></div>
+        <p class="help-p">有时间的待办到点会弹系统通知（网页保持开着，缩到后台也行）；点通知会跳回那条待办。第一次设提醒时会问一次通知权限。</p></div>
+      <div class="help-sec"><h4>订阅到日历</h4>
+        <p class="help-p">点左下「提醒与日历」→「生成订阅链接」，把 <code>webcal://</code> 链接加进 iPhone / Mac / Google 日历，关着网页也能收到提醒。笔记改了会自己同步上去。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>
@@ -6542,6 +6944,8 @@ $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnSearch').onclick=()=>openPalette();
 $('#btnNew').onclick=()=>newNote();
 $('#btnShelf').onclick=()=>toggleShelf();
+$('#btnTodoHelp').onclick=()=>{ helpTab='todo'; openHelpPanel(); };
+$('#headDoneSw').onchange=(e)=>{ S.todoShowDoneToday = e.target.checked; save(); renderShelf(); };
 $('#shelfOpen').onclick=()=>toggleShelf();
 
 /* ========== 账号与云同步 ========== */
@@ -6964,9 +7368,26 @@ if(isConnected()){
   }, 350);
 }
 
-/* ---- 待办到点提醒：每分钟扫一次 ---- */
+/* ---- 待办到点提醒：每分钟扫一次；回到页面时补扫一次 ---- */
 setTimeout(checkTodoReminders, 2500);
 setInterval(checkTodoReminders, 60000);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') checkTodoReminders();
+});
+/* 通知用的 Service Worker：只用来弹通知，不接管请求 */
+if('serviceWorker' in navigator) setTimeout(()=>{ ensureSW(); }, 1200);
+/* 页面上有提醒记录时，顺手把日历订阅源也刷新一遍（内部有节流） */
+setTimeout(()=>{ if(FEED.token) maybePushFeed(); }, 12000);
+setInterval(()=>{ maybePushFeed(); }, 5 * 60000);
+/* 通知点开：切回页面后跳到对应笔记 */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', (e)=>{
+    const d = e.data || {};
+    if(d.type === 'ivy-open-note' && d.noteId && noteById(d.noteId)){
+      S.view = 'notes'; openNote(d.noteId); renderAll(); save();
+    }
+  });
+}
 
 /* ---- 版本水印 ----
    常驻显示本页构建版本；正式域名下再对比 GitHub main 上的 version.js，

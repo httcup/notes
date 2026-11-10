@@ -1691,7 +1691,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v62', at: '2026-11-10 17:42' };
+window.IVY_BUILD = { id: 'v63', at: '2026-11-10 18:14' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7970,41 +7970,31 @@ function openNotesPush(){
 }
 function paintNotesPush(){
   const ov = document.getElementById('npfOv'); if(!ov) return;
-  const steps = [
-    '1. 点上面「生成取数链接」并复制（这串链接就是通行证）',
-    '2. iPhone 打开「快捷指令」App，右上角 ＋ 新建一个空白快捷指令',
-    '3. 搜索「URL内容」，点「获取URL内容」那一行右侧的 ＋',
-    '4. 把链接粘进 URL 框，「方法」保持 GET',
-    '5. 再搜「词典值」加一条：来源选「URL 的内容」，键填 notes',
-    '6. 搜「重复每个项目」，重复对象选上一步的「词典值」',
-    '7. 循环里再放两条「获取词典值」：键分别填 title 和 text',
-    '8. 循环里加「创建备忘录」：标题选 title、正文选 text，点底部 ▶ 运行',
-    '9. 只推某个笔记本：链接末尾加 &nb=笔记本名；只推最近更新：加 &since=毫秒时间戳'
-  ];
+  const SC_LINK = 'https://www.icloud.com/shortcuts/c729f17ccbd84f93a0a44d4192a61982';
   const feedBlock = NPF.token
-    ? `<code class="rc-link" id="npfLink">${esc(NPF.url)}
-         <button class="rc-copy" id="npfCopy" title="复制链接">${ic('link')}</button></code>
+    ? `<code class="rc-link" id="npfLink">${esc(NPF.token)}
+         <button class="rc-copy" id="npfCopy" title="复制订阅 token">${ic('link')}</button></code>
        <div class="rc-acts">
-         <button class="rc-btn primary" id="npfCopyBtn">复制链接</button>
+         <button class="rc-btn primary" id="npfCopyBtn">复制订阅 token</button>
          <button class="rc-btn" id="npfReset">重新生成</button>
          <button class="rc-btn danger" id="npfOff">关闭推送</button>
        </div>`
     : `<div class="rc-acts">
-         <button class="rc-btn primary" id="npfMake">生成取数链接</button>
+         <button class="rc-btn primary" id="npfMake">生成订阅 token</button>
        </div>`;
   ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="同步到苹果备忘录">
     <div class="rc-title">${ic('notebook')}<span>同步到苹果备忘录</span></div>
     <div class="rc-box">
       <div class="rc-box-h"><b>iOS 快捷指令 · 单向推送</b></div>
-      <div class="rc-p">苹果备忘录没有公开接口，无法像日历那样订阅自动同步；可行办法是给快捷指令一条取数链接，由它把笔记批量「创建备忘录」到备忘录 App。链接本身就是凭证，请勿分享。</div>
-      ${feedBlock}
+      <div class="rc-p">苹果备忘录没有公开接口，无法像日历那样订阅自动同步。用下面这条共享快捷指令即可：添加后把订阅 token 粘进快捷指令的文本框，运行时可以选择保存到指定备忘录文件夹。</div>
+      <a class="rc-btn primary" href="${SC_LINK}" target="_blank" rel="noopener"
+         style="display:block;text-align:center;text-decoration:none">点这里直接添加到快捷指令 →</a>
+      <div class="rc-note">如果点开没有反应，把上面这条链接复制到 iPhone / Mac 的浏览器里打开即可。</div>
     </div>
     <div class="rc-box">
-      <div class="rc-box-h"><b>快捷指令这样搭（一次性，两分钟）</b></div>
-      ${steps.map(s=>`<div class="rc-note" style="margin-top:0">${s}</div>`).join('')}
-      <a class="rc-btn" href="/guide/" target="_blank" rel="noopener"
-         style="display:block;text-align:center;text-decoration:none;margin-top:12px">看不懂步骤？看 8 张实拍图解 →</a>
-      <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇；text 字段默认是渲染后的纯文本（标题、待办 □/☑、表格、链接都已转好），要 Markdown 原文用 body 字段（链接后加 &raw=1）。</div>
+      <div class="rc-box-h"><b>订阅 token（粘进快捷指令的文本框）</b></div>
+      ${feedBlock}
+      <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇，正文已是渲染后的纯文本。</div>
     </div>
     <div class="rc-foot"><button class="rc-close" id="npfClose">关闭</button></div>
   </div>`;
@@ -8013,24 +8003,24 @@ function paintNotesPush(){
   if(q('#npfMake')) q('#npfMake').onclick = async ()=>{
     const b = q('#npfMake'); b.disabled = true; b.textContent = '正在生成…';
     const d = await npfApi({ body:{ on:true } });
-    toast(d && d.on ? '链接已生成，复制到快捷指令里用' : '生成失败');
+    toast(d && d.on ? 'token 已生成，粘到快捷指令的文本框里' : '生成失败');
     paintNotesPush();
   };
   if(q('#npfCopyBtn')) q('#npfCopyBtn').onclick = ()=>{
-    if(!NPF.url) return;
-    if(navigator.clipboard) navigator.clipboard.writeText(NPF.url).then(()=>toast('链接已复制，去快捷指令粘贴'), ()=>toast(NPF.url));
-    else toast(NPF.url);
+    if(!NPF.token) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(NPF.token).then(()=>toast('订阅 token 已复制，去快捷指令粘贴'), ()=>toast(NPF.token));
+    else toast(NPF.token);
   };
   if(q('#npfCopy')) q('#npfCopy').onclick = ()=>{
-    if(!NPF.url) return;
-    if(navigator.clipboard) navigator.clipboard.writeText(NPF.url).then(()=>toast('链接已复制'), ()=>toast(NPF.url));
-    else toast(NPF.url);
+    if(!NPF.token) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(NPF.token).then(()=>toast('订阅 token 已复制'), ()=>toast(NPF.token));
+    else toast(NPF.token);
   };
   if(q('#npfReset')) q('#npfReset').onclick = async ()=>{
-    if(!confirm('重新生成后，快捷指令里填的旧链接会立即失效，要在快捷指令里换新链接。继续吗？')) return;
+    if(!confirm('重新生成后，旧 token 会立即失效，要在快捷指令里换新的。继续吗？')) return;
     await npfApi({ body:{ reset:true } });
     paintNotesPush();
-    toast('已换新链接，记得更新快捷指令里的 URL');
+    toast('已换新 token，记得更新快捷指令里的文本框');
   };
   if(q('#npfOff')) q('#npfOff').onclick = async ()=>{
     if(!confirm('关闭后链接立即失效，快捷指令将拉不到数据。笔记本身不受影响。继续吗？')) return;

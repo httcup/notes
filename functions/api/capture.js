@@ -56,7 +56,7 @@ function decodeEntities(s) {
 /** 访客验证页 / 平台通用占位标题，绝不能拿来当笔记标题 */
 function cleanTitle(t) {
   const s = String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-  if (/^(sina visitor system|微博正文|微博|微博-随时随地发现新鲜事|微信公众平台|页面不存在|访问验证|环境异常|验证码)/i.test(s)) return '';
+  if (/^(sina visitor system|微博正文|微博|头条文章|微博-随时随地发现新鲜事|微信公众平台|页面不存在|访问验证|环境异常|验证码)/i.test(s)) return '';
   return s.slice(0, 200);
 }
 
@@ -257,25 +257,37 @@ async function grabWeiboApi(id, diag) {
   } catch (e) { diag.push('weibo-api err ' + String((e && e.message) || e).slice(0, 60)); return null; }
 }
 
-/** 头条文章没有可用的公开 JSON 接口，交给公开 Reader 补；CAPTURE_JINA=0 可关闭 */
-async function grabViaJina(target, diag) {
-  try {
-    const res = await fetchText('https://r.jina.ai/' + target,
-      { 'user-agent': UA, 'accept': 'text/plain' }, 12000);
-    diag.push('reader ' + res.status);
-    if (!res.ok) return null;
-    const raw = (await res.text()).slice(0, MAX_BODY * 2);
-    const title = (/^Title:\s*(.+)$/m.exec(raw) || [])[1] || '';
-    const i = raw.search(/^Markdown Content:\s*$/m);
-    if (i < 0) { diag.push('reader no markdown'); return null; }
-    let md = raw.slice(i).replace(/^Markdown Content:\s*/m, '').trim();
-    // 微博详情页的 ### 作者 / #### 时间 / #### 关注 都是元信息，不是正文也不是标题
-    if (/m\.weibo\.cn\/(detail|status)/.test(target)) {
-      md = md.replace(/^#{1,6}[^\n]*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+/** 头条文章没有可用的公开 JSON 接口，交给公开 Reader 补；CAPTURE_JINA=0 可关闭，
+ *  JINA_API_KEY 可选（免费 Reader 对机房 IP 容易 429，带 key 额度高得多） */
+async function grabViaJina(target, diag, env) {
+  const headers = { 'user-agent': UA, 'accept': 'text/plain', 'x-no-cache': 'true' };
+  if (env && env.JINA_API_KEY) headers.authorization = 'Bearer ' + env.JINA_API_KEY;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetchText('https://r.jina.ai/' + target, headers, 12000);
+      diag.push('reader ' + res.status);
+      if (res.status === 429 && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 1500));   // 限流，稍等再来一次
+        continue;
+      }
+      if (!res.ok) return null;
+      const raw = (await res.text()).slice(0, MAX_BODY * 2);
+      const title = (/^Title:\s*(.+)$/m.exec(raw) || [])[1] || '';
+      const i = raw.search(/^Markdown Content:\s*$/m);
+      if (i < 0) { diag.push('reader no markdown'); return null; }
+      let md = raw.slice(i).replace(/^Markdown Content:\s*/m, '').trim();
+      // 微博详情页的 ### 作者 / #### 时间 / #### 关注 都是元信息，不是正文也不是标题
+      if (/m\.weibo\.cn\/(detail|status)/.test(target)) {
+        md = md.replace(/^#{1,6}[^\n]*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+      }
+      if (md.length < 40 || looksLikeGarbage(md)) { diag.push('reader garbage ' + md.length); return null; }
+      return { title: cleanTitle(title), md: md.slice(0, MAX_BODY), mode: 'full', via: 'reader' };
+    } catch (e) {
+      diag.push('reader err ' + String((e && e.message) || e).slice(0, 60));
+      return null;
     }
-    if (md.length < 40 || looksLikeGarbage(md)) { diag.push('reader garbage ' + md.length); return null; }
-    return { title: cleanTitle(title), md: md.slice(0, MAX_BODY), mode: 'full', via: 'reader' };
-  } catch (e) { diag.push('reader err ' + String((e && e.message) || e).slice(0, 60)); return null; }
+  }
+  return null;
 }
 
 async function grab(rawUrl, env) {
@@ -293,7 +305,7 @@ async function grab(rawUrl, env) {
     }
     if (!env || env.CAPTURE_JINA !== '0') {
       for (const target of jinaTargets(u)) {
-        const got = await grabViaJina(target, diag);
+        const got = await grabViaJina(target, diag, env);
         if (got) return done(got);
       }
     } else diag.push('reader disabled');

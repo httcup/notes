@@ -79,7 +79,7 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 
 - **微信公众号 / 普通网页**：直连。页面常有 3MB+，正文 `#js_content` 可能在 600KB 之后，所以必须读全页、先在完整 HTML 上剔掉 `<script>/<style>`，再按标签栈精确切出 `#js_content` 容器。早期版本先截断 400KB 再清洗，导致脚本未闭合、JS 源码被当成正文写进笔记。
 - **微博普通状态**：网页直连一律返回 Sina Visitor System，但移动端公开 JSON 接口 `m.weibo.cn/statuses/show?id=<id>` 只要带上 `Referer: https://m.weibo.cn/` 和 `X-Requested-With: XMLHttpRequest` 就能直出正文，**不需要访客 Cookie**。长微博再调 `statuses/extend` 补 `longTextContent`，图片/作者/转发原文一起转 Markdown。这是主通道，无第三方依赖。
-- **微博头条文章**：官方 AJAX 接口需要签名/登录（返回「系统繁忙」），只能退回公开 Reader `https://r.jina.ai/<规范化地址>` 取渲染后的 Markdown；官方接口失效时普通微博也走这个兜底。
+- **微博头条文章**：官方 AJAX 接口需要签名/登录（返回「系统繁忙」），访客 Cookie 也解不开，只能退回公开 Reader `https://r.jina.ai/<规范化地址>` 取渲染后的 Markdown；官方接口失效时普通微博也走这个兜底。免费 Reader 对机房 IP 常返回 429，端点内置一次重试；配置 `JINA_API_KEY` 后额度更高。
 - 抓到脚本碎片、访客验证页或解码乱码时**一律降级**，绝不写脏数据进笔记。
 - Reader 兜底会把**公开链接**发给第三方服务。介意的话在 Pages 环境变量里设 `CAPTURE_JINA=0` 关闭，退回「标题 + 原链接 + 分享文字」的降级快照。
 
@@ -112,7 +112,7 @@ Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
 - Build command：留空
 - Build output directory：`public`
 - 环境变量 `IVY_KEY`：主人口令（Secret）；`IVY_SECRET`：令牌签名密钥（Secret，随便一串 64 位十六进制）
-- 可选 `CAPTURE_KEY`：外部剪藏密钥（Secret，给 `/api/capture` 用，建议 32 位随机串）；可选 `CAPTURE_UID`，默认 `owner`；可选 `CAPTURE_JINA=0` 关闭微博的第三方 Reader 通道
+- 可选 `CAPTURE_KEY`：外部剪藏密钥（Secret，给 `/api/capture` 用，建议 32 位随机串）；可选 `CAPTURE_UID`，默认 `owner`；可选 `CAPTURE_JINA=0` 关闭微博的第三方 Reader 通道；可选 `JINA_API_KEY`（Secret）提高 Reader 限额，用于微博头条文章
 - 绑定 D1：变量名 `DB`；绑定 KV：变量名 `MEDIA`（可选再绑 R2：`BUCKET`）
 
 也可以用 API 一次配好（本项目就是这么部署的）。

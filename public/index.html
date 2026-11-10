@@ -903,7 +903,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .blk-hint .hp{color:rgb(var(--faint))}
 .blk-hint .ht{color:rgb(var(--faint));opacity:.72}
-.blk-src.has-hint{color:transparent}
+/* 有占位提示时正文透明、由 .blk-hint 显示灰字；
+   但 color:transparent 会让 caret 一起变透明（光标看不见），所以单独把光标颜色要回来 */
+.blk-src.has-hint{color:transparent;caret-color:rgb(var(--ink))}
 .blk-view{min-height:1.2em}
 .blk-view input[type=checkbox]{cursor:pointer}
 .blk-view img{cursor:default}
@@ -1364,7 +1366,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v45', at: '2026-11-10 11:06' };
+window.IVY_BUILD = { id: 'v46', at: '2026-11-10 11:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4082,11 +4084,13 @@ function syncTodoChk(el, ta){
   const cs = getComputedStyle(ta);
   const lh = parseFloat(cs.lineHeight) || 24;
   const w = measureTextWidth(m[0] + ' ', cs);
+  const sw = measureTextWidth(' ', cs);
   el.classList.add('show-tchk');
   ov.classList.toggle('on', m[1].toLowerCase() === 'x');
   ov.style.left = (ta.offsetLeft || 0) + 'px';
   ov.style.top = (ta.offsetTop || 0) + 'px';
-  ov.style.width = Math.round(w + 2) + 'px';
+  // 牌子只盖住 "- [ ]"，末尾那个空格留给光标，别把 caret 压住
+  ov.style.width = Math.round(Math.max(0, w - sw) + 1) + 'px';
   ov.style.height = Math.round(lh) + 'px';
 }
 

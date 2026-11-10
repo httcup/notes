@@ -73,7 +73,9 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `GET /api/capture?k=<CAPTURE_KEY>&url=<文章地址>` → 直接剪藏，给只能发 GET 的 webhook 用。
 `GET /api/capture?k=<CAPTURE_KEY>` → 手机浏览器里粘贴链接的极简表单页。
 
-> `/api/capture` 是唯一「往里写」的入口，其余接口都是往外读或全量同步。
+`POST /api/pdf`（需 `x-pdf-key: <PDF_IMPORT_KEY>` 或 `x-capture-key`）→ 把 PDF 转成结构化 Markdown 写进「PDF 导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, pdfUrl, mode, chars, tokens }`。原始 PDF 同时存进媒体库，笔记末尾附链接；扫描件转不出文字时只存原件（`mode=original`）。同一份 PDF 重复推送按内容哈希只更新同一篇笔记。
+
+> `/api/capture`（网页剪藏）和 `/api/pdf`（PDF 转 Markdown）是两条「往里写」的入口，其余接口都是往外读或全量同步。
 > `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（网页直连）、`weibo-api`（微博官方移动端接口）、`reader`（第三方 Reader 兜底）、`link`（降级）；`format=json|form|text|query` 表示这次请求是怎么被解析的。请求加 `?debug=1` 会额外返回 `diag` 数组，记录每一路抓取的状态，线上排障用。
 
 抓取策略（踩过的坑）：
@@ -127,6 +129,57 @@ curl -X POST 'https://n.139t.cn/api/capture' -H 'x-capture-key: <KEY>' \
 - 微博 / 微信自身不会主动推送「新收藏」，上游得是你自己的自动化（RSS、定时任务、机器人中转）或分享菜单。
 - ⚠️ `?k=` 形式的 URL 含密钥，别贴到公开仓库、群聊或日志里。
 
+### 把 PDF 转成 Markdown 存进笔记本
+
+`/api/pdf` 是第二条写入通道。链路：
+
+```
+iOS 快捷指令（分享 PDF） → POST https://n.139t.cn/api/pdf
+  → Workers AI toMarkdown（PDF → 结构化 Markdown，标题/列表/表格都保留）
+  → 写进 D1 的「PDF 导入」笔记本 + 原件存进媒体库
+  → 笔记站 45 秒轮询或重开页面即可看到
+```
+
+部署前置（一次性）：
+
+1. Pages 项目 → Settings → Functions → **Bindings → Add → Workers AI**，变量名填 `AI`（production / preview 都加）；改完要重新部署才生效。
+2. 加 Secret `PDF_IMPORT_KEY`（`openssl rand -hex 24` 生成），可选 `PDF_UID`（默认 `owner`）。它和剪藏用的 `CAPTURE_KEY` 相互独立，改它不会影响已有的剪藏快捷指令；端点两个 key 都认。
+3. 绑定 D1 `DB` 与 KV `MEDIA`（沿用现有配置即可，无需改表结构）。
+
+**iOS 快捷指令配置**（打开「在共享表单中显示」，接收「文件 / PDF」）：
+
+| 步骤 | 动作 | 参数 |
+| --- | --- | --- |
+| 1 | 设置变量 | 变量名 `PDF文件`，值是「快捷指令输入」 |
+| 2 | URL | `https://n.139t.cn/api/pdf` |
+| 3 | 获取 URL 内容 | 方法 `POST`；请求头加 `x-pdf-key: <PDF_IMPORT_KEY>`；请求体选「表单」，加一个**文件**类型字段 `file`，值选第 1 步的变量 |
+| 4 | 获取字典值 | 键 `title`（从上一步的 JSON 响应里取） |
+| 5 | 显示通知 | 标题「PDF 已存进笔记本」，内容用第 4 步的结果 |
+
+分享 PDF 时选这条快捷指令即可。Mac 上也可以双击已签名好的 `PDF存进笔记本.shortcut` 直接导入（会经 iCloud 同步到 iPhone）。
+
+其他调用方式：
+
+```bash
+# multipart（快捷指令走的就是这个）
+curl -X POST 'https://n.139t.cn/api/pdf' \
+  -H 'x-pdf-key: <KEY>' \
+  -F 'file=@/path/to/report.pdf;type=application/pdf' \
+  -F 'title=可选标题' -F 'notebook=资料库'
+
+# 原始 PDF 二进制 / JSON base64 / PDF 网址
+curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
+  -H 'content-type: application/pdf' --data-binary @report.pdf
+curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
+  -H 'content-type: application/json' -d '{"pdf":"<base64>","filename":"a.pdf"}'
+# https://n.139t.cn/api/pdf?k=<KEY>&url=https%3A%2F%2Fexample.com%2Fa.pdf
+```
+
+- `?format=md` 返回纯 Markdown，`?format=html` 返回排版好的 HTML 预览页（都不写库以外的东西）；`?keep=0` 不存原始 PDF。
+- `GET /api/pdf?k=<KEY>` 是手机浏览器里选 PDF 上传的表单页，不想配快捷指令时用它。
+- 上限 20MB；扫描件（图片型 PDF）转不出文字时降级为 `mode=original`，只建一条带原件链接的笔记，不写脏正文。
+- 正文是 Markdown，笔记本里可以直接编辑；标题依次取 `title` 字段 → 正文第一个标题 → 文件名。
+
 ## 部署
 
 ### 1. 数据库
@@ -144,7 +197,9 @@ Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
 - Build output directory：`public`
 - 环境变量 `IVY_KEY`：主人口令（Secret）；`IVY_SECRET`：令牌签名密钥（Secret，随便一串 64 位十六进制）
 - 可选 `CAPTURE_KEY`：外部剪藏密钥（Secret，给 `/api/capture` 用，建议 32 位随机串）；可选 `CAPTURE_UID`，默认 `owner`；可选 `CAPTURE_JINA=0` 关闭微博的第三方 Reader 通道；可选 `JINA_API_KEY`（Secret）提高 Reader 限额，用于微博头条文章
-- 绑定 D1：变量名 `DB`；绑定 KV：变量名 `MEDIA`（可选再绑 R2：`BUCKET`）
+- 可选 `PDF_IMPORT_KEY`：`/api/pdf` 的导入密钥（Secret）；可选 `PDF_UID`，默认 `owner`。改它不影响 `CAPTURE_KEY`
+- 绑定 D1：变量名 `DB`；绑定 KV：变量名 `MEDIA`（可选再绑 R2：`BUCKET`）；`/api/pdf` 还需要 Workers AI 绑定：变量名 `AI`（Settings → Functions → Bindings → Workers AI）
+- 改环境变量或绑定后要重新部署才生效
 
 也可以用 API 一次配好（本项目就是这么部署的）。
 

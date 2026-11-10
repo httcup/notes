@@ -251,19 +251,26 @@ body.view-todo .head-actions .notes-only{display:none}
   border-radius:13px;box-shadow:var(--shadow-float);
 }
 .dock-item{
-  height:34px;min-width:34px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:6px;
-  border-radius:9px;color:rgb(var(--muted));font-size:12.5px;flex:0 0 auto;
+  height:34px;min-width:34px;width:34px;padding:0;display:flex;align-items:center;justify-content:center;gap:6px;
+  border-radius:9px;color:rgb(var(--muted));font-size:12.5px;flex:0 0 auto;position:relative;
   transition:background .16s,color .16s;
 }
 .dock-item svg{width:17px;height:17px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .dock-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .dock-item.active{background:rgb(var(--ink) / .06);color:rgb(var(--ink));font-weight:500}
-.dock-item .lbl{white-space:nowrap}
 .dock-spacer{flex:1}
-/* 待办逾期红点 */
+@media (max-width:420px){
+  .dock{gap:0;padding:4px}
+  .dock-item{width:31px;min-width:31px;height:32px}
+  .dock-item svg{width:16px;height:16px}
+  .avatar{width:28px;height:28px}
+}
+/* 待办逾期红点：贴在图标右上角，不再把整个按钮撑宽 */
 .dock-item .todo-dot{
+  position:absolute;top:-3px;right:-4px;
   min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:rgb(var(--danger));
   color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;flex:0 0 auto;
+  box-shadow:0 0 0 2px rgb(var(--surface));
 }
 /* 从待办跳过去时，闪一下那一块 */
 @keyframes todoFlash{0%{background:rgb(var(--ivy)/.16)}100%{background:transparent}}
@@ -363,7 +370,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .trash-head #trashEmpty{margin-left:0;padding:4px 0}
 }
 /* 标题下的 Markdown 工具条 */
-.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 0;user-select:none}
+/* 格式工具条收进右上角「+」菜单里，这一行不再占正文空间 */
+.fmt-bar{display:none !important}
 .fmt-bar button{
   height:26px;min-width:24px;padding:0 6px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
   transition:background .14s,color .14s,transform .1s;
@@ -563,9 +571,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 @media (max-width:640px){
   .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
   .slash{width:min(258px,86vw)}
-  /* 手机上顶部图标已经很挤：插入入口用工具栏里的 +，右上角不再重复放一个 */
-  .paper-actions #paInsert{display:none}
-  .paper .tabbar{padding-right:200px}
+  /* 格式工具条收进 + 之后，手机上必须保留右上角这个插入入口 */
+  .paper .tabbar{padding-right:232px}
 }
 
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
@@ -1142,6 +1149,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .popover{
   position:fixed;z-index:70;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
   border-radius:10px;box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
+  max-height:min(72vh, 580px);overflow-y:auto;overscroll-behavior:contain;
   opacity:0;transform:translateY(-4px) scale(.98);pointer-events:none;transition:opacity .14s,transform .16s var(--spring);
 }
 .popover.open{opacity:1;transform:none;pointer-events:auto}
@@ -1438,9 +1446,9 @@ const ICONS = {
   codeBlock:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m8.5 9.5-2 2.5 2 2.5M15.5 9.5l2 2.5-2 2.5"/>',
   bell:'<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10 18a2 2 0 0 0 4 0"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  notebook:'<rect x="6" y="3" width="13.2" height="18" rx="2.2"/><path d="M6 7.6H3.4M6 12H3.4M6 16.4H3.4"/><path d="M9.8 8h5.8M9.8 11.4h5.8"/><path d="M4.7 3v18"/>',
+  notebook:'<path d="M14 3.4H7.2A2.2 2.2 0 0 0 5 5.6v12.8a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2V8z"/><path d="M14 3.4V8h5"/><path d="M8.7 12.4h6.6M8.7 16h4.2"/>',
   folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
-  todo:'<circle cx="6.4" cy="6.4" r="2.7"/><path d="m5.3 6.4.9.9 1.7-1.9"/><circle cx="6.4" cy="12" r="2.7"/><circle cx="6.4" cy="17.6" r="2.7"/><path d="M11.6 6.4h8.6M11.6 12h8.6M11.6 17.6h8.6"/>',
+  todo:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.6"/><path d="m7.8 9.3 1.7 1.7 3-3.2"/><path d="M13 8.4h4M8 15h8.2"/>',
   link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
   heading:'<path d="M6 5v14M18 5v14M6 12h12"/>',
   table:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M9.5 10v9M15 10v9"/>',
@@ -1449,6 +1457,11 @@ const ICONS = {
   calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
   hl:'<path d="M5 15.4 14.6 5.8a2.3 2.3 0 0 1 3.2 0l.4.4a2.3 2.3 0 0 1 0 3.2L8.6 19H5z"/><path d="M4 21h7"/>',
   tbox:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="m8 12 2.6 2.6L16 9.4"/>',
+  bold:'<path d="M7 5h5a3.5 3.5 0 0 1 0 7H7zM7 12h6a3.5 3.5 0 0 1 0 7H7z"/>',
+  italic:'<path d="M14 5h-4M10 19h4M13.5 5l-3 14"/>',
+  strike:'<path d="M5 12h14M8.5 8.2a3.7 3 0 0 1 7 0M8.5 15.8a3.7 3 0 0 0 7 0"/>',
+  smile:'<circle cx="12" cy="12" r="8.6"/><path d="M8.6 14.2a4.4 4.4 0 0 0 6.8 0M9.3 9.6h.01M14.7 9.6h.01"/>',
+  help:'<circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.3a2.4 2.4 0 1 1 3.3 2.2c-.7.3-1 .9-1 1.7M12 16.8h.01"/>',
   insert:'<path d="M12 5v14M5 12h14"/>'
 };
 function ic(name, cls){
@@ -1457,7 +1470,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v53', at: '2026-11-10 15:04' };
+window.IVY_BUILD = { id: 'v54', at: '2026-11-10 15:22' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3521,8 +3534,8 @@ function renderDock(){
   const cloudBtn = `<button class="dock-item sync-${SYNC.state}" id="dockSync" title="${syncTip()}">
       ${ic('cloud')}<span class="dot"></span></button>`;
   $('#dock').innerHTML = items.map(it=>`
-    <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}">
-      ${ic(it.icon)}<span class="lbl" style="display:${S.view===it.k?'':'none'}">${it.label}</span>
+    <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
+      ${ic(it.icon)}
     </button>`).join('') +
     cloudBtn +
     `<div class="dock-spacer"></div>
@@ -4036,20 +4049,36 @@ function insertBlockAtCaret(){
   if(n) n.body = ta.value;
 }
 const INSERT_ITEMS = [
-  {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
-  {name:'二级标题', keys:['bt2','h2'], glyph:'H2', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
-  {name:'三级标题', keys:['bt3','h3'], glyph:'H3', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
+  {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', icon:'heading', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
+  {name:'二级标题', keys:['bt2','h2'], glyph:'H2', icon:'heading', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
+  {name:'三级标题', keys:['bt3','h3'], glyph:'H3', icon:'heading', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
+  {name:'四级标题', keys:['bt4','h4'], glyph:'H4', icon:'heading', desc:'四级分节', block:1, run:()=>applyFormat('h4')},
+  {name:'五级标题', keys:['bt5','h5'], glyph:'H5', icon:'heading', desc:'五级分节', block:1, run:()=>applyFormat('h5')},
+  {name:'六级标题', keys:['bt6','h6'], glyph:'H6', icon:'heading', desc:'六级分节', block:1, run:()=>applyFormat('h6')},
+
+  {name:'加粗', keys:['jc','jiacu','bold','b'], glyph:'B', icon:'bold', desc:'**加粗文字**', run:()=>applyFormat('b')},
+  {name:'斜体', keys:['xt','xieti','italic'], glyph:'/', icon:'italic', desc:'*斜体文字*', run:()=>applyFormat('i')},
+  {name:'删除线', keys:['scx','shanchuxian','strike'], glyph:'S', icon:'strike', desc:'~~删除线~~', run:()=>applyFormat('s')},
+  {name:'高亮', keys:['gl','gaoliang','mark'], icon:'hl', desc:'==高亮文字==', run:()=>applyFormat('mark')},
+  {name:'高亮颜色…', keys:['ys','yanse','hlcolor'], icon:'hl', desc:'27 种预设色 + 自定义取色', run:()=>openHighlightMenu($('#paInsert'))},
+  {name:'行内代码', keys:['hndm','hangneidaima','icode'], icon:'code', desc:'`行内代码`', run:()=>applyFormat('code')},
+
   {name:'待办', keys:['db','daiban','todo','task'], icon:'todo', desc:'- [ ] 会自动汇总到「日程」', block:1, run:()=>applyFormat('todo')},
   {name:'日期与提醒', keys:['rq','riqi','date'], alt:'@', icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
-  {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再用工具栏调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
+  {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再拖动调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
+  {name:'表格尺寸…', keys:['bgdx','tabledim'], icon:'table', desc:'拖动选择几行几列', run:()=>openTablePicker($('#paInsert'))},
   {name:'代码块', keys:['dmk','daimaikuai','code'], icon:'codeBlock', desc:'``` 围栏代码', block:1, run:()=>applyFormat('pre')},
   {name:'图表', keys:['tb','tubiao','chart','mermaid'], icon:'chart', desc:'Mermaid 流程图、时序图…', block:1, run:()=>applyFormat('mermaid')},
+  {name:'图表类型…', keys:['tblx','charttype'], icon:'chart', desc:'流程图 / 时序图 / 甘特图等', run:()=>openChartMenu($('#paInsert'))},
   {name:'链接笔记', keys:['lj','lianjie','cx','wiki'], icon:'search', desc:'[[ 链接到另一篇笔记，没有就新建 ]]', run:()=>applyFormat('wiki')},
   {name:'图片和附件', keys:['tp','tupian','img','fj','fujian'], icon:'image', desc:'从媒体库选择，或上传新文件', run:()=>pickFiles()},
   {name:'无序列表', keys:['wxlb','ul','lb'], icon:'menu', desc:'- 项目符号列表', block:1, run:()=>applyFormat('ul')},
   {name:'有序列表', keys:['yxlb','ol'], icon:'menu', desc:'1. 编号列表', block:1, run:()=>applyFormat('ol')},
   {name:'引用', keys:['yy','yinyong','quote'], icon:'quote', desc:'> 引用块', block:1, run:()=>applyFormat('quote')},
-  {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')}
+  {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu($('#paInsert'))},
+  {name:'外部链接', keys:['wblj','link','url'], icon:'link', desc:'[文字](https://…)', run:()=>applyFormat('link')},
+  {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')},
+  {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'Markdown 语法与全部快捷键', run:()=>openHelpPanel()}
 ];
 function insertFilter(q){
   q = String(q || '').trim().toLowerCase();
@@ -4858,7 +4887,7 @@ const HELP_HERO = [
   { sym:'/', t:'输入 / 插入', hl:1,
     d:'在行首或空格后输入 /，再打几个字筛选（支持拼音首字母，如 /bg 表格、/rq 日期），回车插入。' },
   { sym:'+', t:'点 + 选择',
-    d:'不想记语法？点笔记右上角或手机工具栏的 +，或按 ⌘/，从同一个菜单里选。' },
+    d:'所有插入和格式工具都在右上角（手机是顶部）的 + 菜单里，⌘/ 也能打开；原来的格式工具条已收进这里。' },
   { sym:'', t:'选中文字',
     d:'选中文字上方浮出工具条：H 标题、B 加粗、/ 斜体、S 删除线、高亮、待办、[[ 笔记链接、加链接。' }
 ];
@@ -7713,7 +7742,7 @@ document.addEventListener('keydown', e=>{
     if(code === 'Digit2'){ e.preventDefault(); applyFormat('h2'); return; }
     if(code === 'Digit3'){ e.preventDefault(); applyFormat('h3'); return; }
   }
-  if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu(document.querySelector('#fmtBar [data-fmt="insert"]')); return; }
+  if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu($('#paInsert') || $('#btnSearch')); return; }
   if(meta && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
   if(meta && e.key.toLowerCase()==='n'){ e.preventDefault(); newNote(); return; }
   if(meta && e.key==='\\'){ e.preventDefault(); toggleShelf(); return; }

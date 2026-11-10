@@ -69,6 +69,25 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `GET /api/media/:uid/:id` → 文件本体（公开，靠 32 位随机 key 不可猜）
 `DELETE /api/media/:uid/:id` → 需本人令牌
 
+`POST /api/capture` body `{ url, title, text, source, notebook }`（需 `x-capture-key` 或登录态）→ 把外部网页/微博/微信文章写成一条笔记，落在「剪藏」笔记本，返回 `{ noteId, mode }`。同一链接重复保存会更新同一篇（id 由链接哈希生成）。
+`GET /api/capture?k=<CAPTURE_KEY>` → 手机浏览器里粘贴链接的极简表单页。
+
+> `/api/capture` 是唯一「往里写」的入口，其余接口都是往外读或全量同步。
+> 微博头条文章需要访客 Cookie，服务端抓不到正文，会自动降级为「标题 + 原链接 + 分享时带过来的文字」；微信公众号文章通常能抓到 `#js_content` 正文。
+
+### 手机里怎么用（对应印象笔记的「转发即收藏」）
+
+1. Cloudflare 控制台给 Pages 项目加 Secret `CAPTURE_KEY`（`openssl rand -hex 24` 生成一串），push 后自动部署。
+2. iOS 快捷指令新建「存到我的笔记」，打开「在共享表单中显示」，接收 URL / 文本：
+   - 从「快捷指令输入」里取 URL → 存为变量「链接」
+   - 「获取 URL 内容」：`POST https://n.139t.cn/api/capture`，头部 `x-capture-key: <CAPTURE_KEY>`，
+     请求体 JSON `{"url":"链接","text":"快捷指令输入","source":"wechat"}`
+   - 「显示通知」展示返回结果里的 `title`，`mode=link` 时提示只存到了链接
+3. 微信 / 微博里点分享 → 选这条快捷指令 → 笔记站 45 秒轮询或重新打开后会多出「剪藏」笔记本。
+4. 不想配快捷指令，也可以直接在手机浏览器打开 `https://n.139t.cn/api/capture?k=<CAPTURE_KEY>` 粘贴链接提交；**这个链接带密钥，别外发**。
+
+> 微信「收藏夹」和微博「收藏」没有开放导出接口，做不到把收藏夹自动同步过来；这里实现的是「看到就推一条」的剪藏，和印象笔记官方机器人账号的机制一致，只是把机器人换成了分享菜单里的快捷指令。
+
 ## 部署
 
 ### 1. 数据库
@@ -85,6 +104,7 @@ Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git
 - Build command：留空
 - Build output directory：`public`
 - 环境变量 `IVY_KEY`：主人口令（Secret）；`IVY_SECRET`：令牌签名密钥（Secret，随便一串 64 位十六进制）
+- 可选 `CAPTURE_KEY`：外部剪藏密钥（Secret，给 `/api/capture` 用，建议 32 位随机串）；可选 `CAPTURE_UID`，默认 `owner`
 - 绑定 D1：变量名 `DB`；绑定 KV：变量名 `MEDIA`（可选再绑 R2：`BUCKET`）
 
 也可以用 API 一次配好（本项目就是这么部署的）。

@@ -166,6 +166,21 @@ body.view-todo .head-actions .notes-only{display:none}
 .note-item.active svg{color:rgb(var(--ivy))}
 .note-item .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .note-item .tags{display:flex;gap:3px;flex:0 0 auto}
+/* 单篇笔记行右侧的删除：占位常留（不抖动），hover / 当前笔记才显出，触屏常显淡一点 */
+.note-item .note-del{
+  width:19px;height:19px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;
+  color:rgb(var(--faint));opacity:0;transition:opacity .12s,background .12s,color .12s;
+}
+.note-item .note-del svg{width:13px;height:13px;stroke-width:1.8;color:inherit}
+.note-item:hover .note-del,.note-item.active .note-del{opacity:1}
+.note-item .note-del:hover{background:rgb(var(--danger) / .13);color:rgb(var(--danger))}
+body.ol-touch .note-item .note-del{opacity:.45}
+body.ol-touch .note-item:hover .note-del,body.ol-touch .note-item.active .note-del{opacity:1}
+/* 触屏 / 窄屏兜底：没有可靠 hover，删除按钮常显淡一点，不然根本点不到 */
+@media (hover:none),(pointer:coarse),(max-width:900px){
+  .note-item .note-del{opacity:.5}
+  .note-item:hover .note-del,.note-item.active .note-del{opacity:1}
+}
 .dot-tag{width:5px;height:5px;border-radius:50%}
 
 /* 左侧标签分类（可折叠树：标签 → 该标签下的笔记） */
@@ -1676,7 +1691,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v58', at: '2026-11-10 16:46' };
+window.IVY_BUILD = { id: 'v59', at: '2026-11-10 16:54' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2162,6 +2177,7 @@ function isTagGroupOpen(k){
 function tagNoteRow(n){
   return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
     ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
+    <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
   </button>`;
 }
 function rememberTag(t){
@@ -2203,6 +2219,7 @@ function renderShelf(){
     return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
       ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
       ${dots?`<span class="tags">${dots}</span>`:''}
+      <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
     </button>`;
   }
 
@@ -2275,6 +2292,13 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
+  shelfBody.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = e=>{
+      e.stopPropagation(); e.preventDefault();
+      toggleTrash(b.dataset.del);
+    };
+    b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
+  });
   shelfBody.querySelectorAll('[data-tagfold]').forEach(b=>{
     b.onclick=()=>{
       const k = b.dataset.tagfold;

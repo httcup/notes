@@ -1691,7 +1691,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v61', at: '2026-11-10 17:22' };
+window.IVY_BUILD = { id: 'v62', at: '2026-11-10 17:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7971,12 +7971,15 @@ function openNotesPush(){
 function paintNotesPush(){
   const ov = document.getElementById('npfOv'); if(!ov) return;
   const steps = [
-    '1. 点上面「生成取数链接」并复制 → iPhone 打开「快捷指令」App，右上角 + 新建',
-    '2. 添加动作「URL」粘贴链接，再加「获取 URL 内容」，类型选「JSON」',
-    '3. 加「重复每个项目」，重复项选「notes」',
-    '4. 循环里加「创建备忘录」：标题取「重复项的 title」，正文取「重复项的 text」（已是渲染后的纯文本，要 Markdown 原文用 body，链接后加 &raw=1）',
-    '5. 只推某个笔记本：链接末尾加 &nb=笔记本名；只推最近更新：加 &since=毫秒时间戳',
-    '6. 手动点一次推一次；也可在快捷指令里建「自动化」定时跑'
+    '1. 点上面「生成取数链接」并复制（这串链接就是通行证）',
+    '2. iPhone 打开「快捷指令」App，右上角 ＋ 新建一个空白快捷指令',
+    '3. 搜索「URL内容」，点「获取URL内容」那一行右侧的 ＋',
+    '4. 把链接粘进 URL 框，「方法」保持 GET',
+    '5. 再搜「词典值」加一条：来源选「URL 的内容」，键填 notes',
+    '6. 搜「重复每个项目」，重复对象选上一步的「词典值」',
+    '7. 循环里再放两条「获取词典值」：键分别填 title 和 text',
+    '8. 循环里加「创建备忘录」：标题选 title、正文选 text，点底部 ▶ 运行',
+    '9. 只推某个笔记本：链接末尾加 &nb=笔记本名；只推最近更新：加 &since=毫秒时间戳'
   ];
   const feedBlock = NPF.token
     ? `<code class="rc-link" id="npfLink">${esc(NPF.url)}
@@ -7999,7 +8002,9 @@ function paintNotesPush(){
     <div class="rc-box">
       <div class="rc-box-h"><b>快捷指令这样搭（一次性，两分钟）</b></div>
       ${steps.map(s=>`<div class="rc-note" style="margin-top:0">${s}</div>`).join('')}
-      <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇；text 字段默认是渲染后的纯文本（标题、待办 □/☑、表格、链接都已转好），要 Markdown 原文用 body 字段。</div>
+      <a class="rc-btn" href="/guide/" target="_blank" rel="noopener"
+         style="display:block;text-align:center;text-decoration:none;margin-top:12px">看不懂步骤？看 8 张实拍图解 →</a>
+      <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇；text 字段默认是渲染后的纯文本（标题、待办 □/☑、表格、链接都已转好），要 Markdown 原文用 body 字段（链接后加 &raw=1）。</div>
     </div>
     <div class="rc-foot"><button class="rc-close" id="npfClose">关闭</button></div>
   </div>`;

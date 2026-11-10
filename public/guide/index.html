@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1113">
+<title>把笔记推到苹果备忘录 · 图解</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23287A52'/%3E%3Cpath d='M10 7h9l4 4v14H10z' fill='%23fff'/%3E%3Cpath d='M13 14h7M13 18h7M13 22h4' stroke='%23287A52' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0f1113;--card:#171a1c;--line:#262b2e;--ink:#eef2f0;--ink2:#a8b3ae;--faint:#6f7b76;--ivy:#3fa574;
+  }
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+       padding:0 0 60px}
+  header{padding:calc(28px + env(safe-area-inset-top)) 20px 22px;border-bottom:1px solid var(--line)}
+  h1{margin:0 0 8px;font-size:22px;letter-spacing:.3px}
+  .sub{color:var(--ink2);font-size:14px;margin:0}
+  .tip{margin:18px 16px 0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:14px;color:var(--ink2)}
+  .tip b{color:var(--ink)}
+  .tip ol{margin:8px 0 0;padding-left:20px}
+  .tip li{margin:4px 0}
+  .steps{display:flex;flex-direction:column;gap:18px;padding:20px 12px 0}
+  figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  figure img{display:block;width:100%;height:auto}
+  figcaption{padding:0}
+  .foot{padding:26px 20px 0;color:var(--faint);font-size:13px;text-align:center}
+  .foot a{color:var(--ivy);text-decoration:none}
+  .divider{display:flex;align-items:center;gap:10px;padding:26px 20px 0;color:var(--faint);font-size:12.5px}
+  .divider:before,.divider:after{content:"";flex:1;height:1px;background:var(--line)}
+  a.long{display:block;margin:14px 16px 0;text-align:center;color:var(--ivy);font-size:14px;text-decoration:none;
+         border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--card)}
+</style>
+</head>
+<body>
+<header>
+  <h1>把笔记推到苹果备忘录</h1>
+  <p class="sub">在 iPhone 的「快捷指令」里照着点，8 步、两分钟，之后手动跑一次就同步一次。</p>
+</header>
+
+<div class="tip">
+  开始前先在电脑上准备好链接：
+  <ol>
+    <li>打开笔记 → 左下角齿轮 →「同步到苹果备忘录」</li>
+    <li>点「生成取数链接」→「复制链接」</li>
+    <li>把这串链接发到手机（微信/备忘录都可以），待会儿粘贴</li>
+  </ol>
+</div>
+
+<div class="steps">
+  <figure><img src="step1.png" alt="步骤 1：新建快捷指令"></figure>
+  <figure><img src="step2.png" alt="步骤 2：添加获取URL内容"></figure>
+  <figure><img src="step3.png" alt="步骤 3：粘贴链接"></figure>
+  <figure><img src="step4.png" alt="步骤 4：获取词典值 notes"></figure>
+  <figure><img src="step5.png" alt="步骤 5：重复每个项目"></figure>
+  <figure><img src="step6.png" alt="步骤 6：取 title 与 text"></figure>
+  <figure><img src="step7.png" alt="步骤 7：创建备忘录"></figure>
+  <figure><img src="step8.png" alt="步骤 8：运行"></figure>
+</div>
+
+<div class="divider">为什么这么绕</div>
+<div class="tip" style="margin-top:14px">
+  苹果备忘录不像日历那样支持「订阅地址自动同步」，也没有开放的写入接口，第三方网页只能把内容交给你手机上的快捷指令，由它来创建备忘录。所以这一步是一次性的设置，设好以后每次点一下运行即可。
+  <br><br>
+  两个要知道的点：<b>每次运行都会新建一篇</b>（不会覆盖旧的那篇）；链接本身就是钥匙，<b>不要发给别人</b>。
+</div>
+
+<a class="long" href="all-steps.png">查看完整长图（一张看完）</a>
+
+<div class="foot"><a href="https://n.139t.cn">← 回到笔记</a></div>
+</body>
+</html>

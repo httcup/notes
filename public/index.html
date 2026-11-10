@@ -453,6 +453,66 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .todo-blank svg{width:40px;height:40px;opacity:.5}
 .todo-blank p{font-size:13px}
 
+/* ---- 历史版本 ---- */
+.hist-ov{
+  position:fixed;inset:0;z-index:135;background:rgb(16 24 32 / .34);
+  display:grid;place-items:center;padding:24px;opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+}
+.hist-ov.open{opacity:1;pointer-events:auto}
+.hist-card{
+  width:min(880px,100%);height:min(640px,86vh);display:flex;flex-direction:column;
+  background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;
+  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+}
+.hist-ov.open .hist-card{transform:none}
+.hist-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 22px 14px}
+.hist-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.hist-hd p{margin-top:7px;font-size:12px;line-height:1.75;color:rgb(var(--faint));max-width:600px}
+.hist-body{flex:1;display:grid;grid-template-columns:238px 1fr;min-height:0;border-top:1px solid rgb(var(--line))}
+.hist-list{overflow:auto;border-right:1px solid rgb(var(--line));padding:8px 6px;overscroll-behavior:contain}
+.hist-day{font-size:10.5px;font-weight:600;letter-spacing:.05em;color:rgb(var(--faint));padding:10px 10px 4px}
+.hist-item{display:flex;flex-direction:column;gap:2px;width:100%;padding:7px 10px;border-radius:8px;text-align:left;transition:background .12s}
+.hist-item:hover{background:rgb(var(--hover))}
+.hist-item.on{background:rgb(var(--ivy-soft))}
+.hist-item .t{font-size:12.5px;color:rgb(var(--ink-2));font-weight:500}
+.hist-item.on .t{color:rgb(var(--ivy-ink))}
+.hist-item .d{font-size:11px;color:rgb(var(--faint));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.hist-item .m{font-size:10.5px;color:rgb(var(--faint));display:flex;gap:6px;align-items:center}
+.hist-item .m .cloud{opacity:.75}
+.hist-preview{overflow:auto;padding:24px 30px;overscroll-behavior:contain}
+.hist-pv-title{font-family:var(--font-serif);font-size:22px;font-weight:700;line-height:1.4;margin-bottom:16px;color:rgb(var(--ink))}
+.hist-pv-body{font-size:14.5px;line-height:1.85;color:rgb(var(--ink-2))}
+.hist-pv-body h1,.hist-pv-body h2,.hist-pv-body h3,.hist-pv-body h4{font-weight:600;line-height:1.6;margin:1.4em 0 .5em;color:rgb(var(--ink))}
+.hist-pv-body h1{font-size:1.4em}.hist-pv-body h2{font-size:1.24em}.hist-pv-body h3{font-size:1.1em}
+.hist-pv-body ul,.hist-pv-body ol{padding-left:1.3em;margin:.7em 0}
+.hist-pv-body li.task{list-style:none;margin-left:-1.1em}
+.hist-pv-body li.task input{margin-right:7px;accent-color:rgb(var(--ivy))}
+.hist-pv-body pre{background:rgb(var(--code-bg));border-radius:8px;padding:10px 12px;overflow:auto;font-family:var(--font-mono);font-size:12.5px;line-height:1.7;margin:.9em 0}
+.hist-pv-body code{font-family:var(--font-mono);font-size:.9em;background:rgb(var(--code-bg));padding:1px 4px;border-radius:4px}
+.hist-pv-body pre code{background:none;padding:0}
+.hist-pv-body table{border-collapse:collapse;width:100%;margin:.9em 0;font-size:.92em}
+.hist-pv-body th,.hist-pv-body td{border:1px solid rgb(var(--line));padding:6px 9px}
+.hist-pv-body blockquote{border-left:2px solid rgb(var(--line));padding-left:12px;color:rgb(var(--muted));margin:.8em 0}
+.hist-empty{height:100%;display:grid;place-items:center;text-align:center;color:rgb(var(--faint));font-size:13px;line-height:2}
+.hist-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid rgb(var(--line))}
+.hist-tip{font-size:11.5px;color:rgb(var(--faint))}
+.hist-actions{display:flex;gap:8px;flex:0 0 auto}
+.hist-btn{height:34px;padding:0 16px;border-radius:9px;font-size:13px;font-weight:500;transition:filter .15s,background .15s}
+.hist-btn.ghost{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.hist-btn.ghost:hover{color:rgb(var(--ink))}
+.hist-btn.primary{background:rgb(var(--ivy));color:#fff}
+.hist-btn.primary:hover{filter:brightness(1.06)}
+.hist-btn:disabled{opacity:.4;pointer-events:none}
+@media (max-width:640px){
+  .hist-card{height:min(700px,90vh)}
+  .hist-body{grid-template-columns:1fr;grid-template-rows:minmax(0,180px) 1fr}
+  .hist-list{border-right:0;border-bottom:1px solid rgb(var(--line))}
+  .hist-preview{padding:18px 20px}
+  .hist-hd{padding:16px 18px 12px}
+  .hist-hd p{font-size:11.5px}
+}
+
 /* ---- 待办视图 ---- */
 .todo-wrap{max-width:880px;margin:0 auto;padding:40px 26px 130px}
 .todo-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -1088,7 +1148,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v39', at: '2026-11-10 09:02' };
+window.IVY_BUILD = { id: 'v40', at: '2026-11-10 09:18' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1144,14 +1204,274 @@ function load(){
     return s;
   }catch(e){ return seed(); }
 }
+/* ========== 历史版本 ==========
+   每次保存留一份快照。保留策略：最近一小时全留；一周内每 10 分钟一个；之后每天一个。
+   本地存一份（离线也能看），连了云同步的再往 D1 推一份。 */
+const VER_KEY = 'ivy.versions.v1';
+const VER_HOUR = 3600000, VER_WEEK = 7 * 86400000;
+const VER_MAX_LOCAL = 300;
+let VERSIONS = {};                 // { noteId: [ {id, at, title, body} ] } 时间倒序
+let HIST = { noteId:null, local:[], remote:[], sel:null, loading:false };
+
+function loadVersions(){
+  try{
+    const raw = localStorage.getItem(VER_KEY);
+    VERSIONS = raw ? (JSON.parse(raw) || {}) : {};
+    if(!VERSIONS || typeof VERSIONS !== 'object') VERSIONS = {};
+  }catch(e){ VERSIONS = {}; }
+}
+function saveVersions(){
+  try{
+    let raw = JSON.stringify(VERSIONS);
+    // localStorage 只有 5MB 左右，超了就按时间从最旧的丢 35%
+    if(raw.length > 3.2e6){
+      const flat = [];
+      Object.keys(VERSIONS).forEach(k=>VERSIONS[k].forEach(v=>flat.push({ k, v })));
+      flat.sort((a,b)=>a.v.at - b.v.at);
+      const dropN = Math.ceil(flat.length * 0.35);
+      const kill = new Set(flat.slice(0, dropN).map(x=>x.k + '|' + x.v.id));
+      Object.keys(VERSIONS).forEach(k=>{
+        VERSIONS[k] = VERSIONS[k].filter(v=>!kill.has(k + '|' + v.id));
+      });
+      raw = JSON.stringify(VERSIONS);
+    }
+    localStorage.setItem(VER_KEY, raw);
+  }catch(e){ /* 存不下就算了，别影响正文保存 */ }
+}
+/* 保留策略（list 必须按时间倒序） */
+function pruneVersions(list){
+  const now = Date.now();
+  const out = [];
+  let weekBucket = null, dayBucket = null;
+  for(const v of list){
+    const age = now - v.at;
+    if(age < VER_HOUR){ out.push(v); continue; }
+    if(age < VER_WEEK){
+      const b = Math.floor(v.at / 600000);          // 10 分钟一个桶
+      if(b !== weekBucket){ out.push(v); weekBucket = b; }
+      continue;
+    }
+    const b = new Date(v.at).toDateString();        // 每天一个
+    if(b !== dayBucket){ out.push(v); dayBucket = b; }
+  }
+  return out.slice(0, VER_MAX_LOCAL);
+}
+/* 内容有变化才记；默认一分钟最多一条，force 用于「恢复前存档」这种关键节点 */
+function recordVersion(n, force){
+  if(!n || !n.id) return;
+  const now = Date.now();
+  if(!VERSIONS[n.id]) VERSIONS[n.id] = [];
+  const bucket = VERSIONS[n.id];
+  const head = bucket[0];
+  const body = n.body || '', title = n.title || '';
+  if(head && head.title === title && head.body === body) return;
+  if(!force && head && now - head.at < 60000) return;   // 一分钟一个
+  if(!force && !body.trim() && !title.trim()) return;   // 空笔记不占空间
+  const v = { id:'v' + now.toString(36) + Math.random().toString(36).slice(2,5), at:now, title, body };
+  bucket.unshift(v);
+  VERSIONS[n.id] = pruneVersions(bucket);
+  saveVersions();
+  if(isConnected()) pushVersionRemote(n.id, v);
+}
+async function pushVersionRemote(noteId, v){
+  try{
+    await apiCall('/api/versions', { method:'POST', body:{ id:v.id, noteId, title:v.title, body:v.body, at:v.at } });
+  }catch(e){ /* 离线就只留本地版本 */ }
+}
+
+function verTime(at){
+  const d = new Date(at), now = new Date();
+  const same = (a,b)=>a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  const hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  if(same(d, now)) return '今天 ' + hm;
+  if(same(d, new Date(now.getTime() - 86400000))) return '昨天 ' + hm;
+  return (d.getMonth()+1) + '月' + d.getDate() + '日 ' + hm;
+}
+function verAgo(at){
+  const s = Math.max(0, Math.round((Date.now() - at) / 1000));
+  if(s < 60) return '刚刚';
+  if(s < 3600) return Math.round(s/60) + ' 分钟前';
+  if(s < 86400) return Math.round(s/3600) + ' 小时前';
+  return Math.round(s/86400) + ' 天前';
+}
+
+function histList(){
+  const map = new Map();
+  HIST.local.forEach(v=>map.set(v.id, Object.assign({}, v)));
+  HIST.remote.forEach(v=>{ if(!map.has(v.id)) map.set(v.id, Object.assign({}, v, { remote:true })); });
+  return [...map.values()].sort((a,b)=> b.at - a.at);
+}
+function openHistoryPanel(){
+  const n = noteById(S.active);
+  if(!n){ toast('先打开一篇笔记'); return; }
+  recordVersion(n, true);                 // 打开前先把当前状态存一份
+  let ov = document.getElementById('histOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'histOv'; ov.className = 'hist-ov';
+    ov.innerHTML = `<div class="hist-card" role="dialog" aria-label="历史版本">
+        <div class="hist-hd">
+          <div>
+            <h3>历史版本</h3>
+            <p>编辑会自动留下版本，可以随时查看并恢复。保留策略：最近一小时内的版本全部保留；一周内每 10 分钟保留一个；之后每天保留一个，最多 30 天。</p>
+          </div>
+          <button class="help-x" id="histClose" title="关闭">${ic('x')}</button>
+        </div>
+        <div class="hist-body">
+          <div class="hist-list" id="histList"></div>
+          <div class="hist-preview" id="histPreview"></div>
+        </div>
+        <div class="hist-foot">
+          <span class="hist-tip" id="histTip"></span>
+          <div class="hist-actions">
+            <button class="hist-btn ghost" id="histCancel">关闭</button>
+            <button class="hist-btn primary" id="histRestore" disabled>恢复此版本</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeHistoryPanel(); });
+    ov.querySelector('#histClose').onclick = closeHistoryPanel;
+    ov.querySelector('#histCancel').onclick = closeHistoryPanel;
+    ov.querySelector('#histRestore').onclick = restoreSelectedVersion;
+    ov.querySelector('#histList').addEventListener('click', e=>{
+      const b = e.target.closest('[data-hv]');
+      if(b) selectHistoryVersion(b.dataset.hv);
+    });
+  }
+  HIST.noteId = n.id;
+  HIST.local = (VERSIONS[n.id] || []).slice();
+  HIST.remote = [];
+  HIST.sel = null;
+  ov.classList.add('open');
+  paintHistory();
+  loadRemoteVersions(n.id);
+}
+function closeHistoryPanel(){
+  const ov = document.getElementById('histOv');
+  if(ov) ov.classList.remove('open');
+}
+async function loadRemoteVersions(noteId){
+  const tip = document.getElementById('histTip');
+  if(!isConnected()){
+    if(tip) tip.textContent = '未连接云同步 · 版本只存在本机';
+    return;
+  }
+  try{
+    const r = await apiCall('/api/versions?noteId=' + encodeURIComponent(noteId));
+    if(HIST.noteId !== noteId) return;
+    const remote = r.versions || [];
+    // 本地已经有的不再重复列（同 id）
+    const localIds = new Set(HIST.local.map(v=>v.id));
+    HIST.remote = remote.filter(v=>!localIds.has(v.id)).map(v=>Object.assign({ remote:true, body:'' }, v));
+    paintHistory();
+  }catch(e){
+    if(tip) tip.textContent = '云端版本没读出来，先看本机这份';
+  }
+}
+function paintHistory(){
+  const list = document.getElementById('histList');
+  const pv = document.getElementById('histPreview');
+  const tip = document.getElementById('histTip');
+  if(!list || !pv) return;
+  const all = histList();
+  if(!all.length){
+    list.innerHTML = '';
+    pv.innerHTML = `<div class="hist-empty">这篇还没有历史版本。<br>编辑保存一下就会自动留下第一份。</div>`;
+    if(tip) tip.textContent = '';
+    return;
+  }
+  if(!HIST.sel || !all.some(v=>v.id===HIST.sel.id)){
+    HIST.sel = all[0];
+  }
+  // 按天分组
+  let lastDay = '', html = '';
+  all.forEach(v=>{
+    const day = verTime(v.at).split(' ')[0];
+    if(day !== lastDay){ html += `<div class="hist-day">${day}</div>`; lastDay = day; }
+    const sizeK = v.size != null ? Math.max(1, Math.round(v.size/1024)) + ' KB' : '';
+    const snip = String(v.body || '').replace(/^#{1,6}\s+/gm, '').replace(/\[[ xX]\]/g, '').replace(/[*_`>#-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    html += `<button class="hist-item ${HIST.sel && HIST.sel.id===v.id ? 'on':''}" data-hv="${v.id}">
+        <span class="t">${verTime(v.at)}</span>
+        <span class="d">${esc(snip || '（空）')}</span>
+        <span class="m">${verAgo(v.at)}${sizeK ? ' · ' + sizeK : ''}${v.remote ? ' · <span class="cloud">云端</span>' : ''}</span>
+      </button>`;
+  });
+  list.innerHTML = html;
+  paintHistPreview();
+  if(tip) tip.textContent = `共 ${all.length} 个版本` + (isConnected() ? '' : ' · 只存本机');
+}
+function paintHistPreview(){
+  const pv = document.getElementById('histPreview');
+  const sel = HIST.sel;
+  if(!pv) return;
+  const rb = document.getElementById('histRestore');
+  if(!sel){ pv.innerHTML = `<div class="hist-empty">选左边的时间点看看</div>`; if(rb) rb.disabled = true; return; }
+  if(sel.remote && !sel.body){
+    pv.innerHTML = `<div class="hist-empty">正在从云端读取…</div>`;
+    if(rb) rb.disabled = true;
+    fetchRemoteVersion(sel);
+    return;
+  }
+  const out = mdToHtml(sel.body || '');
+  pv.innerHTML = `<div class="hist-pv-title">${esc(sel.title || '无标题')}</div>
+    <div class="hist-pv-body">${out.html || '<p style="color:rgb(var(--faint))">（这一版还没有正文）</p>'}</div>`;
+  if(rb) rb.disabled = false;
+  renderMermaidBlocks(pv);
+}
+async function fetchRemoteVersion(v){
+  try{
+    const r = await apiCall('/api/versions?id=' + encodeURIComponent(v.id));
+    if(HIST.sel && HIST.sel.id === v.id){
+      HIST.sel = Object.assign({}, HIST.sel, { title:r.version.title, body:r.version.body });
+      paintHistPreview();
+    }
+  }catch(e){
+    const pv = document.getElementById('histPreview');
+    if(pv) pv.innerHTML = `<div class="hist-empty">这个版本在云端已经过期了</div>`;
+  }
+}
+function selectHistoryVersion(id){
+  const all = histList();
+  const v = all.find(x=>x.id===id);
+  if(!v) return;
+  HIST.sel = v;
+  document.querySelectorAll('#histList .hist-item').forEach(el=>{
+    el.classList.toggle('on', el.dataset.hv === id);
+  });
+  paintHistPreview();
+}
+async function restoreSelectedVersion(){
+  const sel = HIST.sel;
+  if(!sel) return;
+  const n = noteById(HIST.noteId);
+  if(!n) return;
+  let body = sel.body, title = sel.title;
+  if(sel.remote && !body){
+    try{
+      const r = await apiCall('/api/versions?id=' + encodeURIComponent(sel.id));
+      body = r.version.body; title = r.version.title;
+    }catch(e){ toast('这个版本取不到了'); return; }
+  }
+  recordVersion(n, true);          // 先把恢复前的内容存一份，随时能退回来
+  n.title = title || '';
+  n.body = body || '';
+  n.updatedAt = Date.now();
+  closeHistoryPanel();
+  save(); renderAll();
+  toast('已恢复到此版本，恢复前的内容也存了一份');
+}
+
 function save(){
   try{
     const copy = Object.assign({}, S, {media: []});
     localStorage.setItem(LS_KEY, JSON.stringify(copy));
   }catch(e){}
+  try{ if(typeof recordVersion === 'function') recordVersion(noteById(S.active)); }catch(e){}
   if(typeof queueSync === 'function') queueSync();
 }
 S = load();
+loadVersions();
 
 /* 把「块级语法前的多余空行」收掉（不动代码块内部、不动普通段落之间） */
 function normalizeBlockSpacing(md){
@@ -2108,6 +2428,9 @@ function newNote(notebookId){
 function openNote(id){
   const n = noteById(id); if(!n) return;
   if(n.trashed){ toast('该笔记在回收站中'); return; }
+  // 切走之前把当前这篇的最后状态存一份，别丢掉最后一分钟的改动
+  const cur = noteById(S.active);
+  if(cur && cur.id !== id){ try{ recordVersion(cur, true); }catch(e){} }
   trashView = false;
   S.active = id; S.view='notes';
   if(!S.tabs.includes(id)) S.tabs.push(id);
@@ -5198,6 +5521,7 @@ function openNoteMenu(anchor){
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
     ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(liveAnchor(anchor, 'paMore'))],
+    ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
     '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);

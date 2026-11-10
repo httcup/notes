@@ -18,7 +18,8 @@
 // 抓取策略：
 //   微信公众号 / 普通网页 → 直连。先在全量 HTML 上剔除脚本，再按 div 标签栈精确切出
 //   #js_content 容器（微信页面 3MB+，正文常在 600KB 之后，粗暴 slice 会把 JS 当正文写进笔记）。
-//   微博 → 直连必被 Sina Visitor System 拦，改用 r.jina.ai Reader 拿正文（CAPTURE_JINA=0 可关闭）。
+//   微博普通状态 → 移动端公开 JSON 接口（Referer + X-Requested-With，无需 Cookie），长文再取 extend。
+//   微博头条文章 / 官方接口失效 → r.jina.ai Reader 兜底（CAPTURE_JINA=0 可关闭）。
 //   任何一路抓不到或不干净，都降级为「标题 + 原链接 + 分享时带过来的文字」。
 
 import { currentUser, safeEqual, CORS } from '../_lib.js';
@@ -218,55 +219,106 @@ async function readHtml(res) {
   catch (e) { return '\uFFFD\uFFFD\uFFFD\uFFFD'; }
 }
 
-/** 微博直连必被访客系统挡，用公开 Reader 拿渲染后的 Markdown（可用 CAPTURE_JINA=0 关闭） */
-async function grabViaJina(target) {
+const WEIBO_H = {
+  'user-agent': UA,
+  'referer': 'https://m.weibo.cn/',
+  'x-requested-with': 'XMLHttpRequest',
+  'accept': 'application/json, text/plain, */*'
+};
+
+/** 微博普通状态：移动端公开 JSON 接口，带 Referer + X-Requested-With 即直出正文，无需 Cookie、无需第三方 */
+async function grabWeiboApi(id, diag) {
+  try {
+    const res = await fetchText(`https://m.weibo.cn/statuses/show?id=${encodeURIComponent(id)}`, WEIBO_H, 8000);
+    diag.push('weibo-api ' + res.status + ' ' + (res.headers.get('content-type') || '').slice(0, 30));
+    if (!res.ok || !/json/i.test(res.headers.get('content-type') || '')) return null;
+    const j = await res.json().catch(() => null);
+    const d = j && j.ok === 1 && j.data;
+    if (!d || !d.text) { diag.push('weibo-api no text'); return null; }
+    let html = String(d.text);
+    if (d.isLongText) {
+      try {
+        const e = await fetchText(`https://m.weibo.cn/statuses/extend?id=${encodeURIComponent(id)}`, WEIBO_H, 8000);
+        const ej = await e.json().catch(() => null);
+        const long = ej && ej.data && ej.data.longTextContent;
+        if (long && long.length > html.length) { html = String(long); diag.push('weibo-api longtext'); }
+      } catch (err) { /* 长文失败就用截断版 */ }
+    }
+    const emoji = (s) => String(s || '').replace(/<img\b[^>]*\balt=["']([^"']+)["'][^>]*>/gi, '$1');
+    const who = (d.user && d.user.screen_name) || '';
+    let md = `> 微博 @${who}${d.created_at ? ' · ' + d.created_at : ''}\n\n` + htmlToMd(emoji(html));
+    const rt = d.retweeted_status;
+    if (rt && rt.text) md += `\n\n> 转发自 @${(rt.user && rt.user.screen_name) || ''}\n\n` + htmlToMd(emoji(rt.text));
+    const pics = (d.pics || []).map((p) => (p.large && p.large.url) || p.url).filter(Boolean).slice(0, 20);
+    if (pics.length) md += '\n\n' + pics.map((x) => `![](${x})`).join('\n');
+    md = md.trim();
+    if (md.length < 40 || looksLikeGarbage(md)) { diag.push('weibo-api garbage'); return null; }
+    return { title: '', md: md.slice(0, MAX_BODY), mode: 'full', via: 'weibo-api' };
+  } catch (e) { diag.push('weibo-api err ' + String((e && e.message) || e).slice(0, 60)); return null; }
+}
+
+/** 头条文章没有可用的公开 JSON 接口，交给公开 Reader 补；CAPTURE_JINA=0 可关闭 */
+async function grabViaJina(target, diag) {
   try {
     const res = await fetchText('https://r.jina.ai/' + target,
       { 'user-agent': UA, 'accept': 'text/plain' }, 12000);
+    diag.push('reader ' + res.status);
     if (!res.ok) return null;
     const raw = (await res.text()).slice(0, MAX_BODY * 2);
     const title = (/^Title:\s*(.+)$/m.exec(raw) || [])[1] || '';
     const i = raw.search(/^Markdown Content:\s*$/m);
-    if (i < 0) return null;
+    if (i < 0) { diag.push('reader no markdown'); return null; }
     let md = raw.slice(i).replace(/^Markdown Content:\s*/m, '').trim();
     // 微博详情页的 ### 作者 / #### 时间 / #### 关注 都是元信息，不是正文也不是标题
     if (/m\.weibo\.cn\/(detail|status)/.test(target)) {
       md = md.replace(/^#{1,6}[^\n]*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
     }
-    if (md.length < 40 || looksLikeGarbage(md)) return null;
+    if (md.length < 40 || looksLikeGarbage(md)) { diag.push('reader garbage ' + md.length); return null; }
     return { title: cleanTitle(title), md: md.slice(0, MAX_BODY), mode: 'full', via: 'reader' };
-  } catch (e) { return null; }
+  } catch (e) { diag.push('reader err ' + String((e && e.message) || e).slice(0, 60)); return null; }
 }
 
 async function grab(rawUrl, env) {
+  const diag = [];
+  const done = (r) => ({ ...r, diag });
   const u = safeUrl(rawUrl);
-  if (!u) return { title: '', md: '', mode: 'link' };
-  if (/weibo\.(com|cn)/i.test(u.hostname) && (!env || env.CAPTURE_JINA !== '0')) {
-    for (const target of jinaTargets(u)) {
-      const got = await grabViaJina(target);
-      if (got) return got;
+  if (!u) return done({ title: '', md: '', mode: 'link', via: 'link' });
+  if (/weibo\.(com|cn)/i.test(u.hostname)) {
+    const s = u.toString();
+    const article = /(?:id=|\/)(2309\d{13,})/.exec(s);
+    const status = (s.match(/\d{10,20}/g) || []).sort((a, b) => b.length - a.length)[0];
+    if (!article && status) {
+      const got = await grabWeiboApi(status, diag);
+      if (got) return done(got);
     }
+    if (!env || env.CAPTURE_JINA !== '0') {
+      for (const target of jinaTargets(u)) {
+        const got = await grabViaJina(target, diag);
+        if (got) return done(got);
+      }
+    } else diag.push('reader disabled');
   }
   for (const target of fetchCandidates(u)) {
     try {
       const res = await fetchText(target, {
         'user-agent': UA, 'accept-language': 'zh-CN,zh;q=0.9', 'accept': 'text/html,*/*'
       }, 8000);
-      if (!res.ok) continue;
+      if (!res.ok) { diag.push('direct ' + res.status); continue; }
       const ct = res.headers.get('content-type') || '';
-      if (!/html|text/i.test(ct)) continue;
+      if (!/html|text/i.test(ct)) { diag.push('direct skip ' + ct.slice(0, 20)); continue; }
       const raw = await readHtml(res);
       const meta = pickMeta(raw);           // head 里的 og:title 要在剔脚本之前取
       const md = htmlToMd(mainContent(stripNoise(raw)));
+      diag.push('direct md ' + md.length);
       if (looksLikeGarbage(md)) {
-        if (meta.title) return { title: meta.title, md: '', mode: 'link', via: 'link' };
+        if (meta.title) return done({ title: meta.title, md: '', mode: 'link', via: 'link' });
         continue;
       }
-      if (md.length >= 60) return { title: meta.title, md: md.slice(0, MAX_BODY), mode: 'full', via: 'direct' };
-      if (meta.title) return { title: meta.title, md: '', mode: 'link', via: 'link' };
-    } catch (e) { /* 超时 / 反爬 → 试下一个，最后降级 */ }
+      if (md.length >= 60) return done({ title: meta.title, md: md.slice(0, MAX_BODY), mode: 'full', via: 'direct' });
+      if (meta.title) return done({ title: meta.title, md: '', mode: 'link', via: 'link' });
+    } catch (e) { diag.push('direct err ' + String((e && e.message) || e).slice(0, 60)); }
   }
-  return { title: '', md: '', mode: 'link' };
+  return done({ title: '', md: '', mode: 'link', via: 'link' });
 }
 
 async function noteIdFor(url) {
@@ -352,8 +404,9 @@ export async function onRequest({ request, env }) {
   const grabbed = rawUrl ? await grab(rawUrl, env) : { title: '', md: '', mode: 'link', via: 'link' };
   // 微博详情页没有可用 <title>，从正文里挑第一行像话的文字当标题
   const autoTitle = (grabbed.md || '').split('\n')
+    .filter((l) => !/^\s*>/.test(l))
     .map((l) => l.replace(/^[#>*\-\s]+/, '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').trim())
-    .find((l) => l.length >= 8 && !/^https?:/.test(l)) || '';
+    .find((l) => l.length >= 4 && !/^https?:/.test(l)) || '';
   const title = (clientTitle || grabbed.title || text.split('\n')[0] || autoTitle || '剪藏 ' + stamp(Date.now()))
     .replace(/[\r\n]+/g, ' ').slice(0, 200);
 
@@ -391,5 +444,7 @@ export async function onRequest({ request, env }) {
     return reply({ error: String((err && err.message) || err) }, 500);
   }
 
-  return reply({ ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', via: grabbed.via || 'link', noteUrl: url.origin + '/?n=' + id });
+  const out = { ok: true, noteId: id, title, notebook, mode: grabbed.md ? 'full' : 'link', via: grabbed.via || 'link', noteUrl: url.origin + '/?n=' + id };
+  if (url.searchParams.get('debug') === '1') out.diag = grabbed.diag || [];
+  return reply(out);
 }

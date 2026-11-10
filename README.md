@@ -73,14 +73,15 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `GET /api/capture?k=<CAPTURE_KEY>` → 手机浏览器里粘贴链接的极简表单页。
 
 > `/api/capture` 是唯一「往里写」的入口，其余接口都是往外读或全量同步。
-> `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（直连）、`reader`（微博经 Reader）、`link`（降级）。
+> `mode=full` 抓到正文、`mode=link` 只存了标题/链接/分享文字；`via=direct`（网页直连）、`weibo-api`（微博官方移动端接口）、`reader`（第三方 Reader 兜底）、`link`（降级）。请求加 `?debug=1` 会额外返回 `diag` 数组，记录每一路抓取的状态，线上排障用。
 
 抓取策略（踩过的坑）：
 
 - **微信公众号 / 普通网页**：直连。页面常有 3MB+，正文 `#js_content` 可能在 600KB 之后，所以必须读全页、先在完整 HTML 上剔掉 `<script>/<style>`，再按标签栈精确切出 `#js_content` 容器。早期版本先截断 400KB 再清洗，导致脚本未闭合、JS 源码被当成正文写进笔记。
-- **微博**：`weibo.com` / `m.weibo.cn` 直连一律返回 Sina Visitor System（无访客 Cookie 拿不到正文），因此改走公开 Reader `https://r.jina.ai/<规范化后的微博地址>` 取渲染后的 Markdown；普通状态转 `m.weibo.cn/detail/<id>`，头条文章转 `ttarticle/p/show?id=<id>`。
+- **微博普通状态**：网页直连一律返回 Sina Visitor System，但移动端公开 JSON 接口 `m.weibo.cn/statuses/show?id=<id>` 只要带上 `Referer: https://m.weibo.cn/` 和 `X-Requested-With: XMLHttpRequest` 就能直出正文，**不需要访客 Cookie**。长微博再调 `statuses/extend` 补 `longTextContent`，图片/作者/转发原文一起转 Markdown。这是主通道，无第三方依赖。
+- **微博头条文章**：官方 AJAX 接口需要签名/登录（返回「系统繁忙」），只能退回公开 Reader `https://r.jina.ai/<规范化地址>` 取渲染后的 Markdown；官方接口失效时普通微博也走这个兜底。
 - 抓到脚本碎片、访客验证页或解码乱码时**一律降级**，绝不写脏数据进笔记。
-- 微博通道会把**公开链接**发给第三方 Reader 服务。介意的话在 Pages 环境变量里设 `CAPTURE_JINA=0` 关闭，微博会退回「标题 + 原链接 + 分享文字」的降级快照。
+- Reader 兜底会把**公开链接**发给第三方服务。介意的话在 Pages 环境变量里设 `CAPTURE_JINA=0` 关闭，退回「标题 + 原链接 + 分享文字」的降级快照。
 
 ### 手机里怎么用（对应印象笔记的「转发即收藏」）
 

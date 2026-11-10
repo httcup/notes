@@ -511,6 +511,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .rc-select:focus{outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09)}
 .rc-note{font-size:11px;line-height:1.6;color:rgb(var(--faint));margin-top:7px}
+.rc-note a{color:rgb(var(--ivy-ink));cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .rc-link{position:relative;padding-right:30px}
 .rc-copy{
   position:absolute;right:5px;top:6px;width:24px;height:24px;border-radius:6px;
@@ -1417,7 +1418,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v48', at: '2026-11-10 11:20' };
+window.IVY_BUILD = { id: 'v49', at: '2026-11-10 11:32' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2755,7 +2756,14 @@ async function feedPush(opts){
   feedBusy = true;
   try{
     const r = todoIcsText();
-    const body = { ics: r.text, count: r.list.length };
+    const items = r.list.map(t=>({
+      id: 't' + icsHash(t.noteId + '|' + (t.text || '') + '|' + t.due),
+      title: t.text || '待办',
+      due: t.due,
+      repeat: t.repeat || '',
+      note: t.noteTitle || ''
+    }));
+    const body = { ics: r.text, items, count: r.list.length };
     if(opts.reset) body.reset = true;
     if(opts.off) body.off = true;
     const d = await apiCall('/api/calendar', { method: 'POST', body });
@@ -2834,7 +2842,8 @@ function paintRemindCenter(){
          <button class="rc-btn" id="rcReset">重新生成</button>
          <button class="rc-btn danger" id="rcOff">停止订阅</button>
        </div>
-       <div class="rc-note">已收录 ${FEED.count || 0} 条带日期的待办 · 日历大约每 30 分钟同步一次</div>`
+       <div class="rc-note">已收录 ${FEED.count || 0} 条带日期的待办 · 日历大约每 30 分钟同步一次</div>
+       <div class="rc-note">要出现在「提醒事项」App：<a data-rc="vtodo">下载提醒事项 .ics</a>（Mac 上「文件 → 导入」），或用快捷指令定时拉 <a data-rc="json">JSON</a>。</div>`
     : `<div class="rc-acts">
          <button class="rc-btn primary" id="rcMake">生成订阅链接</button>
          <button class="rc-btn" id="rcExport">导出 .ics 文件</button>
@@ -2928,6 +2937,19 @@ function paintRemindCenter(){
     }
   };
   if(q('#rcExport')) q('#rcExport').onclick = ()=>exportTodoIcs();
+  ov.querySelectorAll('[data-rc]').forEach(a=>{
+    a.onclick = ()=>{
+      const base = FEED.url || '';
+      if(!base) return;
+      if(a.dataset.rc === 'vtodo'){
+        location.href = base + '&format=vtodo&download=1';   // 提醒事项只吃 VTODO
+      } else {
+        const u = base + '&format=json';
+        if(navigator.clipboard) navigator.clipboard.writeText(u).then(()=>toast('JSON 地址已复制，贴到快捷指令里'), ()=>toast(u));
+        else toast(u);
+      }
+    };
+  });
 }
 
 /* 到点提醒（每分钟看一眼，记在 localStorage 里避免重复弹） */
@@ -4374,6 +4396,10 @@ function paintHelp(){
         <p class="help-p">有时间的待办到点会弹系统通知（网页保持开着，缩到后台也行）；点通知会跳回那条待办。第一次设提醒时会问一次通知权限。</p></div>
       <div class="help-sec"><h4>订阅到日历</h4>
         <p class="help-p">点左下「提醒与日历」→「生成订阅链接」，把 <code>webcal://</code> 链接加进 iPhone / Mac / Google 日历，关着网页也能收到提醒。笔记改了会自己同步上去。</p></div>
+      <div class="help-sec"><h4>同步到「提醒事项」</h4>
+        <p class="help-p">提醒事项不支持订阅日历链接，但有两条路：<br>
+        ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
+        ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>

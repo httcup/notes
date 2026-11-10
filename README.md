@@ -73,7 +73,7 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `GET /api/capture?k=<CAPTURE_KEY>&url=<文章地址>` → 直接剪藏，给只能发 GET 的 webhook 用。
 `GET /api/capture?k=<CAPTURE_KEY>` → 手机浏览器里粘贴链接的极简表单页。
 
-`POST /api/pdf`（需 `x-pdf-key: <PDF_IMPORT_KEY>` 或 `x-capture-key`）→ 把 PDF 转成结构化 Markdown 写进「PDF 导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, pdfUrl, mode, chars, tokens }`。原始 PDF 同时存进媒体库，笔记末尾附链接；扫描件转不出文字时只存原件（`mode=original`）。同一份 PDF 重复推送按内容哈希只更新同一篇笔记。
+`POST /api/pdf`（需 `x-pdf-key: <PDF_IMPORT_KEY>` 或 `x-capture-key`）→ 把 **PDF 或图片（长图）** 转成结构化 Markdown 写进「PDF 导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, pdfUrl, fileUrl, kind, mime, mode, chars, tokens }`。`kind=pdf|image`；原始文件同时存进媒体库，笔记末尾附链接；识别不出文字时只存原件（`mode=original`）。同一份文件重复推送按内容哈希只更新同一篇笔记。
 
 `POST /api/note` body `{ markdown, title, notebook, source, id }` → 把**已经转好的 Markdown** 直接写进「导入」笔记本，返回 `{ ok, noteId, title, notebook, noteUrl, chars }`。长图、截图、聊天里整理好的文字都走这里；不给 `id` 时按内容哈希幂等。
 
@@ -131,16 +131,21 @@ curl -X POST 'https://n.139t.cn/api/capture' -H 'x-capture-key: <KEY>' \
 - 微博 / 微信自身不会主动推送「新收藏」，上游得是你自己的自动化（RSS、定时任务、机器人中转）或分享菜单。
 - ⚠️ `?k=` 形式的 URL 含密钥，别贴到公开仓库、群聊或日志里。
 
-### 把 PDF 转成 Markdown 存进笔记本
+### 把 PDF / 长图转成 Markdown 存进笔记本
 
-`/api/pdf` 是第二条写入通道。链路：
+`/api/pdf` 是第二条写入通道。**同一个端点、同一条快捷指令**同时收 PDF 和长图（截图），服务端按文件头判断类型，两者都转 Markdown 写进同一个「PDF 导入」笔记本：
 
 ```
-iOS 快捷指令（分享 PDF） → POST https://n.139t.cn/api/pdf
-  → Workers AI toMarkdown（PDF → 结构化 Markdown，标题/列表/表格都保留）
-  → 写进 D1 的「PDF 导入」笔记本 + 原件存进媒体库
+iOS 快捷指令（分享 PDF 或长图） → POST https://n.139t.cn/api/pdf
+  → PDF 走文本抽取；图片走 Qwen 3.8 27B 视觉模型逐字转录中文原文（约 20 秒）
+  → 结构化 Markdown → 写进 D1 的「PDF 导入」笔记本 + 原件存进媒体库
   → 笔记站 45 秒轮询或重开页面即可看到
 ```
+
+- `kind=pdf` → noteId 前缀 `pdf_`、标签「PDF」；`kind=image` → 前缀 `img_`、标签「长图」。笔记本相同，不用分开两条快捷指令。
+- 支持 PNG / JPEG / WebP / SVG；HEIC 会明确报错（先转成 JPEG）。图片单独限 10MB（PDF 仍是 20MB）。
+- **图片走 `@cf/qwen/qwen3.8-27b` 逐字转录中文原文**（`via=qwen-vl`）。实测 900×2200 中文长图约 19 秒、2330 tokens、约 172 neurons；Workers AI 每日有免费额度，超出会计费。直接对图片用 `toMarkdown` 只会得到**英文内容描述**，所以只在 Qwen 不可用时才降级到它（`via=tomarkdown-image`，并在 `warning` 里写明）；两条路都失败才只存原件。
+- 特别高的长图仍可能被模型缩放，小字有丢失风险；可以裁成几段分别推送，或把图交给 WorkBuddy 走下面的 `/api/note`（不经模型缩放、也不消耗 Workers AI 额度）。
 
 部署前置（一次性）：
 
@@ -148,43 +153,43 @@ iOS 快捷指令（分享 PDF） → POST https://n.139t.cn/api/pdf
 2. 加 Secret `PDF_IMPORT_KEY`（`openssl rand -hex 24` 生成），可选 `PDF_UID`（默认 `owner`）。它和剪藏用的 `CAPTURE_KEY` 相互独立，改它不会影响已有的剪藏快捷指令；端点两个 key 都认。
 3. 绑定 D1 `DB` 与 KV `MEDIA`（沿用现有配置即可，无需改表结构）。
 
-**iOS 快捷指令配置**（打开「在共享表单中显示」，接收「文件 / PDF」）：
+**iOS 快捷指令配置**（打开「在共享表单中显示」，接收「文件 / PDF / 图像」）：
 
 | 步骤 | 动作 | 参数 |
 | --- | --- | --- |
-| 1 | 设置变量 | 变量名 `PDF文件`，值是「快捷指令输入」 |
+| 1 | 设置变量 | 变量名 `分享的文件`，值是「快捷指令输入」 |
 | 2 | URL | `https://n.139t.cn/api/pdf` |
 | 3 | 获取 URL 内容 | 方法 `POST`；请求头加 `x-pdf-key: <PDF_IMPORT_KEY>`；请求体选「表单」，加一个**文件**类型字段 `file`，值选第 1 步的变量 |
 | 4 | 获取字典值 | 键 `title`（从上一步的 JSON 响应里取） |
-| 5 | 显示通知 | 标题「PDF 已存进笔记本」，内容用第 4 步的结果 |
+| 5 | 显示通知 | 标题「已存进笔记本」，内容用第 4 步的结果 |
 
-分享 PDF 时选这条快捷指令即可。Mac 上也可以双击已签名好的 `PDF存进笔记本.shortcut` 直接导入（会经 iCloud 同步到 iPhone）。
+分享 PDF 或长图时都选这一条即可。Mac 上双击已签名好的 `PDF存进笔记本.shortcut` 直接导入（会经 iCloud 同步到 iPhone）。
 
 其他调用方式：
 
 ```bash
-# multipart（快捷指令走的就是这个）
-curl -X POST 'https://n.139t.cn/api/pdf' \
-  -H 'x-pdf-key: <KEY>' \
-  -F 'file=@/path/to/report.pdf;type=application/pdf' \
-  -F 'title=可选标题' -F 'notebook=资料库'
-
-# 原始 PDF 二进制 / JSON base64 / PDF 网址
+# multipart（快捷指令走的就是这个）；PDF 和长图只是 MIME 不同
 curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
-  -H 'content-type: application/pdf' --data-binary @report.pdf
+  -F 'file=@/path/to/report.pdf;type=application/pdf' -F 'title=可选标题'
+curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
+  -F 'file=@/path/to/长图.png;type=image/png'
+
+# 原始二进制 / JSON base64 / 文件网址
+curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
+  -H 'content-type: image/png' --data-binary @长图.png
 curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
   -H 'content-type: application/json' -d '{"pdf":"<base64>","filename":"a.pdf"}'
-# https://n.139t.cn/api/pdf?k=<KEY>&url=https%3A%2F%2Fexample.com%2Fa.pdf
+# https://n.139t.cn/api/pdf?k=<KEY>&url=https%3A%2F%2Fexample.com%2Fa.png
 ```
 
-- `?format=md` 返回纯 Markdown，`?format=html` 返回排版好的 HTML 预览页（都不写库以外的东西）；`?keep=0` 不存原始 PDF。
-- `GET /api/pdf?k=<KEY>` 是手机浏览器里选 PDF 上传的表单页，不想配快捷指令时用它。
-- 上限 20MB；扫描件（图片型 PDF）转不出文字时降级为 `mode=original`，只建一条带原件链接的笔记，不写脏正文。
-- 正文是 Markdown，笔记本里可以直接编辑；标题依次取 `title` 字段 → 正文第一个标题 → 文件名。
+- `?format=md` 返回纯 Markdown，`?format=html` 返回排版好的 HTML 预览页；`?keep=0` 不存原始文件。
+- `GET /api/pdf?k=<KEY>` 是手机浏览器里选 PDF 或图片上传的表单页，不想配快捷指令时用它。
+- 上限 20MB；扫描件或识别失败时降级为 `mode=original`，只建一条带原件链接的笔记，不写脏正文。
+- 正文是 Markdown，笔记本里可以直接编辑；标题依次取 `title` 字段 → 正文第一个标题 → 文件名。同一份文件重复推送按内容哈希只更新同一篇。
 
-### 长图 / 任意 Markdown → 笔记本
+### 任意现成 Markdown → 笔记本
 
-`/api/note` 只负责**入库**，不负责识别。把长图或截图交给 WorkBuddy，由它看图转成 Markdown，再调这个端点写进笔记站（中文长图这样最准，也不用付 Workers AI 视觉模型的费用）：
+`/api/note` 只负责**入库**，不负责识别。把长图或截图交给 WorkBuddy，由它看图转成 Markdown，再调这个端点写进笔记站（不经模型缩放、也不消耗 Workers AI 额度，适合特别长或字很小的图）：
 
 ```bash
 curl -X POST 'https://n.139t.cn/api/note' \

@@ -31,6 +31,7 @@ const CORS_OPEN = {
 };
 
 const MAX_PDF = 20 * 1024 * 1024;   // 和 /api/media 一致
+const MAX_IMAGE = 10 * 1024 * 1024; // 视觉模型输入要转 base64，长图单独收紧上限
 const MAX_MD = 400000;              // 和 /api/sync 的 body 上限一致
 const DEFAULT_NOTEBOOK = 'PDF 导入';
 
@@ -185,28 +186,79 @@ async function parseIncoming(request, url) {
   return { bytes, filename, title, notebook, source, pdfUrl, format };
 }
 
-// ---- Workers AI：PDF / 图片 → 结构化 Markdown ---------------------------------
-async function toMarkdown(env, bytes, filename, mime, kind) {
+// ---- Workers AI：PDF 走文本抽取；图片走视觉模型逐字转录 ----------------------
+function tidy(s) {
+  return String(s || '').replace(/\r\n/g, '\n')
+    .replace(/^```(?:markdown|md)?\s*\n?/i, '').replace(/\n?```\s*$/, '')
+    .replace(/\n{4,}/g, '\n\n\n').trim().slice(0, MAX_MD);
+}
+
+/** 大文件分块转 base64，避免 String.fromCharCode(...几十万参数) 爆栈 */
+function toBase64(bytes) {
+  const u = new Uint8Array(bytes), CH = 0x8000;
+  let s = '';
+  for (let i = 0; i < u.length; i += CH) s += String.fromCharCode.apply(null, u.subarray(i, i + CH));
+  return btoa(s);
+}
+
+/** toMarkdown 对图片只会给【英文内容描述/摘要】，不是原文。要中文原文得走视觉模型逐字转录 */
+async function transcribeImage(env, bytes, mime) {
+  if (!env.AI || typeof env.AI.run !== 'function') return { md: '', error: '没有 Workers AI 绑定' };
+  try {
+    const r = await env.AI.run('@cf/qwen/qwen3.8-27b', {
+      messages: [
+        { role: 'system', content: '你是严谨的 OCR 转录引擎，只输出图片中的原文，不翻译、不总结、不解释。' },
+        { role: 'user', content: [
+          { type: 'text', text: '请逐字转录这张图片里的所有文字，保持原有的标题、段落、编号和列表结构，输出 Markdown。不要翻译、不要总结、不要添加任何解释。' },
+          { type: 'image_url', image_url: { url: `data:${mime};base64,${toBase64(bytes)}`, detail: 'high' } }
+        ] }
+      ],
+      max_completion_tokens: 4096,
+      temperature: 0,
+      reasoning_effort: 'low'
+    });
+    const c = r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content;
+    const md = tidy(c);
+    return md
+      ? { md, tokens: (r.usage && r.usage.total_tokens) || 0 }
+      : { md: '', error: '视觉模型没返回文字' };
+  } catch (e) {
+    return { md: '', error: String((e && e.message) || e).slice(0, 200) };
+  }
+}
+
+async function toMarkdownDirect(env, bytes, filename, mime, opts) {
   if (!env.AI || typeof env.AI.toMarkdown !== 'function') {
     return { md: '', error: '服务端没有绑定 Workers AI（变量名 AI）' };
   }
   const doc = { name: filename || 'import.pdf', blob: new Blob([bytes], { type: mime || 'application/pdf' }) };
-  // PDF 关掉元数据；图片走视觉模型（caption + OCR），不传 pdf 选项
-  const opts = kind === 'pdf' ? { conversionOptions: { pdf: { metadata: false } } } : undefined;
   let out;
-  try {
-    out = await env.AI.toMarkdown(doc, opts);
-  } catch (e) {
-    // 兼容不接受 conversionOptions 的旧运行时
-    try { out = await env.AI.toMarkdown(doc); }
+  try { out = await env.AI.toMarkdown(doc, opts); }
+  catch (e) {
+    try { out = await env.AI.toMarkdown(doc); }   // 兼容不接受 conversionOptions 的旧运行时
     catch (e2) { return { md: '', error: String((e2 && e2.message) || e2).slice(0, 200) }; }
   }
   const r = Array.isArray(out) ? out[0] : out;
   if (!r || r.format === 'error' || typeof r.data !== 'string') {
     return { md: '', error: String((r && r.error) || '转换没有返回内容').slice(0, 200) };
   }
-  const md = r.data.replace(/\r\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim().slice(0, MAX_MD);
+  const md = tidy(r.data);
   return { md, tokens: Number(r.tokens) || 0, error: md ? '' : '没提取到文字（可能是纯扫描件或压缩过度的长图）' };
+}
+
+async function toMarkdown(env, bytes, filename, mime, kind) {
+  if (kind !== 'image') {
+    const r = await toMarkdownDirect(env, bytes, filename, mime, { conversionOptions: { pdf: { metadata: false } } });
+    return { ...r, via: 'pdf-text' };
+  }
+  const got = await transcribeImage(env, bytes, mime);
+  if (got.md) return { ...got, via: 'qwen-vl' };
+  // Qwen 不可用才退回 toMarkdown：它给的是英文内容描述，必须在 warning 里说清楚
+  const fb = await toMarkdownDirect(env, bytes, filename, mime, undefined);
+  if (fb.md) {
+    return { ...fb, via: 'tomarkdown-image', error: '中文转录失败，本次存的是图片内容描述（英文）：' + got.error };
+  }
+  return { md: '', tokens: 0, via: 'none', error: (got.error || '') + ' / ' + (fb.error || '') };
 }
 
 /** Markdown 第一个像话的标题，用来当笔记标题 */
@@ -390,6 +442,9 @@ export async function onRequest({ request, env }) {
   const detected = detectFile(bytes);
   if (!detected) return reply({ error: '只支持 PDF 或图片（PNG / JPEG / WebP / SVG）' }, 400);
   if (detected.kind === 'heic') return reply({ error: 'HEIC 请先转成 JPEG 或 PNG 再传' }, 400);
+  if (detected.kind === 'image' && bytes.byteLength > MAX_IMAGE) {
+    return reply({ error: '长图超过 10MB，请先压缩或裁成几段分别推送' }, 413);
+  }
 
   const kind = detected.kind;
   const ext = kind !== 'pdf'
@@ -462,7 +517,7 @@ export async function onRequest({ request, env }) {
   const out = {
     ok: true, noteId: id, title, notebook, noteUrl, pdfUrl, fileUrl: pdfUrl,
     kind, mime: detected.mime,
-    mode, chars: md.length, tokens: conv.tokens || 0,
+    mode, via: conv.via, chars: md.length, tokens: conv.tokens || 0,
     format: incoming.format, size: bytes.byteLength
   };
   if (conv.error) out.warning = conv.error;

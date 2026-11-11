@@ -16,8 +16,8 @@ export async function onRequest(context) {
   const hex = Array.from(digest).slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
   const etag = '"' + hex + '"';
 
-  // 由内容哈希派生一个稳定的「修改时间」：内容变了时间才会变
-  const stamp = Date.UTC(2026, 0, 1) + (parseInt(hex.slice(0, 8), 16) % (365 * 86400)) * 1000;
+  // 由内容哈希派生一个稳定的「修改时间」（落在 2025 年内，避免出现未来时间）：内容变了时间才变
+  const stamp = Date.UTC(2025, 0, 1) + (parseInt(hex.slice(0, 8), 16) % (365 * 86400)) * 1000;
   const lastModified = new Date(stamp).toUTCString();
 
   const headers = new Headers(res.headers);

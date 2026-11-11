@@ -1,15 +1,24 @@
-# 页面本身别让浏览器缓存，否则改完样式用户还看着旧版本
+# 首页：允许浏览器缓存但每次都协商（命中就 304，省掉 130KB 的 HTML 重传）
+# 之前是 no-store，浏览器连协商缓存都用不上，每次打开都完整下载一遍。
+# 边缘也缓存 5 分钟；Pages 每次部署会清缓存，所以改版能立刻看到。
 /index.html
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: public, max-age=0, s-maxage=300, must-revalidate
 
 /
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: public, max-age=0, s-maxage=300, must-revalidate
 
 /s.html
   Cache-Control: no-cache
 
 /s/*
   Cache-Control: no-cache
+
+# Service Worker 必须每次校验，否则通知逻辑改了不生效
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
 
 /*.js
   Cache-Control: public, max-age=3600

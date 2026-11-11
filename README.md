@@ -146,6 +146,7 @@ iOS 快捷指令（分享 PDF 或长图） → POST https://n.139t.cn/api/pdf
 - 支持 PNG / JPEG / WebP / SVG；HEIC 会明确报错（先转成 JPEG）。图片单独限 10MB（PDF 仍是 20MB）。
 - **图片走 `@cf/qwen/qwen3.8-27b` 逐字转录中文原文**（`via=qwen-vl`）。实测 900×2200 中文长图约 19 秒、2330 tokens、约 172 neurons；Workers AI 每日有免费额度，超出会计费。直接对图片用 `toMarkdown` 只会得到**英文内容描述**，所以只在 Qwen 不可用时才降级到它（`via=tomarkdown-image`，并在 `warning` 里写明）；两条路都失败才只存原件。
 - 特别高的长图仍可能被模型缩放，小字有丢失风险；可以裁成几段分别推送，或把图交给 WorkBuddy 走下面的 `/api/note`（不经模型缩放、也不消耗 Workers AI 额度）。
+- **长图每日限 50 张**（PDF 不限）：超出返回 `429`，不调模型也不花钱。计数在 D1 的 `usage_daily` 表，用一条 `UPSERT ... RETURNING` 原子占位 —— 不用 KV 是因为 KV 读有 60 秒缓存，连着传会读到旧值、漏计。转不出文字（只存原件）时会把配额退回去。改上限用环境变量 `IMG_DAILY_LIMIT`（默认 50，最大 500）。
 
 部署前置（一次性）：
 
@@ -185,6 +186,7 @@ curl -X POST 'https://n.139t.cn/api/pdf' -H 'x-pdf-key: <KEY>' \
 - `?format=md` 返回纯 Markdown，`?format=html` 返回排版好的 HTML 预览页；`?keep=0` 不存原始文件。
 - `GET /api/pdf?k=<KEY>` 是手机浏览器里选 PDF 或图片上传的表单页，不想配快捷指令时用它。
 - 上限 20MB；扫描件或识别失败时降级为 `mode=original`，只建一条带原件链接的笔记，不写脏正文。
+- 图片的返回里带 `quota: { enforced, limit, used, remaining, resetAt }`，可以直接看出今天还剩几张；`resetAt` 是北京时间。没建 `usage_daily` 表时 `enforced=false` 并附 `warning`，不会挡住上传。
 - 正文是 Markdown，笔记本里可以直接编辑；标题依次取 `title` 字段 → 正文第一个标题 → 文件名。同一份文件重复推送按内容哈希只更新同一篇。
 
 ### 任意现成 Markdown → 笔记本

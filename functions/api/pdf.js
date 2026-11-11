@@ -57,19 +57,13 @@ function humanSize(n) {
 // ---- 每日图片配额 ------------------------------------------------------------
 // 长图要走视觉模型（Qwen），是唯一会持续吃 Workers AI 额度的通道，所以单独限量。
 // 计日窗口跟 Workers AI 免费额度的重置对齐：UTC 00:00（北京时间 08:00）。
-// 存在 KV 里，加 quota:img 前缀和原件 key 区分，TTL 3 天自动清掉。
+// 计数放在 D1 的 usage_daily 表：一条 UPSERT ... RETURNING 就能原子地「占一张并取回
+// 已用数」。这里刻意不用 KV —— KV 读取有 60 秒缓存，连着传几张会读到旧值、漏计。
 const IMG_LIMIT_DEFAULT = 50;
-const QUOTA_PREFIX = 'quota:img';
-const QUOTA_TTL = 3 * 86400;
 
 function imgLimit(env) {
   const n = parseInt(String(env.IMG_DAILY_LIMIT || ''), 10);
   return Number.isFinite(n) && n > 0 ? Math.min(n, 500) : IMG_LIMIT_DEFAULT;
-}
-
-/** 优先用专用配额 KV（QUOTA）；没配就借存原件的 KV（MEDIA），前缀不同不会撞 key */
-function quotaStore(env) {
-  return env.QUOTA || env.MEDIA || null;
 }
 
 function quotaDay(ts) {
@@ -81,27 +75,30 @@ function quotaResetText(ts) {
   return stamp(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
 }
 
-async function quotaCheck(env, uid, ts) {
+/** 占一张（原子），返回 { enforced, limit, used, remaining, allowed, day } */
+async function quotaTake(env, uid, ts) {
   const limit = imgLimit(env);
-  const kv = quotaStore(env);
   const day = quotaDay(ts);
-  if (!kv) return { enforced: false, limit, used: 0, remaining: limit, day };
-  let used = 0;
-  try { used = Number(await kv.get(`${QUOTA_PREFIX}:${uid}:${day}`)) || 0; } catch (e) { used = 0; }
-  return { enforced: true, limit, used, remaining: Math.max(0, limit - used), day };
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO usage_daily (user_id, day, kind, used) VALUES (?1, ?2, 'image', 1)
+       ON CONFLICT(user_id, day, kind) DO UPDATE SET used = used + 1
+       RETURNING used`
+    ).bind(uid, day).first();
+    const used = Number((row && row.used) || 0);
+    return { enforced: true, limit, day, used, remaining: Math.max(0, limit - used), allowed: used <= limit };
+  } catch (e) {
+    // 表还没建 / D1 抖动：不拦上传，但明确标出配额没生效
+    return { enforced: false, limit, day, used: 0, remaining: limit, allowed: true, error: String((e && e.message) || e).slice(0, 120) };
+  }
 }
 
-/** delta=+1 预占一次，-1 退还（没转出文字时不该白扣配额） */
-async function quotaBump(env, uid, delta, day) {
-  const kv = quotaStore(env);
-  if (!kv) return null;
-  const key = `${QUOTA_PREFIX}:${uid}:${day}`;
+async function quotaRefund(env, uid, day) {
   try {
-    const cur = Number(await kv.get(key)) || 0;
-    const next = Math.max(0, cur + delta);
-    await kv.put(key, String(next), { expirationTtl: QUOTA_TTL });
-    return next;
-  } catch (e) { return null; }   // KV 抖动不该挡住导入
+    await env.DB.prepare(
+      `UPDATE usage_daily SET used = used - 1 WHERE user_id = ?1 AND day = ?2 AND kind = 'image' AND used > 0`
+    ).bind(uid, day).run();
+  } catch (e) { /* 退还失败不影响导入 */ }
 }
 
 /** 只留 http(s)，挡内网 / 云元数据地址，避免这个「能写库的端点」被拿去探内网 */
@@ -507,18 +504,18 @@ export async function onRequest({ request, env }) {
   const hash = await sha256(bytes);
   const now = Date.now();
 
-  // 长图限量：先查当天已用，满了直接挡掉，不调模型、不花钱。PDF 不占这个额度。
+  // 长图限量：先原子占一张，超了退回去并挡掉，不调模型、不花钱。PDF 不占这个额度。
   let quota = null;
   if (kind === 'image') {
-    quota = await quotaCheck(env, me.uid, now);
-    if (quota.enforced && quota.remaining <= 0) {
+    quota = await quotaTake(env, me.uid, now);
+    if (quota.enforced && !quota.allowed) {
+      await quotaRefund(env, me.uid, quota.day);
       return reply({
         error: `今天的图片额度已用完（${quota.limit} 张），${quotaResetText(now)}恢复；PDF 不受这个限制`,
-        kind: 'image', limit: quota.limit, used: quota.used, remaining: 0,
+        kind: 'image', limit: quota.limit, used: quota.limit, remaining: 0,
         resetAt: quotaResetText(now)
       }, 429);
     }
-    if (quota.enforced) await quotaBump(env, me.uid, 1, quota.day);   // 先占位，没转出文字再退还
   }
 
   // 原始文件（PDF 或长图）存媒体库：key 由内容哈希派生，重复推送覆盖同一份，不堆垃圾
@@ -537,16 +534,21 @@ export async function onRequest({ request, env }) {
   const md = conv.md;
   const mode = md ? 'markdown' : 'original';
 
-  // 配额结算：转出文字才算用掉一张；失败就退还占位，不让一次失败白扣一天额度
+  // 配额结算：占位时已经算上了；没转出文字就退回去，不让一次失败白扣一天额度
   let quotaInfo;
   if (kind === 'image') {
     if (!quota.enforced) {
       quotaInfo = { enforced: false, limit: quota.limit, used: null, remaining: null, resetAt: quotaResetText(now) };
+      if (quota.error) quotaInfo.warning = quota.error;
     } else if (md) {
-      quotaInfo = { enforced: true, limit: quota.limit, used: quota.used + 1, remaining: Math.max(0, quota.limit - quota.used - 1), resetAt: quotaResetText(now) };
+      quotaInfo = { enforced: true, limit: quota.limit, used: Math.min(quota.used, quota.limit), remaining: quota.remaining, resetAt: quotaResetText(now) };
     } else {
-      await quotaBump(env, me.uid, -1, quota.day);
-      quotaInfo = { enforced: true, limit: quota.limit, used: quota.used, remaining: quota.remaining, resetAt: quotaResetText(now) };
+      await quotaRefund(env, me.uid, quota.day);
+      quotaInfo = {
+        enforced: true, limit: quota.limit,
+        used: Math.max(0, quota.used - 1), remaining: Math.min(quota.limit, quota.remaining + 1),
+        resetAt: quotaResetText(now)
+      };
     }
   }
 

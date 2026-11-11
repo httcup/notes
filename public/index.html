@@ -1705,7 +1705,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v64', at: '2026-11-11 09:06' };
+window.IVY_BUILD = { id: 'v65', at: '2026-11-11 11:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5777,6 +5777,10 @@ function renderProse(){
   prose.querySelectorAll('.wikilink').forEach(a=>a.onclick=(e)=>{
     e.preventDefault(); openWikiLink(a.dataset.wiki);
   });
+  prose.querySelectorAll('img').forEach(im=>{
+    im.style.cursor = 'zoom-in';
+    im.onclick = ()=>openImagePreview(im);
+  });
   outlineItems = out.headings;
   SPLIT_ANCH = null;   // 预览重绘后锚点位置全变了，下一帧重建
   renderMermaidBlocks(prose);
@@ -6166,6 +6170,8 @@ function blockEl(raw, i, only){
   view.addEventListener('mousedown', e=>{
     if(e.target.closest && e.target.closest('a')) return;
     if(e.target.matches && e.target.matches('input[type=checkbox]')){ e.preventDefault(); toggleTask(i, e.target); return; }
+    // 图片：点开看大图。以前点一下会进编辑态，内嵌 base64 的图当场变成一屏“乱码”
+    if(e.target.tagName === 'IMG'){ e.preventDefault(); e.stopPropagation(); openImagePreview(e.target); return; }
     if(e.button !== 0) return;
     // 不阻止默认行为：允许像普通网页一样拖过多个块选中文字
     SELDOWN = { i, x:e.clientX, y:e.clientY };
@@ -7814,41 +7820,167 @@ function htmlToMd(html){
   return md;
 }
 
+/* ---- 看大图 ---- */
+/* 以前点图片会进编辑态，源码里若是内嵌 base64，整张图的编码就铺满一屏（看着像乱码）。
+   现在点图片只弹大图；要改这一块的源码，点图片旁边的空白处即可。 */
+function openImagePreview(img){
+  const src = (img && (img.currentSrc || img.src)) || '';
+  if(!src) return;
+  let pv = document.getElementById('imgPreview');
+  if(!pv){
+    pv = document.createElement('div');
+    pv.id = 'imgPreview';
+    pv.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(16,20,24,.88);display:none;align-items:center;justify-content:center;padding:4vmin;cursor:zoom-out';
+    pv.innerHTML = '<img alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;background:#fff">';
+    pv.addEventListener('click', closeImagePreview);
+    document.body.appendChild(pv);
+  }
+  pv.querySelector('img').src = src;
+  pv.style.display = 'flex';
+}
+function closeImagePreview(){
+  const pv = document.getElementById('imgPreview');
+  if(pv) pv.style.display = 'none';
+}
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeImagePreview(); }, true);
+
+/* ---- 导入：把内嵌图片搬上云 ----
+   导入的 HTML 里图片常常直接内嵌（<img src="data:image/png;base64,...">）。
+   原样留在 markdown 里会有两个后果：点一下块就看到几十万字符的编码，
+   并且整篇正文很容易撞上 /api/sync 的 40 万字符上限，被从中间截断。
+   所以导入后统一走 uploadMediaFile()，正文里只留 /api/media/... 短链接。 */
+const IMG_EXT = {'image/png':'png','image/jpeg':'jpg','image/gif':'gif','image/webp':'webp',
+  'image/svg+xml':'svg','image/bmp':'bmp','image/avif':'avif'};
+
+/* 中文 HTML 常写 charset=gb2312/gbk，按 UTF-8 硬读会把整篇读成乱码 —— 先嗅一眼前 2KB */
+function decodeImportBuffer(buf){
+  let label = 'utf-8';
+  try{
+    const head = new TextDecoder('latin1').decode(new Uint8Array(buf, 0, Math.min(buf.byteLength, 2048))).toLowerCase();
+    const m = /charset\s*=\s*["']?\s*([\w-]+)/.exec(head);
+    if(m && m[1]) label = m[1];
+  }catch(e){}
+  if(/^(gb2312|gbk|gb18030)$/.test(label)) label = 'gb18030';
+  try{ return new TextDecoder(label).decode(buf); }
+  catch(e){ return new TextDecoder('utf-8').decode(buf); }
+}
+
+function dataUriToBlob(src){
+  const m = /^data:([^;,]*)?(;base64)?,([\s\S]*)$/.exec(src);
+  if(!m) return null;
+  const type = m[1] || 'application/octet-stream';
+  try{
+    if(m[2]){
+      const bin = atob(m[3].replace(/\s+/g,''));
+      const bytes = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+      return new Blob([bytes], {type});
+    }
+    return new Blob([new TextEncoder().encode(decodeURIComponent(m[3]))], {type});
+  }catch(e){ return null; }
+}
+
+async function uploadIntakeBlob(blob, i){
+  const type = blob.type || 'image/png';
+  const ext = IMG_EXT[type] || (String(type).split('/')[1] || 'png').replace(/[^a-z0-9]/gi,'') || 'png';
+  const up = await uploadMediaFile(new File([blob], 'import-' + (i+1) + '.' + ext, {type}));
+  if(!up || !up.url) throw new Error('上传没有返回地址');
+  return up.url;
+}
+
+/* 把 note.body 里的 data: / http(s) 图片换成上传后的短链接 */
+async function absorbInlineImages(note){
+  const md = String(note.body || '');
+  const re = /!\[([^\]]*)\]\((data:[^)\s]+|https?:\/\/[^)\s]+)\)/g;
+  const hits = [];
+  let m;
+  while((m = re.exec(md))) hits.push({ start:m.index, end:m.index + m[0].length, alt:m[1], src:m[2] });
+  const res = { total:hits.length, uploaded:0, kept:0, failed:0 };
+  if(!hits.length) return res;
+  if(!isConnected()){ res.kept = hits.length; return res; }
+
+  toast('正在搬运 ' + hits.length + ' 张图…');
+  let out = '', last = 0;
+  for(let k=0;k<hits.length;k++){
+    const h = hits[k];
+    let url = h.src;
+    try{
+      if(/^data:/i.test(h.src)){
+        const blob = dataUriToBlob(h.src);
+        if(!blob) throw new Error('解码失败');
+        url = await uploadIntakeBlob(blob, k);
+        res.uploaded++;
+      }else{
+        // 远程图也抓一份存到自己家，免得原站防盗链或删图后一片空白
+        const resp = await fetch(h.src, {mode:'cors', credentials:'omit'});
+        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        const blob = await resp.blob();
+        if(!/^image\//.test(blob.type || '')) throw new Error('不是图片');
+        url = await uploadIntakeBlob(blob, k);
+        res.uploaded++;
+      }
+    }catch(err){
+      res.failed++;   // 抓不到就保留原地址，至少还有机会显示
+    }
+    out += md.slice(last, h.start) + '![' + h.alt + '](' + url + ')';
+    last = h.end;
+  }
+  out += md.slice(last);
+  if(out !== md) note.body = out;
+  return res;
+}
+
 function importDoc(){
   const inp = document.createElement('input');
   inp.type = 'file';
   inp.accept = '.md,.markdown,.txt,.html,.htm';
-  inp.onchange = ()=>{
+  inp.onchange = async ()=>{
     const f = inp.files[0]; if(!f) return;
     const isHtml = /\.html?$/i.test(f.name);
-    const r = new FileReader();
-    r.onload = ()=>{
-      const text = String(r.result);
-      let title = f.name.replace(/\.\w+$/,'');
-      let body = '';
-      if(isHtml){
-        const doc = new DOMParser().parseFromString(text,'text/html');
-        const t = (doc.querySelector('title') && doc.querySelector('title').textContent || '').trim();
-        const h1 = (doc.querySelector('h1') && doc.querySelector('h1').textContent || '').trim();
-        title = t || h1 || title;
-        body = htmlToMd(text);
-        // 去掉和标题重复的首个 H1
-        body = body.replace(/^#\s+.*\n?/, m => {
-          const h = m.replace(/^#\s+/,'').trim();
-          return h && h === title ? '' : m;
-        }).trim();
-      }else{
-        const first = text.split('\n').find(l=>/^#\s+/.test(l));
-        if(first) title = first.replace(/^#\s+/,'').trim();
-        body = text.replace(/^#\s+.*\n/,'');
-      }
-      const nn = newNote();
-      nn.title = title;
-      nn.body = body;
-      renderAll(); save();
-      toast('已导入「' + title + '」');
-    };
-    r.readAsText(f);
+    let text = '';
+    try{
+      text = decodeImportBuffer(await f.arrayBuffer());
+    }catch(e){
+      text = await new Promise(res=>{
+        const fr = new FileReader();
+        fr.onload = ()=>res(String(fr.result || ''));
+        fr.onerror = ()=>res('');
+        fr.readAsText(f);
+      });
+    }
+    let title = f.name.replace(/\.\w+$/,'');
+    let body = '';
+    if(isHtml){
+      const doc = new DOMParser().parseFromString(text,'text/html');
+      const t = (doc.querySelector('title') && doc.querySelector('title').textContent || '').trim();
+      const h1 = (doc.querySelector('h1') && doc.querySelector('h1').textContent || '').trim();
+      title = t || h1 || title;
+      body = htmlToMd(text);
+      // 去掉和标题重复的首个 H1
+      body = body.replace(/^#\s+.*\n?/, m => {
+        const h = m.replace(/^#\s+/,'').trim();
+        return h && h === title ? '' : m;
+      }).trim();
+    }else{
+      const first = text.split('\n').find(l=>/^#\s+/.test(l));
+      if(first) title = first.replace(/^#\s+/,'').trim();
+      body = text.replace(/^#\s+.*\n/,'');
+    }
+    const nn = newNote();
+    nn.title = title;
+    nn.body = body;
+    renderAll(); save();
+    const moved = await absorbInlineImages(nn);
+    if(moved.uploaded || moved.failed){
+      nn.updatedAt = Date.now();
+      save();
+      if(LIVE.editing < 0) renderAll();   // 别打断正在打字的人，下次重绘自然就是短链接了
+    }
+    let tail = '';
+    if(moved.uploaded) tail += ' · ' + moved.uploaded + ' 张图已转存';
+    if(moved.failed) tail += ' · ' + moved.failed + ' 张没取到';
+    if(moved.kept) tail += ' · ' + moved.kept + ' 张仍是内嵌（未登录）';
+    toast('已导入「' + title + '」' + tail);
   };
   inp.click();
 }

@@ -1,6 +1,7 @@
-// 首页补 ETag：Cloudflare Pages 对 HTML 不发 ETag / Last-Modified，
+// 首页补校验头：Cloudflare Pages 对 HTML 不发 ETag / Last-Modified，
 // 浏览器没有校验依据，每次打开都要把整页（brotli 后 132KB）重新下载一遍。
-// 这里给 / 加一个内容哈希式 ETag，命中 If-None-Match 就返回 304。
+// 这里按内容哈希生成一对稳定的 ETag / Last-Modified，命中条件请求就返回 304。
+// 注意：生产环境会把 Function 设的 ETag 过滤掉，所以同时给 Last-Modified 做兜底。
 export async function onRequest(context) {
   const { request, next } = context;
   const url = new URL(request.url);
@@ -11,15 +12,23 @@ export async function onRequest(context) {
   if (!res.ok) return res;
 
   const buf = await res.arrayBuffer();
-  const digest = await crypto.subtle.digest('SHA-256', buf);
-  const etag = '"' + Array.from(new Uint8Array(digest)).slice(0, 8)
-    .map((b) => b.toString(16).padStart(2, '0')).join('') + '"';
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', buf));
+  const hex = Array.from(digest).slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const etag = '"' + hex + '"';
+
+  // 由内容哈希派生一个稳定的「修改时间」：内容变了时间才会变
+  const stamp = Date.UTC(2026, 0, 1) + (parseInt(hex.slice(0, 8), 16) % (365 * 86400)) * 1000;
+  const lastModified = new Date(stamp).toUTCString();
 
   const headers = new Headers(res.headers);
   headers.set('etag', etag);
+  headers.set('last-modified', lastModified);
   headers.set('cache-control', 'public, max-age=0, s-maxage=60, must-revalidate');
 
-  if (request.headers.get('if-none-match') === etag) {
+  const inm = request.headers.get('if-none-match');
+  const ims = request.headers.get('if-modified-since');
+  const fresh = (inm && inm === etag) || (!inm && ims && Date.parse(ims) >= stamp - 999);
+  if (fresh) {
     headers.delete('content-length');
     return new Response(null, { status: 304, headers });
   }

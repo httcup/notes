@@ -1709,7 +1709,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v73', at: '2026-11-13 14:44' };
+window.IVY_BUILD = { id: 'v74', at: '2026-11-13 14:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4390,7 +4390,7 @@ function renderFmtBar(){
       else if(k==='code') openCodeMenu(b);
       else if(k==='table') openTablePicker(b);
       else if(k==='chart') openChartMenu(b);
-      else if(k==='help') openHelpPanel();
+      else if(k==='help'){ helpTab='md'; openHelpPanel(); }
       else applyFormat(k);
     };
   });
@@ -4482,7 +4482,7 @@ const INSERT_ITEMS = [
   {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu(insertAnchor())},
   {name:'外部链接', keys:['wblj','link','url'], icon:'link', desc:'[文字](https://…)', run:()=>applyFormat('link')},
   {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')},
-  {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'Markdown 语法与全部快捷键', run:()=>openHelpPanel()}
+  {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'导入导出、Markdown 语法与全部快捷键', run:()=>{ helpTab='io'; openHelpPanel(); }}
 ];
 function insertFilter(q){
   q = String(q || '').trim().toLowerCase();
@@ -5334,12 +5334,13 @@ function openHelpPanel(){
   if(!ov){
     ov = document.createElement('div');
     ov.id = 'helpOv'; ov.className = 'help-ov';
-    ov.innerHTML = `<div class="help-card" role="dialog" aria-label="Markdown 与快捷键">
+    ov.innerHTML = `<div class="help-card" role="dialog" aria-label="使用说明">
         <div class="help-hd">
-          <div><h3>Markdown 与快捷键</h3><p>所有写法与快捷键一览</p></div>
+          <div><h3>使用说明</h3><p>导入导出、Markdown 写法、快捷键与日程</p></div>
           <button class="help-x" id="helpClose" title="关闭">${ic('x')}</button>
         </div>
         <div class="help-tabs">
+          <button class="help-tab" data-htab="io">导入 / 导出</button>
           <button class="help-tab" data-htab="md">Markdown 写法</button>
           <button class="help-tab" data-htab="key">快捷键</button>
           <button class="help-tab" data-htab="todo">日程怎么用</button>
@@ -5362,7 +5363,22 @@ function paintHelp(){
   const ov = $('#helpOv'); if(!ov) return;
   ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
   const body = $('#helpBody');
-  if(helpTab === 'md'){
+  if(helpTab === 'io'){
+    body.innerHTML = `
+      <div class="help-sec"><h4>导出备份（.json）· 用来恢复自己</h4>
+        <p class="help-p">「导出全部笔记（备份）」导出一个 <code>.json</code> 文件，<b>包含全部笔记正文、所属笔记本、标签、创建与修改时间</b>。以后换电脑、重装、清了浏览器数据，用「导入」选这个文件，就能<b>连笔记本分类一起原样还原</b>。<b>想留后路，选它，不要用 Markdown。</b></p></div>
+      <div class="help-sec"><h4>导出 Markdown（.md）· 用来分享或搬去别的软件</h4>
+        <p class="help-p">「导出全部笔记（Markdown）」导出纯文本 <code>.md</code>，每篇之间用 <code>---</code> 隔开，<b>只保留标题和正文，不带笔记本分类和标签</b>。适合发给别人看，或导进 Obsidian、Typora、Notion 等工具。<b>它不能用来恢复自己的数据。</b></p></div>
+      <div class="help-sec"><h4>导入 · 一个入口认三种文件</h4>
+        <p class="help-p">「导入 Markdown / HTML / 备份」会自动判断文件类型：<br>
+        ① <b>.json 备份</b> → 逐篇还原笔记，<b>笔记本分类、标签一起回来</b>；已存在的笔记自动跳过，重复导入不会产生副本；<br>
+        ② <b>.md</b> → 当作<b>一篇</b>笔记导入（第一个 <code># 标题</code> 作标题，其余作正文）；<br>
+        ③ <b>.html</b> → 按网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown；登录状态下内嵌图片会自动转存。</p></div>
+      <div class="help-sec"><h4>该选哪个</h4>
+        <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
+      <div class="help-sec"><h4>关于这个应用</h4>
+        <p class="help-p">小胡小胡的笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
+  } else if(helpTab === 'md'){
     body.innerHTML = `<div class="help-hero">` + HELP_HERO.map(c=>`
         <div class="hh${c.hl ? ' hl' : ''}">
           <div class="hh-t">${c.sym ? `<i>${esc(c.sym)}</i>` : ''}${esc(c.t)}</div>
@@ -8336,7 +8352,7 @@ function openUserMenu(anchor){
     ['导出全部笔记（备份）', '', '', 'download', exportBackup],
     ['导出全部笔记（Markdown）', '', '', 'download', exportAllMd],
     '-',
-    ['关于', '', '', 'info', ()=>toast('小胡小胡的笔记 · 本地优先 + Cloudflare 云同步')]
+    ['使用说明', '', '', 'help', ()=>{ helpTab='io'; openHelpPanel(); }]
   ]);
 }
 

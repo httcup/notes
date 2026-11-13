@@ -1709,7 +1709,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v74', at: '2026-11-13 14:52' };
+window.IVY_BUILD = { id: 'v76', at: '2026-11-13 15:08' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5372,7 +5372,7 @@ function paintHelp(){
       <div class="help-sec"><h4>导入 · 一个入口认三种文件</h4>
         <p class="help-p">「导入 Markdown / HTML / 备份」会自动判断文件类型：<br>
         ① <b>.json 备份</b> → 逐篇还原笔记，<b>笔记本分类、标签一起回来</b>；已存在的笔记自动跳过，重复导入不会产生副本；<br>
-        ② <b>.md</b> → 当作<b>一篇</b>笔记导入（第一个 <code># 标题</code> 作标题，其余作正文）；<br>
+        ② <b>.md</b> → 自动<b>按 <code>---</code> 分篇</b>：每篇的第一个 <code># 标题</code> 作标题、其余作正文，一篇一个笔记；只写了一篇时就导入成一篇（正文里自己的分割线不会被误拆）；<br>
         ③ <b>.html</b> → 按网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown；登录状态下内嵌图片会自动转存。</p></div>
       <div class="help-sec"><h4>该选哪个</h4>
         <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
@@ -8022,9 +8022,12 @@ function importDoc(){
         return h && h === title ? '' : m;
       }).trim();
     }else{
-      const first = text.split('\n').find(l=>/^#\s+/.test(l));
-      if(first) title = first.replace(/^#\s+/,'').trim();
-      body = text.replace(/^#\s+.*\n/,'');
+      // 先按分篇线拆开：导出的是「# 标题 + 正文」，篇与篇之间用 --- 隔开
+      const chunks = splitMdNotes(text);
+      if(chunks.length > 1){ await importMdChunks(chunks); return; }
+      const only = chunks[0] || { title:'', body:text };
+      title = only.title || title;
+      body = only.body;
     }
     const nn = newNote();
     nn.title = title;
@@ -8046,6 +8049,64 @@ function importDoc(){
 }
 function importMd(){ importDoc(); }
 
+/* ---- Markdown 分篇：只在「---」后面紧跟 # 标题时才算分篇线，
+   这样笔记正文里自己写的分割线不会被误拆 ---- */
+function splitMdNotes(text){
+  const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const chunks = [];
+  let cur = [];
+  for(let i = 0; i < lines.length; i++){
+    const ln = lines[i];
+    if(/^\s*-{3,}\s*$/.test(ln)){
+      let j = i + 1;
+      while(j < lines.length && !lines[j].trim()) j++;
+      if(j < lines.length && /^#\s+/.test(lines[j])){   // 分篇线
+        chunks.push(cur); cur = []; i = j - 1; continue;
+      }
+    }
+    cur.push(ln);
+  }
+  chunks.push(cur);
+  return chunks.map(c=>{
+    const buf = c.slice();
+    while(buf.length && !buf[0].trim()) buf.shift();
+    while(buf.length && !buf[buf.length-1].trim()) buf.pop();
+    let title = '';
+    if(buf.length && /^#\s+/.test(buf[0])){ title = buf.shift().replace(/^#\s+/, '').trim(); }
+    while(buf.length && !buf[0].trim()) buf.shift();
+    return { title, body: buf.join('\n').trim() };
+  }).filter(x=>x.title || x.body);
+}
+/* 多篇一起导入：一次建好、一次存盘，避免逐篇重绘 */
+async function importMdChunks(chunks){
+  const base = Date.now();
+  const made = [];
+  chunks.forEach((c, i)=>{
+    // 时间戳倒着给：第一篇最新，书架按更新时间排时仍是原文顺序
+    const now = base + (chunks.length - i);
+    const n = { id:'n' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+      title: c.title || ('导入笔记 ' + (i + 1)), body: c.body || '',
+      notebookId:null, tags:[], trashed:false, createdAt:now, updatedAt:now };
+    made.push(n);
+  });
+  S.notes = made.concat(S.notes);
+  S.view = 'notes'; trashView = false;
+  S.active = made[0].id;
+  if(!S.tabs.includes(S.active)) S.tabs.push(S.active);
+  renderAll(); save();
+  let up = 0, fail = 0;
+  for(const n of made){
+    if(n.body.indexOf('data:image') < 0) continue;
+    const r = await absorbInlineImages(n);
+    up += r.uploaded || 0; fail += r.failed || 0;
+  }
+  if(up || fail){ save(); renderAll(); }
+  let tail = '';
+  if(up) tail += ' · ' + up + ' 张图已转存';
+  if(fail) tail += ' · ' + fail + ' 张没取到';
+  toast('已导入 ' + made.length + ' 篇笔记' + tail);
+}
+
 /* ---- 全量备份 / 恢复（JSON，含笔记本分类、标签、时间） ---- */
 function exportBackup(){
   const data = {
@@ -8058,14 +8119,15 @@ function exportBackup(){
   };
   const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='ivynote-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  a.download = '全部笔记-' + dateStamp() + '.json'; a.click();
   toast('已备份 '+data.notes.length+' 篇笔记（含笔记本分类）');
 }
 function exportAllMd(){
   const live = S.notes.filter(n=>!n.trashed && !n.deleted);
   const all = live.map(n=>`# ${n.title||'无标题'}\n\n${n.body}`).join('\n\n---\n\n');
   const blob = new Blob([all],{type:'text/markdown;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ivynote-export.md'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = '全部笔记-' + dateStamp() + '.md'; a.click();
   toast('已导出 '+live.length+' 篇笔记');
 }
 function importBackup(text){

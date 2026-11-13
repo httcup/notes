@@ -5,6 +5,10 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
+/* Android 上「添加到主屏幕」要求 Service Worker 带 fetch 处理器才会装成独立应用。
+   这里刻意不 respondWith：请求照常走网络，不引入任何缓存。 */
+self.addEventListener('fetch', () => {});
+
 self.addEventListener('notificationclick', (e) => {
   const data = (e.notification && e.notification.data) || {};
   e.notification.close();

@@ -20,8 +20,10 @@
 /vendor/*
   Cache-Control: public, max-age=31536000, immutable
 
-/*.js
-  Cache-Control: public, max-age=3600
+# 注意：不要再加 /*.js 这类宽规则，它会和 /sw.js 叠加成 max-age=3600，
+# 导致 Service Worker 更新不生效（Android 安装也会拿旧脚本）。
+/version.js
+  Cache-Control: public, max-age=0, must-revalidate
 
 /*.css
   Cache-Control: public, max-age=3600

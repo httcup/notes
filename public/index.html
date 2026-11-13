@@ -4,6 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>随手记笔记本</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#287a52" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#1b1b1d" media="(prefers-color-scheme: dark)" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="随手记" />
+<meta name="mobile-web-app-capable" content="yes" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23287A52'/%3E%3Crect x='9.6' y='6.4' width='12.8' height='19.2' rx='2.6' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M13.1 12.4h5.8M13.1 16h5.8M13.1 19.6h3.4' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
 <style>
 /* ============ tokens（取自 ivyNote 真实配色） ============ */
@@ -741,8 +748,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .dl-info{flex:1;min-width:0}
 .dl-info b{display:block;font-size:14px;font-weight:600}
 .dl-info span{display:block;font-size:12.5px;line-height:1.6;color:rgb(var(--faint));margin-top:3px}
-.dl-btn{flex:0 0 auto;padding:8px 16px;border-radius:9px;background:rgb(var(--ink));color:rgb(var(--surface));font-size:13px;font-weight:500;text-decoration:none}
+.dl-btn{flex:0 0 auto;padding:8px 16px;border-radius:9px;background:rgb(var(--ink));color:rgb(var(--surface));font-size:13px;font-weight:500;text-decoration:none;border:0;cursor:pointer;font-family:inherit}
 .dl-btn:hover{opacity:.88}
+.dl-btn:disabled{opacity:.45;cursor:default}
 .dl-tip{margin-top:16px;padding-top:14px;border-top:1px solid rgb(var(--line));font-size:12.5px;line-height:1.85;color:rgb(var(--muted))}
 .dl-tip b{color:rgb(var(--ink-2));font-weight:600}
 .dl-tip code{font-size:11.5px;background:rgb(var(--hover));padding:1px 5px;border-radius:5px}
@@ -1723,7 +1731,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v80', at: '2026-11-13 15:41' };
+window.IVY_BUILD = { id: 'v82', at: '2026-11-13 15:53' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3465,7 +3473,9 @@ let SWREG = null;
 async function ensureSW(){
   if(!('serviceWorker' in navigator)) return null;
   if(SWREG) return SWREG;
-  try{ SWREG = await navigator.serviceWorker.register('/sw.js', { scope: '/' }); }
+  // 带上版本号：每次发版都会换一个脚本地址，绕开 CDN/浏览器缓存，保证通知与安装逻辑即时更新
+  const v = (window.IVY_BUILD && window.IVY_BUILD.id) || '1';
+  try{ SWREG = await navigator.serviceWorker.register('/sw.js?v=' + encodeURIComponent(v), { scope: '/' }); }
   catch(e){ SWREG = null; }
   return SWREG;
 }
@@ -5375,6 +5385,32 @@ function closeHelpPanel(){
 }
 
 /* ---- 客户端下载 ---- */
+/* Android / 桌面 Chrome 的「安装应用」事件要先接住，等用户点按钮时再触发 */
+let PWA_INSTALL = null;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); PWA_INSTALL = e;
+  const b = document.getElementById('dlAndroid'); if(b) b.disabled = false;
+});
+window.addEventListener('appinstalled', ()=>{
+  PWA_INSTALL = null;
+  toast('已安装，从桌面图标就能直接打开');
+});
+const inStandalone = ()=>{
+  try{ return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }catch(e){ return false; }
+};
+async function installAsApp(){
+  if(PWA_INSTALL){
+    const e = PWA_INSTALL; PWA_INSTALL = null;
+    try{
+      e.prompt();
+      const r = await e.userChoice;
+      if(r && r.outcome === 'accepted') toast('正在安装…');
+    }catch(err){}
+    return;
+  }
+  if(inStandalone()){ toast('现在就是在应用模式里跑的'); return; }
+  toast('点浏览器菜单里的「添加到主屏幕」或「安装应用」即可');
+}
 function openClientPanel(){
   let ov = $('#dlOv');
   if(!ov){
@@ -5396,15 +5432,23 @@ function openClientPanel(){
             <div class="dl-info"><b>Windows 版</b><span>免安装 · 约 0.8 MB · Win10 / 11 自带 Edge 即可运行</span></div>
             <a class="dl-btn" href="/dl/Note-Windows.zip" download>下载</a>
           </div>
+          <div class="dl-row">
+            <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="6.5" y="2.6" width="11" height="18.8" rx="2.6"/><path d="M10.6 5.2h2.8"/><path d="M12 18.4h.01"/></svg></div>
+            <div class="dl-info"><b>Android 版</b><span>装到桌面 · 独立图标 · 无需安装包，随网页自动更新</span></div>
+            <button class="dl-btn" id="dlAndroid">安装</button>
+          </div>
           <div class="dl-tip">
             <b>macOS</b>：解压后把「随手记笔记本」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手记笔记本.app</code>。<br>
-            <b>Windows</b>：解压后双击 <code>随手记笔记本.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。
+            <b>Windows</b>：解压后双击 <code>随手记笔记本.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。<br>
+            <b>Android</b>：用系统浏览器（Chrome / Edge / 小米、OPPO、vivo 自带浏览器）打开本页，点上面的<b>「安装」</b>；没有弹窗的话，点浏览器菜单里的<b>「添加到主屏幕」</b>或<b>「安装应用」</b>。装好后从桌面图标直接进，全屏没有地址栏。
           </div>
         </div>
       </div>`;
     document.body.appendChild(ov);
     ov.addEventListener('mousedown', e=>{ if(e.target === ov) ov.classList.remove('open'); });
     $('#dlClose').onclick = ()=>ov.classList.remove('open');
+    const ab = $('#dlAndroid');
+    if(ab) ab.onclick = installAsApp;
   }
   ov.classList.add('open');
 }

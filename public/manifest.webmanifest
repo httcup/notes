@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "随手记笔记本",
+  "short_name": "随手记",
+  "description": "随手记笔记：Markdown 编辑、待办提醒、笔记本分类与多设备云同步。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#faf9f7",
+  "theme_color": "#287a52",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

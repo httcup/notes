@@ -1,5 +1,5 @@
-// POST /api/auth  登录 / 注册，换一个 90 天有效的令牌
-import { json, preflight, hashPassword, randomHex, signToken, safeEqual } from '../_lib.js';
+// POST /api/auth  登录 / 注册 / 改密码，换一个 90 天有效的令牌
+import { json, preflight, hashPassword, randomHex, signToken, safeEqual, currentUser } from '../_lib.js';
 
 const TTL = 90 * 864e5;
 // 注册开关关闭时给新用户的提示（站主可在管理后台开/关）
@@ -24,6 +24,27 @@ export async function onRequest({ request, env }) {
   const name = String(body.name || '').trim();
   const key = String(body.key || '');
   if (key.length < 4) return json({ error: '口令至少 4 位' }, 400);
+
+  // 改自己的密码：要带登录令牌（证明是本人设备），并且再验一次旧密码
+  if (body.action === 'passwd') {
+    if (!env.IVY_SECRET) return json({ error: '服务端未配置 IVY_SECRET' }, 503);
+    const newKey = String(body.newKey || '');
+    if (newKey.length < 4) return json({ error: '新密码至少 4 位' }, 400);
+    if (safeEqual(newKey, key)) return json({ error: '新密码和当前密码一样' }, 400);
+    const me = await currentUser(request, env);
+    if (!me) return json({ error: '登录已过期，请重新登录后再改' }, 401);
+    if (me.uid === ((env && env.ADMIN_UID) || 'owner')) {
+      return json({ error: '主人账号的口令在环境变量 IVY_KEY 里，请到 Cloudflare 控制台修改' }, 400);
+    }
+    const row = await env.DB.prepare('SELECT id, salt, hash FROM users WHERE id = ?1').bind(me.uid).first();
+    if (!row) return json({ error: '账号不存在' }, 404);
+    const h = await hashPassword(key, row.salt);
+    if (!safeEqual(h, row.hash)) return json({ error: '当前密码不正确' }, 401);
+    const salt = randomHex(16);
+    const hash = await hashPassword(newKey, salt);
+    await env.DB.prepare('UPDATE users SET salt = ?2, hash = ?3 WHERE id = ?1').bind(row.id, salt, hash).run();
+    return json({ ok: true });
+  }
 
   // 留空账号 = 主人账号，沿用环境变量里的口令
   if (!name) {

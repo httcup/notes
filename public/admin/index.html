@@ -373,8 +373,37 @@
     name.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); key.focus(); } };
   }
 
-  function renderList(){
-    var html = '<div class="row head"><div>账号</div><div>笔记</div><div>占用</div><div>最后活动</div><div></div></div>';
+  /* ---------- 重置密码 ---------- */
+  function askPass(a){
+    if(!a) return;
+    $('#ov').innerHTML =
+      '<div class="dlg">' +
+        '<div class="dlg-h"><div class="ico" style="background:var(--ivy-l)"><svg viewBox="0 0 24 24" style="stroke:var(--ivy-d)"><rect x="4" y="10" width="16" height="10" rx="2.4"/><path d="M8 10V7.4a4 4 0 0 1 8 0V10"/></svg></div><h3>修改「' + esc(a.name) + '」的密码</h3></div>' +
+        '<div class="dlg-b">直接设一个新密码，不需要知道原来的。改完把新密码告诉对方，让对方在笔记里重新登录。<b>对方已经登录的设备不会立刻掉线</b>，下次登录时要用新密码。' +
+          '<div class="cfield"><span>新密码</span><input type="text" id="pKey" placeholder="至少 4 位" autocomplete="off" spellcheck="false"></div>' +
+        '</div>' +
+        '<div class="dlg-f"><button class="btn line" data-close>取消</button><button class="btn" id="okPass">保存新密码</button></div>' +
+      '</div>';
+    openOv();
+    var key = $('#pKey'), ok = $('#okPass');
+    setTimeout(function(){ key.focus(); }, 60);
+    var go = function(){
+      if(ok.disabled) return;
+      if(key.value.trim().length < 4){ toast('新密码至少 4 位'); return; }
+      ok.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action:'setPass', uid:a.uid, key:key.value.trim() }) })
+        .then(function(){
+          closeOv();
+          toast('已改好，把新密码告诉「' + a.name + '」');
+          load();
+        })
+        .catch(function(e){ toast(e.message || '修改失败'); ok.disabled = false; });
+    };
+    ok.onclick = go;
+    key.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); go(); } };
+  }
+
+  function renderList(){    var html = '<div class="row head"><div>账号</div><div>笔记</div><div>占用</div><div>最后活动</div><div></div></div>';
     html += state.accounts.map(function(a){
       var status = a.disabled
         ? '<span class="tag off">已停用</span>'
@@ -382,6 +411,7 @@
       var self = a.self ? ' <span class="tag">我自己</span>' : '';
       var ops = '<button class="mini" data-open="' + esc(a.uid) + '">查看</button>';
       if(!a.self){
+        ops += '<button class="mini" data-pass="' + esc(a.uid) + '">改密码</button>';
         ops += a.disabled
           ? '<button class="mini" data-enable="' + esc(a.uid) + '">恢复</button>'
           : '<button class="mini" data-disable="' + esc(a.uid) + '">停用</button>';
@@ -409,6 +439,7 @@
   function bindList(){
     var l = $('#list');
     l.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ openDetail(b.dataset.open); }; });
+    l.querySelectorAll('[data-pass]').forEach(function(b){ b.onclick = function(){ askPass(find(b.dataset.pass)); }; });
     l.querySelectorAll('[data-disable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.disable), true); }; });
     l.querySelectorAll('[data-enable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.enable), false); }; });
     l.querySelectorAll('[data-purge]').forEach(function(b){ b.onclick = function(){ askDestroy(find(b.dataset.purge), 'purge'); }; });

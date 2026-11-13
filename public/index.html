@@ -1393,7 +1393,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .dock-item.sync-off .dot{opacity:0}
 @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
 .sheet{
-  width:min(470px,92vw);padding:20px 22px 18px;background:rgb(var(--surface));border-radius:14px;
+  width:min(470px,92vw);max-height:86vh;overflow:auto;padding:20px 22px 18px;background:rgb(var(--surface));border-radius:14px;
   box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   transform:translateY(-6px) scale(.99);transition:transform .22s var(--spring);
 }
@@ -1409,6 +1409,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .reg-hint-t b{color:rgb(var(--ivy-ink));font-weight:600}
 .reg-hint-s{margin-top:6px;font-size:11.5px;line-height:1.7;color:rgb(var(--muted))}
 .field{display:block;margin-bottom:14px}
+/* 修改密码 */
+.pw-toggle{margin:12px 0 4px;font-size:12.5px;color:rgb(var(--muted));text-decoration:underline;text-underline-offset:2.5px;align-self:flex-start}
+.pw-toggle:hover{color:rgb(var(--ink))}
+.pw-box{margin-top:6px;padding-top:12px;border-top:1px dashed rgb(var(--line))}
+.pw-box[hidden]{display:none}
 .field span{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));margin-bottom:6px}
 .field input{
   width:100%;height:34px;padding:0 10px;border-radius:8px;border:.5px solid rgb(var(--line));
@@ -1731,7 +1736,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v82', at: '2026-11-13 15:53' };
+window.IVY_BUILD = { id: 'v83', at: '2026-11-13 16:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5469,6 +5474,8 @@ function paintHelp(){
         ③ <b>.html</b> → 按网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown；登录状态下内嵌图片会自动转存。</p></div>
       <div class="help-sec"><h4>该选哪个</h4>
         <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
+      <div class="help-sec"><h4>忘记密码 / 改密码</h4>
+        <p class="help-p">已登录时：⚙ → 云同步设置 → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手记笔记本 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(helpTab === 'md'){
@@ -9000,6 +9007,16 @@ function openSyncPanel(){
       <button class="btn-ghost" id="syncRegister">注册新账号</button>
       <button class="btn-ghost" id="syncLogout">退出</button>
     </div>
+    <button class="pw-toggle" id="pwToggle">修改密码</button>
+    <div class="pw-box" id="pwBox" hidden>
+      <label class="field"><span>当前密码</span>
+        <input id="pwOld" type="password" placeholder="现在用的密码" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>新密码</span>
+        <input id="pwNew" type="password" placeholder="至少 4 位" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>确认新密码</span>
+        <input id="pwNew2" type="password" placeholder="再输一次" autocomplete="off" spellcheck="false"></label>
+      <div class="sheet-row"><button class="btn-primary" id="pwSave">保存新密码</button></div>
+    </div>
     <div class="sheet-status" id="syncStatusLine"></div>
   </div>`;
   ov.classList.add('open'); syncPanelOpen = true;
@@ -9040,6 +9057,33 @@ function openSyncPanel(){
     toast('已退出账号，本机数据保留');
   };
   $('#syncKeyInput').onkeydown = e=>{ if(e.key==='Enter') $('#syncLogin').click(); };
+
+  /* ---- 修改密码 ---- */
+  $('#pwToggle').onclick = ()=>{ const b = $('#pwBox'); b.hidden = !b.hidden; };
+  $('#pwSave').onclick = async ()=>{
+    const oldK = ($('#pwOld').value || '').trim();
+    const nk = ($('#pwNew').value || '').trim();
+    const nk2 = ($('#pwNew2').value || '').trim();
+    if(!isConnected()){ toast('请先登录再改密码'); return; }
+    if(!oldK){ toast('请输入当前密码'); return; }
+    if(nk.length < 4){ toast('新密码至少 4 位'); return; }
+    if(nk !== nk2){ toast('两次输入的新密码不一致'); return; }
+    const btn = $('#pwSave'); btn.disabled = true;
+    try{
+      const r = await fetch('/api/auth', {
+        method:'POST', headers: authHeaders(true),
+        body: JSON.stringify({ action:'passwd', key: oldK, newKey: nk })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error || '修改失败');
+      SYNC.key = nk; syncSave();          // 本机记住新密码，自动重登不会失败
+      $('#pwOld').value = $('#pwNew').value = $('#pwNew2').value = '';
+      $('#pwBox').hidden = true;
+      const inp = $('#syncKeyInput'); if(inp) inp.value = nk;
+      toast('密码已改好，其他设备下次登录用新密码');
+    }catch(e){ toast(e.message || '修改失败'); }
+    finally{ btn.disabled = false; }
+  };
   if(!isConnected()) setTimeout(()=>{ const i=$('#syncNameInput'); if(i) i.focus(); }, 60);
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }

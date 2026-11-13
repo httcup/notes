@@ -236,6 +236,17 @@ export async function onRequest({ request, env }) {
         await env.DB.prepare('UPDATE users SET disabled = 0, disabled_at = 0 WHERE id = ?1').bind(target).run();
         return json({ ok: true, uid: target, disabled: false });
       }
+      // 后台重置某个账号的密码（对方之前发出的令牌仍然有效，下次登录要用新密码）
+      if (action === 'setPass') {
+        const key = String(body.key || '');
+        if (key.length < 4) return json({ error: '新密码至少 4 位' }, 400);
+        if (!exists) return json({ error: '账号不存在' }, 404);
+        const salt = randomHex(16);
+        const hash = await hashPassword(key, salt);
+        await env.DB.prepare('UPDATE users SET salt = ?2, hash = ?3 WHERE id = ?1')
+          .bind(target, salt, hash).run();
+        return json({ ok: true, uid: target, name: exists.name || '' });
+      }
       if (action === 'purge' || action === 'delete') {
         const stmts = PURGE.map((sql) => env.DB.prepare(sql).bind(target));
         if (action === 'delete') stmts.push(env.DB.prepare('DELETE FROM users WHERE id = ?1').bind(target));

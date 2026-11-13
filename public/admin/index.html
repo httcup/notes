@@ -68,6 +68,19 @@
   .stat b{display:block;font-size:20px;font-weight:650;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   .stat span{font-size:11.5px;color:var(--faint)}
 
+  /* 开放注册开关 */
+  .regrow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;margin:18px 0 -4px}
+  .regrow b{display:block;font-size:13px;font-weight:650}
+  .regrow span{display:block;font-size:11.5px;color:var(--faint);margin-top:2px;line-height:1.6}
+  .sw{position:relative;flex:0 0 auto;width:46px;height:26px;border-radius:13px;cursor:pointer;
+    border:1px solid var(--line);background:#e4e2d8;padding:0;transition:background .18s,border-color .18s}
+  .sw i{position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 3px rgb(0 0 0 / .25);transition:left .18s}
+  .sw.on{background:#34a853;border-color:#34a853}
+  .sw.on i{left:22px}
+  .sw:disabled{opacity:.6;cursor:wait}
+
   /* 账号列表 */
   .list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
   .row{display:grid;grid-template-columns:1.6fr .9fr .8fr .9fr 212px;gap:12px;align-items:center;
@@ -180,6 +193,10 @@
 
   <!-- 主体 -->
   <div id="main" style="display:none">
+    <div class="regrow">
+      <div><b>开放注册</b><span>关闭后新用户无法注册云同步账号，会提示「同步功能暂时关闭，可使用保存本地的功能，如需同步功能请联系管理员」。已有账号不受影响。</span></div>
+      <button class="sw" id="regSw" aria-pressed="false" title="切换是否开放注册"><i></i></button>
+    </div>
     <div class="stats">
       <div class="stat"><b id="sAcc">–</b><span>账号</span></div>
       <div class="stat"><b id="sNotes">–</b><span>笔记（含回收站）</span></div>
@@ -273,6 +290,7 @@
     $('#list').innerHTML = '<div class="empty">读取中…</div>';
     api('/api/admin').then(function(d){
       state.accounts = d.accounts || [];
+      paintReg(d.regOpen !== false);
       $('#sAcc').textContent = d.totals.accounts;
       $('#sNotes').textContent = d.totals.notes;
       $('#sBytes').textContent = fmtBytes(d.totals.bytes);
@@ -282,6 +300,27 @@
       else { $('#list').innerHTML = '<div class="empty">读取出错：' + esc(e.message) + '</div>'; }
     });
   }
+
+  /* ---------- 注册开关 ---------- */
+  function paintReg(open){
+    state.regOpen = open;
+    var sw = $('#regSw');
+    if(!sw) return;
+    sw.classList.toggle('on', open);
+    sw.setAttribute('aria-pressed', open ? 'true' : 'false');
+  }
+  $('#regSw').onclick = function(){
+    var next = !state.regOpen;
+    var sw = $('#regSw');
+    sw.disabled = true;
+    api('/api/admin', { method:'POST', body: JSON.stringify({ action:'setReg', regOpen: next }) })
+      .then(function(d){
+        paintReg(d.regOpen !== false);
+        toast(d.regOpen !== false ? '已开放注册' : '已关闭注册，新用户将无法注册云同步');
+      })
+      .catch(function(e){ toast(e.message || '操作失败'); })
+      .then(function(){ sw.disabled = false; });
+  };
 
   function renderList(){
     var html = '<div class="row head"><div>账号</div><div>笔记</div><div>占用</div><div>最后活动</div><div></div></div>';

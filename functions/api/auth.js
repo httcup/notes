@@ -2,6 +2,16 @@
 import { json, preflight, hashPassword, randomHex, signToken, safeEqual } from '../_lib.js';
 
 const TTL = 90 * 864e5;
+// 注册开关关闭时给新用户的提示（站主可在管理后台开/关）
+const REG_CLOSED_MSG = '同步功能暂时关闭，可使用保存本地的功能，如需同步功能请联系管理员：201965';
+
+// 读「开放注册」开关：settings 表没有记录时视为开放
+async function regOpen(env) {
+  try {
+    const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'reg_open'").first();
+    return !row || row.v !== '0';
+  } catch { return true; }
+}
 
 export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return preflight();
@@ -30,6 +40,8 @@ export async function onRequest({ request, env }) {
     .bind(name)
     .first();
 
+  const open = await regOpen(env);
+
   if (row) {
     const h = await hashPassword(key, row.salt);
     if (!safeEqual(h, row.hash)) return json({ error: '口令不正确' }, 401);
@@ -38,7 +50,12 @@ export async function onRequest({ request, env }) {
     return json({ token, name: row.name, uid: row.id });
   }
 
-  if (!body.create) return json({ error: '账号不存在，可以点「注册」新建' }, 404);
+  // 账号不存在：注册关了就不再引导去注册，直接说明情况
+  if (!body.create) {
+    if (!open) return json({ error: REG_CLOSED_MSG }, 403);
+    return json({ error: '账号不存在，可以点「注册」新建' }, 404);
+  }
+  if (!open) return json({ error: REG_CLOSED_MSG }, 403);
 
   const id = 'u' + randomHex(8);
   const salt = randomHex(16);

@@ -28,6 +28,14 @@ const PURGE = [
   'DELETE FROM usage_daily WHERE user_id = ?1'
 ];
 
+// 读「开放注册」开关（settings 表无记录时视为开放）
+async function getRegOpen(env) {
+  try {
+    const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'reg_open'").first();
+    return !row || row.v !== '0';
+  } catch { return true; }
+}
+
 async function overview(env) {
   const [notesRes, nbsRes, usersRes, feedsRes, srcRes] = await env.DB.batch([
     env.DB.prepare(
@@ -86,6 +94,7 @@ async function overview(env) {
   accounts.sort((x, y) => (y.lastAt || y.createdAt) - (x.lastAt || x.createdAt));
   return {
     ok: true,
+    regOpen: await getRegOpen(env),
     accounts,
     totals: {
       accounts: accounts.length,
@@ -168,6 +177,17 @@ export async function onRequest({ request, env }) {
     if (request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
       const action = String(body.action || '');
+
+      // 站点开关类操作，不需要 uid
+      if (action === 'setReg') {
+        const open = body.regOpen !== false;
+        await env.DB.prepare(
+          "INSERT INTO settings (k, v, updated_at) VALUES ('reg_open', ?1, ?2) " +
+          'ON CONFLICT(k) DO UPDATE SET v = excluded.v, updated_at = excluded.updated_at'
+        ).bind(open ? '1' : '0', Date.now()).run();
+        return json({ ok: true, regOpen: open });
+      }
+
       const target = String(body.uid || '').trim();
       if (!OK_UID.test(target)) return json({ error: 'uid 不合法' }, 400);
       if (target === ((env && env.ADMIN_UID) || 'owner')) {

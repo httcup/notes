@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>管理后台 · 小胡小胡的笔记</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23287A52'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --ivy:#287A52; --ivy-d:#1f6041; --ivy-l:#e8f0ea;
+    --ink:#1d211e; --ink2:#4a514b; --faint:#8b938c;
+    --paper:#f7f6f2; --card:#fff; --line:#e6e4dc;
+    --danger:#c2452f; --danger-l:#fbecea; --warn:#b06a1e;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased; padding-bottom:60px;
+  }
+  button{font:inherit;color:inherit;cursor:pointer}
+  .wrap{max-width:980px;margin:0 auto;padding:0 16px}
+  header{
+    position:sticky;top:0;z-index:20;background:rgba(247,246,242,.92);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  }
+  .bar{display:flex;align-items:center;gap:10px;height:56px}
+  .logo{width:28px;height:28px;border-radius:8px;background:var(--ivy);display:grid;place-items:center;flex:0 0 auto}
+  .logo svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .bar h1{font-size:15px;font-weight:650;margin:0;letter-spacing:.01em}
+  .bar .sp{flex:1}
+  .ghost{
+    height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);
+    background:#fff;color:var(--ink2);font-size:13px;display:inline-flex;align-items:center;gap:6px;
+  }
+  .ghost:hover{border-color:#d6d3c8;color:var(--ink)}
+  .ghost svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+  /* 登录 */
+  .login{max-width:380px;margin:64px auto;background:var(--card);border:1px solid var(--line);
+    border-radius:18px;padding:26px 24px;box-shadow:0 8px 30px rgb(40 122 82 / .06)}
+  .login h2{margin:0 0 6px;font-size:17px;font-weight:650}
+  .login p{margin:0 0 20px;color:var(--faint);font-size:12.5px;line-height:1.7}
+  .field{display:flex;gap:8px}
+  input[type=password],input[type=text]{
+    flex:1;min-width:0;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);
+    background:#fbfaf7;font:inherit;color:var(--ink);outline:none;
+  }
+  input:focus{border-color:var(--ivy);background:#fff;box-shadow:0 0 0 3px rgb(40 122 82 / .1)}
+  .btn{
+    height:40px;padding:0 16px;border-radius:10px;border:1px solid transparent;
+    background:var(--ivy);color:#fff;font-size:13.5px;font-weight:600;white-space:nowrap;
+  }
+  .btn:hover{background:var(--ivy-d)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.line{background:#fff;border-color:var(--line);color:var(--ink2);font-weight:500}
+  .btn.line:hover{border-color:#d6d3c8;color:var(--ink);background:#fff}
+  .btn.dan{background:var(--danger)}
+  .btn.dan:hover{background:#a83a26}
+  .err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:18px}
+
+  /* 概览 */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+  .stat b{display:block;font-size:20px;font-weight:650;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .stat span{font-size:11.5px;color:var(--faint)}
+
+  /* 账号列表 */
+  .list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .row{display:grid;grid-template-columns:1.6fr .9fr .8fr .9fr 212px;gap:12px;align-items:center;
+    padding:12px 14px;border-top:1px solid var(--line)}
+  .row:first-child{border-top:0}
+  .row.head{background:#fbfaf7;color:var(--faint);font-size:11.5px;letter-spacing:.04em;padding:9px 14px}
+  .who{min-width:0}
+  .who b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who i{display:block;font-style:normal;font-size:11px;color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .num{font-variant-numeric:tabular-nums;font-size:13px}
+  .num s{display:block;text-decoration:none;font-size:11px;color:var(--faint)}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;background:#f0efe9;color:var(--ink2)}
+  .tag.ok{background:var(--ivy-l);color:var(--ivy-d)}
+  .tag.off{background:var(--danger-l);color:var(--danger)}
+  .ops{display:flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap}
+  .mini{height:28px;padding:0 9px;border-radius:8px;border:1px solid var(--line);background:#fff;
+    font-size:12px;color:var(--ink2);white-space:nowrap}
+  .mini:hover{border-color:#d6d3c8;color:var(--ink)}
+  .mini.dan{color:var(--danger);border-color:#f0d9d4}
+  .mini.dan:hover{background:var(--danger-l)}
+
+  /* 详情 */
+  .detail{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);display:none}
+  .detail.open{display:block}
+  .dhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .dhead b{font-size:13.5px}
+  .dhead .sp{flex:1}
+  .notes{max-height:52vh;overflow:auto}
+  .nitem{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid #f2f1eb;
+    width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
+  .nitem:first-child{border-top:0}
+  .nitem:hover{background:#fbfaf7}
+  .nitem .t{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nitem .t.mut{color:var(--faint);font-style:italic}
+  .nitem .m{font-size:11px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .nitem .flag{font-size:10.5px;padding:1px 6px;border-radius:20px;background:#f0efe9;color:var(--faint)}
+  .empty{padding:22px 14px;color:var(--faint);font-size:12.5px;text-align:center}
+
+  /* 弹窗 */
+  .ov{position:fixed;inset:0;z-index:60;display:none;background:rgb(20 24 21 / .42);backdrop-filter:blur(3px);
+    padding:20px;overflow:auto}
+  .ov.open{display:flex;align-items:flex-start;justify-content:center}
+  .dlg{width:min(560px,100%);margin:auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgb(0 0 0 / .2);
+    overflow:hidden}
+  .dlg-h{display:flex;align-items:flex-start;gap:10px;padding:16px 18px 0}
+  .dlg-h .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--danger-l);flex:0 0 auto}
+  .dlg-h .ico svg{width:16px;height:16px;stroke:var(--danger);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .dlg-h h3{margin:0;font-size:15px;font-weight:650}
+  .dlg-b{padding:10px 18px 4px;font-size:13px;color:var(--ink2);line-height:1.7}
+  .dlg-b code{background:#f4f3ee;padding:1px 5px;border-radius:5px;font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .dlg-f{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px 16px}
+  .viewer{width:min(760px,100%);margin:auto;background:#fff;border-radius:16px;overflow:hidden;
+    box-shadow:0 20px 60px rgb(0 0 0 / .2)}
+  .viewer-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .viewer-h b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .viewer-h .sp{flex:1}
+  .viewer-b{padding:18px;max-height:64vh;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    font-size:13.5px;line-height:1.85;color:var(--ink)}
+  .x{width:30px;height:30px;border-radius:8px;border:0;background:#f4f3ee;color:var(--ink2);
+    display:grid;place-items:center;flex:0 0 auto}
+  .x:hover{background:#eae8e0}
+  .x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:90;
+    background:#222824;color:#fff;font-size:13px;padding:9px 16px;border-radius:10px;
+    opacity:0;transition:.25s;pointer-events:none;max-width:80vw;text-align:center}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  @media(max-width:720px){
+    .row{grid-template-columns:1fr auto;gap:5px 10px;padding:13px 14px}
+    .row.head{display:none}
+    .who{grid-column:1;grid-row:1}
+    .c-notes{grid-column:2;grid-row:1;justify-self:end;text-align:right;font-size:12.5px}
+    .c-notes s{font-size:11px}
+    .c-size{display:none}
+    .c-time{grid-column:1/-1;grid-row:2;display:flex;gap:6px;align-items:baseline;
+      font-size:11.5px;color:var(--faint);text-align:left}
+    .c-time s{font-size:11px;color:var(--danger)}
+    .ops{grid-column:1/-1;grid-row:3;justify-content:flex-start;margin-top:2px;flex-wrap:wrap}
+    .stats{grid-template-columns:1fr 1fr}
+    .stats .stat:last-child{grid-column:1/-1}
+  }
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8h4.5M9 12.5h7M9 16h5"/></svg></div>
+  <h1>管理后台</h1>
+  <div class="sp"></div>
+  <button class="ghost" id="btnRefresh" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4.5V11h-6"/></svg>刷新
+  </button>
+  <button class="ghost" id="btnOut" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H15M10 8l-4 4 4 4M6 12h9"/></svg>退出
+  </button>
+</div></header>
+
+<div class="wrap">
+  <!-- 登录 -->
+  <div class="login" id="loginBox">
+    <h2>管理后台</h2>
+    <p>这是站主专用的后台，能看到所有账号的笔记数量和内容。用主人口令进入——就是平时登录云同步时「账号留空 + 口令」的那串口令。</p>
+    <div class="field">
+      <input type="password" id="pwd" placeholder="主人口令" autocomplete="current-password">
+      <button class="btn" id="btnLogin">进入</button>
+    </div>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- 主体 -->
+  <div id="main" style="display:none">
+    <div class="stats">
+      <div class="stat"><b id="sAcc">–</b><span>账号</span></div>
+      <div class="stat"><b id="sNotes">–</b><span>笔记（含回收站）</span></div>
+      <div class="stat"><b id="sBytes">–</b><span>占用空间</span></div>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="detail" id="detail"></div>
+    <p style="color:var(--faint);font-size:11.5px;line-height:1.8;margin:14px 2px 0">
+      说明：这里的正文是别人托付的私密内容，只用于查垃圾账号、排查同步问题。停用后对方立刻无法登录，已发出的登录令牌最多 30 秒后失效；清空与删除不可恢复。
+    </p>
+  </div>
+</div>
+
+<div class="ov" id="ov"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  var TKEY = 'ivy.admin.tok';
+  var tok = sessionStorage.getItem(TKEY) || '';
+  var state = { accounts: [], cur: null, detail: null };
+  var $ = function(s){ return document.querySelector(s); };
+
+  var ICON = {
+    ban:'<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M5.6 5.6l12.8 12.8"/>',
+    trash:'<path d="M4 7h16M9.5 7V4.8h5V7M6.5 7l.9 12.2h9.2L17.5 7"/>',
+    warn:'<path d="M12 4.2 21 19.8H3z"/><path d="M12 10v4.2M12 17.2v.2"/>'
+  };
+  function svg(d){ return '<svg viewBox="0 0 24 24">' + d + '</svg>'; }
+
+  function toast(msg){
+    var t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(t._h);
+    t._h = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+  }
+  function fmtBytes(n){
+    if(!n) return '0 B';
+    if(n < 1024) return n + ' B';
+    if(n < 1048576) return (n/1024).toFixed(1) + ' KB';
+    return (n/1048576).toFixed(1) + ' MB';
+  }
+  function fmtTime(ts){
+    if(!ts) return '—';
+    var d = new Date(ts), now = Date.now(), diff = now - ts;
+    var p = function(x){ return x < 10 ? '0' + x : '' + x; };
+    if(diff < 60000) return '刚刚';
+    if(diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
+    if(diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
+    if(diff < 7*86400000) return Math.floor(diff/86400000) + ' 天前';
+    return (d.getMonth()+1) + '月' + d.getDate() + '日';
+  }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function api(path, opts){
+    opts = opts || {};
+    var h = Object.assign({ 'content-type': 'application/json' }, opts.headers || {});
+    if(tok) h.authorization = 'Bearer ' + tok;
+    return fetch(path, { method: opts.method || 'GET', headers: h, body: opts.body }).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if(!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+        return d;
+      });
+    });
+  }
+
+  function showLogin(msg){
+    tok = '';
+    sessionStorage.removeItem(TKEY);
+    $('#loginBox').style.display = '';
+    $('#main').style.display = 'none';
+    $('#btnRefresh').style.display = 'none';
+    $('#btnOut').style.display = 'none';
+    if(msg) $('#loginErr').textContent = msg;
+  }
+  function showMain(){
+    $('#loginBox').style.display = 'none';
+    $('#main').style.display = '';
+    $('#btnRefresh').style.display = '';
+    $('#btnOut').style.display = '';
+  }
+
+  /* ---------- 总览 ---------- */
+  function load(){
+    $('#list').innerHTML = '<div class="empty">读取中…</div>';
+    api('/api/admin').then(function(d){
+      state.accounts = d.accounts || [];
+      $('#sAcc').textContent = d.totals.accounts;
+      $('#sNotes').textContent = d.totals.notes;
+      $('#sBytes').textContent = fmtBytes(d.totals.bytes);
+      renderList();
+    }).catch(function(e){
+      if(/登录|口令|过期/.test(e.message)) showLogin(e.message);
+      else { $('#list').innerHTML = '<div class="empty">读取出错：' + esc(e.message) + '</div>'; }
+    });
+  }
+
+  function renderList(){
+    var html = '<div class="row head"><div>账号</div><div>笔记</div><div>占用</div><div>最后活动</div><div></div></div>';
+    html += state.accounts.map(function(a){
+      var status = a.disabled
+        ? '<span class="tag off">已停用</span>'
+        : '<span class="tag ok">正常</span>';
+      var self = a.self ? ' <span class="tag">我自己</span>' : '';
+      var ops = '<button class="mini" data-open="' + esc(a.uid) + '">查看</button>';
+      if(!a.self){
+        ops += a.disabled
+          ? '<button class="mini" data-enable="' + esc(a.uid) + '">恢复</button>'
+          : '<button class="mini" data-disable="' + esc(a.uid) + '">停用</button>';
+        ops += '<button class="mini dan" data-purge="' + esc(a.uid) + '">清空</button>';
+        ops += '<button class="mini dan" data-del="' + esc(a.uid) + '">删除</button>';
+      }
+      var trash = a.trash ? ' · 回收站 ' + a.trash : '';
+      return '<div class="row">' +
+        '<div class="who"><b>' + esc(a.name) + ' ' + status + self + '</b><i>' + esc(a.uid) + '</i></div>' +
+        '<div class="num c-notes">' + a.live + trash + '<s>' + a.notebooks + ' 个笔记本</s></div>' +
+        '<div class="num c-size">' + fmtBytes(a.bytes) + '<s>' + (a.feed ? '已开订阅' : '未订阅') + '</s></div>' +
+        '<div class="num c-time">' + esc(fmtTime(a.lastAt || a.createdAt)) + '<s>' + (a.disabled ? '停用于 ' + fmtTime(a.disabledAt) : '') + '</s></div>' +
+        '<div class="ops">' + ops + '</div>' +
+      '</div>';
+    }).join('');
+    if(!state.accounts.length) html += '<div class="empty">还没有其他账号</div>';
+    $('#list').innerHTML = html;
+    bindList();
+  }
+
+  function find(uid){
+    for(var i = 0; i < state.accounts.length; i++) if(state.accounts[i].uid === uid) return state.accounts[i];
+    return null;
+  }
+  function bindList(){
+    var l = $('#list');
+    l.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ openDetail(b.dataset.open); }; });
+    l.querySelectorAll('[data-disable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.disable), true); }; });
+    l.querySelectorAll('[data-enable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.enable), false); }; });
+    l.querySelectorAll('[data-purge]').forEach(function(b){ b.onclick = function(){ askDestroy(find(b.dataset.purge), 'purge'); }; });
+    l.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ askDestroy(find(b.dataset.del), 'delete'); }; });
+  }
+
+  /* ---------- 详情 ---------- */
+  function openDetail(uid){
+    var a = find(uid);
+    var d = $('#detail');
+    d.classList.add('open');
+    d.innerHTML = '<div class="dhead"><b>读取中…</b></div>';
+    api('/api/admin?uid=' + encodeURIComponent(uid)).then(function(res){
+      state.cur = uid;
+      state.detail = res;
+      var head = '<div class="dhead"><b>' + esc(a ? a.name : uid) + '</b>' +
+        '<span class="tag">' + res.notes.length + ' 篇</span>' +
+        '<span class="tag">' + res.notebooks.length + ' 个笔记本</span>' +
+        (res.shares ? '<span class="tag">' + res.shares + ' 个分享</span>' : '') +
+        (res.icsSources ? '<span class="tag">' + res.icsSources + ' 个日历源</span>' : '') +
+        '<div class="sp"></div><button class="x" id="dClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
+      var body = res.notes.length
+        ? '<div class="notes">' + res.notes.map(function(n){
+            var flag = n.deleted ? '<span class="flag">已删除</span>' : (n.trashed ? '<span class="flag">回收站</span>' : '');
+            return '<button class="nitem" data-note="' + esc(n.id) + '">' +
+              '<span class="t' + (n.title ? '' : ' mut') + '">' + esc(n.title || '无标题') + '</span>' +
+              flag + '<span class="m">' + fmtBytes(n.bytes) + ' · ' + esc(fmtTime(n.updatedAt)) + '</span></button>';
+          }).join('') + '</div>'
+        : '<div class="empty">这个账号还没有笔记</div>';
+      d.innerHTML = head + body;
+      $('#dClose').onclick = function(){ d.classList.remove('open'); };
+      d.querySelectorAll('[data-note]').forEach(function(b){
+        b.onclick = function(){ viewNote(uid, b.dataset.note); };
+      });
+    }).catch(function(e){
+      d.innerHTML = '<div class="empty">读取出错：' + esc(e.message) + '</div>';
+    });
+  }
+
+  function viewNote(uid, id){
+    api('/api/admin?uid=' + encodeURIComponent(uid) + '&note=' + encodeURIComponent(id)).then(function(d){
+      var n = d.note;
+      $('#ov').innerHTML =
+        '<div class="viewer">' +
+          '<div class="viewer-h"><b>' + esc(n.title || '无标题') + '</b><div class="sp"></div>' +
+          '<button class="x" data-close><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+          '<div class="viewer-b">' + (n.body ? esc(n.body) : '<span style="color:#8b938c">（这篇是空的）</span>') + '</div>' +
+        '</div>';
+      openOv();
+    }).catch(function(e){ toast(e.message); });
+  }
+
+  /* ---------- 停用 / 恢复 ---------- */
+  function askDisable(a, on){
+    if(!a) return;
+    var title = on ? '停用账号' : '恢复账号';
+    var desc = on
+      ? '「' + esc(a.name) + '」将无法再登录，已发出的登录令牌最多 30 秒后失效。笔记不会被删除，随时可以恢复。'
+      : '「' + esc(a.name) + '」将可以重新登录，数据保持原样。';
+    $('#ov').innerHTML =
+      '<div class="dlg">' +
+        '<div class="dlg-h"><div class="ico">' + svg(on ? ICON.ban : ICON.warn) + '</div><h3>' + title + '</h3></div>' +
+        '<div class="dlg-b">' + desc + '</div>' +
+        '<div class="dlg-f"><button class="btn line" data-close>取消</button>' +
+        '<button class="btn ' + (on ? 'dan' : '') + '" id="okGo">' + (on ? '停用' : '恢复') + '</button></div>' +
+      '</div>';
+    openOv();
+    $('#okGo').onclick = function(){
+      this.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action: on ? 'disable' : 'enable', uid: a.uid }) })
+        .then(function(){ closeOv(); toast(on ? '已停用「' + a.name + '」' : '已恢复「' + a.name + '」'); load(); })
+        .catch(function(e){ closeOv(); toast(e.message); });
+    };
+  }
+
+  /* ---------- 清空 / 删除（要手打账号名确认） ---------- */
+  function askDestroy(a, mode){
+    if(!a) return;
+    var del = mode === 'delete';
+    var conf = 'I confirm';
+    $('#ov').innerHTML =
+      '<div class="dlg">' +
+        '<div class="dlg-h"><div class="ico">' + svg(ICON.trash) + '</div><h3>' + (del ? '删除账号' : '清空这个账号的数据') + '</h3></div>' +
+        '<div class="dlg-b">' +
+          (del
+            ? '将永久删除 <code>' + esc(a.name) + '</code> 的账号，以及 ' + a.live + ' 篇笔记、' + a.notebooks + ' 个笔记本、分享链接、日历订阅。此操作不可恢复。'
+            : '将永久清空 <code>' + esc(a.name) + '</code> 的 ' + a.live + ' 篇笔记、' + a.notebooks + ' 个笔记本、分享链接、日历订阅，账号本身保留。此操作不可恢复。') +
+          '<div style="margin-top:12px">确认请手打账号名 <code>' + esc(a.name) + '</code>：</div>' +
+          '<div style="margin-top:8px"><input type="text" id="confIn" placeholder="' + esc(a.name) + '" autocomplete="off" style="width:100%"></div>' +
+        '</div>' +
+        '<div class="dlg-f"><button class="btn line" data-close>取消</button>' +
+        '<button class="btn dan" id="okGo" disabled>' + (del ? '永久删除' : '清空数据') + '</button></div>' +
+      '</div>';
+    openOv();
+    var inp = $('#confIn'), ok = $('#okGo');
+    inp.oninput = inp.onchange = function(){ ok.disabled = inp.value.trim() !== a.name; };
+    inp.onkeydown = function(e){ if(e.key === 'Enter' && !ok.disabled){ e.preventDefault(); ok.click(); } };
+    setTimeout(function(){ inp.focus(); }, 60);
+    ok.onclick = function(){
+      ok.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action: mode, uid: a.uid }) })
+        .then(function(){
+          closeOv();
+          $('#detail').classList.remove('open');
+          toast(del ? '已删除账号「' + a.name + '」' : '已清空「' + a.name + '」的数据');
+          load();
+        })
+        .catch(function(e){ closeOv(); toast(e.message); });
+    };
+  }
+
+  /* ---------- 弹窗 ---------- */
+  function openOv(){ $('#ov').classList.add('open'); }
+  function closeOv(){ $('#ov').classList.remove('open'); $('#ov').innerHTML = ''; }
+  $('#ov').addEventListener('click', function(e){
+    if(e.target === $('#ov') || e.target.closest('[data-close]')) closeOv();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    if($('#ov').classList.contains('open')) closeOv();
+  });
+
+  /* ---------- 登录 ---------- */
+  function login(){
+    var key = $('#pwd').value;
+    if(key.length < 4){ $('#loginErr').textContent = '口令至少 4 位'; return; }
+    $('#btnLogin').disabled = true;
+    $('#loginErr').textContent = '';
+    api('/api/auth', { method:'POST', body: JSON.stringify({ key: key }) }).then(function(d){
+      tok = d.token;
+      sessionStorage.setItem(TKEY, tok);
+      showMain();
+      load();
+    }).catch(function(e){
+      $('#loginErr').textContent = e.message || '登录失败';
+    }).then(function(){ $('#btnLogin').disabled = false; });
+  }
+  $('#btnLogin').onclick = login;
+  $('#pwd').addEventListener('keydown', function(e){ if(e.key === 'Enter') login(); });
+  $('#btnRefresh').onclick = load;
+  $('#btnOut').onclick = function(){ showLogin(''); $('#pwd').value = ''; };
+
+  /* ---------- 启动 ---------- */
+  if(tok){
+    showMain();
+    load();
+  } else {
+    showLogin('');
+    setTimeout(function(){ $('#pwd').focus(); }, 100);
+  }
+})();
+</script>
+</body>
+</html>

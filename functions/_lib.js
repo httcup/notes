@@ -79,13 +79,32 @@ export async function verifyToken(token, secret) {
   }
 }
 
+// 账号是否被停用：同一个 isolate 里缓存 30 秒，避免每个请求都多一次数据库往返
+const disabledCache = new Map();
+async function isDisabled(env, uid) {
+  if (!env || !env.DB || !uid || uid === 'owner') return false;
+  const hit = disabledCache.get(uid);
+  if (hit && Date.now() - hit.at < 30000) return hit.v;
+  let v = false;
+  try {
+    const row = await env.DB.prepare('SELECT disabled FROM users WHERE id = ?1').bind(uid).first();
+    v = !!(row && row.disabled);
+  } catch (e) {
+    v = false; // 老库没有这一列时不影响正常使用
+  }
+  disabledCache.set(uid, { v, at: Date.now() });
+  return v;
+}
+
 // 支持两种身份：Bearer 令牌（多用户）／x-ivy-key 单口令（主人账号，兼容旧客户端）
 export async function currentUser(request, env) {
   const authz = request.headers.get('authorization') || '';
   const m = authz.match(/^Bearer\s+(.+)$/i);
   if (m) {
     const p = await verifyToken(m[1], env.IVY_SECRET);
-    return p ? { uid: p.u, name: p.n || '' } : null;
+    if (!p) return null;
+    if (await isDisabled(env, p.u)) return null; // 停用的账号连旧令牌一起失效
+    return { uid: p.u, name: p.n || '' };
   }
   const legacy = request.headers.get('x-ivy-key') || '';
   if (env.IVY_KEY && safeEqual(legacy, env.IVY_KEY)) return { uid: 'owner', name: '主人' };

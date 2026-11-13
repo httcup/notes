@@ -1,0 +1,3 @@
+-- v12：账号可被停用（管理页 /admin 用）
+ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN disabled_at INTEGER NOT NULL DEFAULT 0;

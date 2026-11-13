@@ -26,13 +26,14 @@ export async function onRequest({ request, env }) {
   }
   if (!env.IVY_SECRET) return json({ error: '服务端未配置 IVY_SECRET' }, 503);
 
-  const row = await env.DB.prepare('SELECT id, name, salt, hash FROM users WHERE name = ?1')
+  const row = await env.DB.prepare('SELECT id, name, salt, hash, disabled FROM users WHERE name = ?1')
     .bind(name)
     .first();
 
   if (row) {
     const h = await hashPassword(key, row.salt);
     if (!safeEqual(h, row.hash)) return json({ error: '口令不正确' }, 401);
+    if (row.disabled) return json({ error: '该账号已被停用，请联系站主' }, 403);
     const token = await signToken({ u: row.id, n: row.name, e: Date.now() + TTL }, env.IVY_SECRET);
     return json({ token, name: row.name, uid: row.id });
   }

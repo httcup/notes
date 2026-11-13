@@ -1709,7 +1709,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v71', at: '2026-11-13 11:26' };
+window.IVY_BUILD = { id: 'v72', at: '2026-11-13 11:30' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7937,7 +7937,7 @@ async function absorbInlineImages(note){
 function importDoc(){
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = '.md,.markdown,.txt,.html,.htm';
+  inp.accept = '.md,.markdown,.txt,.html,.htm,.json';
   inp.onchange = async ()=>{
     const f = inp.files[0]; if(!f) return;
     const isHtml = /\.html?$/i.test(f.name);
@@ -7952,6 +7952,7 @@ function importDoc(){
         fr.readAsText(f);
       });
     }
+    if(!isHtml && importBackup(text)) return;   // JSON 全量备份走还原通道
     let title = f.name.replace(/\.\w+$/,'');
     let body = '';
     if(isHtml){
@@ -7989,6 +7990,61 @@ function importDoc(){
   inp.click();
 }
 function importMd(){ importDoc(); }
+
+/* ---- 全量备份 / 恢复（JSON，含笔记本分类、标签、时间） ---- */
+function exportBackup(){
+  const data = {
+    app:'ivynote', version:1, exportedAt:new Date().toISOString(),
+    notebooks: S.notebooks.filter(nb=>!nb.deleted).map(nb=>({
+      id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false })),
+    notes: S.notes.filter(n=>!n.trashed && !n.deleted).map(n=>({
+      id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
+      tags:n.tags||[], createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
+  };
+  const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='ivynote-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  toast('已备份 '+data.notes.length+' 篇笔记（含笔记本分类）');
+}
+function exportAllMd(){
+  const live = S.notes.filter(n=>!n.trashed && !n.deleted);
+  const all = live.map(n=>`# ${n.title||'无标题'}\n\n${n.body}`).join('\n\n---\n\n');
+  const blob = new Blob([all],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ivynote-export.md'; a.click();
+  toast('已导出 '+live.length+' 篇笔记');
+}
+function importBackup(text){
+  let d; try{ d = JSON.parse(text); }catch(e){ return false; }
+  if(!d || d.app!=='ivynote' || !Array.isArray(d.notes)) return false;
+  const now = Date.now();
+  let nbAdded = 0, noteAdded = 0, skipped = 0;
+  (d.notebooks||[]).forEach(nb=>{
+    if(!nb || !nb.id || !nb.name) return;
+    if(S.notebooks.find(x=>x.id===nb.id || (x.name===nb.name && !x.deleted))) return;
+    S.notebooks.push(Object.assign({color:'', open:true, deleted:false, updatedAt:now}, nb));
+    nbAdded++;
+  });
+  d.notes.forEach(n=>{
+    if(!n || !n.id) return;
+    if(S.notes.find(x=>x.id===n.id)){ skipped++; return; }
+    S.notes.unshift({
+      id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
+      tags:Array.isArray(n.tags)?n.tags.slice():[], trashed:!!n.trashed,
+      createdAt:n.createdAt||now, updatedAt:n.updatedAt||now });
+    noteAdded++;
+  });
+  if(noteAdded || nbAdded){
+    const lib = Array.isArray(S.tagLibrary) ? S.tagLibrary : [];
+    S.notes.forEach(n=>{ if(!Array.isArray(n.tags)) n.tags=[]; (n.tags||[]).forEach(t=>{ if(t && !lib.includes(t)) lib.push(t); }); });
+    S.tagLibrary = lib;
+    renderAll(); save();
+  }
+  let msg = '已导入 '+noteAdded+' 篇笔记';
+  if(nbAdded) msg += '、'+nbAdded+' 个笔记本';
+  if(skipped) msg += ' · 跳过 '+skipped+' 篇已存在的';
+  toast(msg);
+  return true;
+}
 
 /* ========== 菜单 ========== */
 /* 锚点可能在打开菜单的过程中被重绘掉（同步、切换笔记都会 renderAll），
@@ -8237,13 +8293,9 @@ function openUserMenu(anchor){
     ['提醒与日历', '', '', 'bell', openRemindCenter],
     ['同步到苹果备忘录', '', '', 'notebook', ()=>openNotesPush()],
     ['切换主题', '', '', 'moon', toggleTheme],
-    ['导入 Markdown / HTML', '', '', 'upload', importDoc],
-    ['导出全部笔记', '', '', 'download', ()=>{
-      const all = S.notes.map(n=>`# ${n.title||'无标题'}\n\n${n.body}`).join('\n\n---\n\n');
-      const blob = new Blob([all],{type:'text/markdown;charset=utf-8'});
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ivynote-export.md'; a.click();
-      toast('已导出 '+S.notes.length+' 篇笔记');
-    }],
+    ['导入 Markdown / HTML / 备份', '', '', 'upload', importDoc],
+    ['导出全部笔记（备份）', '', '', 'download', exportBackup],
+    ['导出全部笔记（Markdown）', '', '', 'download', exportAllMd],
     '-',
     ['关于', '', '', 'info', ()=>toast('小胡小胡的笔记 · 本地优先 + Cloudflare 云同步')]
   ]);

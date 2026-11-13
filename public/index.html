@@ -1706,7 +1706,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v69', at: '2026-11-13 11:06' };
+window.IVY_BUILD = { id: 'v70', at: '2026-11-13 11:15' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8858,9 +8858,16 @@ if('serviceWorker' in navigator){
       clearTimeout(timer);
       const m = txt.match(/id\s*:\s*'([^']+)'/);
       if(!m) return;
+      const num = s => Number(String(s).replace(/\D/g, '')) || 0;
       if(m[1] === b.id){
         state = '已是最新';
         el.title = `构建 ${b.id} · ${b.at} · 已是最新版本\n点击复制版本信息`;
+        return;
+      }
+      // 本页比源码版本文件还新：说明只是部署时没同步 version.js，不算线上落后，别误报
+      if(num(m[1]) < num(b.id)){
+        state = '已是最新';
+        el.title = `构建 ${b.id} · ${b.at} · 已是最新（源码版本文件为 ${m[1]}）\n点击复制版本信息`;
         return;
       }
       state = `落后（线上 ${b.id} / 最新 ${m[1]}）`;

@@ -1240,8 +1240,10 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .legend .rd{width:8px;height:8px;border-radius:50%;background:rgb(var(--faint))}
 
 /* ============ overlay / palette ============ */
+/* z-index 必须高于手机侧栏抽屉（.shelf 在 <=640px 时是 z-index:80 的浮层），
+   否则手机上打开云同步面板会被抽屉整个盖住（v85 修复） */
 .overlay{
-  position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:flex-start;
+  position:fixed;inset:0;z-index:150;display:flex;justify-content:center;align-items:flex-start;
   padding-top:14vh;background:rgb(10 12 14 / .22);backdrop-filter:blur(3px);
   opacity:0;pointer-events:none;transition:opacity .18s;
 }
@@ -1268,8 +1270,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .p-empty{padding:18px;text-align:center;color:rgb(var(--faint));font-size:13px}
 
 /* popover */
+/* 同样要盖住手机抽屉（80）：坞栏在抽屉里，点齿轮弹出的菜单不能躲到抽屉后面 */
 .popover{
-  position:fixed;z-index:70;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
+  position:fixed;z-index:160;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
   border-radius:10px;box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   max-height:min(72vh, 580px);overflow-y:auto;overscroll-behavior:contain;
   opacity:0;transform:translateY(-4px) scale(.98);pointer-events:none;transition:opacity .14s,transform .16s var(--spring);
@@ -1435,7 +1438,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 
 /* ============ 导出面板 ============ */
 .export-pop{
-  position:fixed;z-index:75;padding:15px 17px 17px;width:430px;max-width:calc(100vw - 24px);
+  position:fixed;z-index:155;padding:15px 17px 17px;width:430px;max-width:calc(100vw - 24px);
   background:rgb(var(--surface));border-radius:14px;
   box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   opacity:0;pointer-events:none;transform:translateY(-4px) scale(.985);
@@ -1736,7 +1739,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v84', at: '2026-11-13 16:02' };
+window.IVY_BUILD = { id: 'v85', at: '2026-11-13 23:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

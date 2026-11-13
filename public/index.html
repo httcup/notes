@@ -941,6 +941,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .todo-pop .tp-i.done span{color:rgb(var(--faint));text-decoration:line-through}
 .todo-pop .tp-empty{padding:14px 8px;font-size:12.5px;color:rgb(var(--faint))}
 .meta-sync{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgb(var(--faint))}
+.meta-sync svg{width:14px;height:14px;flex:0 0 auto;opacity:.9}
 .meta-sync .sd{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
 .meta-sync .sd.ok{background:rgb(var(--ivy));opacity:1}
 .meta-sync .sd.busy{background:rgb(var(--ivy));opacity:1;animation:pulse 1s ease-in-out infinite}
@@ -1367,6 +1368,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .dock-item.sync-pending .dot{opacity:1;animation:pulse 1s ease-in-out infinite}
 .dock-item.sync-error{color:rgb(var(--warn))}
 .dock-item.sync-error .dot{opacity:1}
+.dock-item.sync-off .dot{opacity:0}
 @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
 .sheet{
   width:min(470px,92vw);padding:20px 22px 18px;background:rgb(var(--surface));border-radius:14px;
@@ -1649,6 +1651,7 @@ const ICONS = {
   image:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>',
   graph:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M8.2 16.4 15.8 7.7M8.5 18h6"/>',
   cloud:'<path d="M7 18a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 17.4 9.5A3.75 3.75 0 0 1 17 18z"/>',
+  localSave:'<rect x="3.6" y="4.6" width="16.8" height="11.6" rx="1.9"/><path d="M2 19.6h20"/>',
   cloudCheck:'<path d="M7 18a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 17.4 9.5A3.75 3.75 0 0 1 17 18z"/>',
   paperclip:'<path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3.1 3.1 0 0 1 4.4 4.4l-7.9 7.9a1.6 1.6 0 0 1-2.2-2.2l7.2-7.2"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/>',
@@ -1706,7 +1709,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v70', at: '2026-11-13 11:15' };
+window.IVY_BUILD = { id: 'v71', at: '2026-11-13 11:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3779,7 +3782,7 @@ function renderDock(){
     {k:'graph', icon:'graph', label:'关系图'}
   ];
   const cloudBtn = `<button class="dock-item sync-${SYNC.state}" id="dockSync" title="${syncTip()}">
-      ${ic('cloud')}<span class="dot"></span></button>`;
+      ${isConnected() ? ic('cloud') : ic('localSave')}<span class="dot"></span></button>`;
   $('#dock').innerHTML = items.map(it=>`
     <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
       ${ic(it.icon)}
@@ -8659,12 +8662,16 @@ async function insertFiles(files, target){
 function updateSyncBadge(){
   const el = document.getElementById('metaSync');
   if(!el) return;
-  if(!isConnected()){ el.style.display = 'none'; return; }
   el.style.display = '';
-  const st = SYNC.state==='ok' ? 'ok' : (SYNC.state==='error' ? 'error' : 'busy');
-  const label = st==='ok' ? '已同步' : (st==='error' ? '未保存' : '保存中');
-  el.innerHTML = `<span class="sd ${st}"></span>${label}`;
-  el.title = syncTip();
+  if(isConnected()){
+    const st = SYNC.state==='ok' ? 'ok' : (SYNC.state==='error' ? 'error' : 'busy');
+    const label = st==='ok' ? '已云同步保存' : (st==='error' ? '云同步未保存' : '云同步中');
+    el.innerHTML = `<span class="sd ${st}"></span>${label}`;
+    el.title = syncTip();
+  } else {
+    el.innerHTML = `${ic('localSave')}已本地保存`;
+    el.title = '笔记已保存到本机浏览器 · 想多设备同步可注册云同步';
+  }
 }
 
 const REG_HINT_NEW = `<div class="reg-hint-t">第一次使用？填「用户名 + 自设密码」后点<b>注册新账号</b>，就能开出独立空间，别人看不到你的笔记。</div>

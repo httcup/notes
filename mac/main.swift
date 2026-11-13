@@ -120,7 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
         let cfg = WKWebViewConfiguration()
         cfg.websiteDataStore = .default()
-        cfg.preferences.isElementFullscreenEnabled = true
+        if #available(macOS 12.3, *) { cfg.preferences.isElementFullscreenEnabled = true }
         let ucc = WKUserContentController()
         ucc.add(self, name: "ivyNotify")
         ucc.add(self, name: "ivySave")

@@ -732,6 +732,20 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .help-tabs{display:flex;gap:4px;padding:0 18px 10px;border-bottom:1px solid rgb(var(--line))}
 .help-tab{padding:6px 11px;border-radius:8px;font-size:13px;color:rgb(var(--muted))}
 .help-tab.on{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:500}
+
+/* ---- 客户端下载 ---- */
+.dl-body{padding:8px 22px 22px;overflow:auto}
+.dl-row{display:flex;align-items:center;gap:14px;padding:14px 15px;border:1px solid rgb(var(--line));border-radius:12px;margin-top:12px}
+.dl-ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;background:rgb(var(--hover));color:rgb(var(--ink))}
+.dl-ic svg{width:20px;height:20px}
+.dl-info{flex:1;min-width:0}
+.dl-info b{display:block;font-size:14px;font-weight:600}
+.dl-info span{display:block;font-size:12.5px;line-height:1.6;color:rgb(var(--faint));margin-top:3px}
+.dl-btn{flex:0 0 auto;padding:8px 16px;border-radius:9px;background:rgb(var(--ink));color:rgb(var(--surface));font-size:13px;font-weight:500;text-decoration:none}
+.dl-btn:hover{opacity:.88}
+.dl-tip{margin-top:16px;padding-top:14px;border-top:1px solid rgb(var(--line));font-size:12.5px;line-height:1.85;color:rgb(var(--muted))}
+.dl-tip b{color:rgb(var(--ink-2));font-weight:600}
+.dl-tip code{font-size:11.5px;background:rgb(var(--hover));padding:1px 5px;border-radius:5px}
 .help-body{overflow:auto;padding:6px 22px 24px;overscroll-behavior:contain}
 .help-p{font-size:13px;line-height:1.9;color:rgb(var(--ink-2));padding:6px 2px 2px}
 .help-p code{font-family:var(--font-mono);font-size:11.5px;padding:1px 5px;border-radius:4px;background:rgb(var(--code-bg));color:rgb(var(--ivy-ink))}
@@ -1709,7 +1723,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v76', at: '2026-11-13 15:08' };
+window.IVY_BUILD = { id: 'v78', at: '2026-11-13 15:22' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5359,6 +5373,41 @@ function closeHelpPanel(){
   const ov = $('#helpOv'); if(!ov) return;
   ov.classList.remove('open');
 }
+
+/* ---- 客户端下载 ---- */
+function openClientPanel(){
+  let ov = $('#dlOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'dlOv'; ov.className = 'help-ov';
+    ov.innerHTML = `<div class="help-card" role="dialog" aria-label="客户端下载" style="width:min(560px,100%)">
+        <div class="help-hd">
+          <div><h3>客户端下载</h3><p>装成电脑上的独立应用，不用每次开浏览器</p></div>
+          <button class="help-x" id="dlClose" title="关闭">${ic('x')}</button>
+        </div>
+        <div class="dl-body">
+          <div class="dl-row">
+            <div class="dl-ic">${ic('localSave')}</div>
+            <div class="dl-info"><b>macOS 版</b><span>原生应用 · 约 0.4 MB · 通用版（M 系列 / Intel）</span></div>
+            <a class="dl-btn" href="/dl/IvyNote-macOS.zip" download>下载</a>
+          </div>
+          <div class="dl-row">
+            <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.2" y="3.2" width="7.6" height="7.6" rx="1.2"/><rect x="13.2" y="3.2" width="7.6" height="7.6" rx="1.2"/><rect x="3.2" y="13.2" width="7.6" height="7.6" rx="1.2"/><rect x="13.2" y="13.2" width="7.6" height="7.6" rx="1.2"/></svg></div>
+            <div class="dl-info"><b>Windows 版</b><span>免安装 · 约 0.8 MB · Win10 / 11 自带 Edge 即可运行</span></div>
+            <a class="dl-btn" href="/dl/IvyNote-Windows.zip" download>下载</a>
+          </div>
+          <div class="dl-tip">
+            <b>macOS</b>：解压后把「小胡笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/小胡笔记.app</code>。<br>
+            <b>Windows</b>：解压后双击 <code>小胡笔记.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) ov.classList.remove('open'); });
+    $('#dlClose').onclick = ()=>ov.classList.remove('open');
+  }
+  ov.classList.add('open');
+}
 function paintHelp(){
   const ov = $('#helpOv'); if(!ov) return;
   ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
@@ -8413,6 +8462,7 @@ function openUserMenu(anchor){
     ['导入 Markdown / HTML / 备份', '', '', 'upload', importDoc],
     ['导出全部笔记（备份）', '', '', 'download', exportBackup],
     ['导出全部笔记（Markdown）', '', '', 'download', exportAllMd],
+    ['客户端下载', '', '', 'localSave', openClientPanel],
     '-',
     ['使用说明', '', '', 'help', ()=>{ helpTab='io'; openHelpPanel(); }]
   ]);

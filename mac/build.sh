@@ -11,12 +11,18 @@ APP="$BUILD_DIR/$APP_NAME.app"
 echo "==> 1/5 生成图标"
 python3 make_icon.py
 
-echo "==> 2/5 编译 Swift"
+echo "==> 2/5 编译 Swift（arm64 + x86_64，合成通用二进制）"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-swiftc -O -swift-version 5 \
+swiftc -O -swift-version 5 -target arm64-apple-macos13 \
   -framework Cocoa -framework WebKit -framework UserNotifications \
-  -o "$APP/Contents/MacOS/IvyNote" main.swift
+  -o "$BUILD_DIR/IvyNote-arm64" main.swift
+swiftc -O -swift-version 5 -target x86_64-apple-macos13 \
+  -framework Cocoa -framework WebKit -framework UserNotifications \
+  -o "$BUILD_DIR/IvyNote-x86_64" main.swift
+lipo -create "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64" -output "$APP/Contents/MacOS/IvyNote"
+rm -f "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64"
+lipo -info "$APP/Contents/MacOS/IvyNote"
 
 echo "==> 3/5 写入 Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -32,7 +38,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>小胡小胡的笔记 · n.139t.cn</string>

@@ -114,6 +114,10 @@
   .dhead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
   .dhead b{font-size:13.5px}
   .dhead .sp{flex:1}
+  .dbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;border-bottom:1px solid var(--line);background:#faf9f4}
+  .dbar .dhint{font-size:11px;color:var(--faint);line-height:1.4}
+  .dbar .mini{display:inline-flex;align-items:center;gap:4px}
+  .dbar .mini svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;stroke-linecap:round}
   .notes{max-height:52vh;overflow:auto}
   .nitem{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid #f2f1eb;
     width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
@@ -232,7 +236,8 @@
   var ICON = {
     ban:'<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M5.6 5.6l12.8 12.8"/>',
     trash:'<path d="M4 7h16M9.5 7V4.8h5V7M6.5 7l.9 12.2h9.2L17.5 7"/>',
-    warn:'<path d="M12 4.2 21 19.8H3z"/><path d="M12 10v4.2M12 17.2v.2"/>'
+    warn:'<path d="M12 4.2 21 19.8H3z"/><path d="M12 10v4.2M12 17.2v.2"/>',
+    down:'<path d="M12 4v10.5M7.6 10.4 12 14.8l4.4-4.4"/><path d="M4.5 18.5h15"/>'
   };
   function svg(d){ return '<svg viewBox="0 0 24 24">' + d + '</svg>'; }
 
@@ -447,6 +452,33 @@
   }
 
   /* ---------- 详情 ---------- */
+  function downloadExport(uid, kind, btn){
+    if(btn) btn.disabled = true;
+    fetch('/api/admin?uid=' + encodeURIComponent(uid) + '&export=' + kind, { headers: { authorization: 'Bearer ' + tok } })
+      .then(function(r){
+        if(!r.ok){
+          return r.json().catch(function(){ return {}; }).then(function(d){
+            throw new Error(d.error || ('HTTP ' + r.status));
+          });
+        }
+        var fn = '';
+        try{ fn = decodeURIComponent(r.headers.get('x-filename') || ''); }catch(e){}
+        return r.blob().then(function(b){ return { blob: b, name: fn }; });
+      })
+      .then(function(o){
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(o.blob);
+        a.download = o.name || ('全部笔记.' + (kind === 'json' ? 'json' : 'md'));
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+        toast(kind === 'json' ? '已导出备份（含笔记本分类）' : '已导出 Markdown');
+      })
+      .catch(function(e){ toast(e.message || '导出失败'); })
+      .then(function(){ if(btn) btn.disabled = false; });
+  }
+
   function openDetail(uid){
     var a = find(uid);
     var d = $('#detail');
@@ -469,8 +501,17 @@
               flag + '<span class="m">' + fmtBytes(n.bytes) + ' · ' + esc(fmtTime(n.updatedAt)) + '</span></button>';
           }).join('') + '</div>'
         : '<div class="empty">这个账号还没有笔记</div>';
-      d.innerHTML = head + body;
+      var liveCount = res.notes.filter(function(n){ return !n.trashed && !n.deleted; }).length;
+      var bar = '<div class="dbar">' +
+        '<button class="mini" data-exp="json">' + svg(ICON.down) + '导出备份</button>' +
+        '<button class="mini" data-exp="md">' + svg(ICON.down) + '导出 Markdown</button>' +
+        '<span class="dhint">备份含笔记本分类，可再导入；Markdown 只有标题与正文（' + liveCount + ' 篇，不含回收站）</span>' +
+        '</div>';
+      d.innerHTML = head + bar + body;
       $('#dClose').onclick = function(){ d.classList.remove('open'); };
+      d.querySelectorAll('[data-exp]').forEach(function(b){
+        b.onclick = function(){ downloadExport(uid, b.dataset.exp, b); };
+      });
       d.querySelectorAll('[data-note]').forEach(function(b){
         b.onclick = function(){ viewNote(uid, b.dataset.note); };
       });

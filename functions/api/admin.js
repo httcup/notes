@@ -2,6 +2,7 @@
 //   GET                       账号总览（含主人自己那一片）
 //   GET ?uid=<uid>            某账号的笔记清单 / 笔记本 / 分享 / 订阅
 //   GET ?uid=<uid>&note=<id>  看单篇正文
+//   GET ?uid=<uid>&export=json|md  导出该账号笔记（可再导入的备份 / Markdown）
 //   POST {action:'disable'|'enable'|'purge'|'delete', uid}
 //        disable 停用（登录被拒，已发出的令牌最多 30 秒后失效）
 //        enable  恢复
@@ -114,6 +115,72 @@ async function overview(env) {
   };
 }
 
+// 导出某个账号的全部笔记：kind = 'json'（可再导入的完整备份）| 'md'（Markdown 纯内容）
+async function exportAccount(env, uid, kind) {
+  const [userRow, notesRes, nbsRes] = await Promise.all([
+    env.DB.prepare('SELECT name FROM users WHERE id = ?1').bind(uid).first(),
+    env.DB.prepare(
+      `SELECT id, title, body, notebook_id, tags, created_at, updated_at
+         FROM notes WHERE user_id = ?1 AND trashed = 0 AND deleted = 0
+         ORDER BY created_at ASC`
+    ).bind(uid).all(),
+    env.DB.prepare(
+      'SELECT id, name, color, open, updated_at FROM notebooks WHERE user_id = ?1 AND deleted = 0 ORDER BY updated_at ASC'
+    ).bind(uid).all()
+  ]);
+
+  const notes = (notesRes.results || []).map((r) => {
+    let tags = [];
+    try { tags = JSON.parse(r.tags || '[]'); } catch (e) { tags = []; }
+    return {
+      id: r.id,
+      title: r.title || '',
+      body: r.body || '',
+      notebookId: r.notebook_id || null,
+      tags: Array.isArray(tags) ? tags : [],
+      createdAt: r.created_at || 0,
+      updatedAt: r.updated_at || 0
+    };
+  });
+  const notebooks = (nbsRes.results || []).map((r) => ({
+    id: r.id,
+    name: r.name || '',
+    color: r.color || '',
+    open: r.open !== 0
+  }));
+
+  const who = String((userRow && userRow.name) || uid).replace(/[\\/:*?"<>|]/g, '_');
+  const day = new Date().toISOString().slice(0, 10);
+  const fname = `全部笔记-${who}-${day}.${kind === 'json' ? 'json' : 'md'}`;
+
+  let payload;
+  if (kind === 'json') {
+    payload = JSON.stringify({
+      app: 'ivynote',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      account: who,
+      notebooks,
+      notes
+    });
+  } else {
+    payload = notes.map((n) => `# ${n.title || '无标题'}\n\n${n.body}`).join('\n\n---\n\n');
+  }
+
+  return new Response(payload, {
+    headers: {
+      'content-type': kind === 'json'
+        ? 'application/json; charset=utf-8'
+        : 'text/markdown; charset=utf-8',
+      'content-disposition':
+        `attachment; filename="notes-${day}.${kind === 'json' ? 'json' : 'md'}"; ` +
+        `filename*=UTF-8''${encodeURIComponent(fname)}`,
+      'x-filename': encodeURIComponent(fname),
+      'cache-control': 'no-store'
+    }
+  });
+}
+
 async function detail(env, uid) {
   const [notesRes, nbsRes, shareRes, feedRes, srcRes, verRes] = await env.DB.batch([
     env.DB.prepare(
@@ -169,6 +236,10 @@ export async function onRequest({ request, env }) {
     if (request.method === 'GET') {
       if (!uid) return json(await overview(env));
       if (!OK_UID.test(uid)) return json({ error: 'uid 不合法' }, 400);
+
+      // ?export=json|md  下载该账号的笔记备份 / Markdown
+      const exp = String(url.searchParams.get('export') || '').trim();
+      if (exp === 'json' || exp === 'md') return exportAccount(env, uid, exp);
 
       const noteId = String(url.searchParams.get('note') || '').trim();
       if (noteId) {

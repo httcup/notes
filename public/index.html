@@ -751,6 +751,14 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .dl-btn{flex:0 0 auto;padding:8px 16px;border-radius:9px;background:rgb(var(--ink));color:rgb(var(--surface));font-size:13px;font-weight:500;text-decoration:none;border:0;cursor:pointer;font-family:inherit}
 .dl-btn:hover{opacity:.88}
 .dl-btn:disabled{opacity:.45;cursor:default}
+.dl-btn.ghost{background:transparent;color:rgb(var(--ink-2));border:1px solid rgb(var(--line))}
+.dl-btn.ghost:hover{background:rgb(var(--hover));opacity:1}
+@media (max-width:520px){
+  .dl-row{flex-wrap:wrap;row-gap:10px}
+  .dl-row .dl-info{flex:1 1 120px}
+  .dl-row .dl-btn{margin-left:54px}
+  .dl-row .dl-btn + .dl-btn{margin-left:8px}
+}
 .dl-tip{margin-top:16px;padding-top:14px;border-top:1px solid rgb(var(--line));font-size:12.5px;line-height:1.85;color:rgb(var(--muted))}
 .dl-tip b{color:rgb(var(--ink-2));font-weight:600}
 .dl-tip code{font-size:11.5px;background:rgb(var(--hover));padding:1px 5px;border-radius:5px}
@@ -1739,7 +1747,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v85', at: '2026-11-13 23:58' };
+window.IVY_BUILD = { id: 'v86', at: '2026-11-14 00:35' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5442,13 +5450,14 @@ function openClientPanel(){
           </div>
           <div class="dl-row">
             <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="6.5" y="2.6" width="11" height="18.8" rx="2.6"/><path d="M10.6 5.2h2.8"/><path d="M12 18.4h.01"/></svg></div>
-            <div class="dl-info"><b>Android 版</b><span>装到桌面 · 独立图标 · 无需安装包，随网页自动更新</span></div>
-            <button class="dl-btn" id="dlAndroid">安装</button>
+            <div class="dl-info"><b>Android 版</b><span>APK 安装包 · 约 50 KB · 有独立图标和系统通知；也可以免安装装到桌面</span></div>
+            <a class="dl-btn" href="/dl/note-Android.apk" download>下载 APK</a>
+            <button class="dl-btn ghost" id="dlAndroid">免安装</button>
           </div>
           <div class="dl-tip">
             <b>macOS</b>：解压后把「随手记笔记本」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手记笔记本.app</code>。<br>
             <b>Windows</b>：解压后双击 <code>随手记笔记本.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。<br>
-            <b>Android</b>：用系统浏览器（Chrome / Edge / 小米、OPPO、vivo 自带浏览器）打开本页，点上面的<b>「安装」</b>；没有弹窗的话，点浏览器菜单里的<b>「添加到主屏幕」</b>或<b>「安装应用」</b>。装好后从桌面图标直接进，全屏没有地址栏。
+            <b>Android</b>：点<b>「下载 APK」</b> 装应用版（支持系统通知、导出存到「下载」文件夹）；手机会提示「未知来源」，允许一次即可。不想装包就点<b>「免安装」</b>，用浏览器菜单里的「添加到主屏幕」装成网页应用，随网页自动更新。
           </div>
         </div>
       </div>`;

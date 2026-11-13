@@ -15,8 +15,10 @@ async function regOpen(env) {
 
 export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return preflight();
-  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   if (!env.DB) return json({ error: '还没绑定 D1 数据库' }, 503);
+  // GET：给前端查「是否开放注册」，用来置灰注册按钮
+  if (request.method === 'GET') return json({ ok: true, regOpen: await regOpen(env) });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const body = await request.json().catch(() => ({}));
   const name = String(body.name || '').trim();

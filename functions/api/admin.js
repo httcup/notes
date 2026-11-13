@@ -7,7 +7,7 @@
 //        enable  恢复
 //        purge   清空该账号的所有数据，账号本身保留
 //        delete  连账号一起删掉
-import { json, preflight, currentUser } from '../_lib.js';
+import { json, preflight, currentUser, hashPassword, randomHex } from '../_lib.js';
 
 const OK_UID = /^[A-Za-z0-9_-]{1,80}$/;
 
@@ -34,6 +34,12 @@ async function getRegOpen(env) {
     const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'reg_open'").first();
     return !row || row.v !== '0';
   } catch { return true; }
+}
+
+// D1 数据库总量的估算上限：免费版 5 GB/库，付费版 10 GB/库（可用 DB_QUOTA_GB 覆盖）
+function quotaBytes(env) {
+  const gb = Number((env && env.DB_QUOTA_GB) || 5);
+  return Math.max(1, gb) * 1024 * 1024 * 1024;
 }
 
 async function overview(env) {
@@ -92,6 +98,8 @@ async function overview(env) {
     a.icsSources = (srcs.get(a.uid) || {}).c || 0;
   }
   accounts.sort((x, y) => (y.lastAt || y.createdAt) - (x.lastAt || x.createdAt));
+  const used = accounts.reduce((s, a) => s + a.bytes, 0);
+  const quota = quotaBytes(env);
   return {
     ok: true,
     regOpen: await getRegOpen(env),
@@ -99,7 +107,9 @@ async function overview(env) {
     totals: {
       accounts: accounts.length,
       notes: accounts.reduce((s, a) => s + a.live + a.trash, 0),
-      bytes: accounts.reduce((s, a) => s + a.bytes, 0)
+      bytes: used,
+      quota,
+      free: Math.max(0, quota - used)
     }
   };
 }
@@ -186,6 +196,25 @@ export async function onRequest({ request, env }) {
           'ON CONFLICT(k) DO UPDATE SET v = excluded.v, updated_at = excluded.updated_at'
         ).bind(open ? '1' : '0', Date.now()).run();
         return json({ ok: true, regOpen: open });
+      }
+
+      // 手动开号：替别人注册账号，不受「开放注册」开关限制
+      if (action === 'createUser') {
+        const name = String(body.name || '').trim();
+        const key = String(body.key || '');
+        if (!/^[\w\u4e00-\u9fa5.-]{2,24}$/.test(name)) {
+          return json({ error: '账号 2-24 位，可用中英文、数字、_ . -' }, 400);
+        }
+        if (key.length < 4) return json({ error: '口令至少 4 位' }, 400);
+        const dup = await env.DB.prepare('SELECT id FROM users WHERE name = ?1').bind(name).first();
+        if (dup) return json({ error: '该用户名已被占用' }, 400);
+        const id = 'u' + randomHex(8);
+        const salt = randomHex(16);
+        const hash = await hashPassword(key, salt);
+        await env.DB.prepare(
+          'INSERT INTO users (id, name, salt, hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)'
+        ).bind(id, name, salt, hash, Date.now()).run();
+        return json({ ok: true, uid: id, name });
       }
 
       const target = String(body.uid || '').trim();

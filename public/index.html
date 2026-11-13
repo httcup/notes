@@ -1400,6 +1400,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .btn-primary:disabled{opacity:.45;cursor:default}
 .btn-ghost{height:32px;padding:0 12px;border-radius:8px;color:rgb(var(--muted));font-size:12.5px;border:.5px solid rgb(var(--line))}
 .btn-ghost:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.btn-ghost:disabled{opacity:.4;cursor:default;background:transparent;color:rgb(var(--muted))}
 .sheet-status{margin-top:14px;padding-top:11px;border-top:1px solid rgb(var(--line));font-size:11.5px;line-height:1.75;color:rgb(var(--faint))}
 .sheet-status b{color:rgb(var(--ink-2));font-weight:600}
 
@@ -1705,7 +1706,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v67', at: '2026-11-13 10:41' };
+window.IVY_BUILD = { id: 'v69', at: '2026-11-13 11:06' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8670,11 +8671,31 @@ const REG_HINT_NEW = `<div class="reg-hint-t">第一次使用？填「用户名 
   <div class="reg-hint-s">密码是唯一的钥匙，服务端只存加密哈希，忘了找不回，请一定记好。</div>`;
 const REG_HINT_ON = `<div class="reg-hint-t">已连接云端，编辑会自动保存到你的空间。</div>
   <div class="reg-hint-s">要换账号，改上面的用户名和密码后点「立即同步」即可切换。</div>`;
+const REG_HINT_OFF = `<div class="reg-hint-t">暂时关闭注册，可使用本地保存功能。</div>
+  <div class="reg-hint-s">如需注册云同步，请联系 <b>201965</b>。</div>`;
+let REG_OPEN = true;   // 服务端是否开放注册，打开面板时异步刷新
+
+function refreshRegState(){
+  return fetch('/api/auth', { headers: { accept: 'application/json' } })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d && typeof d.regOpen === 'boolean' && d.regOpen !== REG_OPEN){
+        REG_OPEN = d.regOpen;
+        paintSyncPanel();
+      }
+    })
+    .catch(()=>{});
+}
 
 function paintSyncPanel(){
   const line = $('#syncStatusLine');
   const hint = $('#regHint');
-  if(hint) hint.innerHTML = isConnected() ? REG_HINT_ON : REG_HINT_NEW;
+  if(hint) hint.innerHTML = isConnected() ? REG_HINT_ON : (REG_OPEN ? REG_HINT_NEW : REG_HINT_OFF);
+  const reg = $('#syncRegister');
+  if(reg){
+    reg.disabled = !REG_OPEN;
+    reg.title = REG_OPEN ? '' : '注册已关闭，如需注册请联系 201965';
+  }
   if(!line) return;
   const n = S.notes.filter(x=>!x.trashed).length;
   const m = allMedia().length;
@@ -8711,6 +8732,7 @@ function openSyncPanel(){
   </div>`;
   ov.classList.add('open'); syncPanelOpen = true;
   paintSyncPanel();
+  refreshRegState();
 
   const readForm = ()=>({
     name: ($('#syncNameInput').value||'').trim(),
@@ -8718,6 +8740,7 @@ function openSyncPanel(){
   });
   const run = async (create)=>{
     const {name, key} = readForm();
+    if(create && !REG_OPEN){ toast('注册已关闭，如需注册请联系 201965'); return; }
     if(!key){ toast('请先填写密码'); return; }
     if(create && !name){ toast('注册新账号需要填写用户名'); return; }
     const btn = create ? $('#syncRegister') : $('#syncLogin');
@@ -8730,9 +8753,10 @@ function openSyncPanel(){
       if(SYNC.state==='ok') toast((create?'已创建账号「':'已登录「')+ (name||'默认账号') +'」');
     }catch(e){
       SYNC.state = 'off'; SYNC.error = '';
+      if(/关闭注册|暂时关闭/.test(e.message||'')) REG_OPEN = false;
       toast(e.message || '登录失败');
       paintSyncPanel();
-    }finally{ btn.disabled = false; }
+    }finally{ btn.disabled = create && !REG_OPEN; }
   };
 
   $('#syncClose').onclick = closeSyncPanel;

@@ -67,6 +67,8 @@
   .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
   .stat b{display:block;font-size:20px;font-weight:650;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   .stat span{font-size:11.5px;color:var(--faint)}
+  .sbar{display:block;height:4px;border-radius:2px;background:#eceae2;margin-top:9px;overflow:hidden}
+  .sbar u{display:block;height:100%;width:0;border-radius:2px;background:var(--ivy);transition:width .3s}
 
   /* 开放注册开关 */
   .regrow{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -80,6 +82,9 @@
   .sw.on{background:#34a853;border-color:#34a853}
   .sw.on i{left:22px}
   .sw:disabled{opacity:.6;cursor:wait}
+  .cfield{margin-top:12px}
+  .cfield span{display:block;font-size:11.5px;color:var(--faint);margin-bottom:5px}
+  .cfield input{width:100%}
 
   /* 账号列表 */
   .list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -195,12 +200,15 @@
   <div id="main" style="display:none">
     <div class="regrow">
       <div><b>开放注册</b><span>关闭后新用户无法注册云同步账号，会提示「同步功能暂时关闭，可使用保存本地的功能，如需同步功能请联系管理员」。已有账号不受影响。</span></div>
-      <button class="sw" id="regSw" aria-pressed="false" title="切换是否开放注册"><i></i></button>
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <button class="mini" id="btnCreate" title="替别人手动注册一个账号">手动开号</button>
+        <button class="sw" id="regSw" aria-pressed="false" title="切换是否开放注册"><i></i></button>
+      </div>
     </div>
     <div class="stats">
       <div class="stat"><b id="sAcc">–</b><span>账号</span></div>
       <div class="stat"><b id="sNotes">–</b><span>笔记（含回收站）</span></div>
-      <div class="stat"><b id="sBytes">–</b><span>占用空间</span></div>
+      <div class="stat"><b id="sBytes">–</b><span id="sBytesSub">占用空间</span><i class="sbar"><u id="sBar"></u></i></div>
     </div>
     <div class="list" id="list"></div>
     <div class="detail" id="detail"></div>
@@ -239,7 +247,12 @@
     if(!n) return '0 B';
     if(n < 1024) return n + ' B';
     if(n < 1048576) return (n/1024).toFixed(1) + ' KB';
-    return (n/1048576).toFixed(1) + ' MB';
+    if(n < 1073741824) return (n/1048576).toFixed(1) + ' MB';
+    return (n/1073741824).toFixed(2) + ' GB';
+  }
+  function fmtQuota(n){
+    var gb = n / 1073741824;
+    return (gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10) + ' GB';
   }
   function fmtTime(ts){
     if(!ts) return '—';
@@ -294,6 +307,13 @@
       $('#sAcc').textContent = d.totals.accounts;
       $('#sNotes').textContent = d.totals.notes;
       $('#sBytes').textContent = fmtBytes(d.totals.bytes);
+      var t = d.totals, q = t.quota || 0;
+      if(q){
+        var free = t.free != null ? t.free : Math.max(0, q - t.bytes);
+        $('#sBytesSub').textContent = '共 ' + fmtQuota(q) + ' · 剩余 ' + fmtBytes(free);
+        var pct = Math.min(100, (t.bytes / q) * 100);
+        $('#sBar').style.width = (pct > 0 && pct < 0.6 ? 0.6 : pct).toFixed(1) + '%';
+      }
       renderList();
     }).catch(function(e){
       if(/登录|口令|过期/.test(e.message)) showLogin(e.message);
@@ -321,6 +341,37 @@
       .catch(function(e){ toast(e.message || '操作失败'); })
       .then(function(){ sw.disabled = false; });
   };
+  $('#btnCreate').onclick = askCreate;
+
+  /* ---------- 手动开号 ---------- */
+  function askCreate(){
+    $('#ov').innerHTML =
+      '<div class="dlg">' +
+        '<div class="dlg-h"><div class="ico" style="background:var(--ivy-l)"><svg viewBox="0 0 24 24" style="stroke:var(--ivy-d)"><path d="M12 5v14M5 12h14"/></svg></div><h3>手动开号</h3></div>' +
+        '<div class="dlg-b">替别人注册一个云同步账号，不受「开放注册」开关的限制。创建后把用户名和密码告诉对方，对方在笔记里填上这两项就能登录同步。' +
+          '<div class="cfield"><span>用户名</span><input type="text" id="cName" placeholder="2-24 位，可用中英文、数字、_ . -" autocomplete="off" spellcheck="false" maxlength="24"></div>' +
+          '<div class="cfield"><span>密码</span><input type="text" id="cKey" placeholder="至少 4 位" autocomplete="off" spellcheck="false"></div>' +
+        '</div>' +
+        '<div class="dlg-f"><button class="btn line" data-close>取消</button><button class="btn" id="okGo">创建账号</button></div>' +
+      '</div>';
+    openOv();
+    var name = $('#cName'), key = $('#cKey'), ok = $('#okGo');
+    setTimeout(function(){ name.focus(); }, 60);
+    var go = function(){
+      if(ok.disabled) return;
+      ok.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action:'createUser', name: name.value.trim(), key: key.value }) })
+        .then(function(d){
+          closeOv();
+          toast('已创建账号「' + d.name + '」，把用户名和密码告诉对方即可');
+          load();
+        })
+        .catch(function(e){ toast(e.message || '创建失败'); ok.disabled = false; });
+    };
+    ok.onclick = go;
+    key.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); go(); } };
+    name.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); key.focus(); } };
+  }
 
   function renderList(){
     var html = '<div class="row head"><div>账号</div><div>笔记</div><div>占用</div><div>最后活动</div><div></div></div>';

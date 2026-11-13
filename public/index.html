@@ -1709,7 +1709,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v72', at: '2026-11-13 11:30' };
+window.IVY_BUILD = { id: 'v73', at: '2026-11-13 14:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -1742,12 +1742,49 @@ function seed(){
     media: []
   };
 }
+/* ========== IndexedDB：本地大容量主存储（localStorage 只有 5MB，IDB 有几百 MB 起） ========== */
+let _idbP = null;
+function idb(){
+  if(_idbP) return _idbP;
+  _idbP = new Promise((res, rej)=>{
+    const rq = indexedDB.open('ivynote', 1);
+    rq.onupgradeneeded = ()=>{ if(!rq.result.objectStoreNames.contains('kv')) rq.result.createObjectStore('kv'); };
+    rq.onsuccess = ()=>res(rq.result);
+    rq.onerror = ()=>rej(rq.error);
+  });
+  return _idbP;
+}
+async function idbGet(key){
+  try{
+    const db = await idb();
+    return await new Promise((res, rej)=>{
+      const rq = db.transaction('kv','readonly').objectStore('kv').get(key);
+      rq.onsuccess = ()=>res(rq.result); rq.onerror = ()=>rej(rq.error);
+    });
+  }catch(e){ return undefined; }
+}
+async function idbSet(key, val){
+  try{
+    const db = await idb();
+    await new Promise((res, rej)=>{
+      const tx = db.transaction('kv','readwrite');
+      tx.objectStore('kv').put(val, key);
+      tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error);
+    });
+    return true;
+  }catch(e){ return false; }
+}
+
 function load(){
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(!raw) return seed();
     const s = JSON.parse(raw);
     if(!s.notes) return seed();
+    return normalizeState(s);
+  }catch(e){ return seed(); }
+}
+function normalizeState(s){
     s.media = []; // 本地文件的 blob url 无法持久化
     if(typeof s.shelfOpen!=='boolean') s.shelfOpen = true;
     if(typeof s.outlineOpen!=='boolean') s.outlineOpen = false;
@@ -1762,8 +1799,8 @@ function load(){
     s.notes.forEach(n=>{ if(!Array.isArray(n.tags)) n.tags = []; });
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
+    if(!Array.isArray(s.pendingDeletes)) s.pendingDeletes = [];
     return s;
-  }catch(e){ return seed(); }
 }
 /* ========== 历史版本 ==========
    每次保存留一份快照。保留策略：最近一小时全留；一周内每 10 分钟一个；之后每天一个。
@@ -2026,7 +2063,9 @@ async function restoreSelectedVersion(){
 function save(){
   try{
     const copy = Object.assign({}, S, {media: []});
-    localStorage.setItem(LS_KEY, JSON.stringify(copy));
+    copy._savedAt = Date.now();
+    idbSet('state', copy);                       // IDB 主存储，几百 MB 起步，不受 5MB 限制
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(copy)); }catch(e){}   // 镜像，超 5MB 失败也无妨
   }catch(e){}
   try{ if(typeof recordVersion === 'function') recordVersion(noteById(S.active)); }catch(e){}
   if(typeof queueSync === 'function') queueSync();
@@ -2111,7 +2150,7 @@ try{
         S.active = first ? first.id : null;
         if(first && !S.tabs.length) S.tabs = [first.id];
       }
-      try{ localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({}, S, {media:[]}))); }catch(e){}
+      try{ persistLocal(); }catch(e){}
     }
     localStorage.setItem('ivy.purgedSeeds','1');
   }
@@ -8544,7 +8583,9 @@ function applyRemote(data){
   return changed;
 }
 function persistLocal(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({}, S, {media: []}))); }catch(e){}
+  const copy = Object.assign({}, S, {media: [], _savedAt: Date.now()});
+  idbSet('state', copy);
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(copy)); }catch(e){}
 }
 function renderAfterSync(changed, force){
   const editing = document.activeElement && document.activeElement.closest && document.activeElement.closest('#doc');
@@ -8833,36 +8874,48 @@ function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanel
 $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverlay') closeSyncPanel(); });
 
 /* ========== 启动 ========== */
-paintRowIcons();
-const qs = new URLSearchParams(location.search);
-const vParam = qs.get('view');
-if(vParam && ['notes','media','graph'].includes(vParam)){ S.view = vParam; trashView=false; }
-const tParam = qs.get('theme');
-if(tParam==='dark' || tParam==='light'){ S.theme = tParam; }
-applyTheme();
-// URL 里的 n= 参数
-const nParam = qs.get('n');
-if(nParam && noteById(nParam) && !noteById(nParam).trashed){
-  S.active = nParam; if(!S.tabs.includes(nParam)) S.tabs.push(nParam);
-} else if(qs.get('new')==='1'){ newNote(); }
-renderAll();
-if(qs.get('mode')==='edit') setTimeout(()=>setMode('source'), 60);
-if(qs.get('mode')==='preview') setTimeout(()=>setMode('preview'), 60);
-if(qs.get('mode')==='live') setTimeout(()=>setMode('live'), 60);
-if(qs.get('cmd')==='1') setTimeout(()=>openPalette(), 60);
-if(qs.get('sync')==='1') setTimeout(()=>openSyncPanel(), 60);
-// 已有密码时后台安静同步一次
-if(isConnected()){
-  setTimeout(async ()=>{
-    if(!SYNC.token && SYNC.key){
-      try{ await doAuth(SYNC.account, SYNC.key, false); }
-      catch(e){ SYNC.state='error'; SYNC.error=e.message||'登录失败'; renderDock(); return; }
+(async function boot(){
+  // IndexedDB 恢复：localStorage 可能因 5MB 上限写失败而停留在旧数据，两边谁新用谁
+  try{
+    const fromIdb = await idbGet('state');
+    let lsS = null;
+    try{ const raw = localStorage.getItem(LS_KEY); if(raw) lsS = JSON.parse(raw); }catch(e){}
+    if(fromIdb && fromIdb.notes && (!lsS || !lsS.notes || (fromIdb._savedAt||0) >= (lsS._savedAt||0))){
+      S = normalizeState(fromIdb);
+      persistLocal();   // 回写 localStorage 镜像，下次冷启动还能快速同步加载
     }
-    syncNow({rerender:true});
-    icsPullSources(true);            // 账号里的日历订阅源，换设备后自动补齐
-    icsPullDone();                   // 哪些日历事件已经勾掉，也跟着账号走
-  }, 350);
-}
+  }catch(e){}
+  paintRowIcons();
+  const qs = new URLSearchParams(location.search);
+  const vParam = qs.get('view');
+  if(vParam && ['notes','media','graph'].includes(vParam)){ S.view = vParam; trashView=false; }
+  const tParam = qs.get('theme');
+  if(tParam==='dark' || tParam==='light'){ S.theme = tParam; }
+  applyTheme();
+  // URL 里的 n= 参数
+  const nParam = qs.get('n');
+  if(nParam && noteById(nParam) && !noteById(nParam).trashed){
+    S.active = nParam; if(!S.tabs.includes(nParam)) S.tabs.push(nParam);
+  } else if(qs.get('new')==='1'){ newNote(); }
+  renderAll();
+  if(qs.get('mode')==='edit') setTimeout(()=>setMode('source'), 60);
+  if(qs.get('mode')==='preview') setTimeout(()=>setMode('preview'), 60);
+  if(qs.get('mode')==='live') setTimeout(()=>setMode('live'), 60);
+  if(qs.get('cmd')==='1') setTimeout(()=>openPalette(), 60);
+  if(qs.get('sync')==='1') setTimeout(()=>openSyncPanel(), 60);
+  // 已有密码时后台安静同步一次
+  if(isConnected()){
+    setTimeout(async ()=>{
+      if(!SYNC.token && SYNC.key){
+        try{ await doAuth(SYNC.account, SYNC.key, false); }
+        catch(e){ SYNC.state='error'; SYNC.error=e.message||'登录失败'; renderDock(); return; }
+      }
+      syncNow({rerender:true});
+      icsPullSources(true);            // 账号里的日历订阅源，换设备后自动补齐
+      icsPullDone();                   // 哪些日历事件已经勾掉，也跟着账号走
+    }, 350);
+  }
+})();
 
 /* ---- 待办到点提醒：每分钟扫一次；回到页面时补扫一次 ---- */
 setTimeout(checkTodoReminders, 2500);

@@ -8,10 +8,10 @@ BUNDLE_ID="cn.139t.noteapp"
 BUILD_DIR="build"
 APP="$BUILD_DIR/$APP_NAME.app"
 
-echo "==> 1/5 生成图标"
+echo "==> 1/6 生成图标"
 python3 make_icon.py
 
-echo "==> 2/5 编译 Swift（arm64 + x86_64，合成通用二进制）"
+echo "==> 2/6 编译 Swift（arm64 + x86_64，合成通用二进制）"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -swift-version 5 -target arm64-apple-macos13 \
@@ -24,7 +24,7 @@ lipo -create "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64" -output "$AP
 rm -f "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64"
 lipo -info "$APP/Contents/MacOS/IvyNote"
 
-echo "==> 3/5 写入 Info.plist"
+echo "==> 3/6 写入 Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -51,9 +51,15 @@ PLIST
 cp "$BUILD_DIR/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
-echo "==> 4/5 ad-hoc 签名"
+echo "==> 4/6 ad-hoc 签名"
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || echo "（签名失败，仍可直接运行）"
 
-echo "==> 5/5 完成"
+echo "==> 5/6 打包下载用 zip"
+PUB="../public/dl"
+mkdir -p "$PUB"
+rm -f "$PUB/note-MacOS.zip"
+ditto -c -k --sequesterRsrc --keepParent "$APP" "$PUB/note-MacOS.zip"
+
+echo "==> 6/6 完成"
 du -sh "$APP" | awk '{print "体积: "$1}'
 echo "产物: $(pwd)/$APP"

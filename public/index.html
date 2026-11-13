@@ -1723,7 +1723,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v79', at: '2026-11-13 15:27' };
+window.IVY_BUILD = { id: 'v80', at: '2026-11-13 15:41' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5389,12 +5389,12 @@ function openClientPanel(){
           <div class="dl-row">
             <div class="dl-ic">${ic('localSave')}</div>
             <div class="dl-info"><b>macOS 版</b><span>原生应用 · 约 0.4 MB · 通用版（M 系列 / Intel）</span></div>
-            <a class="dl-btn" href="/dl/IvyNote-macOS.zip" download>下载</a>
+            <a class="dl-btn" href="/dl/note-MacOS.zip" download>下载</a>
           </div>
           <div class="dl-row">
             <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.2" y="3.2" width="7.6" height="7.6" rx="1.2"/><rect x="13.2" y="3.2" width="7.6" height="7.6" rx="1.2"/><rect x="3.2" y="13.2" width="7.6" height="7.6" rx="1.2"/><rect x="13.2" y="13.2" width="7.6" height="7.6" rx="1.2"/></svg></div>
             <div class="dl-info"><b>Windows 版</b><span>免安装 · 约 0.8 MB · Win10 / 11 自带 Edge 即可运行</span></div>
-            <a class="dl-btn" href="/dl/IvyNote-Windows.zip" download>下载</a>
+            <a class="dl-btn" href="/dl/Note-Windows.zip" download>下载</a>
           </div>
           <div class="dl-tip">
             <b>macOS</b>：解压后把「随手记笔记本」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手记笔记本.app</code>。<br>

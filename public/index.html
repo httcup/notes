@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>小胡小胡的笔记</title>
+<title>随手记笔记本</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23287A52'/%3E%3Crect x='9.6' y='6.4' width='12.8' height='19.2' rx='2.6' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M13.1 12.4h5.8M13.1 16h5.8M13.1 19.6h3.4' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
 <style>
 /* ============ tokens（取自 ivyNote 真实配色） ============ */
@@ -1536,7 +1536,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   <aside class="shelf" id="shelf">
     <header class="shelf-head">
       <div class="brand">
-        <h1 class="brand-name" id="brandName">小胡小胡的笔记</h1>
+        <h1 class="brand-name" id="brandName">随手记笔记本</h1>
       </div>
       <div class="head-actions" id="headActions">
         <button class="icon-btn todo-only" id="btnTodoHelp" title="待办使用说明" aria-label="待办使用说明"></button>
@@ -1723,7 +1723,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v78', at: '2026-11-13 15:22' };
+window.IVY_BUILD = { id: 'v79', at: '2026-11-13 15:27' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2121,16 +2121,16 @@ try{
   }
 }catch(e){}
 
-// 一次性改名：使用说明示例里的「常青笔记」统一改成「小胡的笔记」
+// 一次性改名：使用说明示例里的「常青笔记」统一改成「随手记笔记本」
 try{
   if(!localStorage.getItem('ivy.renameV1')){
     let changed = false;
     (S.notes||[]).forEach(n=>{
       if(typeof n.body === 'string' && n.body.includes('常青笔记')){
-        n.body = n.body.split('常青笔记').join('小胡的笔记');
+        n.body = n.body.split('常青笔记').join('随手记笔记本');
         n.updatedAt = Date.now(); changed = true;
       }
-      if(n.title === '常青笔记'){ n.title = '小胡的笔记'; changed = true; }
+      if(n.title === '常青笔记'){ n.title = '随手记笔记本'; changed = true; }
     });
     if(changed) persistLocal();
     localStorage.setItem('ivy.renameV1','1');
@@ -2267,7 +2267,7 @@ function toggleNoteTag(t){
 }
 
 function renderShelf(){
-  brandName.textContent = ({notes:'小胡小胡的笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '小胡小胡的笔记';
+  brandName.textContent = ({notes:'随手记笔记本', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '随手记笔记本';
   document.body.classList.toggle('view-todo', S.view === 'todo');
   const hds = document.getElementById('headDoneSw');
   if(hds) hds.checked = !!S.todoShowDoneToday;
@@ -2497,7 +2497,7 @@ function todoIcsText(){
   const lines = [
     'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//IvyNote//Reminders//CN',
     'CALSCALE:GREGORIAN','METHOD:PUBLISH',
-    'X-WR-CALNAME:待办提醒','X-WR-CALDESC:来自小胡的笔记的待办',
+    'X-WR-CALNAME:待办提醒','X-WR-CALDESC:来自随手记笔记本的待办',
     'X-WR-TIMEZONE:Asia/Shanghai',
     'REFRESH-INTERVAL;VALUE=DURATION:PT30M','X-PUBLISHED-TTL:PT30M'
   ];
@@ -5397,8 +5397,8 @@ function openClientPanel(){
             <a class="dl-btn" href="/dl/IvyNote-Windows.zip" download>下载</a>
           </div>
           <div class="dl-tip">
-            <b>macOS</b>：解压后把「小胡笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/小胡笔记.app</code>。<br>
-            <b>Windows</b>：解压后双击 <code>小胡笔记.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。
+            <b>macOS</b>：解压后把「随手记笔记本」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手记笔记本.app</code>。<br>
+            <b>Windows</b>：解压后双击 <code>随手记笔记本.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。
           </div>
         </div>
       </div>`;
@@ -5426,7 +5426,7 @@ function paintHelp(){
       <div class="help-sec"><h4>该选哪个</h4>
         <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
-        <p class="help-p">小胡小胡的笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
+        <p class="help-p">随手记笔记本 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(helpTab === 'md'){
     body.innerHTML = `<div class="help-hero">` + HELP_HERO.map(c=>`
         <div class="hh${c.hl ? ' hl' : ''}">
@@ -9084,7 +9084,7 @@ if('serviceWorker' in navigator){
   paint(`<span class="bd">${esc(b.id)}</span><span>·</span><span>${esc(b.at)}</span>`);
   el.title = `构建 ${b.id} · ${b.at}\n点击复制版本信息`;
   el.onclick = ()=>{
-    const info = `小胡的笔记 · 构建 ${b.id} (${b.at}) · 线上检测：${state}`;
+    const info = `随手记笔记本 · 构建 ${b.id} (${b.at}) · 线上检测：${state}`;
     if(navigator.clipboard) navigator.clipboard.writeText(info).then(()=>toast('版本信息已复制'), ()=>toast(info));
     else toast(info);
   };

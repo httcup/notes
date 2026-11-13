@@ -387,14 +387,14 @@ async function boot(){
     const r = await fetch('/api/share?slug=' + encodeURIComponent(slug), { cache: 'no-store' });
     const d = await r.json();
     if (!r.ok) return fail(d.error || '打不开这篇笔记');
-    document.title = (d.title || '分享的笔记') + ' · 小胡小胡的笔记';
+    document.title = (d.title || '分享的笔记') + ' · 随手记笔记本';
     document.getElementById('paper').innerHTML = `
       <div class="brand"><span class="dot"></span>公开分享 · 只读</div>
       <h1 class="title">${esc(d.title || '无标题')}</h1>
       <div class="meta">${esc(stamp(d.updatedAt || d.createdAt))}${d.updatedAt && d.createdAt && stamp(d.updatedAt) !== stamp(d.createdAt) ? '' : ''}</div>
       <div class="body">${d.body && d.body.trim() ? mdToHtml(d.body) : '<p style="color:rgb(var(--faint))">（这篇笔记没有正文）</p>'}</div>
       <div class="foot">
-        <span>由「小胡小胡的笔记」分享</span>
+        <span>由「随手记笔记本」分享</span>
         <button class="copy" id="copyBtn">复制链接</button>
       </div>`;
     const btn = document.getElementById('copyBtn');

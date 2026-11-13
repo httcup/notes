@@ -1,4 +1,4 @@
-# notes · 小胡小胡的笔记（云同步版）
+# notes · 随手记笔记本（云同步版）
 
 一个本地优先、云端同步的 Markdown 笔记应用。界面参考 ivyNote（官网https://ivynote.app/） 重写，
 数据存在自己的 Cloudflare 账号里。

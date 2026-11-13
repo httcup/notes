@@ -1,4 +1,4 @@
-// 小胡笔记 · macOS 客户端
+// 随手记笔记本 · macOS 客户端
 // 原生 WKWebView 壳：加载 n.139t.cn，补充原生通知、Mac 菜单与外链跳转。
 import Cocoa
 import WebKit
@@ -6,7 +6,7 @@ import UserNotifications
 
 let HOME_URL = URL(string: "https://n.139t.cn/")!
 let ALLOWED_HOSTS: Set<String> = ["n.139t.cn", "139t.cn"]
-let APP_NAME = "小胡笔记"
+let APP_NAME = "随手记笔记本"
 
 // 可点击的毛玻璃视图（通知横幅用）
 final class ClickEffectView: NSVisualEffectView {

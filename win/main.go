@@ -1,4 +1,4 @@
-// 小胡笔记 · Windows 客户端启动器
+// 随手记笔记本 · Windows 客户端启动器
 // 用系统自带的 Edge / Chrome 打开「应用窗口」模式：没有地址栏和标签页，
 // 独立用户目录，数据与平时上网的浏览器互不干扰。
 // 编译：GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-H=windowsgui -s -w"

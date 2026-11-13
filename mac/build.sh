@@ -1,9 +1,9 @@
 #!/bin/bash
-# 构建「小胡笔记.app」：Swift 编译 + 图标 + Info.plist + ad-hoc 签名
+# 构建「随手记笔记本.app」：Swift 编译 + 图标 + Info.plist + ad-hoc 签名
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP_NAME="小胡笔记"
+APP_NAME="随手记笔记本"
 BUNDLE_ID="cn.139t.noteapp"
 BUILD_DIR="build"
 APP="$BUILD_DIR/$APP_NAME.app"
@@ -41,7 +41,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSHumanReadableCopyright</key><string>小胡小胡的笔记 · n.139t.cn</string>
+  <key>NSHumanReadableCopyright</key><string>随手记笔记本 · n.139t.cn</string>
   <key>NSAppTransportSecurity</key>
   <dict><key>NSAllowsArbitraryLoads</key><false/></dict>
 </dict>

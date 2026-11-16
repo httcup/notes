@@ -8,7 +8,9 @@
 //        enable  恢复
 //        purge   清空该账号的所有数据，账号本身保留
 //        delete  连账号一起删掉
-import { json, preflight, currentUser, hashPassword, randomHex } from '../_lib.js';
+import { json, preflight, currentUser, hashPassword, randomHex, forgetAccount } from '../_lib.js';
+// 注销与「清空账号」共用同一份表清单，避免漏表造成数据残留
+import { purgeUserData } from '../_purge.js';
 
 const OK_UID = /^[A-Za-z0-9_-]{1,80}$/;
 
@@ -17,17 +19,6 @@ function isAdmin(env, user) {
   return !!user && user.uid === adminUid;
 }
 
-const PURGE = [
-  'DELETE FROM notes WHERE user_id = ?1',
-  'DELETE FROM notebooks WHERE user_id = ?1',
-  'DELETE FROM note_versions WHERE user_id = ?1',
-  'DELETE FROM shares WHERE user_id = ?1',
-  'DELETE FROM ics_sources WHERE user_id = ?1',
-  'DELETE FROM ics_done WHERE user_id = ?1',
-  'DELETE FROM notes_feeds WHERE user_id = ?1',
-  'DELETE FROM calendar_feeds WHERE user_id = ?1',
-  'DELETE FROM usage_daily WHERE user_id = ?1'
-];
 
 // 读「开放注册」开关（settings 表无记录时视为开放）
 async function getRegOpen(env) {
@@ -319,10 +310,10 @@ export async function onRequest({ request, env }) {
         return json({ ok: true, uid: target, name: exists.name || '' });
       }
       if (action === 'purge' || action === 'delete') {
-        const stmts = PURGE.map((sql) => env.DB.prepare(sql).bind(target));
-        if (action === 'delete') stmts.push(env.DB.prepare('DELETE FROM users WHERE id = ?1').bind(target));
-        await env.DB.batch(stmts);
-        return json({ ok: true, uid: target, purged: true, deleted: action === 'delete' });
+        // 走 _purge.js：表清单只有一份，不会漏表；顺带清掉该账号上传的图片
+        const r = await purgeUserData(env, target, { includeAccount: action === 'delete' });
+        if (action === 'delete') forgetAccount(target); // 让旧令牌立刻失效
+        return json({ ok: true, uid: target, purged: true, deleted: action === 'delete', media: r.media });
       }
       return json({ error: '未知操作' }, 400);
     }

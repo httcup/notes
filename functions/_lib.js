@@ -79,21 +79,32 @@ export async function verifyToken(token, secret) {
   }
 }
 
-// 账号是否被停用：同一个 isolate 里缓存 30 秒，避免每个请求都多一次数据库往返
-const disabledCache = new Map();
-async function isDisabled(env, uid) {
-  if (!env || !env.DB || !uid || uid === 'owner') return false;
-  const hit = disabledCache.get(uid);
+// 账号是否已失效：同一个 isolate 里缓存 30 秒，避免每个请求都多一次数据库往返。
+// 两种情况都算失效：
+//   1) 账号被停用（users.disabled = 1）
+//   2) 账号已注销 —— users 里那一行被删掉了
+// 第 2 条必须有：令牌是 HMAC 签名的、90 天有效，注销后若不校验账号是否还在，
+// 旧令牌还能继续把笔记写进一个「已经不存在」的账号，等于注销没销干净。
+const accountCache = new Map();
+async function accountInvalid(env, uid) {
+  if (!env || !env.DB || !uid || uid === 'owner') return false; // 主人账号不在 users 表里
+  const hit = accountCache.get(uid);
   if (hit && Date.now() - hit.at < 30000) return hit.v;
   let v = false;
   try {
     const row = await env.DB.prepare('SELECT disabled FROM users WHERE id = ?1').bind(uid).first();
-    v = !!(row && row.disabled);
+    v = !row || !!row.disabled;
   } catch (e) {
     v = false; // 老库没有这一列时不影响正常使用
   }
-  disabledCache.set(uid, { v, at: Date.now() });
+  accountCache.set(uid, { v, at: Date.now() });
   return v;
+}
+
+// 账号被删除后立刻清掉本实例的缓存，否则同一个实例里旧令牌还能再撑 30 秒
+// （其它实例仍可能有最长 30 秒的旧缓存，这是用内存换掉每个请求一次数据库往返的代价）
+export function forgetAccount(uid) {
+  accountCache.delete(uid);
 }
 
 // 支持两种身份：Bearer 令牌（多用户）／x-ivy-key 单口令（主人账号，兼容旧客户端）
@@ -103,7 +114,7 @@ export async function currentUser(request, env) {
   if (m) {
     const p = await verifyToken(m[1], env.IVY_SECRET);
     if (!p) return null;
-    if (await isDisabled(env, p.u)) return null; // 停用的账号连旧令牌一起失效
+    if (await accountInvalid(env, p.u)) return null; // 停用或已注销的账号，旧令牌一起失效
     return { uid: p.u, name: p.n || '' };
   }
   const legacy = request.headers.get('x-ivy-key') || '';

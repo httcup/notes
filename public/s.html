@@ -170,6 +170,43 @@ body.has-ol .ol-zone{display:flex}
   .ol-card.open{opacity:1;transform:none;pointer-events:auto}
 }
 
+
+/* ===== 阅读模式切换：预览 / Markdown / 思维导图（被分享者自己选） ===== */
+.modes{display:flex;gap:2px;padding:3px;border-radius:9px;background:rgb(var(--sunken));margin:0 0 24px;width:max-content}
+.modes button{
+  height:28px;padding:0 14px;border:0;border-radius:7px;background:none;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:rgb(var(--muted));transition:background .14s,color .14s;white-space:nowrap;
+}
+.modes button:hover{color:rgb(var(--ink))}
+.modes button.on{background:rgb(var(--surface));color:rgb(var(--ivy-ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.07)}
+.pane[hidden]{display:none}
+.md-bar{display:flex;justify-content:flex-end;margin-bottom:10px}
+.src{
+  font-family:var(--font-mono);font-size:12.8px;line-height:1.8;
+  white-space:pre-wrap;word-break:break-word;margin:0;
+  background:rgb(var(--code-bg));border:.5px solid rgb(var(--line));border-radius:11px;
+  padding:16px 18px;max-height:72vh;overflow:auto;
+}
+body.mode-map .shell{max-width:1120px}
+body.mode-map .ol-zone,body.mode-map .ol-card,
+body.mode-src .ol-zone,body.mode-src .ol-card{display:none}
+.mm-tools{display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px}
+.mm-tools button{
+  height:26px;min-width:30px;padding:0 9px;border:0;border-radius:7px;cursor:pointer;
+  background:rgb(var(--sunken));color:rgb(var(--muted));font-family:inherit;font-size:12px;
+}
+.mm-tools button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.mm-wrap{
+  overflow:auto;border:.5px solid rgb(var(--line));border-radius:12px;
+  background:rgb(var(--surface));padding:8px;max-height:min(74vh,760px);
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+.mm-wrap svg{display:block;margin:0 auto}
+.mm-tip{margin-top:10px;font-size:12px;color:rgb(var(--faint));text-align:center}
+@media (max-width:640px){
+  .modes{width:100%}
+  .modes button{flex:1;padding:0 6px}
+}
 </style>
 </head>
 <body>
@@ -380,6 +417,191 @@ document.addEventListener('click', (e) => {
   card.classList.remove('open');
 });
 
+/* ===== 阅读模式：预览 / Markdown / 思维导图（被分享者自己切） ===== */
+let TITLE = '', BODY = '';
+const MAP = { built: false, root: null, W: 0, H: 0, k: 0, auto: true };
+const M_NH = 32, M_VGAP = 12, M_HGAP = 52, M_PAD = 22;
+const M_FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif';
+let _mCtx = null;
+function mCtx(){
+  if (!_mCtx) _mCtx = document.createElement('canvas').getContext('2d');
+  _mCtx.font = '13px ' + M_FONT;
+  return _mCtx;
+}
+function vv(name, fb){
+  const t = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return t ? 'rgb(' + t.split(/[\s,]+/).filter(Boolean).join(',') + ')' : fb;
+}
+function mXml(t){
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+/* 去掉行内 Markdown 记号，只留可读文字 */
+function mClean(t){
+  return String(t || '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function buildMap(){
+  const root = { label: TITLE || '未命名', text: '', depth: 0, children: [], w: 0, x: 0, y: 0 };
+  const parents = [root], indents = [];
+  let base = 0, minH = 0, firstHead = true, fence = false, count = 0;
+  const lines = String(BODY || '').replace(/\r/g, '').split('\n');
+  for (const raw of lines) {
+    if (count > 400) break;
+    if (/^\s*(```|~~~)/.test(raw)) { fence = !fence; continue; }
+    if (fence) continue;
+    if (!raw.trim()) continue;
+    const h = raw.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (h) {
+      const lv = Math.min(6, h[1].length);
+      const label = mClean(h[2]);
+      if (!label) continue;
+      // 开头的一级标题如果就是笔记标题，别重复画一层
+      if (firstHead && lv === 1 && label === mClean(TITLE)) {
+        firstHead = false; parents.length = 1; base = 0; indents.length = 0; continue;
+      }
+      firstHead = false;
+      if (!minH || lv < minH) minH = lv;
+      const depth = Math.max(1, Math.min(lv - minH + 1, parents.length));
+      const node = { label, text: '', depth, children: [], w: 0, x: 0, y: 0 };
+      parents[depth - 1].children.push(node);
+      parents.length = depth + 1;
+      parents[depth] = node;
+      base = depth;
+      indents.length = 0;
+      count++;
+      continue;
+    }
+    const li = raw.match(/^(\s*)(?:[-*+]|\d{1,3}[.)])\s+(.+)$/);
+    if (!li) continue;
+    const indent = li[1].replace(/\t/g, '  ').length;
+    const label = mClean(li[2].replace(/^\[[ xX]\]\s*/, ''));
+    if (!label) continue;
+    while (indents.length && indent < indents[indents.length - 1]) indents.pop();
+    if (!indents.length || indent > indents[indents.length - 1]) indents.push(indent);
+    const k = Math.min(indents.length, 8);
+    const depth = Math.min(base + k, parents.length);
+    const parent = parents[depth - 1] || parents[parents.length - 1] || root;
+    const node = { label, text: '', depth, children: [], w: 0, x: 0, y: 0 };
+    parent.children.push(node);
+    parents.length = depth + 1;
+    parents[depth] = node;
+    count++;
+  }
+  // 量宽 + 排版（向右展开，和笔记里默认的逻辑图一致）
+  const ctx = mCtx();
+  const colW = [];
+  let maxD = 0;
+  (function walk(n, d) {
+    const label = n.label.length > 42 ? n.label.slice(0, 42) + '…' : n.label;
+    n.text = label;
+    n.w = Math.max(d === 0 ? 104 : 58, Math.min(260, Math.ceil(ctx.measureText(label).width) + 26));
+    colW[d] = Math.max(colW[d] || 0, n.w);
+    maxD = Math.max(maxD, d);
+    n.children.forEach(c => walk(c, d + 1));
+  })(root, 0);
+  const xs = [M_PAD];
+  for (let d = 1; d <= maxD; d++) xs[d] = xs[d - 1] + colW[d - 1] + M_HGAP;
+  let cursor = M_PAD;
+  (function place(n) {
+    n.x = xs[n.depth];
+    if (!n.children.length) { n.y = cursor + M_NH / 2; cursor += M_NH + M_VGAP; return; }
+    const start = cursor;
+    n.children.forEach(place);
+    n.y = (start + cursor - M_VGAP) / 2;
+  })(root);
+  MAP.root = root;
+  MAP.W = xs[maxD] + colW[maxD] + M_PAD;
+  MAP.H = Math.max(cursor - M_VGAP, M_NH) + M_PAD;
+}
+function mmSvg(){
+  const root = MAP.root, W = MAP.W, H = MAP.H;
+  const c = {
+    bg: vv('--surface', '#fff'), node: vv('--surface', '#fff'), line: vv('--line', '#e6e9ec'),
+    ink: vv('--ink-2', '#464b50'), ivy: vv('--ivy', '#287a52'),
+    soft: vv('--ivy-soft', '#e5f3eb'), softInk: vv('--ivy-ink', '#1b5c3c')
+  };
+  const out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">'];
+  out.push('<rect width="' + W + '" height="' + H + '" fill="' + c.bg + '"/>');
+  (function links(n) {
+    n.children.forEach(k => {
+      const x1 = n.x + n.w, y1 = n.y, x2 = k.x, y2 = k.y, dx = Math.max(18, (x2 - x1) * 0.45);
+      out.push('<path d="M' + x1 + ' ' + y1 + 'C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2
+        + '" fill="none" stroke="' + c.line + '" stroke-width="1.4"/>');
+      links(k);
+    });
+  })(root);
+  (function nodes(n) {
+    const top = n.y - M_NH / 2;
+    const fill = n.depth === 0 ? c.ivy : (n.depth === 1 ? c.soft : c.node);
+    const txt = n.depth === 0 ? '#ffffff' : (n.depth === 1 ? c.softInk : c.ink);
+    out.push('<g><title>' + mXml(n.label) + '</title>');
+    out.push('<rect x="' + n.x + '" y="' + top + '" width="' + n.w + '" height="' + M_NH + '" rx="8" fill="' + fill + '"'
+      + (n.depth >= 2 ? ' stroke="' + c.line + '" stroke-width="1"' : '') + '/>');
+    out.push('<text x="' + (n.x + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + M_FONT
+      + '" font-size="13" fill="' + txt + '">' + mXml(n.text) + '</text>');
+    out.push('</g>');
+    n.children.forEach(nodes);
+  })(root);
+  out.push('</svg>');
+  return out.join('');
+}
+function paintMap(){
+  const wrap = document.getElementById('mmWrap');
+  if (!wrap) return;
+  if (!MAP.built) { buildMap(); MAP.built = true; }
+  if (!MAP.root) return;
+  const cw = Math.max(280, wrap.clientWidth - 18);
+  if (MAP.auto) MAP.k = Math.min(1, cw / MAP.W);
+  if (!MAP.k) MAP.k = 1;
+  MAP.k = Math.max(0.35, Math.min(2.2, MAP.k));
+  wrap.innerHTML = mmSvg();
+  const svg = wrap.querySelector('svg');
+  if (svg) {
+    svg.setAttribute('width', Math.round(MAP.W * MAP.k));
+    svg.setAttribute('height', Math.round(MAP.H * MAP.k));
+  }
+}
+function setMode(m){
+  const panes = { preview: 'panePreview', src: 'paneSrc', map: 'paneMap' };
+  if (!panes[m]) m = 'preview';
+  document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  Object.keys(panes).forEach(k => {
+    const el = document.getElementById(panes[k]);
+    if (el) el.hidden = k !== m;
+  });
+  document.body.classList.toggle('mode-map', m === 'map');
+  document.body.classList.toggle('mode-src', m === 'src');
+  document.body.dataset.mode = m;
+  if (m === 'src') {
+    const box = document.getElementById('srcBox');
+    if (box && !box.textContent) box.textContent = (BODY || '').trim() ? BODY : '（这篇笔记没有正文）';
+  }
+  if (m === 'map') paintMap();
+  if (m !== 'preview') {
+    const card = document.getElementById('olCard');
+    if (card) card.classList.remove('open');
+  }
+  try { localStorage.setItem('share.view', m); } catch (e) {}   // 记住这位读者上次看的模式
+}
+window.addEventListener('resize', () => {
+  if (document.body.dataset.mode !== 'map') return;
+  if (MAP.auto) { MAP.k = 0; paintMap(); }
+});
+try {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (document.body.dataset.mode === 'map') paintMap();
+  });
+} catch (e) {}
+
 async function boot(){
   const slug = getSlug();
   if (!slug) return fail('链接不完整');
@@ -388,22 +610,68 @@ async function boot(){
     const d = await r.json();
     if (!r.ok) return fail(d.error || '打不开这篇笔记');
     document.title = (d.title || '分享的笔记') + ' · 随手笔记';
+    TITLE = d.title || '无标题';
+    BODY = d.body || '';
     document.getElementById('paper').innerHTML = `
       <div class="brand"><span class="dot"></span>公开分享 · 只读</div>
-      <h1 class="title">${esc(d.title || '无标题')}</h1>
-      <div class="meta">${esc(stamp(d.updatedAt || d.createdAt))}${d.updatedAt && d.createdAt && stamp(d.updatedAt) !== stamp(d.createdAt) ? '' : ''}</div>
-      <div class="body">${d.body && d.body.trim() ? mdToHtml(d.body) : '<p style="color:rgb(var(--faint))">（这篇笔记没有正文）</p>'}</div>
+      <h1 class="title">${esc(TITLE)}</h1>
+      <div class="meta">${esc(stamp(d.updatedAt || d.createdAt))}</div>
+      <div class="modes" id="modes" role="tablist">
+        <button type="button" data-mode="preview" class="on" role="tab">预览</button>
+        <button type="button" data-mode="src" role="tab">Markdown</button>
+        <button type="button" data-mode="map" role="tab">思维导图</button>
+      </div>
+      <div class="pane" id="panePreview">
+        <div class="body">${BODY.trim() ? mdToHtml(BODY) : '<p style="color:rgb(var(--faint))">（这篇笔记没有正文）</p>'}</div>
+      </div>
+      <div class="pane" id="paneSrc" hidden>
+        <div class="md-bar"><button class="copy" id="copyMd">复制 Markdown</button></div>
+        <pre class="src" id="srcBox"></pre>
+      </div>
+      <div class="pane" id="paneMap" hidden>
+        <div class="mm-tools">
+          <button type="button" data-mmz="out" title="缩小">－</button>
+          <button type="button" data-mmz="in" title="放大">＋</button>
+          <button type="button" data-mmz="fit">适应宽度</button>
+        </div>
+        <div class="mm-wrap" id="mmWrap"></div>
+        <div class="mm-tip">由标题与缩进列表自动生成 · 只读视图</div>
+      </div>
       <div class="foot">
         <span>由「随手笔记」分享</span>
         <button class="copy" id="copyBtn">复制链接</button>
       </div>`;
+    document.body.dataset.mode = 'preview';
     const btn = document.getElementById('copyBtn');
     btn.onclick = async () => {
       try { await navigator.clipboard.writeText(location.href); btn.textContent = '已复制'; }
       catch (e) { btn.textContent = '复制失败'; }
       setTimeout(() => { btn.textContent = '复制链接'; }, 1600);
     };
+    document.querySelectorAll('#modes button').forEach(b => {
+      b.onclick = () => setMode(b.dataset.mode);
+    });
+    const cm = document.getElementById('copyMd');
+    if (cm) cm.onclick = async () => {
+      try { await navigator.clipboard.writeText(BODY || ''); cm.textContent = '已复制'; }
+      catch (e) { cm.textContent = '复制失败'; }
+      setTimeout(() => { cm.textContent = '复制 Markdown'; }, 1600);
+    };
+    document.querySelectorAll('#paneMap [data-mmz]').forEach(b => {
+      b.onclick = () => {
+        const k = b.dataset.mmz;
+        if (k === 'fit') { MAP.auto = true; MAP.k = 0; return paintMap(); }
+        MAP.auto = false;
+        MAP.k = Math.min(2.2, Math.max(0.35, (MAP.k || 1) * (k === 'in' ? 1.2 : 1 / 1.2)));
+        paintMap();
+      };
+    });
     buildOutline();
+    // 支持 ?view=map / ?view=src 直接以某种模式打开，也记住读者上次的选择
+    let want = '';
+    try { want = new URLSearchParams(location.search).get('view') || ''; } catch (e) {}
+    if (!want) { try { want = localStorage.getItem('share.view') || ''; } catch (e) {} }
+    setMode(want === 'map' || want === 'src' ? want : 'preview');
   } catch (e) {
     fail('网络错误');
   }

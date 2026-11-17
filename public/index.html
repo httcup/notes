@@ -1986,7 +1986,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v137', at: '2026-11-17 16:52' };
+window.IVY_BUILD = { id: 'v140', at: '2026-11-17 17:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8177,7 +8177,7 @@ function showShareCard(url){
   ov.innerHTML = `<div class="share-card" role="dialog" aria-label="分享笔记">
       <div class="sc-head"><span>分享笔记</span><span class="sc-x" id="scClose" title="关闭">×</span></div>
       ${qrImg}
-      <p class="sc-hint">手机扫码打开，或复制链接发给朋友</p>
+      <p class="sc-hint">手机扫码打开，或复制链接发给朋友 · 对方可切换预览 / Markdown / 思维导图</p>
       <div class="sc-url" id="scUrl">${esc(url)}</div>
       <div class="sc-btns">
         <button class="sc-copy" id="scCopy">复制链接</button>

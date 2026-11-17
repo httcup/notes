@@ -161,6 +161,15 @@ body.view-todo .head-actions .notes-only{display:none}
 .nb-head .t{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nb-notes{padding-left:8px}
 .nb-notes.hidden{display:none}
+/* 二级（及更深）笔记本：缩进 + 一条很淡的层级导引线 */
+.nb-body{padding-left:9px;margin-left:7px;border-left:1px solid rgb(var(--line))}
+.nb-body.hidden{display:none}
+.nb-body .nb-notes{padding-left:5px}
+.nb-sub .nb-head{font-size:13px}
+.nb-kids:not(:empty){margin-bottom:3px}
+/* 父笔记本自己的笔记紧跟在子笔记本下面，加一条很淡的分隔，避免看成子笔记本的内容 */
+.nb-kids + .nb-notes:not(:empty){border-top:1px solid rgb(var(--line)/.7);margin-top:3px;padding-top:3px}
+.nb-kids .nb-dot{width:6px;height:6px}
 
 .note-item{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
@@ -1271,7 +1280,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 /* ============ 思维导图（由 Markdown 大纲渲染，只读，不改笔记） ============ */
 .mm-ov{position:fixed;inset:0;z-index:145;background:rgb(16 24 32 / .34);display:grid;place-items:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .18s ease}
 .mm-ov.open{opacity:1;pointer-events:auto}
-.mm-card{width:min(1180px,100%);height:min(780px,92vh);display:flex;flex-direction:column;background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;transform:translateY(10px) scale(.995);transition:transform .22s var(--spring)}
+.mm-card{position:relative;width:min(1180px,100%);height:min(780px,92vh);display:flex;flex-direction:column;background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;transform:translateY(10px) scale(.995);transition:transform .22s var(--spring)}
 .mm-ov.open .mm-card{transform:none}
 .mm-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;flex-wrap:wrap}
 .mm-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
@@ -1281,6 +1290,30 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .mm-btn{height:28px;padding:0 10px;border-radius:7px;font-size:12px;color:rgb(var(--muted));background:rgb(var(--sunken));transition:background .14s,color .14s}
 .mm-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .mm-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+/* 外观样式面板 */
+.mm-style-btn{display:inline-flex;align-items:center;gap:6px}
+.mm-swatch{width:10px;height:10px;border-radius:50%;background:rgb(var(--ivy));box-shadow:inset 0 0 0 1px rgb(0 0 0 / .14);flex:0 0 auto}
+.mm-style-pop{position:absolute;top:56px;right:16px;z-index:30;width:min(394px,calc(100% - 32px));padding:12px;border-radius:13px;background:rgb(var(--surface));border:.5px solid rgb(var(--line));box-shadow:var(--shadow-lift);animation:mmPop .16s ease}
+@keyframes mmPop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.mm-style-pop[hidden]{display:none}
+.mm-sp-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.mm-sp-hd b{font-size:12.5px;color:rgb(var(--ink))}
+.mm-sp-hd span{font-size:10.5px;color:rgb(var(--faint));margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mm-sp-x{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;color:rgb(var(--muted));flex:0 0 auto}
+.mm-sp-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.mm-sp-x svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.mm-sp-tabs{display:flex;gap:4px;padding:3px;border-radius:9px;background:rgb(var(--sunken));margin-bottom:10px}
+.mm-sp-tabs button{flex:1;height:26px;border-radius:7px;font-size:11.5px;color:rgb(var(--muted));transition:background .14s,color .14s}
+.mm-sp-tabs button:hover{color:rgb(var(--ink))}
+.mm-sp-tabs button.on{background:rgb(var(--surface));color:rgb(var(--ivy-ink));font-weight:600;box-shadow:var(--shadow-float)}
+.mm-sp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mm-sp-item{display:flex;flex-direction:column;gap:5px;padding:6px;border-radius:9px;border:1.5px solid transparent;background:rgb(var(--sunken));text-align:left;transition:border-color .14s,background .14s,transform .14s}
+.mm-sp-item:hover{border-color:rgb(var(--line));transform:translateY(-1px)}
+.mm-sp-item.on{border-color:rgb(var(--ivy));background:rgb(var(--ivy-soft))}
+.mm-sp-thumb{display:block;border-radius:6px;overflow:hidden;line-height:0;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .07)}
+.mm-sp-thumb svg{display:block;width:100%;height:auto}
+.mm-sp-nm{font-size:11.5px;font-weight:600;color:rgb(var(--ink));padding-left:1px;white-space:nowrap}
+.mm-sp-hint{font-size:10px;line-height:1.35;color:rgb(var(--faint));padding-left:1px}
 .mm-body{flex:1;position:relative;min-height:0;border-top:1px solid rgb(var(--line));background:rgb(var(--surface));overflow:hidden}
 .mm-canvas{position:absolute;inset:0;cursor:grab;touch-action:none;overscroll-behavior:contain}
 .mm-canvas.grabbing{cursor:grabbing}
@@ -1321,6 +1354,13 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   .mm-editbar{gap:5px;padding:7px 10px}
   .mm-eb{height:25px;padding:0 8px;font-size:11.5px}
   .mm-eb-tip{display:none}
+  /* 窄屏：样式面板改成贴底抽屉，两列排，别把图全遮住 */
+  .mm-style-pop{top:auto;bottom:10px;left:8px;right:8px;width:auto;max-height:62%;overflow:auto;padding:10px}
+  .mm-sp-grid{grid-template-columns:repeat(2,1fr);gap:7px}
+  .mm-sp-hd span{display:none}
+  .mm-sp-hint{display:none}
+  .mm-sp-item{padding:5px;gap:4px}
+  .mm-style-pop{max-height:56%}
 }
 
 /* ============ overlay / palette ============ */
@@ -1894,6 +1934,9 @@ const ICONS = {
   notebook:'<path d="M14 3.4H7.2A2.2 2.2 0 0 0 5 5.6v12.8a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2V8z"/><path d="M14 3.4V8h5"/><path d="M8.7 12.4h6.6M8.7 16h4.2"/>',
   folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
   todo:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.6"/><path d="m7.8 9.3 1.7 1.7 3-3.2"/><path d="M13 8.4h4M8 15h8.2"/>',
+  arrUp:'<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
+  arrDown:'<path d="M12 5v14"/><path d="m18.5 12.5-6.5 6.5-6.5-6.5"/>',
+  sub:'<path d="M6 4v8a2 2 0 0 0 2 2h10"/><path d="m14.5 10.5 3.5 3.5-3.5 3.5"/>',
   link:'<path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.1-2.1a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.1 2.1a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
   heading:'<path d="M6 5v14M18 5v14M6 12h12"/>',
   table:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M9.5 10v9M15 10v9"/>',
@@ -1919,7 +1962,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v131', at: '2026-11-17 15:58' };
+window.IVY_BUILD = { id: 'v132', at: '2026-11-17 16:30' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2002,6 +2045,9 @@ function normalizeState(s){
     if(!s.outlineHoverV1){ s.outlineOpen = false; s.outlineHoverV1 = true; }
     if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
     if(typeof s.tagFilter !== 'string') s.tagFilter = '';
+    // 思维导图外观：老数据默认经典绿
+    if(!['classic','minimal','candy','card','org','neon'].includes(s.mmStyle)) s.mmStyle = 'classic';
+    if(!['both','right','left','down','up'].includes(s.mmDir)) s.mmDir = 'right';
     if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
     if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
     if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
@@ -2010,6 +2056,26 @@ function normalizeState(s){
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
     if(!Array.isArray(s.pendingDeletes)) s.pendingDeletes = [];
+    // 笔记本树：补 parentId / order，顺手切断自环和指向已删笔记本的悬空引用
+    if(!Array.isArray(s.notebooks)) s.notebooks = [];
+    s.notebooks.forEach((nb, i)=>{
+      if(typeof nb.order !== 'number' || isNaN(nb.order)) nb.order = i;
+      if(nb.parentId === undefined) nb.parentId = null;
+      if(typeof nb.open !== 'boolean') nb.open = true;
+    });
+    const byId = new Map(s.notebooks.map(nb=>[nb.id, nb]));
+    s.notebooks.forEach(nb=>{
+      if(nb.parentId && (!byId.has(nb.parentId) || byId.get(nb.parentId).deleted)) nb.parentId = null;
+      if(nb.parentId === nb.id) nb.parentId = null;
+      // 沿着父链往上走，超过 12 层或绕回自己就断开
+      let cur = nb, steps = 0, seen = new Set();
+      while(cur && cur.parentId && steps++ < 12){
+        if(seen.has(cur.id)){ nb.parentId = null; break; }
+        seen.add(cur.id);
+        cur = byId.get(cur.parentId);
+      }
+      if(steps >= 12) nb.parentId = null;
+    });
     return s;
 }
 /* ========== 历史版本 ==========
@@ -2462,6 +2528,70 @@ function toggleNoteTag(t){
   renderMeta(); renderShelf(); save();
 }
 
+/* ---------- 笔记本树：支持把笔记本收进另一个笔记本（二级 / 更深） ---------- */
+function nbLive(){ return S.notebooks.filter(x=>!x.deleted); }
+function nbById(id){ return S.notebooks.find(x=>x.id===id && !x.deleted); }
+function nbKids(pid){
+  const want = pid || null;
+  return nbLive().filter(x=>(x.parentId||null) === want)
+    .sort((a,b)=> (a.order||0)-(b.order||0) || (a.updatedAt||0)-(b.updatedAt||0));
+}
+function nbDescIds(id, out){
+  out = out || [];
+  nbKids(id).forEach(k=>{
+    if(out.indexOf(k.id) < 0){ out.push(k.id); nbDescIds(k.id, out); }
+  });
+  return out;
+}
+function nbFlat(){                       // 按树顺序铺平，菜单里用缩进表示层级
+  const out = [];
+  (function walk(pid, lv){
+    if(lv > 8) return;
+    nbKids(pid).forEach(nb=>{ out.push({ nb, lv }); walk(nb.id, lv + 1); });
+  })(null, 0);
+  return out;
+}
+function nbNoteCount(id){                // 含子笔记本的笔记总数
+  let c = S.notes.filter(n=>n.notebookId===id && !n.trashed).length;
+  nbDescIds(id).forEach(k=>{ c += S.notes.filter(n=>n.notebookId===k && !n.trashed).length; });
+  return c;
+}
+function nbOpenChain(id){                // 把祖先依次展开，移完能立刻看见
+  let cur = id ? nbById(id) : null, guard = 0;
+  while(cur && guard++ < 10){
+    if(cur.open === false) cur.open = true;
+    cur = cur.parentId ? nbById(cur.parentId) : null;
+  }
+}
+function nbSetParent(id, parentId){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb) return false;
+  const target = parentId || null;
+  if(target === (nb.parentId||null)) return false;
+  if(target && (target === id || nbDescIds(id).includes(target))){ toast('不能放进它自己的子笔记本里'); return false; }
+  const sibs = nbKids(target);
+  nb.parentId = target;
+  nb.order = sibs.length ? Math.max(...sibs.map(s=>s.order||0)) + 1 : 0;
+  nb.updatedAt = Date.now();
+  if(target) nbOpenChain(target);
+  renderAll(); save();
+  const p = target ? nbById(target) : null;
+  toast(p ? '已收进「' + p.name + '」' : '已移到顶层');
+  return true;
+}
+function nbReorder(id, dir){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
+  const sibs = nbKids(nb.parentId || null);
+  const i = sibs.findIndex(x=>x.id===id), j = i + dir;
+  if(i < 0 || j < 0 || j >= sibs.length) return;
+  const arr = sibs.slice();
+  arr.splice(i, 1);
+  arr.splice(j, 0, nb);
+  const now = Date.now();
+  arr.forEach((s, k)=>{ s.order = k; s.updatedAt = now; });
+  renderAll(); save();
+  toast(dir < 0 ? '已上移' : '已下移');
+}
+
 function renderShelf(){
   brandName.textContent = ({notes:'随手笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '随手笔记';
   document.body.classList.toggle('view-todo', S.view === 'todo');
@@ -2490,21 +2620,31 @@ function renderShelf(){
     </button>`;
   }
 
-  S.notebooks.filter(nb=>!nb.deleted).forEach(nb=>{
-    const list = byNb[nb.id]||[];
+  function nbGroupHtml(nb, lv){
+    const own = byNb[nb.id] || [];
+    const kids = nbKids(nb.id);
+    const open = nb.open !== false;
     const dot = /^#[\da-fA-F]{3,8}$/.test(nb.color || '') ? nb.color : '#287a52';
-    html += `<div class="nb-group">
+    let inner = '';
+    if(kids.length || own.length){
+      inner = `<div class="nb-body ${open?'':'hidden'}">`;
+      if(kids.length) inner += `<div class="nb-kids">${kids.map(k=>nbGroupHtml(k, lv+1)).join('')}</div>`;
+      if(own.length) inner += `<div class="nb-notes">${own.map(noteRow).join('')}</div>`;
+      inner += `</div>`;
+    }
+    return `<div class="nb-group${lv?' nb-sub':''}">
       <div class="nb-row">
-        <button class="nb-head ${nb.open?'open':''}" data-nb="${nb.id}">
+        <button class="nb-head ${open?'open':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
           <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
           <span class="nb-dot" style="background:${dot}"></span>
-          <span class="t">${esc(nb.name)}</span><span class="meta">${list.length}</span>
+          <span class="t">${esc(nb.name)}</span><span class="meta">${kids.length ? nbNoteCount(nb.id) : own.length}</span>
         </button>
-        <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 删除">${ic('more')}</button>
+        <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 收纳 / 排序">${ic('more')}</button>
       </div>
-      <div class="nb-notes ${nb.open?'':'hidden'}">${list.map(noteRow).join('')}</div>
+      ${inner}
     </div>`;
-  });
+  }
+  html += nbKids(null).map(nb=>nbGroupHtml(nb, 0)).join('');
 
   if(loose.length){
     const lopen = S.looseOpen !== false;          // 未归类默认展开
@@ -4128,19 +4268,24 @@ let NB_DLG = null;
 function nbDialogOpen(){ const o = $('#nbOv'); return !!o && o.classList.contains('open'); }
 function openNbDialog(opts){
   const ov = $('#nbOv'); if(!ov) return;
-  NB_DLG = Object.assign({ mode:'create', value:'', original:'', color:NB_COLORS[0], count:0, pvName:'', onDone:null }, opts || {});
+  NB_DLG = Object.assign({ mode:'create', value:'', original:'', color:NB_COLORS[0], count:0, pvName:'', parentId:null, subCount:0, onDone:null }, opts || {});
   const rename = NB_DLG.mode === 'rename', move = NB_DLG.mode === 'move', del = NB_DLG.mode === 'delete';
   const dlg = ov.querySelector('.nb-dlg'); if(dlg) dlg.classList.toggle('del', del);
   $('#nbIco').classList.toggle('danger', del);
   $('#nbOk').classList.toggle('danger', del);
-  $('#nbTitle').textContent = del ? '删除笔记本' : (rename ? '重命名笔记本' : '新建笔记本');
+  const parentNb = NB_DLG.parentId ? nbById(NB_DLG.parentId) : null;
+  $('#nbTitle').textContent = del ? '删除笔记本'
+    : (rename ? '重命名笔记本' : (parentNb ? '在「' + parentNb.name + '」里新建子笔记本' : '新建笔记本'));
   $('#nbDesc').textContent  = del
-    ? (NB_DLG.count ? '里面的笔记会移到「未归类」，不会丢失' : '这是个空笔记本，删除后不可恢复')
+    ? (NB_DLG.subCount
+        ? NB_DLG.subCount + ' 个子笔记本会提到上一层，' + (NB_DLG.count ? NB_DLG.count + ' 篇笔记移到「未归类」' : '笔记不受影响')
+        : (NB_DLG.count ? '里面的笔记会移到「未归类」，不会丢失' : '这是个空笔记本，删除后不可恢复'))
     : (move ? '创建后，这篇笔记会自动移进去'
-    : (rename ? '改个名字，或顺手换个标记颜色' : '把相关的笔记收在一起，找起来更方便'));
+    : (rename ? '改个名字，或顺手换个标记颜色'
+    : (parentNb ? '子笔记本挂在「' + parentNb.name + '」下面，再点一次就能收起' : '把相关的笔记收在一起，找起来更方便')));
   $('#nbIco').innerHTML = ic(del ? 'trash' : (rename ? 'pencil' : 'notebook'));
   $('#nbOk').innerHTML = ic(del ? 'trash' : (rename ? 'check' : 'plus')) + '<span>'
-    + (del ? '删除' : (rename ? '保存' : (move ? '创建并移入' : '创建笔记本'))) + '</span>';
+    + (del ? '删除' : (rename ? '保存' : (move ? '创建并移入' : (parentNb ? '创建子笔记本' : '创建笔记本')))) + '</span>';
   $('#nbPvSub').textContent = NB_DLG.count + ' 篇笔记';
   $('#nbQuick').innerHTML = NB_QUICK.map(x=>`<button type="button" data-nbn="${esc(x)}">${esc(x)}</button>`).join('');
   $('#nbSw').innerHTML = NB_COLORS.map(c=>`<button type="button" data-nbc="${c}" style="background:${c};color:${c}" aria-label="标记颜色 ${c}"></button>`).join('');
@@ -4174,8 +4319,9 @@ function submitNbDialog(){
   if(NB_DLG.mode === 'delete'){ const d = NB_DLG; closeNbDialog(); if(d.onDone) d.onDone('', d.color); return; }
   const name = $('#nbName').value.trim();
   if(!name){ nbDlgError('先给笔记本起个名字吧'); return; }
-  if(S.notebooks.some(nb=>!nb.deleted && nb.name === name && name !== NB_DLG.original)){
-    nbDlgError('已经有同名的笔记本了'); return;
+  const sameLevel = nb => (nb.parentId || null) === (NB_DLG.parentId || null);
+  if(S.notebooks.some(nb=>!nb.deleted && nb.name === name && name !== NB_DLG.original && sameLevel(nb))){
+    nbDlgError('这一层已经有同名的笔记本了'); return;
   }
   const d = NB_DLG, color = d.color;
   closeNbDialog();
@@ -4209,22 +4355,33 @@ function submitNbDialog(){
     if(e.metaKey || e.ctrlKey || e.altKey){ e.stopPropagation(); }
   }, true);
 })();
-function createNotebook(name, color, noteToMove){
+function createNotebook(name, color, noteToMove, parentId){
   const now = Date.now();
-  const nb = { id:'nb'+now.toString(36), name, color, open:true, deleted:false, updatedAt:now };
+  const pid = parentId || null;
+  const sibs = nbKids(pid);
+  const nb = { id:'nb'+now.toString(36)+Math.random().toString(36).slice(2,5), name, color,
+               open:true, deleted:false, updatedAt:now, parentId:pid,
+               order: sibs.length ? Math.max(...sibs.map(x=>x.order||0)) + 1 : 0 };
   S.notebooks.push(nb);
+  if(pid) nbOpenChain(pid);
   if(noteToMove) moveNoteTo(noteToMove, nb.id);
   renderAll(); save();
-  toast(noteToMove ? '已创建「'+name+'」并移入这篇笔记' : '已创建笔记本「'+name+'」');
+  toast(noteToMove ? '已创建「'+name+'」并移入这篇笔记'
+    : (pid ? '已建好子笔记本「'+name+'」' : '已创建笔记本「'+name+'」'));
   return nb;
 }
 function newNotebook(){
   openNbDialog({ value:'新笔记本', onDone:(name, color)=>createNotebook(name, color) });
 }
+function newSubNotebook(parentId){
+  const p = nbById(parentId);
+  if(!p){ newNotebook(); return; }
+  openNbDialog({ value:'新笔记本', parentId, onDone:(name, color)=>createNotebook(name, color, null, parentId) });
+}
 function renameNotebook(id){
   const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
   openNbDialog({
-    mode:'rename', value:nb.name, original:nb.name, color:nb.color || NB_COLORS[0],
+    mode:'rename', value:nb.name, original:nb.name, color:nb.color || NB_COLORS[0], parentId:nb.parentId || null,
     count:S.notes.filter(n=>n.notebookId===id && !n.trashed).length,
     onDone:(name, color)=>{
       if(name === nb.name && (nb.color || NB_COLORS[0]) === color) return;
@@ -4236,11 +4393,16 @@ function renameNotebook(id){
 function delNotebook(id){
   const nb = S.notebooks.find(x=>x.id===id); if(!nb || nb.deleted) return;
   const count = S.notes.filter(n=>n.notebookId===id && !n.trashed).length;
+  const subCount = nbKids(id).length;
   openNbDialog({
-    mode:'delete', count, pvName:nb.name,
+    mode:'delete', count, subCount, pvName:nb.name,
     onDone:()=>{
       const now = Date.now();
       S.notes.forEach(n=>{ if(n.notebookId===id){ n.notebookId = null; n.updatedAt = now; } });
+      // 子笔记本不跟着删，提到上一层，顺序接在后面
+      const sibs = nbKids(nb.parentId || null).filter(x=>x.id !== id);
+      let ord = sibs.length ? Math.max(...sibs.map(x=>x.order||0)) : 0;
+      nbKids(id).forEach(k=>{ k.parentId = nb.parentId || null; k.order = ++ord; k.updatedAt = now; });
       nb.deleted = true; nb.open = false; nb.updatedAt = now;
       renderAll(); save();
       toast(count ? '已删除笔记本，'+count+' 篇笔记移到未归类' : '已删除笔记本「'+nb.name+'」');
@@ -4249,15 +4411,37 @@ function delNotebook(id){
 }
 function openNotebookMenu(anchor, id){
   const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
-  popover(anchor, [
+  const sibs = nbKids(nb.parentId || null);
+  const pos = sibs.findIndex(x=>x.id === id);
+  const parentNb = nb.parentId ? nbById(nb.parentId) : null;
+  const items = [
     ['重命名', '', '', 'pencil', ()=>renameNotebook(id)],
     ['在这建一篇笔记', '', '', 'plus', ()=>{
       if(!nb.open){ nb.open = true; nb.updatedAt = Date.now(); }
       newNote(id);
     }],
+    ['新建子笔记本', '', '', 'sub', ()=>newSubNotebook(id)],
     '-',
-    ['删除笔记本', '', 'danger', 'trash', ()=>delNotebook(id)]
-  ]);
+    ['收纳到…', parentNb ? parentNb.name : '顶层', '', 'folder', ()=>openNbMovePicker(anchor, id)]
+  ];
+  if(sibs.length > 1){
+    items.push(['上移', '', '', 'arrUp', pos > 0 ? ()=>nbReorder(id, -1) : null]);
+    items.push(['下移', '', '', 'arrDown', pos < sibs.length - 1 ? ()=>nbReorder(id, 1) : null]);
+  }
+  items.push('-');
+  items.push(['删除笔记本', '', 'danger', 'trash', ()=>delNotebook(id)]);
+  popover(anchor, items);
+}
+function openNbMovePicker(anchor, id){
+  const nb = S.notebooks.find(x=>x.id===id); if(!nb) return;
+  const ban = new Set([id].concat(nbDescIds(id)));
+  const items = [['移到顶层', !nb.parentId ? '✓' : '', '', 'panelLeft', ()=>nbSetParent(id, null)]];
+  const list = nbFlat().filter(x=>!ban.has(x.nb.id));
+  if(list.length) items.push('-');
+  list.forEach(x=>{
+    items.push(['　'.repeat(x.lv) + x.nb.name, nb.parentId === x.nb.id ? '✓' : '', '', 'book', ()=>nbSetParent(id, x.nb.id)]);
+  });
+  popover(anchor, items, { align:'left' });
 }
 function toggleTrash(id){
   const n = noteById(id); if(!n) return;
@@ -8466,7 +8650,8 @@ function exportBackup(){
   const data = {
     app:'ivynote', version:1, exportedAt:new Date().toISOString(),
     notebooks: S.notebooks.filter(nb=>!nb.deleted).map(nb=>({
-      id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false })),
+      id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
+      parentId:nb.parentId||null, order:nb.order||0 })),
     notes: S.notes.filter(n=>!n.trashed && !n.deleted).map(n=>({
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
       tags:n.tags||[], createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
@@ -8762,13 +8947,13 @@ function moveNoteTo(n, notebookId){
 }
 function openMoveMenu(anchor){
   const n = noteById(S.active); if(!n) return;
-  const nbs = S.notebooks.filter(x=>!x.deleted);
-  const items = nbs.map(nb=>[
-    nb.name,
-    n.notebookId === nb.id ? '✓' : '',
+  const nbs = nbFlat();
+  const items = nbs.map(x=>[
+    '　'.repeat(x.lv) + x.nb.name,
+    n.notebookId === x.nb.id ? '✓' : '',
     '',
     'book',
-    ()=>moveNoteTo(n, nb.id)
+    ()=>moveNoteTo(n, x.nb.id)
   ]);
   if(!nbs.length) items.push(['（还没有笔记本）','','muted','book',null]);
   popover(anchor, [
@@ -9007,7 +9192,8 @@ function localPayload(){
     notes: live.concat(tombs),
     notebooks: S.notebooks.map(nb=>({
       id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
-      deleted:!!nb.deleted, updatedAt:nb.updatedAt||0
+      deleted:!!nb.deleted, updatedAt:nb.updatedAt||0,
+      parentId:nb.parentId||null, order:nb.order||0
     }))
   };
 }
@@ -9028,7 +9214,8 @@ function applyRemote(data){
       const newer = (r.updatedAt||0) > (cur.updatedAt||0);
       const same  = (r.updatedAt||0) === (cur.updatedAt||0);
       const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted
-                    || (cur.color||'')!==(r.color||'');
+                    || (cur.color||'')!==(r.color||'')
+                    || (cur.parentId||null)!==(r.parentId||null) || (cur.order||0)!==(r.order||0);
       if(newer || (same && diff)){ Object.assign(cur, r); changed = true; }
     }
   }
@@ -10128,7 +10315,7 @@ $('#aiCfgOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiCfgO
    笔记本身仍然是纯 Markdown，导出、同步、导入全都不受影响。 */
 const MM = { noteId:null, root:null, lay:null, s:1, tx:0, ty:0, withList:true,
              ptrs:new Map(), pinch:0, moved:0, byId:new Map(), c:{}, bg:'#fff',
-             sel:0, seq:0, style:null, canEdit:false, undo:[] };
+             sel:0, seq:0, style:null, canEdit:false, undo:[], styleId:'', dir:'', uiTab:'dir' };
 const MM_NH = 32, MM_VGAP = 12, MM_HGAP = 56, MM_PAD = 26;
 const MM_FONT = "-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif";
 let _mmCtx = null;
@@ -10224,6 +10411,9 @@ function mmBuildTree(note, withList){
 }
 function mmMeasureTree(root, lay){
   const ctx = mmCtx();
+  // 一级分支编号，彩虹 / 霓虹样式按它上色，整条枝干同色
+  root.br = -1;
+  root.children.forEach((c, i) => { c.br = i; });
   (function walk(n){
     const label = n.label.length > 46 ? n.label.slice(0, 46) + '…' : n.label;
     n.text = label;
@@ -10231,17 +10421,64 @@ function mmMeasureTree(root, lay){
     n.w = Math.max(n.depth === 0 ? 108 : 62, Math.min(268, tw + 26));
     lay.colW[n.depth] = Math.max(lay.colW[n.depth] || 0, n.w);
     lay.maxDepth = Math.max(lay.maxDepth, n.depth);
-    n.children.forEach(walk);
+    n.children.forEach(c => { if(n.br >= 0 && c.br == null) c.br = n.br; walk(c); });
   })(root);
 }
 function mmLayout(root){
-  const lay = { colW:[], xs:[], maxDepth:0, width:0, height:0 };
+  const dir = MM.dir || 'right';
+  const lay = { colW:[], xs:[], maxDepth:0, width:0, height:0, dir };
   mmMeasureTree(root, lay);
-  lay.xs[0] = MM_PAD;
-  for(let d = 1; d <= lay.maxDepth; d++) lay.xs[d] = lay.xs[d-1] + lay.colW[d-1] + MM_HGAP;
-  let cursor = MM_PAD;
-  (function place(n){
-    n.x = lay.xs[n.depth];
+  root.side = '';
+  if(dir === 'down' || dir === 'up') mmLayoutV(root, lay, dir);
+  else mmLayoutH(root, lay, dir);
+  lay.dir = dir;
+  return lay;
+}
+function mmShiftTree(n, dy){
+  n.y += dy;
+  n.children.forEach(c=>mmShiftTree(c, dy));
+}
+function mmShiftTreeX(n, dx){
+  n.x += dx;
+  n.children.forEach(c=>mmShiftTreeX(c, dx));
+}
+/* 横向：向右 / 向左 / 左右双侧 */
+function mmLayoutH(root, lay, dir){
+  const gap = MM_HGAP;
+  const all = root.children;
+  let R = [], L = [];
+  if(dir === 'left') L = all;
+  else if(dir === 'right') R = all;
+  else { const half = Math.ceil(all.length / 2); R = all.slice(0, half); L = all.slice(half); }
+
+  const cols = list => {
+    const w = [0]; let max = 0;
+    function walk(n, d){
+      w[d] = Math.max(w[d] || 0, n.w);
+      if(d > max) max = d;
+      if(!n.collapsed) n.children.forEach(c=>walk(c, d + 1));
+    }
+    list.forEach(n=>walk(n, 1));
+    w.length = max + 1;
+    return { w, max };
+  };
+  const SR = cols(R), SL = cols(L);
+  const ext = S => { let e = 0; for(let d = 1; d <= S.max; d++) e += S.w[d] + gap; return e; };
+  const extL = ext(SL);
+
+  root.x = MM_PAD + extL;
+  const xsR = [0];
+  let xr = root.x + root.w + gap;
+  for(let d = 1; d <= SR.max; d++){ xsR[d] = xr; xr += SR.w[d] + gap; }
+  const xeL = [0];
+  let xl = root.x - gap;
+  for(let d = 1; d <= SL.max; d++){ xeL[d] = xl; xl -= SL.w[d] + gap; }
+
+  let cursor = 0;
+  const place = (n, side) => {
+    n.side = side;
+    if(side === 'right') n.x = xsR[n.depth];
+    else if(side === 'left') n.x = xeL[n.depth] - n.w;
     const kids = n.collapsed ? [] : n.children;
     if(!kids.length){
       n.y = cursor + MM_NH / 2;
@@ -10249,68 +10486,356 @@ function mmLayout(root){
       return;
     }
     const start = cursor;
-    kids.forEach(place);
+    kids.forEach(c=>place(c, side));
     n.y = (start + cursor - MM_VGAP) / 2;
+  };
+  function placeGroup(list, side){
+    cursor = 0;
+    list.forEach(n=>place(n, side));
+    return Math.max(0, cursor - MM_VGAP);
+  }
+  const hR = placeGroup(R, 'right');
+  const hL = placeGroup(L, 'left');
+  // 左右两边的中线要落在同一个 y 上，根节点才不会歪
+  if(hR && hL) mmShiftTree2List(L, hR / 2 - hL / 2);
+  const rootY = hR ? hR / 2 : (hL ? hL / 2 : 0);
+  root.y = rootY;
+
+  let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
+  (function walk(n){
+    minY = Math.min(minY, n.y - MM_NH / 2); maxY = Math.max(maxY, n.y + MM_NH / 2);
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + n.w);
+    if(!n.collapsed) n.children.forEach(walk);
   })(root);
-  lay.width = lay.xs[lay.maxDepth] + lay.colW[lay.maxDepth] + MM_PAD;
-  lay.height = Math.max(cursor - MM_VGAP, MM_NH) + MM_PAD;
+  if(minY < MM_PAD) mmShiftTree(root, MM_PAD - minY);
+  lay.maxDepth = Math.max(SR.max, SL.max);
+  lay.width = maxX + MM_PAD;
+  lay.height = maxY + (minY < MM_PAD ? MM_PAD - minY : 0) + MM_PAD;
   return lay;
 }
-function mmColors(){
+function mmShiftTree2List(list, dy){
+  if(dy) list.forEach(n=>mmShiftTree(n, dy));
+}
+/* 纵向：向下 / 向上（组织架构图） */
+function mmLayoutV(root, lay, dir){
+  const gx = 26, gy = 58;
+  let cursor = 0;
+  (function place(n){
+    n.side = dir;
+    const kids = n.collapsed ? [] : n.children;
+    if(!kids.length){ n.x = cursor; cursor += n.w + gx; return; }
+    kids.forEach(place);
+    const first = kids[0], last = kids[kids.length - 1];
+    n.x = (first.x + last.x + last.w) / 2 - n.w / 2;
+  })(root);
+  let maxD = 0, minX = Infinity, maxX = -Infinity;
+  (function walk(n){
+    maxD = Math.max(maxD, n.depth);
+    if(!n.collapsed) n.children.forEach(walk);
+  })(root);
+  (function walk(n){
+    n.y = MM_PAD + (dir === 'up' ? (maxD - n.depth) : n.depth) * (MM_NH + gy) + MM_NH / 2;
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + n.w);
+    if(!n.collapsed) n.children.forEach(walk);
+  })(root);
+  const dx = MM_PAD - minX;
+  if(dx) mmShiftTreeX(root, dx);
+  lay.maxDepth = maxD;
+  lay.width = maxX + dx + MM_PAD;
+  lay.height = MM_PAD * 2 + maxD * (MM_NH + gy) + MM_NH;
+  return lay;
+}
+/* ---------- 外观预设：同一棵树，六种画法 ---------- */
+const MM_PRESETS = [
+  { id:'classic', name:'经典绿',   hint:'圆角卡片 · 柔和曲线',       shape:'round',  link:'curve' },
+  { id:'minimal', name:'极简线',   hint:'去掉底色 · 只留文字细线',   shape:'plain',  link:'curve' },
+  { id:'candy',   name:'彩虹分支', hint:'一级分支各一色 · 粗枝干',   shape:'pill',   link:'taper' },
+  { id:'card',    name:'悬浮卡片', hint:'白色卡片投影 · 直角折线',   shape:'card',   link:'elbow', shadow:true },
+  { id:'org',     name:'组织架构', hint:'方角节点 · 树状折线',       shape:'square', link:'elbow' },
+  { id:'neon',    name:'夜间霓虹', hint:'深色底 · 发光描边',         shape:'glow',   link:'curve', glow:true }
+];
+const MM_HUES_LIGHT = ['#dd6149','#d8983a','#3f9c69','#3a80c5','#7a66c6','#c9528a','#2f9691','#a0763c'];
+const MM_HUES_DARK  = ['#ff8f76','#efbb68','#61c98d','#66a9ee','#a89af0','#f083ab','#52c4bf','#cda05e'];
+function mmStyleIds(){ return MM_PRESETS.map(p => p.id); }
+function mmPreset(id){
+  const want = id || MM.styleId || 'classic';
+  return MM_PRESETS.find(p => p.id === want) || MM_PRESETS[0];
+}
+function mmDark(){ return document.documentElement.dataset.theme === 'dark'; }
+function mmRgbArr(h){
+  h = String(h || '').replace('#','').trim();
+  if(h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const n = parseInt(h, 16);
+  return isNaN(n) ? [40,40,40] : [(n>>16)&255, (n>>8)&255, n&255];
+}
+function mmMix(a, b, t){
+  const A = mmRgbArr(a), B = mmRgbArr(b);
+  return 'rgb(' + A.map((v,i)=> Math.round(v + (B[i]-v)*t)).join(',') + ')';
+}
+function mmRgba(h, a){ return 'rgba(' + mmRgbArr(h).join(',') + ',' + a + ')'; }
+
+function mmPalette(fid){
+  const id = fid || MM.styleId || 'classic';
+  const dark = mmDark();
   const cs = getComputedStyle(document.documentElement);
   const v = (name, fb) => {
     const t = cs.getPropertyValue(name).trim();
-    return t ? 'rgb(' + t.split(/[\s,]+/).filter(Boolean).join(' ') + ')' : fb;
+    return t ? 'rgb(' + t.split(/[\s,]+/).filter(Boolean).join(',') + ')' : fb;
   };
   const c = {
-    bg:      v('--surface', '#ffffff'),
-    node:    v('--surface', '#ffffff'),
-    stroke:  v('--line', '#e3e7ea'),
-    ink:     v('--ink-2', '#33404a'),
+    id,
+    bg:      v('--surface', dark ? '#171d22' : '#ffffff'),
+    node:    v('--surface', dark ? '#1b2229' : '#ffffff'),
+    stroke:  dark ? '#2f3a42' : '#e4e8ea',
+    ink:     v('--ink-2', dark ? '#d6dee5' : '#33404a'),
     root:    v('--ivy', '#287a52'),
     rootTxt: v('--on-ivy', '#ffffff'),
-    soft:    v('--ivy-soft', '#e5f3eb'),
-    softTxt: v('--ivy-ink', '#1b5c3c'),
-    link:    v('--line', '#dfe4e8')
+    soft:    v('--ivy-soft', dark ? '#1e3328' : '#e5f3eb'),
+    softTxt: v('--ivy-ink', dark ? '#8ecfae' : '#1b5c3c'),
+    link:    dark ? '#3a474f' : '#cfdad4',
+    accent:  v('--ivy', '#287a52'),
+    sel:     v('--ivy', '#287a52'),
+    hues:    null
   };
+  if(id === 'minimal'){
+    c.bg = v('--surface', dark ? '#141a1f' : '#ffffff');
+    c.node = 'none';
+    c.stroke = dark ? '#3a474f' : '#dfe5e8';
+    c.ink = v('--ink-2', dark ? '#dbe3e9' : '#2c363d');
+    c.root = dark ? '#e8f0f5' : '#212b32';
+    c.rootTxt = dark ? '#11181d' : '#ffffff';
+    c.soft = dark ? '#20302a' : '#eef3f0';
+    c.softTxt = v('--ivy-ink', dark ? '#8ecfae' : '#1b5c3c');
+    c.link = dark ? '#333f47' : '#dadfe3';
+    c.accent = v('--ivy', dark ? '#57b98a' : '#287a52');
+    c.sel = c.accent;
+  }
+  if(id === 'candy'){
+    c.bg = v('--surface', dark ? '#161c22' : '#ffffff');
+    c.node = v('--surface', dark ? '#1c242b' : '#ffffff');
+    c.stroke = dark ? '#2d383f' : '#e7ebed';
+    c.ink = v('--ink-2', dark ? '#d8e0e6' : '#33404a');
+    c.root = dark ? '#dfe8ee' : '#2c3740';
+    c.rootTxt = dark ? '#11181d' : '#ffffff';
+    c.soft = dark ? '#232f36' : '#f0f3f5';
+    c.softTxt = dark ? '#cfe0dd' : '#2b3a3c';
+    c.link = dark ? '#3b474f' : '#d3d9dd';
+    c.hues = dark ? MM_HUES_DARK : MM_HUES_LIGHT;
+    c.accent = c.hues[2];
+    c.sel = c.hues[3];
+  }
+  if(id === 'card'){
+    c.bg = dark ? '#12181d' : '#f3f5f6';
+    c.node = dark ? '#1c242b' : '#ffffff';
+    c.stroke = dark ? '#2c363e' : '#e6eaed';
+    c.ink = v('--ink-2', dark ? '#dae3e9' : '#2f3a44');
+    c.root = dark ? '#e4ecf1' : '#33414b';
+    c.rootTxt = dark ? '#121a1f' : '#ffffff';
+    c.soft = dark ? '#20303a' : '#e9eff2';
+    c.softTxt = dark ? '#c3d8e4' : '#33454f';
+    c.link = dark ? '#41505a' : '#b9c5cd';
+    c.accent = v('--ivy', dark ? '#66c79a' : '#2b7d58');
+    c.sel = c.accent;
+  }
+  if(id === 'org'){
+    c.bg = v('--surface', dark ? '#12181d' : '#ffffff');
+    c.node = dark ? '#1a232c' : '#eef4f9';
+    c.stroke = dark ? '#2b3b49' : '#c7d8e7';
+    c.ink = dark ? '#d3e1ed' : '#25415a';
+    c.root = dark ? '#3d7fb0' : '#2b5c85';
+    c.rootTxt = '#ffffff';
+    c.soft = dark ? '#1b2c39' : '#e2eef8';
+    c.softTxt = dark ? '#a8cfe8' : '#1e4a70';
+    c.link = dark ? '#3d5a70' : '#9db8ce';
+    c.accent = dark ? '#6fb3e0' : '#2b5c85';
+    c.sel = c.accent;
+  }
+  if(id === 'neon'){
+    c.bg = '#0d1218';
+    c.node = '#141d26';
+    c.stroke = '#26343f';
+    c.ink = '#dbe7f2';
+    c.root = '#2fe0a5';
+    c.rootTxt = '#04231a';
+    c.soft = '#14322a';
+    c.softTxt = '#7ef0c0';
+    c.link = '#2b5b4c';
+    c.accent = '#2fe0a5';
+    c.sel = '#63f0c0';
+    c.hues = MM_HUES_DARK;
+  }
   return c;
 }
-function mmLook(n){
-  if(n.depth === 0) return { fill: MM.c.root, txt: MM.c.rootTxt, stroke: 'none' };
-  if(n.depth === 1) return { fill: MM.c.soft, txt: MM.c.softTxt, stroke: 'none' };
-  return { fill: MM.c.node, txt: MM.c.ink, stroke: MM.c.stroke };
+/* 连线路径：曲线 / 直角折线 / 直线 */
+function mmLinkD(style, x1, y1, x2, y2){
+  // 向左展开时 x2 < x1，dx 要跟着反向，否则曲线会甩到外面去
+  const sign = x2 >= x1 ? 1 : -1;
+  const dx = Math.max(18, Math.abs(x2 - x1) * 0.45) * sign;
+  if(style === 'straight') return 'M' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2;
+  if(style === 'elbow'){
+    if(Math.abs(y2 - y1) < 1) return 'M' + x1 + ' ' + y1 + 'H' + x2;
+    const mx = x1 + (x2 - x1) / 2, up = y2 < y1 ? -1 : 1;
+    const r = Math.max(0, Math.min(9, Math.abs(y2 - y1) / 2, Math.abs(mx - x1), Math.abs(x2 - mx)));
+    return 'M' + x1 + ' ' + y1
+      + 'H' + (mx - r) + 'Q' + mx + ' ' + y1 + ' ' + mx + ' ' + (y1 + up * r)
+      + 'V' + (y2 - up * r) + 'Q' + mx + ' ' + y2 + ' ' + (mx + r) + ' ' + y2 + 'H' + x2;
+  }
+  return 'M' + x1 + ' ' + y1 + 'C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2;
+}
+/* 纵向布局的连线（上下方向） */
+function mmLinkV(style, x1, y1, x2, y2){
+  const up = y2 >= y1 ? 1 : -1;
+  if(style === 'straight') return 'M' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2;
+  if(style === 'elbow'){
+    const my = (y1 + y2) / 2;
+    return 'M' + x1 + ' ' + y1 + 'V' + my + 'H' + x2 + 'V' + y2;
+  }
+  const dy = Math.max(16, Math.abs(y2 - y1) * 0.42) * up;
+  return 'M' + x1 + ' ' + y1 + 'C' + x1 + ' ' + (y1 + dy) + ' ' + x2 + ' ' + (y2 - dy) + ' ' + x2 + ' ' + y2;
+}
+/* 枝干：横向 / 纵向的粗细渐变填充 */
+function mmTaperH(x1, y1, x2, y2, hue){
+  const sign = x2 >= x1 ? 1 : -1;
+  const dx = Math.max(22, Math.abs(x2 - x1) * 0.45) * sign;
+  const half = 4.2;
+  return '<path d="M' + x1 + ' ' + (y1 - half)
+    + 'C' + (x1 + dx) + ' ' + (y1 - half * .85) + ' ' + (x2 - dx) + ' ' + (y2 - half * .3) + ' ' + x2 + ' ' + (y2 - 0.7)
+    + 'L' + x2 + ' ' + (y2 + 0.7)
+    + 'C' + (x2 - dx) + ' ' + (y2 + half * .3) + ' ' + (x1 + dx) + ' ' + (y1 + half * .85) + ' ' + x1 + ' ' + (y1 + half)
+    + 'Z" fill="' + hue + '" opacity=".8"/>';
+}
+function mmTaperV(x1, y1, x2, y2, hue){
+  const up = y2 >= y1 ? 1 : -1;
+  const dy = Math.max(20, Math.abs(y2 - y1) * 0.42) * up;
+  const half = 4.2;
+  return '<path d="M' + (x1 - half) + ' ' + y1
+    + 'C' + (x1 - half * .85) + ' ' + (y1 + dy) + ' ' + (x2 - half * .3) + ' ' + (y2 - dy) + ' ' + (x2 - 0.7) + ' ' + y2
+    + 'L' + (x2 + 0.7) + ' ' + y2
+    + 'C' + (x2 + half * .3) + ' ' + (y2 - dy) + ' ' + (x1 + half * .85) + ' ' + (y1 + dy) + ' ' + (x1 + half) + ' ' + y1
+    + 'Z" fill="' + hue + '" opacity=".8"/>';
 }
 function mmSvgString(){
-  const root = MM.root, lay = MM.lay;
+  const root = MM.root, lay = MM.lay, c = MM.c, p = mmPreset(), dark = mmDark();
+  const W = lay.width, H = lay.height;
   const out = [];
-  out.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + lay.width + '" height="' + lay.height + '" viewBox="0 0 ' + lay.width + ' ' + lay.height + '">');
-  out.push('<rect x="0" y="0" width="' + lay.width + '" height="' + lay.height + '" fill="' + MM.c.bg + '"/>');
+  out.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">');
+  // 投影 / 发光写在 SVG 里，导出的 PNG 才带得上（不吃 CSS）
+  if(p.shadow || p.glow){
+    out.push('<defs>');
+    if(p.shadow) out.push('<filter id="mmShadow" x="-30%" y="-40%" width="160%" height="190%">'
+      + '<feDropShadow dx="0" dy="2.5" stdDeviation="3.4" flood-color="' + (dark ? '#000000' : '#22303a') + '" flood-opacity="' + (dark ? '.6' : '.18') + '"/></filter>');
+    if(p.glow) out.push('<filter id="mmGlow" x="-45%" y="-45%" width="190%" height="190%">'
+      + '<feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="' + c.accent + '" flood-opacity=".55"/></filter>');
+    out.push('</defs>');
+  }
+  out.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + c.bg + '"/>');
   out.push('<g class="mm-vp">');
   const links = [];
+  const vDir = lay.dir === 'down' || lay.dir === 'up';
   (function walk(n){
     if(n.collapsed) return;
-    n.children.forEach(c => {
-      const x1 = n.x + n.w, y1 = n.y, x2 = c.x, y2 = c.y;
-      const dx = Math.max(20, (x2 - x1) * 0.45);
-      links.push('<path d="M' + x1 + ' ' + y1 + ' C' + (x1+dx) + ' ' + y1 + ' ' + (x2-dx) + ' ' + y2 + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="' + MM.c.link + '" stroke-width="1.4"/>');
-      walk(c);
+    n.children.forEach(k => {
+      const hue = (c.hues && k.br >= 0) ? c.hues[k.br % c.hues.length] : c.accent;
+      let x1, y1, x2, y2;
+      if(vDir){
+        const down = lay.dir === 'down';
+        x1 = n.x + n.w / 2; y1 = n.y + (down ? MM_NH / 2 : -MM_NH / 2);
+        x2 = k.x + k.w / 2; y2 = k.y + (down ? -MM_NH / 2 : MM_NH / 2);
+      }else if(k.side === 'left'){
+        x1 = n.x; y1 = n.y; x2 = k.x + k.w; y2 = k.y;     // 左侧：从父节点左边缘连到子节点右边缘
+      }else{
+        x1 = n.x + n.w; y1 = n.y; x2 = k.x; y2 = k.y;
+      }
+      if(p.link === 'taper'){
+        links.push(vDir ? mmTaperV(x1, y1, x2, y2, hue) : mmTaperH(x1, y1, x2, y2, hue));
+      }else{
+        const stroke = (c.hues || p.shape === 'glow') ? hue : c.link;
+        const sw = n.depth === 0 ? 1.8 : 1.3;
+        const d = vDir ? mmLinkV(p.link, x1, y1, x2, y2) : mmLinkD(p.link, x1, y1, x2, y2);
+        links.push('<path d="' + d + '" fill="none" stroke="' + stroke
+          + '" stroke-width="' + sw + '" stroke-linecap="round"'
+          + (p.shape === 'glow' ? ' opacity=".55"' : '') + '/>');
+      }
+      walk(k);
     });
   })(root);
   out.push(links.join(''));
   const nodes = [];
   (function walk(n){
-    const lk = mmLook(n);
-    const top = n.y - MM_NH / 2;
-    const sel = MM.sel === n.i;
+    const sel = !!MM.sel && MM.sel === n.i;   // sel=0 表示没选中，别把根节点画成选中态
+    const hue = (c.hues && n.br >= 0) ? c.hues[n.br % c.hues.length] : c.accent;
+    const l = n.x, top = n.y - MM_NH / 2, w = n.w, h = MM_NH;
     nodes.push('<g data-mm="' + n.i + '" style="cursor:pointer">');
-    nodes.push('<rect x="' + n.x + '" y="' + top + '" width="' + n.w + '" height="' + MM_NH + '" rx="8" fill="' + lk.fill + '"'
-      + (sel ? ' stroke="' + MM.c.root + '" stroke-width="2"' : (lk.stroke === 'none' ? '' : ' stroke="' + lk.stroke + '"')) + '/>');
-    nodes.push('<text x="' + (n.x + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + lk.txt + '">' + mmXml(n.text) + '</text>');
+    if(p.shape === 'plain'){
+      const txt = n.depth === 0 ? c.root : (n.depth === 1 ? hue : c.ink);
+      const fw = n.depth === 0 ? 700 : (n.depth === 1 ? 600 : 400);
+      if(sel) nodes.push('<rect data-sel="1" x="' + (l - 5) + '" y="' + (top - 1) + '" width="' + (w + 10) + '" height="' + (h + 2)
+        + '" rx="7" fill="none" stroke="' + c.sel + '" stroke-width="1.4" stroke-dasharray="4 3" opacity=".85"/>');
+      nodes.push('<text x="' + (l + 3) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" font-weight="' + fw
+        + '" fill="' + txt + '">' + mmXml(n.text) + '</text>');
+      nodes.push('<path d="M' + (l + 3) + ' ' + (top + h - 3) + 'H' + (l + w - 8) + '" stroke="' + (n.depth <= 1 ? hue : c.stroke)
+        + '" stroke-width="' + (n.depth === 0 ? 2.2 : 1.1) + '" opacity="' + (n.depth === 0 ? '.85' : '.45') + '" stroke-linecap="round"/>');
+    }else{
+      let fill = c.node, txt = c.ink, stroke = 'none', sw = 0, rx = 8, extra = '';
+      if(p.shape === 'pill'){
+        rx = h / 2;
+        if(n.depth === 0){ fill = c.root; txt = c.rootTxt; }
+        else if(n.depth === 1){
+          fill = mmRgba(hue, dark ? .3 : .14);
+          txt = dark ? mmMix(hue, '#ffffff', .34) : mmMix(hue, '#101820', .44);
+          stroke = mmRgba(hue, .5); sw = 1;
+        }else{ fill = c.node; txt = c.ink; stroke = c.stroke; sw = 1; }
+      }else if(p.shape === 'card'){
+        rx = 9; extra = ' filter="url(#mmShadow)"';
+        if(n.depth === 0){ fill = c.root; txt = c.rootTxt; }
+        else if(n.depth === 1){ fill = c.soft; txt = c.softTxt; }
+        else { fill = c.node; txt = c.ink; stroke = c.stroke; sw = 1; }
+      }else if(p.shape === 'square'){
+        rx = 2;
+        if(n.depth === 0){ fill = c.root; txt = c.rootTxt; }
+        else if(n.depth === 1){ fill = c.soft; txt = c.softTxt; }
+        else { fill = c.node; txt = c.ink; stroke = c.stroke; sw = 1; }
+      }else if(p.shape === 'glow'){
+        rx = 9;
+        if(n.depth === 0){ fill = c.root; txt = c.rootTxt; }
+        else if(n.depth === 1){
+          fill = mmRgba(hue, .18); txt = hue; stroke = mmRgba(hue, .55); sw = 1.2;
+          extra = ' filter="url(#mmGlow)"';
+        }else { fill = c.node; txt = c.ink; stroke = c.stroke; sw = 1; }
+      }else{
+        if(n.depth === 0){ fill = c.root; txt = c.rootTxt; }
+        else if(n.depth === 1){ fill = c.soft; txt = c.softTxt; }
+        else { fill = c.node; txt = c.ink; stroke = c.stroke; sw = 1; }
+      }
+      // 原始描边存在 data-st 上，取消选中时按它还原（不同样式描边规则不一样）
+      const baseSt = stroke === 'none' ? '' : stroke, baseSw = String(sw);
+      if(sel){ stroke = c.sel; sw = 2.4; }
+      nodes.push('<rect data-shape="1" data-st="' + baseSt + '" data-sw="' + baseSw + '" x="' + l + '" y="' + top
+        + '" width="' + w + '" height="' + h + '" rx="' + rx + '" fill="' + fill + '"'
+        + (stroke !== 'none' ? ' stroke="' + stroke + '" stroke-width="' + sw + '"' : '') + extra + '/>');
+      // 卡片风格：一级节点左侧一条色条，一眼分得清分支
+      if(p.shape === 'card' && n.depth >= 1)
+        nodes.push('<rect x="' + (l + 5) + '" y="' + (top + 7) + '" width="3" height="' + (h - 14) + '" rx="1.5" fill="' + hue + '" opacity=".9"/>');
+      nodes.push('<text x="' + (l + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + txt + '">' + mmXml(n.text) + '</text>');
+    }
     if(n.children.length){
       // 有子节点就常显这个圆点：展开时是「−」，折叠时显示藏了几个
+      let fbFill = c.soft, fbTxt = c.softTxt, fbStroke = c.bg;
+      if(p.shape === 'plain'){ fbFill = c.bg; fbTxt = c.ink; fbStroke = c.stroke; }
+      else if(p.shape === 'glow'){ fbFill = mmRgba(hue, .22); fbTxt = hue; fbStroke = c.bg; }
+      else if(c.hues){
+        fbFill = mmRgba(hue, .18);
+        fbTxt = dark ? mmMix(hue, '#ffffff', .3) : mmMix(hue, '#101820', .4);
+      }
+      // 折叠圆点跟着方向走：右向放右边缘、左向放左边缘、上下布局放底/顶边
+      let fx = n.x + n.w, fy = n.y;
+      if(lay.dir === 'down'){ fx = n.x + n.w / 2; fy = n.y + MM_NH / 2; }
+      else if(lay.dir === 'up'){ fx = n.x + n.w / 2; fy = n.y - MM_NH / 2; }
+      else if(n.side === 'left' || (n.depth === 0 && lay.dir === 'left')){ fx = n.x; }
       nodes.push('<g data-mm-fold="1" style="cursor:pointer">');
-      nodes.push('<circle cx="' + (n.x + n.w) + '" cy="' + n.y + '" r="9" fill="' + MM.c.soft + '" stroke="' + MM.c.bg + '" stroke-width="2"/>');
-      nodes.push('<text x="' + (n.x + n.w) + '" y="' + n.y + '" dy="0.34em" text-anchor="middle" font-family="' + MM_FONT + '" font-size="' + (n.collapsed ? 10.5 : 12) + '" font-weight="600" fill="' + MM.c.softTxt + '">' + (n.collapsed ? n.children.length : '−') + '</text>');
+      nodes.push('<circle cx="' + fx + '" cy="' + fy + '" r="9" fill="' + fbFill + '" stroke="' + fbStroke + '" stroke-width="2"/>');
+      nodes.push('<text x="' + fx + '" y="' + fy + '" dy="0.34em" text-anchor="middle" font-family="' + MM_FONT
+        + '" font-size="' + (n.collapsed ? 10.5 : 12) + '" font-weight="600" fill="' + fbTxt + '">' + (n.collapsed ? n.children.length : '−') + '</text>');
       nodes.push('</g>');
     }
     nodes.push('</g>');
@@ -10319,6 +10844,194 @@ function mmSvgString(){
   out.push(nodes.join(''));
   out.push('</g></svg>');
   return out.join('');
+}
+/* 样式缩略图：拿同一套配色画一棵小三节点树 */
+function mmPrevSvg(id){
+  const p = mmPreset(id), c = mmPalette(id), dark = mmDark();
+  const W = 112, H = 64, o = [];
+  o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" preserveAspectRatio="xMidYMid meet">');
+  if(p.shadow) o.push('<defs><filter id="mmPS" x="-30%" y="-40%" width="160%" height="190%"><feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="' + (dark ? '#000' : '#22303a') + '" flood-opacity="' + (dark ? '.55' : '.16') + '"/></filter></defs>');
+  o.push('<rect width="' + W + '" height="' + H + '" fill="' + c.bg + '"/>');
+  const R = { x:5, y:25, w:26, h:14 };
+  const kids = [ { x:47, y:5, w:56, h:13 }, { x:47, y:25.5, w:60, h:13 }, { x:47, y:46, w:48, h:13 } ];
+  const hueAt = i => (c.hues ? c.hues[(i + 2) % c.hues.length] : c.accent);
+  // 连线
+  kids.forEach((k, i) => {
+    const x1 = R.x + R.w, y1 = R.y + R.h / 2, x2 = k.x, y2 = k.y + k.h / 2;
+    const hue = hueAt(i);
+    if(p.link === 'taper'){
+      const dx = (x2 - x1) * .5, half = 3.2;
+      o.push('<path d="M' + x1 + ' ' + (y1 - half) + 'C' + (x1 + dx) + ' ' + (y1 - half * .8) + ' ' + (x2 - dx) + ' ' + (y2 - half * .3) + ' ' + x2 + ' ' + (y2 - .7)
+        + 'L' + x2 + ' ' + (y2 + .7) + 'C' + (x2 - dx) + ' ' + (y2 + half * .3) + ' ' + (x1 + dx) + ' ' + (y1 + half * .8) + ' ' + x1 + ' ' + (y1 + half) + 'Z" fill="' + hue + '" opacity=".8"/>');
+    }else{
+      o.push('<path d="' + mmLinkD(p.link, x1, y1, x2, y2) + '" fill="none" stroke="' + ((c.hues || p.shape === 'glow') ? hue : c.link) + '" stroke-width="1.2" stroke-linecap="round"' + (p.shape === 'glow' ? ' opacity=".6"' : '') + '/>');
+    }
+  });
+  const bar = (x, y, w, h, fill) => w > 0 ? '<rect x="' + x + '" y="' + y + '" width="' + Math.max(2, w) + '" height="' + h + '" rx="' + (h / 2) + '" fill="' + fill + '"/>' : '';
+  const draw = (n, fill, stroke, txt, rx, shadow) => {
+    const s = [];
+    if(p.shape === 'plain'){
+      s.push(bar(n.x + 1, n.y + n.h / 2 - 1.6, n.w * .58, 3.2, txt));
+      s.push(bar(n.x + 1, n.y + n.h - 2, n.w * .82, 1.4, txt));
+    }else{
+      s.push('<rect x="' + n.x + '" y="' + n.y + '" width="' + n.w + '" height="' + n.h + '" rx="' + rx + '" fill="' + fill + '"'
+        + (stroke ? ' stroke="' + stroke + '" stroke-width="1"' : '') + (shadow ? ' filter="url(#mmPS)"' : '') + '/>');
+      if(p.shape === 'card') s.push(bar(n.x + 3.5, n.y + 4.5, 2, n.h - 9, txt === c.rootTxt ? c.rootTxt : (c.hues ? hueAt(0) : c.accent)));
+      s.push(bar(n.x + 8, n.y + n.h / 2 - 1.7, n.w * .42, 3.4, txt));
+    }
+    return s.join('');
+  };
+  o.push(draw(R, c.root, '', c.rootTxt, p.shape === 'square' ? 2 : (p.shape === 'pill' ? R.h / 2 : 8), !!p.shadow));
+  kids.forEach((k, i) => {
+    const hue = hueAt(i);
+    let fill = c.node, txt = c.ink, stroke = c.stroke;
+    if(p.shape === 'pill'){
+      fill = mmRgba(hue, dark ? .3 : .15);
+      txt = dark ? mmMix(hue, '#ffffff', .3) : mmMix(hue, '#101820', .4);
+      stroke = mmRgba(hue, .45);
+    }else if(p.shape === 'card'){ fill = i === 0 ? c.soft : c.node; txt = i === 0 ? c.softTxt : c.ink; stroke = i === 0 ? '' : c.stroke; }
+    else if(p.shape === 'square'){ fill = i === 0 ? c.soft : c.node; txt = i === 0 ? c.softTxt : c.ink; stroke = i === 0 ? '' : c.stroke; }
+    else if(p.shape === 'glow'){ fill = mmRgba(hue, .18); txt = hue; stroke = mmRgba(hue, .5); }
+    else if(p.shape === 'plain'){ txt = hue; fill = 'none'; stroke = ''; }
+    else { fill = i === 0 ? c.soft : c.node; txt = i === 0 ? c.softTxt : c.ink; stroke = i === 0 ? '' : c.stroke; }
+    const rx = p.shape === 'square' ? 2 : (p.shape === 'pill' ? k.h / 2 : 7);
+    o.push(draw(k, fill, stroke, txt, rx, !!p.shadow));
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+/* 结构缩略图：静态几何，够表达方向就行 */
+function mmDirPrevSvg(id){
+  const c = mmPalette();
+  const dir = id || 'right';
+  const root = { x:44, y:24, w:24, h:14 };
+  let kids = [], links = [];
+  const L = (x1,y1,x2,y2)=>links.push([x1,y1,x2,y2]);
+  if(dir === 'both'){
+    kids = [{x:76,y:6,w:32,h:11},{x:76,y:29,w:32,h:11},{x:4,y:9,w:32,h:11},{x:4,y:32,w:32,h:11}];
+    L(68,31,76,11.5); L(68,31,76,34.5); L(44,31,36,14.5); L(44,31,36,37.5);
+  }else if(dir === 'left'){
+    root.x = 82;
+    kids = [{x:16,y:4,w:56,h:12},{x:12,y:25,w:60,h:12},{x:24,y:46,w:48,h:12}];
+    L(82,31,72,10); L(82,31,72,31); L(82,31,72,52);
+  }else if(dir === 'down' || dir === 'up'){
+    root.y = dir === 'down' ? 3 : 48;
+    const ky = dir === 'down' ? 44 : 7;
+    kids = [{x:2,y:ky,w:32,h:13},{x:40,y:ky,w:34,h:13},{x:80,y:ky,w:28,h:13}];
+    const ry = dir === 'down' ? 17 : 48, kEdge = dir === 'down' ? 44 : 20;
+    L(56,ry,18,kEdge); L(56,ry,57,kEdge); L(56,ry,94,kEdge);
+  }else{
+    root.x = 4;
+    kids = [{x:40,y:4,w:56,h:12},{x:40,y:25,w:60,h:12},{x:40,y:46,w:48,h:12}];
+    L(30,31,40,10); L(30,31,40,31); L(30,31,40,52);
+  }
+  const vertical = dir === 'down' || dir === 'up';
+  const o = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 64" width="112" height="64">',
+             '<rect width="112" height="64" fill="' + c.bg + '"/>'];
+  links.forEach(pt => {
+    const x1 = pt[0], y1 = pt[1], x2 = pt[2], y2 = pt[3];
+    let d;
+    if(vertical){
+      const dy = (y2 - y1) * 0.5;
+      d = 'M' + x1 + ' ' + y1 + 'C' + x1 + ' ' + (y1 + dy) + ' ' + x2 + ' ' + (y2 - dy) + ' ' + x2 + ' ' + y2;
+    }else{
+      const dx = (x2 - x1) * 0.5;
+      d = 'M' + x1 + ' ' + y1 + 'C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2;
+    }
+    o.push('<path d="' + d + '" fill="none" stroke="' + c.link + '" stroke-width="1.2" stroke-linecap="round"/>');
+  });
+  const bar = (x,y,w,h,f) => '<rect x="' + x + '" y="' + y + '" width="' + Math.max(2, w) + '" height="' + h + '" rx="' + (h/2) + '" fill="' + f + '"/>';
+  o.push('<rect x="' + root.x + '" y="' + root.y + '" width="' + root.w + '" height="' + root.h + '" rx="7" fill="' + c.root + '"/>');
+  o.push(bar(root.x + 8, root.y + root.h/2 - 1.7, root.w * 0.42, 3.4, c.rootTxt));
+  kids.forEach(k=>{
+    o.push('<rect x="' + k.x + '" y="' + k.y + '" width="' + k.w + '" height="' + k.h + '" rx="6" fill="' + c.soft + '" stroke="' + c.stroke + '" stroke-width="1"/>');
+    o.push(bar(k.x + 7, k.y + k.h/2 - 1.7, k.w * 0.4, 3.4, c.softTxt));
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+/* ---------- 结构与外观选择面板 ---------- */
+const MM_DIRS = [
+  { id:'both',  name:'思维导图', hint:'根节点居中，两边各分一半' },
+  { id:'right', name:'逻辑图 →', hint:'全部往右展开，最常用' },
+  { id:'left',  name:'← 逻辑图', hint:'全部往左展开' },
+  { id:'down',  name:'组织架构', hint:'向下分层，像树状组织图' },
+  { id:'up',    name:'向上结构', hint:'向上分层' }
+];
+function mmDirName(id){
+  const d = MM_DIRS.find(x=>x.id === id);
+  return d ? d.name : MM_DIRS[1].name;
+}
+function mmSyncStyleBtn(){
+  const p = mmPreset();
+  const nm = document.getElementById('mmStyleName');
+  if(nm) nm.textContent = p.name;
+  const sw = document.getElementById('mmSwatch');
+  if(sw) sw.style.background = MM.c.accent || '#287a52';
+  const pop = document.getElementById('mmStylePop');
+  if(pop && !pop.hidden) mmPaintStyleGrid();
+}
+function mmPaintStyleGrid(){
+  const grid = document.getElementById('mmGrid');
+  if(!grid) return;
+  const tab = MM.uiTab || 'dir';
+  if(tab === 'dir'){
+    grid.innerHTML = MM_DIRS.map(d =>
+      '<button type="button" class="mm-sp-item' + (d.id === (MM.dir||'right') ? ' on' : '') + '" data-mmdir="' + d.id + '">'
+      + '<span class="mm-sp-thumb">' + mmDirPrevSvg(d.id) + '</span>'
+      + '<span class="mm-sp-nm">' + d.name + '</span>'
+      + '<span class="mm-sp-hint">' + d.hint + '</span>'
+      + '</button>').join('');
+    grid.querySelectorAll('[data-mmdir]').forEach(b => { b.onclick = () => mmApplyDir(b.dataset.mmdir); });
+  }else{
+    grid.innerHTML = MM_PRESETS.map(p =>
+      '<button type="button" class="mm-sp-item' + (p.id === MM.styleId ? ' on' : '') + '" data-mms="' + p.id + '">'
+      + '<span class="mm-sp-thumb">' + mmPrevSvg(p.id) + '</span>'
+      + '<span class="mm-sp-nm">' + p.name + '</span>'
+      + '<span class="mm-sp-hint">' + p.hint + '</span>'
+      + '</button>').join('');
+    grid.querySelectorAll('[data-mms]').forEach(b => { b.onclick = () => mmApplyStyle(b.dataset.mms); });
+  }
+  document.querySelectorAll('#mmSpTabs [data-mmtab]').forEach(b =>
+    b.classList.toggle('on', b.dataset.mmtab === tab));
+}
+function mmApplyStyle(id){
+  if(!mmStyleIds().includes(id)) id = 'classic';
+  MM.styleId = id;
+  if(S && typeof S === 'object'){ S.mmStyle = id; try{ save(); }catch(e){} }
+  MM.c = mmPalette();
+  MM.bg = MM.c.bg;
+  const canvas = document.querySelector('#mmCanvas');
+  if(canvas){
+    const body = canvas.closest ? canvas.closest('.mm-body') : null;
+    if(body) body.style.background = MM.c.bg;
+    if(MM.root && MM.lay) canvas.innerHTML = mmSvgString();
+  }
+  mmSyncStyleBtn();
+  // 窄屏是贴底抽屉，选完就收起来，不然图被挡掉一半
+  if(window.innerWidth <= 760) mmToggleStyle(false);
+}
+function mmApplyDir(id){
+  if(!MM_DIRS.some(d => d.id === id)) id = 'right';
+  MM.dir = id;
+  if(S && typeof S === 'object'){ S.mmDir = id; try{ save(); }catch(e){} }
+  if(MM.root){
+    MM.lay = mmLayout(MM.root);
+    const canvas = document.querySelector('#mmCanvas');
+    if(canvas) canvas.innerHTML = mmSvgString();
+    mmFit();
+  }
+  mmPaintStyleGrid();
+  if(window.innerWidth <= 760) mmToggleStyle(false);
+}
+function mmToggleStyle(force){
+  const pop = document.getElementById('mmStylePop');
+  if(!pop) return;
+  const open = force == null ? pop.hidden : !!force;
+  if(open) mmPaintStyleGrid();
+  pop.hidden = !open;
+  const btn = document.getElementById('mmStyleBtn');
+  if(btn) btn.classList.toggle('on', !!open);
 }
 function mmApply(){
   const g = document.querySelector('#mmCanvas .mm-vp');
@@ -10337,13 +11050,24 @@ function mmFit(){
   if(!box || !MM.lay) return;
   const bw = box.clientWidth, bh = box.clientHeight;
   let s = Math.min((bw - 24) / MM.lay.width, (bh - 24) / MM.lay.height, 1.35);
-  // 手机屏窄，硬塞进一屏会小到看不清：保底 0.78，超出的部分让用户拖/缩
-  const floor = bw < 760 ? 0.78 : 0.18;
+  // 手机屏窄，硬塞进一屏会小到看不清：保底缩放，超出的部分让用户拖/缩。
+  // 双侧布局天生两倍宽，保底值给低一档，否则只能看到半棵树
+  const both = MM.lay.dir === 'both';
+  const floor = bw < 760 ? (both ? 0.56 : 0.78) : 0.18;
   s = Math.max(floor, Math.min(2.6, s));
   MM.s = s;
   const w = MM.lay.width * s, h = MM.lay.height * s;
-  MM.tx = w <= bw - 24 ? (bw - w) / 2 : 12;
-  MM.ty = h <= bh - 24 ? (bh - h) / 2 : 12;
+  // 装得下就居中；装不下就以根节点为中心（不然一打开根节点可能被推到屏幕外）
+  if(w <= bw - 24) MM.tx = (bw - w) / 2;
+  else {
+    const rx = (MM.root.x + MM.root.w / 2) * s;
+    MM.tx = Math.min(24, Math.max(bw - w - 24, bw / 2 - rx));
+  }
+  if(h <= bh - 24) MM.ty = (bh - h) / 2;
+  else {
+    const ry = MM.root.y * s;
+    MM.ty = Math.min(24, Math.max(bh - h - 24, bh / 2 - ry));
+  }
   mmApply();
 }
 function mmSetAll(n, v){
@@ -10449,16 +11173,27 @@ function mmBlockEdit(){
 function mmPaintSel(idx){
   if(!idx) return;
   const n = MM.byId.get(idx);
-  const rect = document.querySelector('#mmCanvas [data-mm="' + idx + '"] rect');
-  if(!n || !rect) return;
-  if(MM.sel === idx){
-    rect.setAttribute('stroke', MM.c.root);
-    rect.setAttribute('stroke-width', '2');
-  }else{
-    const lk = mmLook(n);
-    if(lk.stroke === 'none') rect.removeAttribute('stroke');
-    else rect.setAttribute('stroke', lk.stroke);
-    rect.removeAttribute('stroke-width');
+  const g = document.querySelector('#mmCanvas [data-mm="' + idx + '"]');
+  if(!n || !g) return;
+  const on = MM.sel === idx;
+  const shape = g.querySelector('[data-shape]');
+  if(shape){
+    if(on){
+      shape.setAttribute('stroke', MM.c.sel);
+      shape.setAttribute('stroke-width', '2.4');
+    }else{
+      const st = shape.getAttribute('data-st'), sw = shape.getAttribute('data-sw') || '1';
+      if(st){ shape.setAttribute('stroke', st); shape.setAttribute('stroke-width', sw); }
+      else { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
+    }
+  }
+  // 极简风格没有底色，用虚线框标选中
+  const old = g.querySelector('[data-sel]');
+  if(old) old.remove();
+  if(on && mmPreset().shape === 'plain'){
+    const l = n.x, top = n.y - MM_NH / 2, w = n.w, h = MM_NH;
+    g.insertAdjacentHTML('afterbegin', '<rect data-sel="1" x="' + (l - 5) + '" y="' + (top - 1) + '" width="' + (w + 10)
+      + '" height="' + (h + 2) + '" rx="7" fill="none" stroke="' + MM.c.sel + '" stroke-width="1.4" stroke-dasharray="4 3" opacity=".85"/>');
   }
 }
 function mmSelect(idx){
@@ -10599,8 +11334,11 @@ function mmRefresh(refit){
   if(!ov) return;
   const note = noteById(MM.noteId);
   if(!note){ closeMindMap(); return; }
-  MM.c = mmColors();
+  if(!MM.styleId) MM.styleId = (S && S.mmStyle) || 'classic';
+  if(!MM.dir) MM.dir = (S && S.mmDir) || 'right';
+  MM.c = mmPalette();
   MM.bg = MM.c.bg;
+  mmSyncStyleBtn();
   const built = mmBuildTree(note, MM.withList);
   MM.root = built.root;
   MM.style = built.style;
@@ -10612,6 +11350,8 @@ function mmRefresh(refit){
   if(MM.sel && !MM.byId.has(MM.sel)) MM.sel = 0;
   const empty = ov.querySelector('#mmEmpty'), canvas = ov.querySelector('#mmCanvas');
   const sub = ov.querySelector('#mmSub');
+  const body = canvas && canvas.closest ? canvas.closest('.mm-body') : null;
+  if(body) body.style.background = MM.c.bg;   // 霓虹这类深底样式，画布外的留白也要跟着变
   if(!built.count){
     MM.lay = null;
     canvas.innerHTML = '';
@@ -10747,6 +11487,7 @@ function openMindMap(){
       + '<div class="mm-hd"><div><h3>' + ic('mind') + '思维导图</h3>'
       + '<p id="mmSub">由标题与缩进列表生成 · 改动会写回笔记</p></div>'
       + '<div class="mm-tools">'
+      + '<button class="mm-btn mm-style-btn" id="mmStyleBtn" title="换一种画法"><i class="mm-swatch" id="mmSwatch"></i><span id="mmStyleName">经典绿</span></button>'
       + '<button class="mm-btn" id="mmExpand">展开全部</button>'
       + '<button class="mm-btn" id="mmFold">折叠到二级</button>'
       + '<button class="mm-btn on" id="mmList">含列表项</button>'
@@ -10754,6 +11495,15 @@ function openMindMap(){
       + '<button class="mm-btn" id="mmPng">导出图片</button>'
       + '<button class="help-x" id="mmClose" title="关闭">' + ic('x') + '</button>'
       + '</div></div>'
+      + '<div class="mm-style-pop" id="mmStylePop" hidden>'
+      + '<div class="mm-sp-hd"><b>结构 / 外观</b><span>只换画法，不动你的笔记内容</span>'
+      + '<button class="mm-sp-x" id="mmStyleX" title="收起">' + ic('x') + '</button></div>'
+      + '<div class="mm-sp-tabs" id="mmSpTabs">'
+      + '<button type="button" data-mmtab="dir">结构布局</button>'
+      + '<button type="button" data-mmtab="look">外观样式</button>'
+      + '</div>'
+      + '<div class="mm-sp-grid" id="mmGrid"></div>'
+      + '</div>'
       + '<div class="mm-body">'
       + '<div class="mm-canvas" id="mmCanvas"></div>'
       + '<div class="mm-pill" id="mmPill">滚轮缩放 · 拖动平移 · 点节点选中 · 双击改名</div>'
@@ -10781,6 +11531,21 @@ function openMindMap(){
     document.body.appendChild(ov);
     ov.addEventListener('mousedown', e => { if(e.target === ov) closeMindMap(); });
     ov.querySelector('#mmClose').onclick = closeMindMap;
+    ov.querySelector('#mmStyleBtn').onclick = e => { e.stopPropagation(); mmToggleStyle(); };
+    ov.querySelector('#mmStyleX').onclick = () => mmToggleStyle(false);
+    ov.querySelectorAll('#mmSpTabs [data-mmtab]').forEach(b => {
+      b.onclick = () => { MM.uiTab = b.dataset.mmtab; mmPaintStyleGrid(); };
+    });
+    if(!window._mmStyleOut){
+      window._mmStyleOut = true;
+      document.addEventListener('mousedown', e => {
+        const pop = document.getElementById('mmStylePop');
+        if(!pop || pop.hidden) return;
+        if(pop.contains(e.target)) return;
+        if(e.target.closest && e.target.closest('#mmStyleBtn')) return;
+        mmToggleStyle(false);
+      }, true);
+    }
     ov.querySelector('#mmFit').onclick = () => mmFit();
     ov.querySelector('#mmExpand').onclick = () => { mmSetAll(MM.root, false); mmRerender(true); };
     ov.querySelector('#mmFold').onclick = () => {

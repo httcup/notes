@@ -172,13 +172,14 @@ body.has-ol .ol-zone{display:flex}
 
 
 /* ===== 阅读模式切换：预览 / Markdown / 思维导图（被分享者自己选） ===== */
-.modes{display:flex;gap:2px;padding:3px;border-radius:9px;background:rgb(var(--sunken));margin:0 0 24px;width:max-content}
+.modes{display:flex;gap:1px;padding:2px;border-radius:9px;background:rgb(var(--sunken));margin-left:6px;flex:0 0 auto}
 .modes button{
-  height:28px;padding:0 14px;border:0;border-radius:7px;background:none;cursor:pointer;
-  font-family:inherit;font-size:12.5px;color:rgb(var(--muted));transition:background .14s,color .14s;white-space:nowrap;
+  width:30px;height:26px;display:grid;place-items:center;border:0;border-radius:7px;background:none;cursor:pointer;
+  color:rgb(var(--muted));transition:background .14s,color .14s;padding:0;
 }
+.modes button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .modes button:hover{color:rgb(var(--ink))}
-.modes button.on{background:rgb(var(--surface));color:rgb(var(--ivy-ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.07)}
+.modes button.on{background:rgb(var(--surface));color:rgb(var(--ivy-ink));box-shadow:0 1px 2px rgb(16 24 32/.07)}
 .pane[hidden]{display:none}
 .md-bar{display:flex;justify-content:flex-end;margin-bottom:10px}
 .src{
@@ -204,8 +205,8 @@ body.mode-src .ol-zone,body.mode-src .ol-card{display:none}
 .mm-wrap svg{display:block;margin:0 auto}
 .mm-tip{margin-top:10px;font-size:12px;color:rgb(var(--faint));text-align:center}
 @media (max-width:640px){
-  .modes{width:100%}
-  .modes button{flex:1;padding:0 6px}
+  .brand{font-size:12px}
+  .modes button{width:28px;height:25px}
 }
 </style>
 </head>
@@ -613,14 +614,21 @@ async function boot(){
     TITLE = d.title || '无标题';
     BODY = d.body || '';
     document.getElementById('paper').innerHTML = `
-      <div class="brand"><span class="dot"></span>公开分享 · 只读</div>
+      <div class="brand"><span class="dot"></span>公开分享 · 只读
+        <div class="modes" id="modes" role="tablist" aria-label="阅读模式">
+          <button type="button" data-mode="preview" class="on" role="tab" title="预览" aria-label="预览">
+            <svg viewBox="0 0 24 24"><path d="M1.8 12S5.6 5.5 12 5.5 22.2 12 22.2 12 18.4 18.5 12 18.5 1.8 12 1.8 12Z"/><circle cx="12" cy="12" r="3.1"/></svg>
+          </button>
+          <button type="button" data-mode="src" role="tab" title="Markdown 源码" aria-label="Markdown">
+            <svg viewBox="0 0 24 24"><path d="m9 7-5 5 5 5"/><path d="m15 7 5 5-5 5"/></svg>
+          </button>
+          <button type="button" data-mode="map" role="tab" title="思维导图" aria-label="思维导图">
+            <svg viewBox="0 0 24 24"><rect x="2.5" y="9.5" width="5.5" height="5" rx="1.6"/><rect x="16" y="3" width="5.5" height="5" rx="1.6"/><rect x="16" y="16" width="5.5" height="5" rx="1.6"/><path d="M8 12h4v-6.5h4M12 12v6.5h4"/></svg>
+          </button>
+        </div>
+      </div>
       <h1 class="title">${esc(TITLE)}</h1>
       <div class="meta">${esc(stamp(d.updatedAt || d.createdAt))}</div>
-      <div class="modes" id="modes" role="tablist">
-        <button type="button" data-mode="preview" class="on" role="tab">预览</button>
-        <button type="button" data-mode="src" role="tab">Markdown</button>
-        <button type="button" data-mode="map" role="tab">思维导图</button>
-      </div>
       <div class="pane" id="panePreview">
         <div class="body">${BODY.trim() ? mdToHtml(BODY) : '<p style="color:rgb(var(--faint))">（这篇笔记没有正文）</p>'}</div>
       </div>

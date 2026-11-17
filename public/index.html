@@ -969,6 +969,46 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .hist-pv-body th,.hist-pv-body td{border:1px solid rgb(var(--line));padding:6px 9px}
 .hist-pv-body blockquote{border-left:2px solid rgb(var(--line));padding-left:12px;color:rgb(var(--muted));margin:.8em 0}
 .hist-empty{height:100%;display:grid;place-items:center;text-align:center;color:rgb(var(--faint));font-size:13px;line-height:2}
+/* ---- 笔记信息 ---- */
+.info-ov{
+  position:fixed;inset:0;z-index:140;background:rgb(16 24 32 / .34);
+  display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+}
+.info-ov.open{opacity:1;pointer-events:auto}
+.info-card{
+  width:min(462px,100%);max-height:min(760px,90vh);display:flex;flex-direction:column;
+  background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;
+  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+}
+.info-ov.open .info-card{transform:none}
+.info-hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px 10px}
+.info-hd h3{font-family:var(--font-serif);font-size:18px;font-weight:700;letter-spacing:-.01em}
+.info-x{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:rgb(var(--faint));transition:background .12s,color .12s}
+.info-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.info-x svg{width:15px;height:15px}
+.info-body{overflow:auto;padding:0 20px 16px;overscroll-behavior:contain}
+.info-sec{font-size:11px;font-weight:600;letter-spacing:.04em;color:rgb(var(--faint));margin:13px 0 2px}
+.info-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:8px 0;border-bottom:1px solid rgb(var(--line) / .65);font-size:12.5px}
+.info-row:last-of-type{border-bottom:0}
+.info-row .k{color:rgb(var(--faint));flex:0 0 auto}
+.info-row .v{color:rgb(var(--ink));text-align:right;min-width:0;word-break:break-word;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.info-link{color:rgb(var(--ivy));font-size:12.5px;background:none;border:0;cursor:pointer;font-family:inherit}
+.info-link:hover{text-decoration:underline}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.info-cell{background:rgb(var(--sunken));border-radius:10px;padding:10px 11px}
+.info-cell b{display:block;font-size:16px;line-height:1.25;color:rgb(var(--ink));font-weight:600}
+.info-cell span{display:block;margin-top:2px;font-size:10.5px;color:rgb(var(--faint))}
+.info-id{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:4px;font-size:11.5px;color:rgb(var(--faint))}
+.info-copy{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:rgb(var(--faint));transition:background .12s,color .12s}
+.info-copy:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.info-copy svg{width:14px;height:14px}
+@media (max-width:520px){
+  .info-ov{padding:12px}
+  .info-card{max-height:88vh}
+  .info-grid{grid-template-columns:repeat(2,1fr)}
+}
+
 .hist-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid rgb(var(--line))}
 .hist-tip{font-size:11.5px;color:rgb(var(--faint))}
 .hist-actions{display:flex;gap:8px;flex:0 0 auto}
@@ -1992,7 +2032,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v141', at: '2026-11-17 17:18' };
+window.IVY_BUILD = { id: 'v142', at: '2026-11-17 17:24' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4620,6 +4660,7 @@ function renderEditor(){
   renderProse();
   if((S.mode||'live')==='live') renderLive();
   wireEditor(n);
+  histSyncNote();
   // 布局稳定后再量一次标题高度：手机上是抽屉式书架，折叠动画期间可用宽度会变，
   // 只在 renderEditor 里量一次会把标题撑成好几行，下面留一大片空白
   requestAnimationFrame(()=>{
@@ -6479,6 +6520,145 @@ function openWikiLink(t){
 }
 
 /* ========== 所见即所得编辑（块级 Markdown） ========== */
+/* ========== 正文撤销 / 重做 ==========
+   块编辑器每次拆块、合并、失焦提交都会重建 textarea，浏览器原生的撤销栈就断了
+   （commitBlock 里给 ta.value 重新赋值也会清空它）。所以正文自己记快照：
+   内容 + 块划分 + 光标位置，按「输入停顿」切成一步，栈里最多留 150 步。 */
+var UNDO = null;
+function histState(){
+  if(!UNDO) UNDO = { note:null, stack:[], idx:-1, timer:0, quiet:false, touching:false, MAX:150 };
+  return UNDO;
+}
+function histCancelTimer(){ const H = histState(); if(H.timer){ clearTimeout(H.timer); H.timer = 0; } }
+function histSnapNow(){
+  const n = noteById(S.active); if(!n) return null;
+  const m = curMode();
+  let body = n.body || '';
+  const src = document.getElementById('source');
+  if((m === 'source' || m === 'split') && src) body = src.value;
+  if(m === 'live'){
+    // 正在编辑的那一块以 textarea 里的实时内容为准，别把刚敲的字丢了
+    const host = liveHost();
+    if(host && LIVE.editing >= 0){
+      const ta = host.querySelector('.blk[data-i="' + LIVE.editing + '"] .blk-src');
+      if(ta && LIVE.raws[LIVE.editing] !== ta.value) LIVE.raws[LIVE.editing] = ta.value;
+    }
+  }
+  const at = (LIVE.editing >= 0 && LIVE.ta)
+    ? { i:LIVE.editing, pos:(LIVE.ta.selectionStart || 0) }
+    : { i:Math.max(0, LIVE.raws.length - 1), pos:-1 };
+  return { body:body, raws:LIVE.raws.slice(), gaps:(LIVE.gaps || []).slice(), at:at };
+}
+function histReset(){
+  const H = histState();
+  histCancelTimer();
+  H.touching = false;
+  H.stack = []; H.idx = -1; H.note = (S && S.active) || null;
+  const s = histSnapNow();
+  if(s){ H.stack = [s]; H.idx = 0; }
+}
+function histSyncNote(){
+  const H = histState();
+  const id = (S && S.active) || null;
+  if(H.note !== id || !H.stack.length) histReset();
+}
+function histPush(){
+  const H = histState();
+  histCancelTimer();
+  const s = histSnapNow(); if(!s) return;
+  if(H.note !== ((S && S.active) || null)){ histReset(); return; }
+  const top = H.stack[H.idx];
+  if(top && top.body === s.body) return;          // 内容没变，不占一格
+  if(H.idx < H.stack.length - 1) H.stack.length = H.idx + 1;   // 撤销后又改：截断「未来」
+  H.stack.push(s);
+  if(H.stack.length > H.MAX) H.stack.shift();
+  H.idx = H.stack.length - 1;
+  H.touching = false;
+}
+/* 输入过程中频繁调用：只在停顿后落一格，避免一个字一步 */
+function histTouch(){
+  const H = histState();
+  if(H.quiet) return;
+  if(H.note !== ((S && S.active) || null) || !H.stack.length){ histReset(); return; }
+  histCancelTimer();
+  H.touching = true;
+  H.timer = setTimeout(function(){ H.timer = 0; histPush(); }, 340);
+}
+function histApply(i){
+  const H = histState();
+  const s = H.stack[i]; if(!s) return false;
+  const n = noteById(S.active); if(!n) return false;
+  const m = curMode();
+  H.quiet = true; H.idx = i; H.touching = false;
+  n.body = s.body; n.updatedAt = Date.now();
+  const src = document.getElementById('source');
+  if(m === 'source' || m === 'split'){
+    if(src){
+      src.value = s.body;
+      if(m === 'source'){
+        const p = (s.at && s.at.pos >= 0) ? Math.min(s.at.pos, s.body.length) : s.body.length;
+        try{ src.focus(); src.setSelectionRange(p, p); }catch(e){}
+      }
+    }
+    if(m === 'split') renderProse();
+  }else{
+    const host0 = liveHost();
+    const old = host0 && host0.querySelector('.blk.editing');
+    if(old) old.classList.remove('editing');
+    LIVE.editing = -1; LIVE.ta = null;
+    HOLD_BLUR = true;
+    LIVE.raws = (s.raws && s.raws.length) ? s.raws.slice() : [''];
+    const g = (s.gaps || []).slice();
+    while(g.length < LIVE.raws.length) g.push(0);
+    LIVE.gaps = g;
+    paintLive();
+    const at = s.at || { i:0, pos:-1 };
+    const bi = Math.max(0, Math.min(LIVE.raws.length - 1, at.i | 0));
+    setTimeout(function(){
+      HOLD_BLUR = false;
+      try{ focusBlock(bi, at.pos >= 0 ? at.pos : 'end'); }catch(e){}
+    }, 0);
+  }
+  renderMeta(); renderOutline(); save();
+  H.quiet = false;
+  return true;
+}
+function histUndo(){
+  const H = histState();
+  if(!S.active || !noteById(S.active)) return false;
+  histSyncNote();
+  histCancelTimer();
+  const cur = histSnapNow();
+  const top = H.stack[H.idx];
+  if(cur && (!top || cur.body !== top.body)) histPush();   // 还没落格的改动先记下来，才退得回「改动前」
+  if(H.idx <= 0){ toast('已经退到这篇笔记最早的状态了'); return true; }
+  return histApply(H.idx - 1);
+}
+function histRedo(){
+  const H = histState();
+  if(!S.active || !noteById(S.active)) return false;
+  histSyncNote();
+  histCancelTimer();
+  if(H.idx >= H.stack.length - 1){ toast('没有更新的改动了'); return true; }
+  return histApply(H.idx + 1);
+}
+document.addEventListener('keydown', function(e){
+  if(e.isComposing || e.keyCode === 229) return;              // 输入法组字时别抢
+  if(!(e.metaKey || e.ctrlKey) || e.altKey) return;
+  const k = String(e.key || '').toLowerCase();
+  const undo = k === 'z' && !e.shiftKey;
+  const redo = (k === 'z' && e.shiftKey) || (k === 'y' && !e.shiftKey);
+  if(!undo && !redo) return;
+  const ae = document.activeElement;
+  if(ae && ae.id === 'docTitle') return;                      // 标题交给浏览器原生
+  const inDoc = ae && ae.closest && ae.closest('#doc');
+  // AI 输入框、搜索框、导图改名框等：走它们自己的撤销
+  if(!inDoc && ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+  if(!S.active || !noteById(S.active)) return;
+  if(undo){ if(histUndo()) e.preventDefault(); }
+  else if(histRedo()) e.preventDefault();
+}, true);
+
 const LIVE = { raws: [], gaps: [], editing: -1, ta: null };
 /* 打开系统取色器等外部窗口时，先别把正在编辑的块提交掉 */
 let HOLD_BLUR = false;
@@ -6655,6 +6835,7 @@ function renderLive(){
   // 记住块之间原本隔了几个空行，保存时原样还原，绝不擅自把单换行改成空行
   LIVE.gaps = blocks.length ? blocks.map((b,i)=> i===0 ? 0 : Math.max(0, b.start - blocks[i-1].end)) : [0];
   paintLive();
+  histSyncNote();
 }
 
 let SELDOWN = null;
@@ -6679,11 +6860,149 @@ document.addEventListener('copy', e=>{
   if(a < 0 || b < 0 || a === b) return;    // 同一块内交给浏览器默认行为
   if(a > b){ const t = a; a = b; b = t; }
   const md = LIVE.raws.slice(a, b+1).join('\n');
-  const html = blocks.slice(a, b+1).map(b2=>b2.querySelector('.blk-view').innerHTML).join('');
-  e.clipboardData.setData('text/plain', md);
-  e.clipboardData.setData('text/html', html);
+  const plain = sel.toString() || md;
+  e.clipboardData.setData('text/plain', plain);
+  try{
+    const wrap = document.createElement('div');
+    wrap.appendChild(sel.getRangeAt(0).cloneContents());
+    e.clipboardData.setData('text/html', wrap.innerHTML);
+  }catch(err){}
+  try{ e.clipboardData.setData('text/x-ivy-md', md); }catch(err){}
   e.preventDefault();
 });
+
+/* 预览态的块是只读 div，浏览器没有可编辑目标：
+   ⌘C 能复制、⌘X 删不掉、⌘V 什么都不发生。这里补上剪贴板三件套。 */
+function liveSelRange(){
+  if((S.mode || 'live') !== 'live') return null;
+  const host = liveHost(); if(!host) return null;
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const r = sel.getRangeAt(0);
+  if(!host.contains(r.startContainer) || !host.contains(r.endContainer)) return null;
+  return r;
+}
+/* 只有「焦点在输入框里并且已经选了字」才算是真的在编辑：
+   预览态的块是只读 div，光标常常停在某个隐藏 textarea 上，那种情况要自己接管 */
+function inRealEditor(){
+  const ae = document.activeElement;
+  if(!ae) return false;
+  if(ae.isContentEditable) return true;
+  if(ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT'){
+    try{ return typeof ae.selectionStart === 'number' && ae.selectionStart !== ae.selectionEnd; }catch(e){ return true; }
+  }
+  return false;
+}
+function focusInField(){
+  const ae = document.activeElement;
+  return !!(ae && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT'));
+}
+document.addEventListener('cut', e=>{
+  const r = liveSelRange();
+  if(!r || inRealEditor()) return;
+  const txt = window.getSelection().toString();
+  if(!txt) return;
+  try{
+    e.clipboardData.setData('text/plain', txt);
+    const md = liveSelMd(r);
+    if(md) e.clipboardData.setData('text/x-ivy-md', md);
+  }catch(err){}
+  e.preventDefault();
+  if(deleteLiveSelection()) toast('已剪切');
+});
+document.addEventListener('paste', e=>{
+  if((S.mode || 'live') !== 'live' || inRealEditor()) return;
+  const host = liveHost(); if(!host) return;
+  const cd = e.clipboardData;
+  if(!cd) return;
+  const files = [...(cd.files || [])];
+  if(files.length){ e.preventDefault(); insertFiles(files, null); return; }
+  const text = cd.getData('text/x-ivy-md') || cd.getData('text/plain') || '';
+  if(!text) return;
+  e.preventDefault();
+  pasteIntoLive(text);
+});
+let CLIP_AT = null;                     // 剪切时记住位置，⌘V 才能粘回原处
+document.addEventListener('keydown', e=>{
+  if(!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return;
+  const k = String(e.key || '').toLowerCase();
+  if(k !== 'x' && k !== 'v') return;
+  if((S.mode || 'live') !== 'live' || inRealEditor()) return;
+  if(!S.active) return;
+  const sel = liveSelRange();
+  if(k === 'x'){
+    if(!sel) return;
+    e.preventDefault();
+    const at = liveSelStart(sel);
+    let ok = false;
+    try{ ok = document.execCommand('copy'); }catch(err){}
+    if(deleteLiveSelection()){ CLIP_AT = at; toast('已剪切'); }
+    return;
+  }
+  // ⌘V：预览态的块不是可编辑元素，浏览器根本不会派发 paste 事件
+  if(focusInField() && !sel && !CLIP_AT) return;      // 标题 / AI 输入框里粘贴，交给浏览器
+  if(!navigator.clipboard || !navigator.clipboard.readText) return;
+  e.preventDefault();
+  const at = CLIP_AT;
+  CLIP_AT = null;
+  navigator.clipboard.readText().then(t=>{
+    if(t) pasteIntoLive(t, at);
+    else toast('剪贴板里没有文字');
+  }).catch(()=>toast('浏览器不让读剪贴板，可以点工具栏的粘贴按钮'));
+}, true);
+function liveSelStart(r){
+  const host = liveHost();
+  if(!host || !r) return null;
+  const p = blockPoint(r.startContainer, r.startOffset, false);
+  if(!p) return null;
+  const view = host.querySelector('.blk[data-i="' + p.i + '"] .blk-view');
+  const plain = view ? view.textContent : '';
+  return { i:p.i, pos:cutBefore(LIVE.raws[p.i] || '', plain.slice(0, Math.min(p.off, plain.length))) };
+}
+
+/* 选区跨块时给出 markdown 源，粘回编辑器不丢加粗/链接 */
+function liveSelMd(r){
+  const host = liveHost(); if(!host) return '';
+  const blocks = [...host.querySelectorAll('.blk')];
+  const a = blocks.findIndex(b=>b.contains(r.startContainer));
+  const b = blocks.findIndex(b=>b.contains(r.endContainer));
+  if(a < 0 || b < 0 || a === b) return '';
+  return LIVE.raws.slice(a, b + 1).join('\n');
+}
+function pasteIntoLive(text, at0){
+  let at = at0 || null;
+  const r = liveSelRange();
+  if(r){
+    const host = liveHost();
+    const p = blockPoint(r.startContainer, r.startOffset, false);
+    if(p){
+      const view = host.querySelector('.blk[data-i="' + p.i + '"] .blk-view');
+      const plain = view ? view.textContent : '';
+      at = { i:p.i, pos:cutBefore(LIVE.raws[p.i] || '', plain.slice(0, Math.min(p.off, plain.length))) };
+    }
+    deleteLiveSelection();
+  }
+  if(!LIVE.raws.length) LIVE.raws = [''];
+  if(!at) at = { i:LIVE.raws.length - 1, pos:(LIVE.raws[LIVE.raws.length - 1] || '').length };
+  if(at.i >= LIVE.raws.length) at = { i:LIVE.raws.length - 1, pos:1e9 };
+  const i = Math.max(0, Math.min(LIVE.raws.length - 1, at.i));
+  const raw = LIVE.raws[i] || '';
+  const pos = Math.max(0, Math.min(at.pos, raw.length));
+  const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  if(lines.length === 1){
+    LIVE.raws[i] = raw.slice(0, pos) + lines[0] + raw.slice(pos);
+  }else{
+    const head = raw.slice(0, pos) + lines[0];
+    const tail = lines[lines.length - 1] + raw.slice(pos);
+    const mid = lines.slice(1, -1);
+    LIVE.raws.splice(i, 1, head, ...mid, tail);
+    const g = LIVE.gaps || []; g.splice(i, 1, ...new Array(mid.length + 2).fill(0));
+    LIVE.gaps = g;
+  }
+  syncBody();
+  renderLive();
+  toast('已粘贴');
+}
 
 /* 预览态里的块是只读 div，原生选区按删除没反应 → 手动按 markdown 源删 */
 function viewOffset(view, node, offset){
@@ -6971,6 +7290,7 @@ function syncBody(){
   if(body === n.body) return;
   n.body = body; n.updatedAt = Date.now();
   renderMeta(); renderOutline(); save();
+  histTouch();
 }
 
 /* ---- 焦点与导航 ---- */
@@ -7338,6 +7658,7 @@ function wireEditor(n){
   src.addEventListener('input', ()=>{
     n.body = src.value; n.updatedAt = Date.now();
     grow(src); renderMeta(); save();
+    histTouch();
     if(curMode()==='split'){ livePreviewSoon(); }
     slashMaybe(src); dueMaybe(src);
   });
@@ -8988,6 +9309,122 @@ function paintNotesPush(){
     toast('已关闭推送');
   };
 }
+/* ---------- 笔记信息 ---------- */
+function infoTime(ts){
+  if(!ts) return '—';
+  const d = new Date(ts), p = x => String(x).padStart(2, '0');
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function nbPathName(id){
+  const names = [];
+  let cur = id ? nbById(id) : null, guard = 0;
+  while(cur && guard++ < 8){ names.unshift(cur.name); cur = cur.parentId ? nbById(cur.parentId) : null; }
+  return names.join(' / ');
+}
+function noteStats(n){
+  const body = String(n.body || '');
+  const plain = body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[#>*_`~|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const chars = plain.replace(/\s/g, '').length;
+  const blocks = String(body).trim() ? parseBlocks(body).length : 0;
+  const imgs = (body.match(/!\[[^\]]*\]\([^)]*\)/g) || []).length
+             + (body.match(/\[\[file:[^\]]+\]\]/g) || []).length;
+  const links = (body.match(/\[\[[^\]]+\]\]/g) || []).length;
+  const t = String(n.title || '').trim();
+  const back = t ? (S.notes || []).filter(x => x.id !== n.id && !x.trashed && String(x.body || '').includes('[[' + t + ']]')).length : 0;
+  return { chars, blocks, imgs, links, back, mins: chars ? Math.max(1, Math.round(chars / 300)) : 0 };
+}
+function closeNoteInfo(){
+  const ov = document.getElementById('infoOv');
+  if(ov) ov.classList.remove('open');
+}
+function openNoteInfo(){
+  const n = S.active ? noteById(S.active) : null;
+  if(!n){ toast('先打开一篇笔记'); return; }
+  let ov = document.getElementById('infoOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'infoOv'; ov.className = 'info-ov';
+    ov.addEventListener('mousedown', e => { if(e.target === ov) closeNoteInfo(); });
+    document.body.appendChild(ov);
+  }
+  const st = noteStats(n);
+  const nbName = n.notebookId ? (nbPathName(n.notebookId) || '未归类') : '不放入笔记本';
+  const tags = (n.tags || []).length ? n.tags.join('、') : '无';
+  const state = n.trashed ? '回收站' : (n.pinned ? '置顶' : '正常');
+  const synced = (typeof SYNC !== 'undefined' && (SYNC.token || SYNC.key));
+  const owner = (typeof SYNC !== 'undefined' && SYNC.account) ? SYNC.account : '本机';
+  const versa = (typeof VERSIONS !== 'undefined' && VERSIONS[n.id]) ? VERSIONS[n.id].length : 0;
+  const shared = !!n.shareSlug;
+
+  ov.innerHTML = `
+    <div class="info-card" role="dialog" aria-label="笔记信息">
+      <div class="info-hd">
+        <h3>笔记信息</h3>
+        <button class="info-x" id="infoX" title="关闭">${ic('x')}</button>
+      </div>
+      <div class="info-body">
+        <div class="info-sec">基本</div>
+        <div class="info-row"><span class="k">创建时间</span><span class="v">${infoTime(n.createdAt)}</span></div>
+        <div class="info-row"><span class="k">更新时间</span><span class="v">${infoTime(n.updatedAt)}</span></div>
+        <div class="info-row"><span class="k">所有者</span><span class="v">${esc(owner)}</span></div>
+        <div class="info-row"><span class="k">位置</span><span class="v">${esc(nbName)}</span></div>
+        <div class="info-row"><span class="k">标签</span><span class="v">${esc(tags)}</span></div>
+        <div class="info-row"><span class="k">状态</span><span class="v">${state}</span></div>
+        <div class="info-row"><span class="k">同步</span><span class="v">${synced ? '已开启云同步' : '仅保存在本机'}</span></div>
+        <div class="info-row"><span class="k">分享</span><span class="v">${shared ? '已分享' : '未分享'}<button class="info-link" id="infoShare">${shared ? '查看' : '分享'}</button></span></div>
+
+        <div class="info-sec">统计</div>
+        <div class="info-grid">
+          <div class="info-cell"><b>${st.chars}</b><span>字数</span></div>
+          <div class="info-cell"><b>${String(n.body || '').length}</b><span>字符数</span></div>
+          <div class="info-cell"><b>约 ${st.mins} 分钟</b><span>阅读时长</span></div>
+          <div class="info-cell"><b>${st.blocks}</b><span>段落</span></div>
+          <div class="info-cell"><b>${st.imgs}</b><span>图片与附件</span></div>
+          <div class="info-cell"><b>${st.links} / ${st.back}</b><span>链接 / 反链</span></div>
+        </div>
+
+        <div class="info-sec">历史与设备</div>
+        <div class="info-row"><span class="k">历史版本</span><span class="v"><button class="info-link" id="infoHist">${versa ? versa + ' 个版本' : '还没有版本'}</button></span></div>
+        <div class="info-row"><span class="k">编辑过的设备</span><span class="v">Web · 本机</span></div>
+
+        <div class="info-id">
+          <span>笔记 ID　${esc(n.id)}</span>
+          <button class="info-copy" id="infoCopy" title="复制笔记 ID">${ic('copy')}</button>
+        </div>
+      </div>
+    </div>`;
+
+  ov.classList.add('open');
+  ov.querySelector('#infoX').onclick = closeNoteInfo;
+  ov.querySelector('#infoShare').onclick = () => {
+    closeNoteInfo();
+    const anchor = document.getElementById('paMore');
+    if(anchor) openShareMenu(anchor);
+  };
+  ov.querySelector('#infoHist').onclick = () => { closeNoteInfo(); openHistoryPanel(); };
+  ov.querySelector('#infoCopy').onclick = async () => {
+    const btn = ov.querySelector('#infoCopy');
+    try{
+      await navigator.clipboard.writeText(n.id);
+      btn.innerHTML = ic('check');
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = n.id; ta.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); btn.innerHTML = ic('check'); }catch(err){ toast('复制失败'); }
+      ta.remove();
+    }
+    setTimeout(() => { btn.innerHTML = ic('copy'); }, 1600);
+  };
+}
+
 function openNoteMenu(anchor){
   const n = noteById(S.active);
   const nb = n && S.notebooks.find(x=>x.id===n.notebookId && !x.deleted);
@@ -9007,6 +9444,7 @@ function openNoteMenu(anchor){
     ['创建笔记副本', '', '', 'copy', ()=>duplicateNote()],
     ['上传图片/文件', '', '', 'paperclip', ()=>pickFiles()],
     ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
+    ['笔记信息', '', '', 'info', ()=>openNoteInfo()],
     '-',
     ['AI 排版', '', '', 'spark', ()=>openAI('format')],
     ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
@@ -9165,7 +9603,7 @@ document.addEventListener('keydown', e=>{
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); }
+  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); if(typeof closeNoteInfo==='function') closeNoteInfo(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));

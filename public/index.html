@@ -122,8 +122,8 @@ body.view-todo .head-actions .notes-only{display:none}
 .shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 64px;scrollbar-gutter:stable}
 .sec-label{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
-  font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
-  margin:10px 8px 6px;
+  font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
+  margin:12px 8px 6px;
 }
 .sec-label .count{font-size:11px;font-weight:500;color:rgb(var(--faint))}
 /* 「笔记」总开关：点标题把下面一整块（笔记本 / 标签 / 回收站）收起来 */
@@ -132,8 +132,9 @@ body.view-todo .head-actions .notes-only{display:none}
   border-radius:7px;padding:2px 0;transition:color .12s;
 }
 .sec-fold:hover{color:rgb(var(--ink))}
-.sec-fold .lb{display:flex;align-items:center;gap:5px}
+.sec-fold .lb{display:flex;align-items:center;gap:6px}
 .sec-fold .caret{
+  width:15px;text-align:center;
   font-size:8px;font-style:normal;color:rgb(var(--faint));display:inline-block;
   transform:rotate(90deg);transition:transform .18s var(--spring);
 }
@@ -148,8 +149,9 @@ body.view-todo .head-actions .notes-only{display:none}
 .shelf-row svg{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:rgb(var(--faint))}
 .shelf-row .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .shelf-row .meta{font-size:11px;color:rgb(var(--faint));flex:0 0 auto}
-/* 回收站和「笔记 / 标签」同属大类，别混进次级字号里 */
-.shelf-row[data-act="trash"] .t{font-size:13.5px;font-weight:600;color:rgb(var(--ink-2))}
+/* 回收站和「笔记 / 标签」同属大类：字号、字重、颜色都对齐，只是它带图标 */
+.shelf-row[data-act="trash"]{margin-top:2px;gap:6px;padding-left:8px}
+.shelf-row[data-act="trash"] .t{font-size:14.5px;font-weight:600;color:rgb(var(--ink-2))}
 .shelf-row.new-nb{color:rgb(var(--ivy));font-size:12.5px;padding:6px 8px}
 .shelf-row.new-nb:hover{background:rgb(var(--ivy-soft))}
 .shelf-row.new-nb svg{color:currentColor}
@@ -166,7 +168,7 @@ body.view-todo .head-actions .notes-only{display:none}
 .nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nb-head{
   display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;
-  color:rgb(var(--ink-2));font-size:13.5px;font-weight:600;letter-spacing:0;
+  color:rgb(var(--ink-2));font-size:13.5px;font-weight:500;letter-spacing:0;
 }
 .nb-row:hover .nb-head{color:rgb(var(--ink))}
 .nb-head .meta{font-size:11px;font-weight:400;color:rgb(var(--faint));margin-left:auto;flex:0 0 auto}
@@ -179,7 +181,8 @@ body.view-todo .head-actions .notes-only{display:none}
 .nb-body{padding-left:9px;margin-left:7px;border-left:1px solid rgb(var(--line))}
 .nb-body.hidden{display:none}
 .nb-body .nb-notes{padding-left:5px}
-.nb-sub .nb-head{font-size:13px}
+/* 三级：子笔记本比父级再小半档，用字号而不是加粗来表达层级 */
+.nb-sub .nb-head{font-size:12.5px;font-weight:500;color:rgb(var(--muted))}
 .nb-kids:not(:empty){margin-bottom:3px}
 /* 父笔记本自己的笔记紧跟在子笔记本下面，加一条很淡的分隔，避免看成子笔记本的内容 */
 .nb-kids + .nb-notes:not(:empty){border-top:1px solid rgb(var(--line)/.7);margin-top:3px;padding-top:3px}
@@ -245,14 +248,12 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-sec{margin-top:12px}
 .tag-sec-head{
   display:flex;align-items:center;gap:6px;width:calc(100% - 16px);text-align:left;
-  margin:10px 8px 6px;padding:2px 0;
-  font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
+  margin:12px 8px 6px;padding:2px 0;
+  font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
 }
 .tag-sec-head:hover{color:rgb(var(--ink))}
-.tag-sec-head .caret,.tag-caret{
-  flex:0 0 auto;width:9px;text-align:center;font-size:8px;line-height:1;
-  color:rgb(var(--faint));transition:transform .18s;
-}
+.tag-sec-head .caret{flex:0 0 auto;width:15px;text-align:center;font-size:8px;line-height:1;color:rgb(var(--faint));transition:transform .18s}
+.tag-caret{flex:0 0 auto;width:9px;text-align:center;font-size:8px;line-height:1;color:rgb(var(--faint));transition:transform .18s}
 .tag-sec-head.open .caret,.tag-row.open .tag-caret{transform:rotate(90deg)}
 .tag-sec-head svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 .tag-sec-head .count{margin-left:auto;font-size:11px;font-weight:500;color:rgb(var(--faint))}
@@ -260,6 +261,7 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-line{position:relative;border-radius:7px}
 .tag-line:hover{background:rgb(var(--hover))}
 .shelf-row.tag-row{padding:5px 8px;padding-right:30px;gap:7px;color:rgb(var(--ink-2))}
+.shelf-row.tag-row .t{font-size:13.5px;font-weight:500}
 .shelf-row.tag-row:hover{background:transparent;color:rgb(var(--ink))}
 .tag-row .meta{transition:opacity .12s}
 .tag-line:hover .tag-row .meta{opacity:0}
@@ -2336,7 +2338,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v155', at: '2026-11-17 21:56' };
+window.IVY_BUILD = { id: 'v156', at: '2026-11-17 22:00' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3145,7 +3147,7 @@ function renderShelf(){
   // 标签和回收站不跟着「笔记」一起收，各自常驻在下面
   html += `<div class="tag-sec">
     <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
-      <span class="caret">&#9654;</span>${ic('tag')}<span>标签</span>
+      <span class="caret">&#9654;</span><span>标签</span>
     </button>
     ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
   </div>`;

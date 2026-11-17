@@ -421,6 +421,21 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .doc-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 24px;font-size:12.5px;color:rgb(var(--faint))}
 .doc-meta .sep{opacity:.6}
 .meta-btn{padding:2px 4px;border-radius:5px;color:rgb(var(--faint));transition:background .14s,color .14s;font-size:12.5px}
+.meta-resume{
+  display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 6px 0 7px;border-radius:6px;
+  background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-size:11.5px;font-weight:500;
+  transition:filter .14s;
+}
+.meta-resume:hover{filter:brightness(.97)}
+.meta-resume .rx{
+  width:14px;height:14px;border-radius:4px;display:grid;place-items:center;
+  color:rgb(var(--ivy-ink)/.55);font-size:12px;line-height:1;
+}
+.meta-resume .rx:hover{background:rgb(var(--ivy-ink)/.1);color:rgb(var(--ivy-ink))}
+.dev-list{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.dev-item{display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--ink))}
+.dev-item em{font-style:normal;color:rgb(var(--faint));font-size:11px}
+.dev-item b{font-weight:500;font-size:10px;padding:1px 5px;border-radius:4px;background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
 /* 回收站头部：窄屏要能换行，否则「清空回收站」会被挤出屏幕 */
@@ -1654,6 +1669,84 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .btn-ghost:disabled{opacity:.4;cursor:default;background:transparent;color:rgb(var(--muted))}
 .sheet-status{margin-top:14px;padding-top:11px;border-top:1px solid rgb(var(--line));font-size:11.5px;line-height:1.75;color:rgb(var(--faint))}
 .sheet-status b{color:rgb(var(--ink-2));font-weight:600}
+/* ---- 设置（整页） ---- */
+.set-ov{
+  position:fixed;inset:0;z-index:150;background:rgb(16 24 32 / .34);
+  display:grid;place-items:center;padding:24px;opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+}
+.set-ov.open{opacity:1;pointer-events:auto}
+.set-wrap{
+  width:min(960px,100%);height:min(740px,90vh);display:flex;background:rgb(var(--surface));
+  border-radius:18px;box-shadow:var(--shadow-lift);overflow:hidden;
+  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+}
+.set-ov.open .set-wrap{transform:none}
+.set-nav{
+  width:214px;flex:0 0 auto;padding:22px 12px 16px;background:rgb(var(--sunken));
+  display:flex;flex-direction:column;gap:2px;overflow:auto;
+}
+.set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em;padding:0 10px 14px}
+.set-nav nav{display:flex;flex-direction:column;gap:2px}
+.set-nav button{
+  text-align:left;height:36px;padding:0 12px;border-radius:9px;font-size:13px;
+  color:rgb(var(--muted));transition:background .13s,color .13s;white-space:nowrap;
+}
+.set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.set-nav button.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.06)}
+.set-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.set-head{display:flex;align-items:center;justify-content:space-between;padding:20px 26px 10px}
+.set-head h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.set-body{flex:1;overflow:auto;padding:2px 26px 28px;overscroll-behavior:contain}
+.set-sec{margin:18px 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;color:rgb(var(--faint))}
+.set-sec:first-child{margin-top:4px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid rgb(var(--line)/.7)}
+.set-row:last-child{border-bottom:0}
+.set-row .t{font-size:13px;color:rgb(var(--ink))}
+.set-row .d{font-size:11.5px;color:rgb(var(--faint));margin-top:3px;line-height:1.65}
+.set-card{background:rgb(var(--sunken));border-radius:12px;padding:14px 16px;margin:10px 0}
+.set-card .field{margin-bottom:10px}
+.set-note{font-size:11.5px;line-height:1.75;color:rgb(var(--faint));margin:10px 0 0}
+.set-btn{height:32px;padding:0 14px;border-radius:8px;font-size:12.5px;background:rgb(var(--hover));color:rgb(var(--ink));flex:0 0 auto;transition:background .13s}
+.set-btn:hover{background:rgb(var(--line))}
+.set-btn.primary{background:rgb(var(--ivy));color:#fff}
+.set-btn.primary:hover{filter:brightness(1.05)}
+.set-btn.danger{background:rgb(var(--warn)/.1);color:rgb(var(--warn))}
+.set-btn.danger:hover{background:rgb(var(--warn)/.16)}
+.set-chips{display:flex;gap:6px;flex-wrap:wrap}
+.set-chip{height:30px;padding:0 14px;border-radius:8px;font-size:12.5px;background:rgb(var(--hover));color:rgb(var(--muted));transition:background .13s,color .13s}
+.set-chip:hover{color:rgb(var(--ink))}
+.set-chip.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:600}
+.set-empty{font-size:12px;color:rgb(var(--faint));padding:14px 0}
+@media (max-width:760px){
+  .set-ov{padding:0}
+  .set-wrap{width:100%;height:100%;border-radius:0;flex-direction:column}
+  .set-nav{width:100%;flex:0 0 auto;padding:12px 12px 8px;flex-direction:row;gap:6px;overflow-x:auto;align-items:center}
+  .set-title{font-size:17px;padding:0 6px 0 2px;flex:0 0 auto}
+  .set-nav nav{flex-direction:row;gap:6px}
+  .set-nav button{height:30px;padding:0 11px;background:rgb(var(--surface));flex:0 0 auto;font-size:12.5px}
+  .set-head{padding:12px 16px 6px}
+  .set-body{padding:2px 16px 22px}
+}
+
+/* ---- API 令牌与 MCP ---- */
+.tok-sec{font-size:11px;font-weight:600;letter-spacing:.04em;color:rgb(var(--faint));margin:18px 0 8px}
+.tok-list{display:flex;flex-direction:column;gap:6px}
+.tok-empty{font-size:12px;color:rgb(var(--faint));padding:6px 0}
+.tok-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border-radius:9px;background:rgb(var(--sunken))}
+.tok-item-main{min-width:0;flex:1}
+.tok-item-main b{display:block;font-size:12.5px;font-weight:600;color:rgb(var(--ink))}
+.tok-item-main span{display:block;margin-top:2px;font-size:11px;color:rgb(var(--faint));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tok-del{flex:0 0 auto;height:26px;padding:0 10px;border-radius:7px;font-size:11.5px;color:rgb(var(--warn));background:rgb(var(--warn)/.08)}
+.tok-del:hover{background:rgb(var(--warn)/.14)}
+.tok-new{margin:14px 0 4px;padding:12px 13px;border-radius:11px;background:rgb(var(--ivy-soft)/.55);border:1px solid rgb(var(--ivy)/.22)}
+.tok-new-t{font-size:11.5px;font-weight:600;color:rgb(var(--ivy-ink));margin-bottom:6px}
+.tok-copy-row{display:flex;align-items:center;gap:8px}
+.tok-copy-row code{flex:1;min-width:0;font-family:var(--font-mono);font-size:11.5px;background:rgb(var(--surface));border:1px solid rgb(var(--line));border-radius:7px;padding:7px 9px;overflow:auto;white-space:nowrap}
+.tok-copy-row .btn-ghost{flex:0 0 auto;height:28px;font-size:11.5px}
+.tok-json{font-family:var(--font-mono);font-size:11px;line-height:1.62;background:rgb(var(--surface));border:1px solid rgb(var(--line));border-radius:8px;padding:9px 11px;white-space:pre-wrap;word-break:break-all;max-height:170px;overflow:auto;margin:0 0 8px}
+.tok-warn{margin-top:8px;font-size:11px;line-height:1.7;color:rgb(var(--faint))}
+
 
 /* ============ AI（自己的接口） ============ */
 .ai-sheet{width:min(620px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px 14px}
@@ -2032,7 +2125,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v142', at: '2026-11-17 17:24' };
+window.IVY_BUILD = { id: 'v144', at: '2026-11-17 17:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2410,7 +2503,54 @@ async function restoreSelectedVersion(){
   toast('已恢复到此版本，恢复前的内容也存了一份');
 }
 
+/* ---------- 编辑设备记录 ---------- */
+/* 只存设备指纹 + 可读名字 + 最后编辑时间，不含任何内容 */
+var DEV_LABEL = '';
+function devId(){
+  let id = '';
+  try{ id = localStorage.getItem('ivy.dev') || ''; }catch(e){}
+  if(!id){
+    id = 'd' + Math.random().toString(36).slice(2, 9);
+    try{ localStorage.setItem('ivy.dev', id); }catch(e){}
+  }
+  return id;
+}
+function devLabel(){
+  if(DEV_LABEL) return DEV_LABEL;
+  const ua = navigator.userAgent || '';
+  let os = 'Web';
+  if(/iPhone/.test(ua)) os = 'iPhone';
+  else if(/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) os = 'iPad';
+  else if(/Android/.test(ua)) os = 'Android';
+  else if(/Macintosh|Mac OS X/.test(ua)) os = 'macOS';
+  else if(/Windows/.test(ua)) os = 'Windows';
+  else if(/Linux/.test(ua)) os = 'Linux';
+  let br = '浏览器';
+  if(/Edg\//.test(ua)) br = 'Edge';
+  else if(/OPR\//.test(ua)) br = 'Opera';
+  else if(/Firefox\//.test(ua)) br = 'Firefox';
+  else if(/Chrome\//.test(ua)) br = 'Chrome';
+  else if(/Safari\//.test(ua)) br = 'Safari';
+  DEV_LABEL = br + ' · ' + os;
+  return DEV_LABEL;
+}
+/* 同一台设备 2 分钟内只打一次点，避免每敲一个字就写盘 */
+function noteTouchDevice(n){
+  if(!n) return;
+  const id = devId(), now = Date.now();
+  if(!Array.isArray(n.devices)) n.devices = [];
+  const hit = n.devices.find(d=>d && d.id === id);
+  if(hit){
+    if(now - (hit.at || 0) < 120000){ hit.at = now; }   // 刷新时间但不重排
+    else { hit.at = now; hit.label = devLabel(); }
+  }else{
+    n.devices.push({ id:id, label:devLabel(), at:now });
+  }
+  n.devices.sort((a,b)=>(b.at || 0) - (a.at || 0));
+  if(n.devices.length > 5) n.devices.length = 5;
+}
 function save(){
+  try{ noteTouchDevice(noteById(S.active)); }catch(e){}
   try{
     const copy = Object.assign({}, S, {media: []});
     copy._savedAt = Date.now();
@@ -4296,7 +4436,7 @@ function renderDock(){
     `<button class="dock-item" id="dockSet" title="设置" aria-label="设置">${ic('gear')}</button>`;
   $('#dock').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
   $('#dockSync').onclick=()=>openSyncPanel();
-  $('#dockSet').onclick=(e)=>openUserMenu(e.currentTarget);
+  $('#dockSet').onclick=()=>openSettings();
   updateTodoBadge();
 }
 
@@ -4771,18 +4911,33 @@ function wireSplitSync(){
 }
 window.addEventListener('resize', ()=>{ SPLIT_ANCH = null; }, { passive:true });
 
+function agoText(ts){
+  const d = Date.now() - (ts || 0);
+  if(d < 60000) return '刚刚';
+  if(d < 3600000) return Math.max(1, Math.floor(d / 60000)) + ' 分钟前';
+  if(d < 86400000) return Math.floor(d / 3600000) + ' 小时前';
+  return Math.floor(d / 86400000) + ' 天前';
+}
 function renderMeta(){
   const n = noteById(S.active); if(!n) return;
   const meta = $('#docMeta');
+  const res = (typeof UNDO !== 'undefined' && UNDO && UNDO.note === n.id && UNDO.resumed) ? UNDO.resumed : null;
   const d = new Date(n.updatedAt);
   const stamp = `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   const wc = countWords(n.body);
   meta.innerHTML = `<button class="meta-btn" id="metaTime">${stamp}</button>
     <span class="sep">·</span><span>${wc} 字</span>
     <span class="meta-sync" id="metaSync"></span>
+    ${res ? `<button class="meta-resume" id="metaResume" title="切回来还能接着撤销">↩ 上次编辑 · ${agoText(res.at)}${res.steps ? ' · 可撤 ' + res.steps + ' 步' : ''}<span class="rx" id="metaResumeX" title="收起">×</span></button>` : ''}
     ${tagOf(n).map(t=>`<span class="chip" data-pick="${esc(t)}" style="color:${tagColor(t)}">${esc(t)}<span class="rm" data-rmtag="${esc(t)}">×</span></span>`).join('')}
     <button class="meta-btn add" id="addTag">+ 标签</button>`;
   updateSyncBadge();
+  const rb = meta.querySelector('#metaResume');
+  if(rb) rb.onclick = e=>{
+    if(e.target.closest('#metaResumeX')){ UNDO.resumed = null; renderMeta(); return; }
+    if(UNDO.idx > 0){ histUndo(); }
+    else { UNDO.resumed = null; renderMeta(); toast('这篇没有可撤回的改动了'); }
+  };
   meta.querySelector('#addTag').onclick = e=>openTagPicker(e.currentTarget);
   meta.querySelectorAll('[data-pick]').forEach(x=>{
     x.onclick = e=>{ if(e.target.closest('[data-rmtag]')) return; openTagPicker(x); };
@@ -6526,7 +6681,8 @@ function openWikiLink(t){
    内容 + 块划分 + 光标位置，按「输入停顿」切成一步，栈里最多留 150 步。 */
 var UNDO = null;
 function histState(){
-  if(!UNDO) UNDO = { note:null, stack:[], idx:-1, timer:0, quiet:false, touching:false, MAX:150 };
+  if(!UNDO) UNDO = { note:null, stack:[], idx:-1, timer:0, quiet:false, touching:false,
+                     byNote:{}, resumed:null, MAX:150 };
   return UNDO;
 }
 function histCancelTimer(){ const H = histState(); if(H.timer){ clearTimeout(H.timer); H.timer = 0; } }
@@ -6557,10 +6713,44 @@ function histReset(){
   const s = histSnapNow();
   if(s){ H.stack = [s]; H.idx = 0; }
 }
+/* 换笔记时把撤销记录按笔记存一份（30 分钟内切回来还能接着撤） */
+function histPark(){
+  const H = histState();
+  if(!H.note || !H.stack.length) return;
+  H.byNote[H.note] = { stack:H.stack.slice(), idx:H.idx, at:Date.now() };
+  const ids = Object.keys(H.byNote);
+  if(ids.length > 8){
+    ids.sort((a,b)=>(H.byNote[a].at||0)-(H.byNote[b].at||0));
+    ids.slice(0, ids.length - 8).forEach(k=>{ delete H.byNote[k]; });
+  }
+}
 function histSyncNote(){
   const H = histState();
   const id = (S && S.active) || null;
-  if(H.note !== id || !H.stack.length) histReset();
+  if(H.note === id && H.stack.length) return;
+  if(H.note && H.note !== id) histPark();
+  histCancelTimer();
+  H.touching = false;
+  H.note = id;
+  H.resumed = null;
+  const saved = id ? H.byNote[id] : null;
+  const fresh = saved && saved.stack && saved.stack.length && (Date.now() - (saved.at || 0)) < 30 * 60 * 1000;
+  const s = histSnapNow();
+  if(fresh){
+    H.stack = saved.stack.slice();
+    H.idx = Math.min(saved.idx, H.stack.length - 1);
+    // 离开期间在别处改过内容：把现状补成新的一格，撤销才不会跳回旧内容
+    if(s && H.stack[H.idx] && s.body !== H.stack[H.idx].body){
+      H.stack = H.stack.slice(0, H.idx + 1);
+      H.stack.push(s);
+      H.idx = H.stack.length - 1;
+    }
+    H.resumed = { at: saved.at, steps: Math.max(0, H.idx) };
+    setTimeout(()=>{ try{ renderMeta(); }catch(e){} }, 0);
+  }else{
+    H.stack = s ? [s] : [];
+    H.idx = s ? 0 : -1;
+  }
 }
 function histPush(){
   const H = histState();
@@ -6619,6 +6809,7 @@ function histApply(i){
       try{ focusBlock(bi, at.pos >= 0 ? at.pos : 'end'); }catch(e){}
     }, 0);
   }
+  H.resumed = null;
   renderMeta(); renderOutline(); save();
   H.quiet = false;
   return true;
@@ -9054,7 +9245,7 @@ function exportBackup(){
       parentId:nb.parentId||null, order:nb.order||0 })),
     notes: S.notes.filter(n=>!n.trashed && !n.deleted).map(n=>({
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
-      tags:n.tags||[], pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
+      tags:n.tags||[], pinned:!!n.pinned, pinnedAt:n.pinnedAt||0, devices:n.devices||[],
       createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
   };
   const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
@@ -9088,6 +9279,7 @@ function importBackup(text){
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
       tags:Array.isArray(n.tags)?n.tags.slice():[], trashed:!!n.trashed,
       pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
+      devices:Array.isArray(n.devices)?n.devices.slice():[],
       createdAt:n.createdAt||now, updatedAt:n.updatedAt||now });
     noteAdded++;
   });
@@ -9362,6 +9554,12 @@ function openNoteInfo(){
   const owner = (typeof SYNC !== 'undefined' && SYNC.account) ? SYNC.account : '本机';
   const versa = (typeof VERSIONS !== 'undefined' && VERSIONS[n.id]) ? VERSIONS[n.id].length : 0;
   const shared = !!n.shareSlug;
+  const myDev = devId();
+  const devs = (Array.isArray(n.devices) ? n.devices : []).slice(0, 5);
+  const devHtml = devs.length
+    ? '<span class="dev-list">' + devs.map(d=>'<span class="dev-item">' + esc(d.label || '未知设备')
+        + '<em>' + agoText(d.at) + '</em>' + (d.id === myDev ? '<b>当前</b>' : '') + '</span>').join('') + '</span>'
+    : '<span style="color:rgb(var(--faint))">还没有记录</span>';
 
   ov.innerHTML = `
     <div class="info-card" role="dialog" aria-label="笔记信息">
@@ -9392,7 +9590,7 @@ function openNoteInfo(){
 
         <div class="info-sec">历史与设备</div>
         <div class="info-row"><span class="k">历史版本</span><span class="v"><button class="info-link" id="infoHist">${versa ? versa + ' 个版本' : '还没有版本'}</button></span></div>
-        <div class="info-row"><span class="k">编辑过的设备</span><span class="v">Web · 本机</span></div>
+        <div class="info-row"><span class="k">编辑过的设备</span><span class="v">${devHtml}</span></div>
 
         <div class="info-id">
           <span>笔记 ID　${esc(n.id)}</span>
@@ -9603,7 +9801,7 @@ document.addEventListener('keydown', e=>{
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); if(typeof closeNoteInfo==='function') closeNoteInfo(); }
+  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); if(typeof closeNoteInfo==='function') closeNoteInfo(); if(typeof closeSettings==='function') closeSettings(); if(typeof closeTokenPanel==='function') closeTokenPanel(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
@@ -9701,7 +9899,7 @@ function localPayload(){
   const live = S.notes.map(n=>({
     id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
     tags:n.tags||[], trashed:!!n.trashed, deleted:!!n.deleted,
-    pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
+    pinned:!!n.pinned, pinnedAt:n.pinnedAt||0, devices:n.devices||[],
     createdAt:n.createdAt||0, updatedAt:n.updatedAt||0
   }));
   // 待删除的笔记以墓碑上传，让云端和其它设备一起消失
@@ -9718,6 +9916,15 @@ function localPayload(){
     }))
   };
 }
+function mergeDevices(a, b){
+  const m = new Map();
+  [...(a || []), ...(b || [])].forEach(d=>{
+    if(!d || !d.id) return;
+    const cur = m.get(d.id);
+    if(!cur || (d.at || 0) > (cur.at || 0)) m.set(d.id, { id:d.id, label:d.label || (cur && cur.label) || '', at:d.at || 0 });
+  });
+  return [...m.values()].sort((x,y)=>(y.at || 0) - (x.at || 0)).slice(0, 5);
+}
 function applyRemote(data){
   let changed = false;
   const map = new Map(S.notes.map(n=>[n.id,n]));
@@ -9725,7 +9932,12 @@ function applyRemote(data){
     if(!Array.isArray(r.tags)) r.tags = [];       // 兼容老客户端/老数据
     const cur = map.get(r.id);
     if(!cur){ S.notes.push(r); changed = true; }
-    else if((r.updatedAt||0) > (cur.updatedAt||0)){ Object.assign(cur, r); changed = true; }
+    else if((r.updatedAt||0) > (cur.updatedAt||0)){
+      const oldDevs = Array.isArray(cur.devices) ? cur.devices : [];
+      Object.assign(cur, r);
+      cur.devices = mergeDevices(oldDevs, Array.isArray(r.devices) ? r.devices : []);
+      changed = true;
+    }
   }
   const nbm = new Map(S.notebooks.map(n=>[n.id,n]));
   for(const r of (data.notebooks||[])){
@@ -10175,6 +10387,500 @@ function openSyncPanel(){
   });
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
+/* ---------- 设置（整页） ---------- */
+const SET_TABS = [
+  ['account', '账户'],
+  ['appearance', '外观'],
+  ['remind', '提醒与日历'],
+  ['mcp', 'API 令牌与 MCP'],
+  ['sync', '同步与备份'],
+  ['share', '分享管理'],
+  ['import', '导入'],
+  ['data', '数据'],
+  ['about', '关于']
+];
+let SET_TAB = 'account';
+function setTabName(id){
+  const t = SET_TABS.find(x=>x[0] === id);
+  return t ? t[1] : '设置';
+}
+function closeSettings(){
+  const ov = $('#setOv');
+  if(ov) ov.classList.remove('open');
+}
+function openSettings(tab){
+  let ov = $('#setOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'set-ov'; ov.id = 'setOv';
+    ov.innerHTML = `<div class="set-wrap">
+      <aside class="set-nav">
+        <div class="set-title">设置</div>
+        <nav id="setNav"></nav>
+      </aside>
+      <section class="set-main">
+        <div class="set-head"><h2 id="setHead">账户</h2>
+          <button class="pa-btn" id="setClose" title="关闭">${ic('x')}</button></div>
+        <div class="set-body" id="setPane"></div>
+      </section>
+    </div>`;
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeSettings(); });
+    document.body.appendChild(ov);
+    ov.querySelector('#setClose').onclick = closeSettings;
+    ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name]) =>
+      `<button type="button" data-st="${id}">${name}</button>`).join('');
+    ov.querySelectorAll('#setNav [data-st]').forEach(b=>{
+      b.onclick = ()=>{ SET_TAB = b.dataset.st; paintSettings(); };
+    });
+  }
+  if(tab) SET_TAB = tab;
+  ov.classList.add('open');
+  paintSettings();
+}
+function paintSettings(){
+  const nav = $('#setNav'), pane = $('#setPane'), head = $('#setHead');
+  if(!nav || !pane) return;
+  nav.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on', b.dataset.st === SET_TAB));
+  head.textContent = setTabName(SET_TAB);
+  pane.scrollTop = 0;
+  pane.innerHTML = setPaneHtml(SET_TAB);
+  bindPane(SET_TAB);
+}
+function setPaneHtml(tab){
+  if(tab === 'account') return setAccountHtml();
+  if(tab === 'appearance') return setAppearanceHtml();
+  if(tab === 'remind') return setRemindHtml();
+  if(tab === 'mcp') return setMcpHtml();
+  if(tab === 'sync') return setSyncHtml();
+  if(tab === 'share') return setShareHtml();
+  if(tab === 'import') return setImportHtml();
+  if(tab === 'data') return setDataHtml();
+  return setAboutHtml();
+}
+
+/* ---- 账户 ---- */
+function setAccountHtml(){
+  const logged = !!SYNC.token;
+  if(!logged){
+    return `<div class="set-card">
+        <div class="set-row"><div><div class="t">登录后开启云同步</div>
+          <div class="d">换设备也能接着写。不登录也能完整使用，数据只存在这台设备。</div></div></div>
+        <label class="field"><span>用户名</span>
+          <input id="setName" type="text" placeholder="例如 xiaohu" autocomplete="off" spellcheck="false" value="${esc(SYNC.account || '')}"></label>
+        <label class="field"><span>密码</span>
+          <input id="setKey" type="password" placeholder="自己设定的密码，至少 4 位" autocomplete="off" spellcheck="false"></label>
+        <div class="sheet-row">
+          <button class="btn-primary" id="setLogin">登录并同步</button>
+          <button class="btn-ghost" id="setReg">注册新账号</button>
+        </div>
+      </div>
+      <p class="set-note">忘记密码：找站主在管理后台重置。</p>`;
+  }
+  const state = SYNC.state === 'ok' ? '已同步' : (SYNC.state === 'busy' ? '同步中…' : (SYNC.state === 'error' ? '同步出错：' + (SYNC.error || '') : '待同步'));
+  const last = SYNC.last ? agoText(SYNC.last) : '—';
+  return `<div class="set-card">
+      <div class="set-row"><div><div class="t">${esc(SYNC.account || '主人账号')}</div>
+        <div class="d">${state} · 上次同步 ${last}</div></div>
+        <button class="set-btn" id="setSyncNow">立即同步</button></div>
+      <div class="set-row"><div><div class="t">退出登录</div>
+        <div class="d">退出后本机笔记保留，不再上传</div></div>
+        <button class="set-btn danger" id="setLogout">退出</button></div>
+    </div>
+    <div class="set-sec">安全</div>
+    <div class="set-row"><div><div class="t">修改密码</div>
+      <div class="d">改完其它设备要用新密码重新登录</div></div>
+      <button class="set-btn" id="setPw">修改</button></div>
+    <div class="set-row"><div><div class="t">注销账号</div>
+      <div class="d">删除云端的笔记、笔记本、历史版本与分享，本机保留</div></div>
+      <button class="set-btn danger" id="setDel">注销</button></div>`;
+}
+
+/* ---- 外观 ---- */
+function setAppearanceHtml(){
+  const dark = S.theme === 'dark';
+  const mode = S.mode || 'live';
+  return `<div class="set-sec">主题</div>
+    <div class="set-chips">
+      <button type="button" class="set-chip${dark ? '' : ' on'}" data-theme="light">${ic('sun')} 浅色</button>
+      <button type="button" class="set-chip${dark ? ' on' : ''}" data-theme="dark">${ic('moon')} 深色</button>
+    </div>
+    <div class="set-sec">默认编辑模式</div>
+    <div class="set-chips">
+      <button type="button" class="set-chip${mode === 'live' ? ' on' : ''}" data-mode="live">实时预览</button>
+      <button type="button" class="set-chip${mode === 'source' ? ' on' : ''}" data-mode="source">源码</button>
+      <button type="button" class="set-chip${mode === 'split' ? ' on' : ''}" data-mode="split">双栏</button>
+    </div>
+    <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>`;
+}
+
+/* ---- 提醒与日历 ---- */
+function setRemindHtml(){
+  return `<div class="set-row"><div><div class="t">提醒与日历</div>
+      <div class="d">给待办设提醒、在这台设备弹通知，或把日程订阅到手机日历</div></div>
+      <button class="set-btn" id="setOpenRemind">打开</button></div>
+    <div class="set-row"><div><div class="t">同步到苹果备忘录</div>
+      <div class="d">用 iOS 快捷指令把笔记单向推送到备忘录</div></div>
+      <button class="set-btn" id="setOpenPush">打开</button></div>
+    <p class="set-note">提醒依赖浏览器通知权限；日历订阅是只读的，不会把日历写回笔记。</p>`;
+}
+
+/* ---- API 令牌与 MCP ---- */
+function setMcpHtml(){
+  return `<p class="set-note" style="margin-top:4px">给 Claude Desktop、Cursor 这类 AI 工具发一把钥匙，让它通过 MCP 读取和写入你的笔记。令牌只在创建时显示一次。</p>
+    <div class="set-card">
+      <label class="field"><span>令牌名称</span>
+        <input id="tokName" type="text" placeholder="例如：Claude Desktop" maxlength="40" autocomplete="off" spellcheck="false"></label>
+      <div class="sheet-row"><button class="btn-primary" id="tokCreate">创建令牌</button></div>
+      <div id="tokFresh" hidden></div>
+    </div>
+    <div class="set-sec">已创建的令牌</div>
+    <div id="tokList" class="tok-list"></div>
+    <p class="set-note">MCP 端点：<b>${location.origin}/mcp</b></p>`;
+}
+
+/* ---- 同步与备份 ---- */
+function setSyncHtml(){
+  const state = !SYNC.token ? '未登录，仅保存在本机'
+    : (SYNC.state === 'ok' ? '已同步' : (SYNC.state === 'busy' ? '同步中…' : (SYNC.state === 'error' ? '同步出错：' + (SYNC.error || '') : '待同步')));
+  return `<div class="set-card">
+      <div class="set-row"><div><div class="t">同步状态</div>
+        <div class="d">${esc(state)}${SYNC.last ? ' · 上次 ' + agoText(SYNC.last) : ''}</div></div>
+        <button class="set-btn" id="setSyncNow2">${SYNC.token ? '立即同步' : '去登录'}</button></div>
+    </div>
+    <div class="set-sec">备份</div>
+    <div class="set-row"><div><div class="t">导出全部笔记（备份文件）</div>
+      <div class="d">JSON 格式，含笔记本、标签、置顶与分享状态，可原样恢复</div></div>
+      <button class="set-btn" id="setExpBackup">导出</button></div>
+    <div class="set-row"><div><div class="t">导出全部笔记（Markdown）</div>
+      <div class="d">纯文本，方便迁到别的工具</div></div>
+      <button class="set-btn" id="setExpMd">导出</button></div>
+    <div class="set-row"><div><div class="t">导入</div>
+      <div class="d">支持备份文件、Markdown、HTML</div></div>
+      <button class="set-btn" id="setGoImport">去导入</button></div>`;
+}
+
+/* ---- 分享管理 ---- */
+function setShareHtml(){
+  const list = (S.notes || []).filter(n=>n.shareSlug && !n.trashed && !n.deleted);
+  if(!list.length) return `<div class="set-empty">还没有分享出去的笔记。在笔记菜单 ⋯ → 复制/分享/导出 里可以生成公开链接。</div>`;
+  return `<div class="set-sec">已分享 ${list.length} 篇</div>` + list.map(n=>`
+    <div class="set-row"><div style="min-width:0"><div class="t" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.title || '无标题')}</div>
+      <div class="d">${esc((location.origin + '/s/' + n.shareSlug).replace(/^https?:\/\//, ''))}</div></div>
+      <div class="sheet-row"><button class="set-btn" data-opencopy="${esc(n.id)}">复制链接</button>
+        <button class="set-btn danger" data-unshare="${esc(n.id)}">取消分享</button></div></div>`).join('');
+}
+
+/* ---- 导入 ---- */
+function setImportHtml(){
+  return `<div class="set-row"><div><div class="t">导入文件</div>
+      <div class="d">Markdown（.md）、HTML、或之前导出的备份文件（.json）</div></div>
+      <button class="set-btn primary" id="setImportBtn">选择文件</button></div>
+    <div class="set-row"><div><div class="t">从备份恢复</div>
+      <div class="d">会合并进现有笔记：同 id 的按更新时间保留较新的那份</div></div>
+      <button class="set-btn" id="setImportBackup">选择备份</button></div>
+    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。</p>`;
+}
+
+/* ---- 数据 ---- */
+function setDataHtml(){
+  const live = (S.notes || []).filter(n=>!n.trashed && !n.deleted).length;
+  const trash = (S.notes || []).filter(n=>n.trashed).length;
+  const nb = (S.notebooks || []).filter(n=>!n.deleted).length;
+  return `<div class="set-card">
+      <div class="set-row"><div><div class="t">本机数据</div>
+        <div class="d">${live} 篇笔记 · ${nb} 个笔记本 · 回收站 ${trash} 篇</div></div>
+        <button class="set-btn" id="setTrash">回收站</button></div>
+    </div>
+    <div class="set-sec">清理</div>
+    <div class="set-row"><div><div class="t">导出后清理</div>
+      <div class="d">先导出备份，再清空回收站里的笔记</div></div>
+      <button class="set-btn" id="setGoBackup">先备份</button></div>
+    <p class="set-note">数据优先存在这台设备（IndexedDB），登录后会同步到云端。</p>`;
+}
+
+/* ---- 关于 ---- */
+function setAboutHtml(){
+  const b = window.IVY_BUILD || { id:'—', at:'' };
+  return `<div class="set-card">
+      <div class="set-row"><div><div class="t">随手笔记</div>
+        <div class="d">版本 ${esc(b.id)} · ${esc(b.at)}</div></div></div>
+      <div class="set-row"><div><div class="t">数据在哪</div>
+        <div class="d">默认存在本机 IndexedDB；登录后同步到 Cloudflare</div></div></div>
+    </div>
+    <div class="set-sec">帮助</div>
+    <div class="set-row"><div><div class="t">使用说明与快捷键</div><div class="d">Markdown 语法、全部快捷键、AI 与思维导图</div></div>
+      <button class="set-btn" id="setHelp">打开</button></div>
+    <div class="set-row"><div><div class="t">客户端下载</div><div class="d">装成独立应用，不用每次开浏览器</div></div>
+      <button class="set-btn" id="setClient">打开</button></div>
+    <div class="set-row"><div><div class="t">AI 接口设置</div><div class="d">填自己的 OpenAI 兼容接口</div></div>
+      <button class="set-btn" id="setAiCfg">打开</button></div>`;
+}
+
+/* ---- 交互绑定 ---- */
+function bindPane(tab){
+  const pane = $('#setPane'); if(!pane) return;
+  if(tab === 'account'){
+    const login = $('#setLogin');
+    if(login){
+      const run = async (create)=>{
+        const name = ($('#setName').value || '').trim();
+        const key = ($('#setKey').value || '').trim();
+        if(create && !REG_OPEN){ toast('注册已关闭，如需注册请联系 201965'); return; }
+        if(!key){ toast('请先填写密码'); return; }
+        if(create && !name){ toast('注册新账号需要填写用户名'); return; }
+        login.disabled = true;
+        try{
+          await doAuth(name, key, create);
+          SYNC.state = 'busy';
+          await syncNow({ rerender:true });
+          paintSettings();
+          if(SYNC.state === 'ok') toast((create ? '已创建账号「' : '已登录「') + (name || '默认账号') + '」');
+        }catch(e){
+          SYNC.state = 'off';
+          if(/关闭注册|暂时关闭/.test(e.message || '')) REG_OPEN = false;
+          toast(e.message || '登录失败');
+        }finally{ login.disabled = false; }
+      };
+      login.onclick = ()=>run(false);
+      const reg = $('#setReg');
+      if(reg) reg.onclick = ()=>run(true);
+      const key = $('#setKey');
+      if(key) key.onkeydown = e=>{ if(e.key === 'Enter') login.click(); };
+    }
+    const now = $('#setSyncNow') || $('#setSyncNow2');
+    if(now) now.onclick = async ()=>{
+      if(!SYNC.token){ SET_TAB = 'account'; paintSettings(); return; }
+      try{ await syncNow({ rerender:true }); toast('已同步'); paintSettings(); }
+      catch(e){ toast('同步失败：' + (e.message || '网络错误')); }
+    };
+    const out = $('#setLogout');
+    if(out) out.onclick = ()=>{
+      SYNC.token=''; SYNC.key=''; SYNC.account=''; SYNC.state='off'; SYNC.last=0; SYNC.error='';
+      syncSave(); renderDock(); updateSyncBadge(); paintSettings();
+      toast('已退出账号，本机数据保留');
+    };
+    const pw = $('#setPw');
+    if(pw) pw.onclick = ()=>{ closeSettings(); openSyncPanel(); setTimeout(()=>{ const b = $('#pwToggle'); if(b) b.click(); }, 80); };
+    const del = $('#setDel');
+    if(del) del.onclick = ()=>{ closeSettings(); openSyncPanel(); setTimeout(()=>{ const b = $('#acctToggle'); if(b) b.click(); }, 80); };
+  }
+
+  if(tab === 'appearance'){
+    pane.querySelectorAll('[data-theme]').forEach(b=>{
+      b.onclick = ()=>{
+        const want = b.dataset.theme;
+        if((S.theme === 'dark') !== (want === 'dark')) toggleTheme();
+        paintSettings();
+      };
+    });
+    pane.querySelectorAll('[data-mode]').forEach(b=>{
+      b.onclick = ()=>{ setMode(b.dataset.mode); paintSettings(); };
+    });
+  }
+
+  if(tab === 'remind'){
+    const a = $('#setOpenRemind'); if(a) a.onclick = ()=>{ closeSettings(); openRemindCenter(); };
+    const b = $('#setOpenPush'); if(b) b.onclick = ()=>{ closeSettings(); openNotesPush(); };
+  }
+
+  if(tab === 'mcp'){
+    const c = $('#tokCreate'); if(c) c.onclick = createToken;
+    loadTokens();
+  }
+
+  if(tab === 'sync'){
+    const a = $('#setSyncNow2');
+    if(a) a.onclick = async ()=>{
+      if(!SYNC.token){ SET_TAB = 'account'; paintSettings(); return; }
+      try{ await syncNow({ rerender:true }); toast('已同步'); paintSettings(); }
+      catch(e){ toast('同步失败：' + (e.message || '网络错误')); }
+    };
+    const b = $('#setExpBackup'); if(b) b.onclick = ()=>exportBackup();
+    const c = $('#setExpMd'); if(c) c.onclick = ()=>exportAllMd();
+    const d = $('#setGoImport'); if(d) d.onclick = ()=>{ SET_TAB = 'import'; paintSettings(); };
+  }
+
+  if(tab === 'share'){
+    pane.querySelectorAll('[data-unshare]').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('取消分享后，这个链接立刻失效，确定吗？')) return;
+        await unshareById(b.dataset.unshare);
+      };
+    });
+    pane.querySelectorAll('[data-opencopy]').forEach(b=>{
+      b.onclick = async ()=>{
+        const n = noteById(b.dataset.opencopy); if(!n || !n.shareSlug) return;
+        const url = location.origin + '/s/' + n.shareSlug;
+        try{ await navigator.clipboard.writeText(url); toast('已复制链接'); }
+        catch(e){ toast('复制失败：' + url); }
+      };
+    });
+  }
+
+  if(tab === 'import'){
+    const a = $('#setImportBtn'); if(a) a.onclick = ()=>importDoc();
+    const b = $('#setImportBackup'); if(b) b.onclick = ()=>importDoc(true);
+    if(!bindPane._impBound){
+      bindPane._impBound = true;
+    }
+  }
+
+  if(tab === 'data'){
+    const a = $('#setTrash'); if(a) a.onclick = ()=>{ closeSettings(); if(typeof openTrashView === 'function') openTrashView(); };
+    const b = $('#setGoBackup'); if(b) b.onclick = ()=>{ SET_TAB = 'sync'; paintSettings(); };
+  }
+
+  if(tab === 'about'){
+    const a = $('#setHelp'); if(a) a.onclick = ()=>{ closeSettings(); helpTab='io'; openHelpPanel(); };
+    const b = $('#setClient'); if(b) b.onclick = ()=>{ closeSettings(); openClientPanel(); };
+    const c = $('#setAiCfg'); if(c) c.onclick = ()=>{ closeSettings(); openAIConfig(); };
+  }
+}
+async function unshareById(id){
+  const n = noteById(id); if(!n) return;
+  try{
+    await apiCall('/api/share?noteId=' + encodeURIComponent(id), { method:'DELETE' });
+    delete n.shareSlug; save();
+    toast('已取消分享，原链接已失效');
+    paintSettings();
+  }catch(e){
+    toast('取消失败：' + (e.message || '网络错误'));
+  }
+}
+
+
+/* ---------- API 令牌与 MCP ---------- */
+let TOK_BUSY = false;
+async function tokFetch(method, body, id){
+  const url = '/api/tokens' + (id ? '?id=' + encodeURIComponent(id) : '');
+  let r = await fetch(url, { method, headers: authHeaders(true), body: body ? JSON.stringify(body) : undefined });
+  let d = await r.json().catch(()=>({}));
+  if(r.status === 401 && SYNC.token && SYNC.key){
+    if(await relogin()){
+      r = await fetch(url, { method, headers: authHeaders(true), body: body ? JSON.stringify(body) : undefined });
+      d = await r.json().catch(()=>({}));
+    }
+  }
+  if(!r.ok){ const e = new Error(d.error || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+  return d;
+}
+function tokCopyText(btn, text, done){
+  if(!btn) return;
+  btn.onclick = async ()=>{
+    let ok = true;
+    try{ await navigator.clipboard.writeText(text); }
+    catch(e){
+      ok = false;
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(ta); ta.select();
+      try{ ok = document.execCommand('copy'); }catch(err){ ok = false; }
+      ta.remove();
+    }
+    if(!ok){ toast('复制失败，请手动选中'); return; }
+    const old = btn.textContent;
+    btn.textContent = done || '已复制';
+    setTimeout(()=>{ btn.textContent = old; }, 1500);
+  };
+}
+function closeTokenPanel(){
+  const ov = $('#tokOv');
+  if(ov) ov.classList.remove('open');
+}
+function openTokenPanel(){
+  if(!SYNC.token){ toast('先在「账号与云同步」里登录，令牌是绑定账号的'); return; }
+  let ov = $('#tokOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.className = 'overlay'; ov.id = 'tokOv';
+    ov.innerHTML = `<div class="sheet">
+      <div class="sheet-head"><h3>API 令牌与 MCP</h3>
+        <button class="pa-btn" id="tokClose" title="关闭">${ic('x')}</button></div>
+      <p class="sheet-sub">给 Claude Desktop、Cursor 这类 AI 工具发一把钥匙，让它能通过 MCP 读取和写入你的笔记。令牌只在创建时显示一次。</p>
+      <label class="field"><span>令牌名称</span>
+        <input id="tokName" type="text" placeholder="例如：Claude Desktop" maxlength="40" autocomplete="off" spellcheck="false"></label>
+      <div class="sheet-row"><button class="btn-primary" id="tokCreate">创建令牌</button></div>
+      <div id="tokFresh" hidden></div>
+      <div class="tok-sec">已创建的令牌</div>
+      <div id="tokList" class="tok-list"></div>
+      <div class="sheet-status">MCP 端点：<b>${location.origin}/mcp</b>　·　同一个账号的笔记会同步到所有设备</div>
+    </div>`;
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeTokenPanel(); });
+    document.body.appendChild(ov);
+    ov.querySelector('#tokClose').onclick = closeTokenPanel;
+    ov.querySelector('#tokCreate').onclick = createToken;
+  }
+  ov.classList.add('open');
+  const fresh = $('#tokFresh');
+  if(fresh){ fresh.hidden = true; fresh.innerHTML = ''; }
+  const nm = $('#tokName'); if(nm) nm.value = '';
+  loadTokens();
+}
+async function createToken(){
+  if(TOK_BUSY) return;
+  const btn = $('#tokCreate'), nameEl = $('#tokName');
+  const name = ((nameEl && nameEl.value) || '').trim() || '未命名令牌';
+  TOK_BUSY = true;
+  if(btn){ btn.disabled = true; btn.textContent = '创建中…'; }
+  try{
+    const d = await tokFetch('POST', { name });
+    const cfg = JSON.stringify({
+      mcpServers: {
+        ivynote: {
+          url: location.origin + '/mcp',
+          headers: { Authorization: 'Bearer ' + d.token }
+        }
+      }
+    }, null, 2);
+    const box = $('#tokFresh');
+    if(box){
+      box.hidden = false;
+      box.innerHTML = `<div class="tok-new">
+        <div class="tok-new-t">令牌已创建 · 只显示这一次</div>
+        <div class="tok-copy-row"><code id="tokPlain">${esc(d.token)}</code><button class="btn-ghost" id="tokCopy">复制令牌</button></div>
+        <div class="tok-new-t" style="margin-top:12px">MCP 配置（客户端里的 mcpServers 直接粘这一段）</div>
+        <pre class="tok-json" id="tokJson">${esc(cfg)}</pre>
+        <div class="sheet-row"><button class="btn-primary" id="tokCopyJson">复制配置</button></div>
+        <div class="tok-warn">关掉面板后就查不到明文了，丢了只能重新创建。令牌等同于账号密码，别贴到公开的地方。</div>
+      </div>`;
+      tokCopyText($('#tokCopy'), d.token, '已复制');
+      tokCopyText($('#tokCopyJson'), cfg, '已复制配置');
+    }
+    if(nameEl) nameEl.value = '';
+    loadTokens();
+  }catch(e){
+    toast(e.message || '创建失败');
+  }finally{
+    TOK_BUSY = false;
+    if(btn){ btn.disabled = false; btn.textContent = '创建令牌'; }
+  }
+}
+async function loadTokens(){
+  const box = $('#tokList'); if(!box) return;
+  box.innerHTML = '<div class="tok-empty">读取中…</div>';
+  try{
+    const d = await tokFetch('GET');
+    const list = d.tokens || [];
+    if(!list.length){ box.innerHTML = '<div class="tok-empty">还没有令牌</div>'; return; }
+    box.innerHTML = list.map(t=>`<div class="tok-item">
+      <div class="tok-item-main"><b>${esc(t.name || '未命名令牌')}</b>
+        <span>${esc(t.prefix)}…　创建于 ${agoText(t.createdAt)}　${t.lastUsedAt ? '最后使用 ' + agoText(t.lastUsedAt) : '从未使用'}</span></div>
+      <button class="tok-del" data-tok="${esc(t.id)}">吊销</button>
+    </div>`).join('');
+    box.querySelectorAll('[data-tok]').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('吊销后，用这把令牌的客户端会立刻断开，确定吗？')) return;
+        b.disabled = true;
+        try{ await tokFetch('DELETE', null, b.dataset.tok); toast('已吊销'); loadTokens(); }
+        catch(e){ b.disabled = false; toast(e.message || '吊销失败'); }
+      };
+    });
+  }catch(e){
+    box.innerHTML = '<div class="tok-empty">' + esc(e.message || '读取失败') + '</div>';
+  }
+}
+
+
 $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverlay') closeSyncPanel(); });
 
 /* ========== AI：每个账号自己的接口 ========== */

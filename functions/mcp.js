@@ -1,6 +1,6 @@
 // /mcp  MCP（Model Context Protocol）端点：让 Claude / Cursor 等 AI 工具读写笔记
 //
-// 鉴权：Authorization: Bearer ivy_pat_xxx（在「API 令牌与 MCP」里创建）
+// 鉴权：Authorization: Bearer pat_xxx（在「API 令牌与 MCP」里创建；早期发的 ivy_pat_ 仍然认）
 // 传输：Streamable HTTP —— POST 进来 JSON-RPC，返回 application/json
 //
 // 支持：initialize / tools/list / tools/call / ping / notifications/*
@@ -123,7 +123,7 @@ function errResult(text) {
 
 async function authToken(request, env) {
   const authz = request.headers.get('authorization') || '';
-  const m = authz.match(/^Bearer\s+(ivy_pat_[A-Za-z0-9_-]+)$/i);
+  const m = authz.match(/^Bearer\s+((?:ivy_)?pat_[A-Za-z0-9_-]+)$/i);
   if (!m) return null;
   const hash = await sha256hex(m[1]);
   const row = await env.DB.prepare(
@@ -263,7 +263,7 @@ async function handleOne(msg, env, uid) {
     return ok(id, {
       protocolVersion: pv,
       capabilities: { tools: {} },
-      serverInfo: { name: 'ivynote', version: '1.0.0' },
+      serverInfo: { name: 'notes', version: '1.0.0' },
       instructions: '这里是「随手笔记」。可以搜索、读取、新建、改写和追加笔记，改动会同步到所有设备。'
     });
   }

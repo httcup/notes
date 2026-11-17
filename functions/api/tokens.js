@@ -4,7 +4,7 @@
 //   POST { name }   新建令牌，明文只在这里返回一次
 //   DELETE ?id=xxx  吊销（软删，留审计）
 //
-// 令牌形如 ivy_pat_xxxxxxxx；库里只存 SHA-256，泄库也拿不到可用的钥匙。
+// 令牌形如 pat_xxxxxxxx；库里只存 SHA-256，泄库也拿不到可用的钥匙。
 import { json, preflight, currentUser } from '../_lib.js';
 
 async function sha256hex(s) {
@@ -50,7 +50,7 @@ export async function onRequest({ request, env }) {
     if (request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
       const name = str(body.name, 40).trim() || '未命名令牌';
-      const token = 'ivy_pat_' + randToken(24);
+      const token = 'pat_' + randToken(24);
       const id = 'tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       await env.DB.prepare(
         'INSERT INTO api_tokens (id, user_id, name, hash, prefix, created_at, last_used_at, revoked) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0)'

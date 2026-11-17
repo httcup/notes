@@ -125,6 +125,19 @@ body.view-todo .head-actions .notes-only{display:none}
   margin:10px 8px 6px;
 }
 .sec-label .count{font-size:11px;font-weight:500;color:rgb(var(--faint))}
+/* 「笔记」总开关：点标题把下面一整块（笔记本 / 标签 / 回收站）收起来 */
+.sec-fold{
+  width:100%;background:none;border:0;font-family:inherit;text-align:left;cursor:pointer;
+  border-radius:7px;padding:2px 0;transition:color .12s;
+}
+.sec-fold:hover{color:rgb(var(--ink))}
+.sec-fold .lb{display:flex;align-items:center;gap:5px}
+.sec-fold .caret{
+  font-size:8px;font-style:normal;color:rgb(var(--faint));display:inline-block;
+  transform:rotate(90deg);transition:transform .18s var(--spring);
+}
+.sec-fold.closed .caret{transform:rotate(0)}
+.sec-body.hidden{display:none}
 .shelf-row{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
   padding:6px 8px;border-radius:7px;color:rgb(var(--ink-2));
@@ -321,16 +334,18 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .dock-item svg{width:17px;height:17px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .dock-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .dock-item.active{background:rgb(var(--ink) / .06);color:rgb(var(--ink));font-weight:500}
-.dock-spacer{flex:1}
+/* 底部只剩 5 个图标：等分整条 dock，图标各自居中 */
+.dock{justify-content:space-between;gap:0}
+.dock-item{flex:1 1 0;min-width:0;width:auto}
 @media (max-width:420px){
   .dock{gap:0;padding:4px}
-  .dock-item{width:31px;min-width:31px;height:32px}
+  .dock-item{width:auto;min-width:0;height:32px}
   .dock-item svg{width:16px;height:16px}
 }
 /* 待办逾期红点：贴在图标右上角，不再把整个按钮撑宽 */
 /* 待办逾期红点：贴在图标右上角，不再把整个按钮撑宽 */
 .dock-item .todo-dot{
-  position:absolute;top:-3px;right:-4px;
+  position:absolute;top:1px;left:50%;margin-left:5px;
   min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:rgb(var(--danger));
   color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;flex:0 0 auto;
   box-shadow:0 0 0 2px rgb(var(--surface));
@@ -654,6 +669,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   background:rgb(var(--sunken)/.55);
 }
 .rc-box-h{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.rc-box-h svg{width:14px;height:14px;flex:0 0 auto;stroke:rgb(var(--ivy));fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .rc-box-h b{font-size:12.5px;font-weight:600;color:rgb(var(--ink))}
 .rc-badge{
   margin-left:auto;font-size:11px;padding:1.5px 7px;border-radius:20px;
@@ -1022,6 +1038,56 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .info-ov{padding:12px}
   .info-card{max-height:88vh}
   .info-grid{grid-template-columns:repeat(2,1fr)}
+}
+/* ---- 退出登录：本机笔记留不留 ---- */
+.lo-ov{
+  position:fixed;inset:0;z-index:160;background:rgb(16 24 32 / .38);
+  display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+}
+.lo-ov.open{opacity:1;pointer-events:auto}
+.lo-card{
+  width:min(440px,100%);max-height:90vh;overflow:auto;background:rgb(var(--surface));
+  border-radius:16px;box-shadow:var(--shadow-lift);
+  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+}
+.lo-ov.open .lo-card{transform:none}
+.lo-hd{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px 4px}
+.lo-hd h3{font-family:var(--font-serif);font-size:17px;font-weight:700;letter-spacing:-.01em}
+.lo-body{padding:4px 20px 0}
+.lo-lead{margin:0 0 13px;font-size:12.5px;line-height:1.75;color:rgb(var(--muted))}
+.lo-lead b{color:rgb(var(--ink));font-weight:600}
+.lo-opt{
+  display:flex;gap:11px;width:100%;text-align:left;padding:12px 13px;margin-bottom:8px;
+  border:1px solid rgb(var(--line));border-radius:11px;background:rgb(var(--surface));
+  transition:border-color .14s,background .14s;
+}
+.lo-opt:hover{background:rgb(var(--hover))}
+.lo-opt.on{border-color:rgb(var(--ivy));background:rgb(var(--ivy-soft) / .55)}
+.lo-opt.on.bad{border-color:rgb(var(--danger));background:rgb(var(--danger) / .06)}
+.lo-radio{
+  position:relative;flex:0 0 auto;width:15px;height:15px;margin-top:3px;border-radius:50%;
+  border:1.5px solid rgb(var(--line-strong, var(--line)));
+}
+.lo-opt.on .lo-radio{border-color:rgb(var(--ivy))}
+.lo-opt.on .lo-radio:after{content:'';position:absolute;inset:2.5px;border-radius:50%;background:rgb(var(--ivy))}
+.lo-opt.on.bad .lo-radio{border-color:rgb(var(--danger))}
+.lo-opt.on.bad .lo-radio:after{background:rgb(var(--danger))}
+.lo-opt .t{display:block;font-size:13px;font-weight:600;color:rgb(var(--ink))}
+.lo-opt .d{display:block;margin-top:4px;font-size:11.5px;line-height:1.68;color:rgb(var(--faint))}
+.lo-warn{
+  display:none;margin:2px 0 4px;padding:9px 11px;border-radius:9px;
+  background:rgb(var(--danger-soft));color:rgb(var(--danger));font-size:11.5px;line-height:1.68;
+}
+.lo-warn.on{display:block}
+.lo-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:14px 20px 16px;margin-top:10px;border-top:1px solid rgb(var(--line));
+}
+.lo-acts{display:flex;gap:8px;align-items:center}
+@media (max-width:520px){
+  .lo-ov{padding:12px}
+  .lo-foot{flex-wrap:wrap}
 }
 
 .hist-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid rgb(var(--line))}
@@ -1704,6 +1770,14 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-row:last-child{border-bottom:0}
 .set-row .t{font-size:13px;color:rgb(var(--ink))}
 .set-row .d{font-size:11.5px;color:rgb(var(--faint));margin-top:3px;line-height:1.65}
+/* 帮助 / 下载 / 提醒这些本来是弹窗里的内容，铺进设置页时把内边距去掉，和别的设置项左对齐 */
+.set-body .help-tabs{padding:0 0 10px;flex-wrap:wrap}
+.set-body .help-body{padding:0 0 10px;overflow:visible}
+.set-body .help-p{padding-left:0;padding-right:0}
+.set-body .dl-body{padding:0 0 4px;overflow:visible}
+.set-body .dl-row{margin-top:10px}
+.set-body .rc-box{margin-bottom:9px}
+.set-body .ai-cfg-tip{margin-bottom:14px}
 .set-card{background:rgb(var(--sunken));border-radius:12px;padding:14px 16px;margin:10px 0}
 .set-card .field{margin-bottom:10px}
 .set-note{font-size:11.5px;line-height:1.75;color:rgb(var(--faint));margin:10px 0 0}
@@ -2125,7 +2199,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v144', at: '2026-11-17 17:40' };
+window.IVY_BUILD = { id: 'v145', at: '2026-11-17 17:41' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2549,7 +2623,9 @@ function noteTouchDevice(n){
   n.devices.sort((a,b)=>(b.at || 0) - (a.at || 0));
   if(n.devices.length > 5) n.devices.length = 5;
 }
+var LOGOUT_WIPING = false;   // 退出并清空本机时置位，挡住迟到的 save() 把数据写回来
 function save(){
+  if(LOGOUT_WIPING) return;
   try{ noteTouchDevice(noteById(S.active)); }catch(e){}
   try{
     const copy = Object.assign({}, S, {media: []});
@@ -2822,12 +2898,19 @@ function renderShelf(){
 
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
-  let html = `<div class="sec-label"><span>笔记</span><span class="count">${notes.length}</span></div>`;
+  // 「笔记」这个标题也能点：一收就把下面的笔记本、标签、回收站全收起来
+  const nClosed = !!S.notesClosed;
+  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}" data-act="toggle-notes-sec"
+      title="${nClosed ? '展开笔记本、标签与回收站' : '收起笔记本、标签与回收站'}">
+      <span class="lb"><i class="caret">&#9654;</i>笔记</span>
+      <span class="count">${notes.length}</span>
+    </button>`;
+  let body = '';
   // 置顶笔记单独列在书架最上面：笔记本折叠着也能一眼看到
   const pinnedNotes = notes.filter(n=>n.pinned);
   if(pinnedNotes.length){
     const pOpen = S.pinOpen !== false;
-    html += `<div class="nb-group pin-group">
+    body += `<div class="nb-group pin-group">
       <div class="nb-row">
         <button class="nb-head ${pOpen?'open':''}" data-nb="__pin" title="置顶的笔记">
           <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
@@ -2838,7 +2921,7 @@ function renderShelf(){
       <div class="nb-notes pin-notes ${pOpen?'':'hidden'}">${pinnedNotes.map(noteRow).join('')}</div>
     </div>`;
   }
-  html += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
+  body += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
   notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
@@ -2880,11 +2963,11 @@ function renderShelf(){
       ${inner}
     </div>`;
   }
-  html += nbKids(null).map(nb=>nbGroupHtml(nb, 0)).join('');
+  body += nbKids(null).map(nb=>nbGroupHtml(nb, 0)).join('');
 
   if(loose.length){
     const lopen = S.looseOpen !== false;          // 未归类默认展开
-    html += `<div class="nb-group">
+    body += `<div class="nb-group">
       <div class="nb-row">
         <button class="nb-head ${lopen?'open':''}" data-nb="__loose">
           <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
@@ -2920,15 +3003,16 @@ function renderShelf(){
         : `<div class="tag-empty">这个标签下还没有笔记</div>`}</div>` : ''}
     </div>`;
   }).join('');
-  html += `<div class="tag-sec">
+  body += `<div class="tag-sec">
     <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
       <span class="caret">&#9654;</span>${ic('tag')}<span>标签</span>
     </button>
     ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
   </div>`;
 
-  html += `<div style="height:6px"></div>
+  body += `<div style="height:6px"></div>
     <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
+  html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
   shelfBody.innerHTML = html;
   bindShelf();
 }
@@ -2994,6 +3078,7 @@ function bindShelf(){
       openTrashView();
     }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
+    if(a==='toggle-notes-sec'){ S.notesClosed = !S.notesClosed; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
@@ -4126,6 +4211,7 @@ async function feedPush(opts){
     saveFeedCache();
     const ov = document.getElementById('remOv');
     if(ov && ov.classList.contains('open')) paintRemindCenter();
+    else if(typeof remindRepaintHook === 'function') remindRepaintHook();
     return d;
   }catch(e){
     toast('订阅链接没更新成功：' + (e.message || '网络错误'));
@@ -4154,6 +4240,7 @@ async function maybePushFeed(){
 }
 
 /* ---- 提醒与日历 面板 ---- */
+let remindRepaintHook = null;      // 设置页里内嵌显示时，用它重绘那一页
 function closeRemindCenter(){
   const ov = document.getElementById('remOv');
   if(ov) ov.classList.remove('open');
@@ -4175,6 +4262,17 @@ function openRemindCenter(){
 function paintRemindCenter(){
   const ov = document.getElementById('remOv');
   if(!ov) return;
+  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="提醒与日历">
+    <div class="rc-title">${ic('bell')}<span>提醒与日历</span></div>
+    ${remindBodyHtml()}
+    <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
+  </div>`;
+  const c = ov.querySelector('#rcClose');
+  if(c) c.onclick = closeRemindCenter;
+  bindRemindBody(ov, paintRemindCenter);
+}
+/* 正文单独抽出来：弹窗和设置页用的是同一套控件，只是换了个容器 */
+function remindBodyHtml(){
   const perm = notifyPermission();
   const on = notifyWanted() && perm === 'granted';
   const dt = dayRemindTime();
@@ -4211,10 +4309,7 @@ function paintRemindCenter(){
          <button class="rc-btn" id="rcExport">导出 .ics 文件</button>
        </div>`;
 
-  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="提醒与日历">
-    <div class="rc-title">${ic('bell')}<span>提醒与日历</span></div>
-
-    <div class="rc-box">
+  return `<div class="rc-box">
       <div class="rc-box-h"><b>在这台设备上提醒带日期的待办</b>
         <button class="rc-switch${on ? ' on' : ''}" id="rcSw" role="switch" aria-checked="${on}"><i></i></button>
       </div>
@@ -4248,13 +4343,13 @@ function paintRemindCenter(){
         <button class="rc-btn primary" id="rcIcsAdd">添加</button>
       </div>
       <div class="rc-note">只支持「公开共享」的日历；私有日历要 Apple ID 应用专用密码，这里不碰。各设备各自拉取、各自缓存，加一次就够。</div>
-    </div>
-
-    <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
-  </div>`;
-
-  const q = s=>ov.querySelector(s);
-  if(q('#rcClose')) q('#rcClose').onclick = closeRemindCenter;
+    </div>`;
+}
+/* 控件绑定：root 是任意容器（弹窗 / 设置页），repaint 由调用方决定重绘哪里 */
+function bindRemindBody(root, repaint){
+  if(!root) return;
+  const q = s=>root.querySelector(s);
+  const paintRemindCenter = ()=>repaint();   // 局部同名：重绘交给容器
   if(q('#rcSw')) q('#rcSw').onclick = async ()=>{
     const want = !(notifyWanted() && notifyPermission() === 'granted');
     if(want){
@@ -4426,16 +4521,14 @@ function renderDock(){
     {k:'media', icon:'folder', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];
-  const cloudBtn = `<button class="dock-item sync-${SYNC.state}" id="dockSync" title="${syncTip()}">
-      ${isConnected() ? ic('cloud') : ic('localSave')}<span class="dot"></span></button>`;
+  // 云同步入口已挪到「设置 → 账户」，底部只留 5 个常用视图 + 设置
   $('#dock').innerHTML = items.map(it=>`
     <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
       ${ic(it.icon)}
     </button>`).join('') +
-    cloudBtn +
     `<button class="dock-item" id="dockSet" title="设置" aria-label="设置">${ic('gear')}</button>`;
   $('#dock').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
-  $('#dockSync').onclick=()=>openSyncPanel();
+  const ds = $('#dockSync'); if(ds) ds.onclick = ()=>openSyncPanel();
   $('#dockSet').onclick=()=>openSettings();
   updateTodoBadge();
 }
@@ -6127,7 +6220,18 @@ function openClientPanel(){
           <div><h3>客户端下载</h3><p>装成电脑上的独立应用，不用每次开浏览器</p></div>
           <button class="help-x" id="dlClose" title="关闭">${ic('x')}</button>
         </div>
-        <div class="dl-body">
+        <div class="dl-body">${dlBodyHtml()}</div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) ov.classList.remove('open'); });
+    $('#dlClose').onclick = ()=>ov.classList.remove('open');
+    bindDlBody(ov);
+  }
+  ov.classList.add('open');
+}
+/* 下载列表：弹窗和设置页共用 */
+function dlBodyHtml(){
+  return `
           <div class="dl-row">
             <div class="dl-ic">${ic('localSave')}</div>
             <div class="dl-info"><b>macOS 版</b><span>原生应用 · 约 0.4 MB · 通用版（M 系列 / Intel）</span></div>
@@ -6148,23 +6252,22 @@ function openClientPanel(){
             <b>macOS</b>：解压后把「随手笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手笔记.app</code>。<br>
             <b>Windows</b>：解压后双击 <code>随手笔记.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。<br>
             <b>Android</b>：点<b>「下载 APK」</b> 装应用版（支持系统通知、导出存到「下载」文件夹）；手机会提示「未知来源」，允许一次即可。不想装包就点<b>「免安装」</b>，用浏览器菜单里的「添加到主屏幕」装成网页应用，随网页自动更新。
-          </div>
-        </div>
-      </div>`;
-    document.body.appendChild(ov);
-    ov.addEventListener('mousedown', e=>{ if(e.target === ov) ov.classList.remove('open'); });
-    $('#dlClose').onclick = ()=>ov.classList.remove('open');
-    const ab = $('#dlAndroid');
-    if(ab) ab.onclick = installAsApp;
-  }
-  ov.classList.add('open');
+          </div>`;
+}
+function bindDlBody(root){
+  const ab = root.querySelector('#dlAndroid');
+  if(ab) ab.onclick = installAsApp;
 }
 function paintHelp(){
   const ov = $('#helpOv'); if(!ov) return;
   ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
   const body = $('#helpBody');
-  if(helpTab === 'io'){
-    body.innerHTML = `
+  if(body) body.innerHTML = helpBodyHtml(helpTab);
+}
+/* 帮助正文：弹窗和设置页共用，只产出 HTML */
+function helpBodyHtml(tab){
+  if(tab === 'io'){
+    return `
       <div class="help-sec"><h4>导出备份（.json）· 用来恢复自己</h4>
         <p class="help-p">「导出全部笔记（备份）」导出一个 <code>.json</code> 文件，<b>包含全部笔记正文、所属笔记本、标签、创建与修改时间</b>。以后换电脑、重装、清了浏览器数据，用「导入」选这个文件，就能<b>连笔记本分类一起原样还原</b>。<b>想留后路，选它，不要用 Markdown。</b></p></div>
       <div class="help-sec"><h4>导出 Markdown（.md）· 用来分享或搬去别的软件</h4>
@@ -6191,8 +6294,8 @@ function paintHelp(){
         <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
-  } else if(helpTab === 'md'){
-    body.innerHTML = `<div class="help-hero">` + HELP_HERO.map(c=>`
+  } else if(tab === 'md'){
+    return `<div class="help-hero">` + HELP_HERO.map(c=>`
         <div class="hh${c.hl ? ' hl' : ''}">
           <div class="hh-t">${c.sym ? `<i>${esc(c.sym)}</i>` : ''}${esc(c.t)}</div>
           <div class="hh-p">${esc(c.d)}</div>
@@ -6206,8 +6309,8 @@ function paintHelp(){
           <td class="ht-eff">${eff}</td>
         </tr>`).join('')}</tbody>
       </table>`;
-  } else if(helpTab === 'todo'){
-    body.innerHTML = `
+  } else if(tab === 'todo'){
+    return `
       <div class="help-sec"><h4>添加日期</h4>
         <p class="help-p">在待办 <code>- [ ]</code> 后面写 <code>@</code>，再写时间：<code>@今天</code>、<code>@明天 9点</code>、<code>@周五下午3点</code>、<code>@11月20日</code>、<code>@3天后</code>、<code>@下周一</code>，英文 <code>@tomorrow 3pm</code> 也行。也可以直接写 <code>⏰ 2026-11-15 18:00</code>。点条目右侧的时间可以改。</p></div>
       <div class="help-sec"><h4>重复</h4>
@@ -6229,10 +6332,14 @@ function paintHelp(){
 - [ ] 体检预约 @明天 9点
 - [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08</pre></div>`;
   } else {
-    body.innerHTML = `<div class="help-sec">` + HELP_KEYS.map(([n,k])=>
+    return `<div class="help-sec">` + HELP_KEYS.map(([n,k])=>
       `<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`
     ).join('') + `</div>`;
   }
+}
+function helpTabsHtml(){
+  return [['io','导入 / 导出'],['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']]
+    .map(([id,name])=>`<button class="help-tab${helpTab === id ? ' on' : ''}" data-htab="${id}">${name}</button>`).join('');
 }
 /* 高亮：27 个预设色 + 自定义取色。语法 ==文字==（绿）/ ==文字=={.yellow} / ==文字=={c:#f59e0b} */
 const HL_HEX = [
@@ -9442,6 +9549,16 @@ function openNotesPush(){
 }
 function paintNotesPush(){
   const ov = document.getElementById('npfOv'); if(!ov) return;
+  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="同步到苹果备忘录">
+    <div class="rc-title">${ic('notebook')}<span>同步到苹果备忘录</span></div>
+    ${npfBodyHtml()}
+    <div class="rc-foot"><button class="rc-close" id="npfClose">关闭</button></div>
+  </div>`;
+  const c = ov.querySelector('#npfClose');
+  if(c) c.onclick = closeNotesPush;
+  bindNpfBody(ov, paintNotesPush);
+}
+function npfBodyHtml(){
   const SC_LINK = 'https://www.icloud.com/shortcuts/c729f17ccbd84f93a0a44d4192a61982';
   const feedBlock = NPF.token
     ? `<code class="rc-link" id="npfLink">${esc(NPF.token)}
@@ -9454,9 +9571,7 @@ function paintNotesPush(){
     : `<div class="rc-acts">
          <button class="rc-btn primary" id="npfMake">生成订阅 token</button>
        </div>`;
-  ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="同步到苹果备忘录">
-    <div class="rc-title">${ic('notebook')}<span>同步到苹果备忘录</span></div>
-    <div class="rc-box">
+  return `<div class="rc-box">
       <div class="rc-box-h"><b>iOS 快捷指令 · 单向推送</b></div>
       <div class="rc-p">苹果备忘录没有公开接口，无法像日历那样订阅自动同步。用下面这条共享快捷指令即可：添加后把订阅 token 粘进快捷指令的文本框，运行时可以选择保存到指定备忘录文件夹。</div>
       <a class="rc-btn primary" href="${SC_LINK}" target="_blank" rel="noopener"
@@ -9467,11 +9582,12 @@ function paintNotesPush(){
       <div class="rc-box-h"><b>订阅 token（粘进快捷指令的文本框）</b></div>
       ${feedBlock}
       <div class="rc-note">注意：备忘录不支持按内容更新，每次运行都会新建一篇；编辑过的笔记会再推一份新的。单次最多返回 300 篇，正文已是渲染后的纯文本。</div>
-    </div>
-    <div class="rc-foot"><button class="rc-close" id="npfClose">关闭</button></div>
-  </div>`;
-  const q = s=>ov.querySelector(s);
-  if(q('#npfClose')) q('#npfClose').onclick = closeNotesPush;
+    </div>`;
+}
+function bindNpfBody(root, repaint){
+  if(!root) return;
+  const q = s=>root.querySelector(s);
+  const paintNotesPush = ()=>repaint();
   if(q('#npfMake')) q('#npfMake').onclick = async ()=>{
     const b = q('#npfMake'); b.disabled = true; b.textContent = '正在生成…';
     const d = await npfApi({ body:{ on:true } });
@@ -9801,7 +9917,7 @@ document.addEventListener('keydown', e=>{
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); if(typeof closeNoteInfo==='function') closeNoteInfo(); if(typeof closeSettings==='function') closeSettings(); if(typeof closeTokenPanel==='function') closeTokenPanel(); }
+  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); closeMindMap(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); if(typeof closeNoteInfo==='function') closeNoteInfo(); if(typeof closeSettings==='function') closeSettings(); if(typeof closeTokenPanel==='function') closeTokenPanel(); if(typeof closeLogoutSheet==='function') closeLogoutSheet(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
@@ -10393,13 +10509,16 @@ const SET_TABS = [
   ['appearance', '外观'],
   ['remind', '提醒与日历'],
   ['mcp', 'API 令牌与 MCP'],
-  ['sync', '同步与备份'],
+  ['sync', '同步 / 导出 / 导入'],
   ['share', '分享管理'],
-  ['import', '导入'],
   ['data', '数据'],
+  ['help', '使用说明'],
+  ['client', '客户端下载'],
+  ['ai', 'AI 接口设置'],
   ['about', '关于']
 ];
 let SET_TAB = 'account';
+let _setPaintedTab = null, setRemindReady = false, setAiReady = false;
 function setTabName(id){
   const t = SET_TABS.find(x=>x[0] === id);
   return t ? t[1] : '设置';
@@ -10407,6 +10526,10 @@ function setTabName(id){
 function closeSettings(){
   const ov = $('#setOv');
   if(ov) ov.classList.remove('open');
+  remindRepaintHook = null;
+  setRemindReady = false;
+  setAiReady = false;
+  _setPaintedTab = null;
 }
 function openSettings(tab){
   let ov = $('#setOv');
@@ -10437,14 +10560,18 @@ function openSettings(tab){
   ov.classList.add('open');
   paintSettings();
 }
-function paintSettings(){
+function paintSettings(keepScroll){
   const nav = $('#setNav'), pane = $('#setPane'), head = $('#setHead');
   if(!nav || !pane) return;
+  const prevTab = _setPaintedTab, prevScroll = pane.scrollTop;
+  if(prevTab !== SET_TAB){ setRemindReady = false; setAiReady = false; remindRepaintHook = null; }
   nav.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on', b.dataset.st === SET_TAB));
   head.textContent = setTabName(SET_TAB);
-  pane.scrollTop = 0;
   pane.innerHTML = setPaneHtml(SET_TAB);
   bindPane(SET_TAB);
+  // 同一页里重绘（比如切了个开关）时保持滚动位置，别把人弹回顶部
+  pane.scrollTop = (keepScroll || prevTab === SET_TAB) ? prevScroll : 0;
+  _setPaintedTab = SET_TAB;
 }
 function setPaneHtml(tab){
   if(tab === 'account') return setAccountHtml();
@@ -10453,9 +10580,29 @@ function setPaneHtml(tab){
   if(tab === 'mcp') return setMcpHtml();
   if(tab === 'sync') return setSyncHtml();
   if(tab === 'share') return setShareHtml();
-  if(tab === 'import') return setImportHtml();
   if(tab === 'data') return setDataHtml();
+  if(tab === 'help') return setHelpHtml();
+  if(tab === 'client') return setClientHtml();
+  if(tab === 'ai') return setAiHtml();
   return setAboutHtml();
+}
+
+/* ---- 使用说明（就是帮助弹窗里的内容，铺在这一页） ---- */
+function setHelpHtml(){
+  return `<div class="help-tabs set-help-tabs">${helpTabsHtml()}</div>
+    <div class="help-body" id="setHelpBody">${helpBodyHtml(helpTab)}</div>`;
+}
+
+/* ---- 客户端下载 ---- */
+function setClientHtml(){
+  return `<p class="set-note" style="margin:2px 0 14px">装成独立应用，有自己的图标，不用每次开浏览器。</p>
+    <div class="dl-body">${dlBodyHtml()}</div>`;
+}
+
+/* ---- AI 接口设置 ---- */
+function setAiHtml(){
+  if(!isConnected()) return `<div class="set-empty">AI 接口是按账号存的，先在「账户」里登录，再回来填自己的接口。</div>`;
+  return aiCfgHtml();
 }
 
 /* ---- 账户 ---- */
@@ -10483,7 +10630,7 @@ function setAccountHtml(){
         <div class="d">${state} · 上次同步 ${last}</div></div>
         <button class="set-btn" id="setSyncNow">立即同步</button></div>
       <div class="set-row"><div><div class="t">退出登录</div>
-        <div class="d">退出后本机笔记保留，不再上传</div></div>
+        <div class="d">退出时可选：笔记留在这台设备，或一起清空</div></div>
         <button class="set-btn danger" id="setLogout">退出</button></div>
     </div>
     <div class="set-sec">安全</div>
@@ -10493,6 +10640,119 @@ function setAccountHtml(){
     <div class="set-row"><div><div class="t">注销账号</div>
       <div class="d">删除云端的笔记、笔记本、历史版本与分享，本机保留</div></div>
       <button class="set-btn danger" id="setDel">注销</button></div>`;
+}
+
+/* ---- 退出登录：先问「本机笔记留不留」，别默认替用户决定 ---- */
+let LO_KEEP = true, LO_BUSY = false;
+function logoutUnsyncedCount(){
+  const last = SYNC.last || 0;
+  let n = 0;
+  (S.notes || []).forEach(x=>{ if(!x.deleted && !x.trashed && (x.updatedAt || 0) > last) n++; });
+  n += (S.pendingDeletes || []).length;
+  return n;
+}
+function closeLogoutSheet(){
+  const ov = $('#loOv');
+  if(ov) ov.classList.remove('open');
+}
+function openLogoutSheet(){
+  let ov = $('#loOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'loOv'; ov.className = 'lo-ov';
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeLogoutSheet(); });
+    document.body.appendChild(ov);
+  }
+  const n = (S.notes || []).filter(x=>!x.deleted && !x.trashed).length;
+  const nb = (S.notebooks || []).filter(x=>!x.deleted).length;
+  const pend = logoutUnsyncedCount();
+  ov.innerHTML = `<div class="lo-card" role="dialog" aria-label="退出登录">
+      <div class="lo-hd"><h3>退出登录</h3>
+        <button class="info-x" id="loX" title="关闭">${ic('x')}</button></div>
+      <div class="lo-body">
+        <p class="lo-lead">退出 <b>${esc(accountLabel())}</b> 不会删除云端笔记，只决定这台设备上的这一份（<b>${n}</b> 篇笔记 · <b>${nb}</b> 个笔记本）怎么处理。</p>
+        <button type="button" class="lo-opt" data-keep="1">
+          <span class="lo-radio"></span>
+          <span><span class="t">保留笔记在本机</span>
+            <span class="d">退出后照样能离线打开、编辑，重新登录会接着同步。只是想让它别再上传时选这个。</span></span>
+        </button>
+        <button type="button" class="lo-opt bad" data-keep="0">
+          <span class="lo-radio"></span>
+          <span><span class="t">不保留，清空本机笔记</span>
+            <span class="d">删掉这台设备上的笔记、笔记本和历史版本。云端还在，下次登录会重新拉回来；没同步过的改动会丢。</span></span>
+        </button>
+        <div class="lo-warn" id="loWarn"></div>
+      </div>
+      <div class="lo-foot">
+        <button class="btn-ghost" id="loBackup">先导出备份</button>
+        <div class="lo-acts">
+          <button class="btn-ghost" id="loCancel">取消</button>
+          <button class="btn-primary" id="loGo">退出登录</button>
+        </div>
+      </div>
+    </div>`;
+  ov.classList.add('open');
+  LO_KEEP = true; LO_BUSY = false;
+  const paint = ()=>{
+    ov.querySelectorAll('[data-keep]').forEach(b=>{
+      b.classList.toggle('on', (b.dataset.keep === '1') === LO_KEEP);
+    });
+    const w = ov.querySelector('#loWarn');
+    if(w){
+      w.classList.toggle('on', !LO_KEEP);
+      w.innerHTML = pend
+        ? `有 <b>${pend}</b> 处改动还没同步到云端，清空后这些改动就找不回来了。建议先导出备份。`
+        : '清空后无法恢复，重要内容建议先导出备份。';
+    }
+    const go = ov.querySelector('#loGo');
+    if(go){
+      go.textContent = LO_KEEP ? '退出登录' : '退出并清空本机';
+      go.className = LO_KEEP ? 'btn-primary' : 'btn-danger';
+      go.disabled = false;
+    }
+  };
+  ov.querySelectorAll('[data-keep]').forEach(b=>{
+    b.onclick = ()=>{ LO_KEEP = b.dataset.keep === '1'; paint(); };
+  });
+  ov.querySelector('#loX').onclick = closeLogoutSheet;
+  ov.querySelector('#loCancel').onclick = closeLogoutSheet;
+  ov.querySelector('#loBackup').onclick = ()=>exportBackup();
+  ov.querySelector('#loGo').onclick = ()=>doLogout(LO_KEEP);
+  paint();
+}
+/* 只删这台设备上的笔记数据：IDB 主存 + localStorage 镜像 + 历史版本 */
+async function wipeLocalNotes(){
+  try{
+    const db = await idb();
+    await new Promise(res=>{
+      try{
+        const tx = db.transaction('kv','readwrite');
+        tx.objectStore('kv').delete('state');
+        tx.oncomplete = ()=>res(); tx.onerror = ()=>res(); tx.onabort = ()=>res();
+      }catch(e){ res(); }
+    });
+  }catch(e){}
+  [LS_KEY, VER_KEY].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+}
+async function doLogout(keepLocal){
+  if(LO_BUSY) return;
+  LO_BUSY = true;
+  const go = $('#loGo');
+  if(go){ go.disabled = true; go.textContent = keepLocal ? '正在退出…' : '正在清空…'; }
+  SYNC.token = ''; SYNC.key = ''; SYNC.account = ''; SYNC.state = 'off'; SYNC.last = 0; SYNC.error = '';
+  syncSave();
+  if(!keepLocal){
+    LOGOUT_WIPING = true;             // 清空后别再被迟到的 save() 写回去
+    await wipeLocalNotes();
+    closeLogoutSheet(); closeSettings();
+    toast('已退出，本机笔记已清空');
+    setTimeout(()=>location.reload(), 650);
+    return;
+  }
+  closeLogoutSheet(); closeSettings();
+  renderDock(); updateSyncBadge();
+  toast('已退出账号，本机笔记保留');
+  LO_BUSY = false;
 }
 
 /* ---- 外观 ---- */
@@ -10513,15 +10773,12 @@ function setAppearanceHtml(){
     <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>`;
 }
 
-/* ---- 提醒与日历 ---- */
+/* ---- 提醒与日历（直接铺在设置页里，不再开单独弹窗） ---- */
 function setRemindHtml(){
-  return `<div class="set-row"><div><div class="t">提醒与日历</div>
-      <div class="d">给待办设提醒、在这台设备弹通知，或把日程订阅到手机日历</div></div>
-      <button class="set-btn" id="setOpenRemind">打开</button></div>
-    <div class="set-row"><div><div class="t">同步到苹果备忘录</div>
-      <div class="d">用 iOS 快捷指令把笔记单向推送到备忘录</div></div>
-      <button class="set-btn" id="setOpenPush">打开</button></div>
-    <p class="set-note">提醒依赖浏览器通知权限；日历订阅是只读的，不会把日历写回笔记。</p>`;
+  return `<p class="set-note" style="margin:2px 0 14px">提醒、日历订阅、苹果日历同步都在这一页设，改完立刻生效。</p>
+    ${remindBodyHtml()}
+    <div class="set-sec">同步到苹果备忘录</div>
+    ${npfBodyHtml()}`;
 }
 
 /* ---- API 令牌与 MCP ---- */
@@ -10554,9 +10811,14 @@ function setSyncHtml(){
     <div class="set-row"><div><div class="t">导出全部笔记（Markdown）</div>
       <div class="d">纯文本，方便迁到别的工具</div></div>
       <button class="set-btn" id="setExpMd">导出</button></div>
-    <div class="set-row"><div><div class="t">导入</div>
-      <div class="d">支持备份文件、Markdown、HTML</div></div>
-      <button class="set-btn" id="setGoImport">去导入</button></div>`;
+    <div class="set-sec">导入</div>
+    <div class="set-row"><div><div class="t">导入文件</div>
+      <div class="d">Markdown（.md）、HTML，或之前导出的备份文件（.json）</div></div>
+      <button class="set-btn primary" id="setImportBtn">选择文件</button></div>
+    <div class="set-row"><div><div class="t">从备份恢复</div>
+      <div class="d">合并进现有笔记：同 id 的按更新时间保留较新的那份</div></div>
+      <button class="set-btn" id="setImportBackup">选择备份</button></div>
+    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。</p>`;
 }
 
 /* ---- 分享管理 ---- */
@@ -10570,7 +10832,7 @@ function setShareHtml(){
         <button class="set-btn danger" data-unshare="${esc(n.id)}">取消分享</button></div></div>`).join('');
 }
 
-/* ---- 导入 ---- */
+/* ---- 导入（已合并进「同步 / 导出 / 导入」，这里保留给内部调用） ---- */
 function setImportHtml(){
   return `<div class="set-row"><div><div class="t">导入文件</div>
       <div class="d">Markdown（.md）、HTML、或之前导出的备份文件（.json）</div></div>
@@ -10607,13 +10869,7 @@ function setAboutHtml(){
       <div class="set-row"><div><div class="t">数据在哪</div>
         <div class="d">默认存在本机 IndexedDB；登录后同步到 Cloudflare</div></div></div>
     </div>
-    <div class="set-sec">帮助</div>
-    <div class="set-row"><div><div class="t">使用说明与快捷键</div><div class="d">Markdown 语法、全部快捷键、AI 与思维导图</div></div>
-      <button class="set-btn" id="setHelp">打开</button></div>
-    <div class="set-row"><div><div class="t">客户端下载</div><div class="d">装成独立应用，不用每次开浏览器</div></div>
-      <button class="set-btn" id="setClient">打开</button></div>
-    <div class="set-row"><div><div class="t">AI 接口设置</div><div class="d">填自己的 OpenAI 兼容接口</div></div>
-      <button class="set-btn" id="setAiCfg">打开</button></div>`;
+    <p class="set-note">使用说明、客户端下载、AI 接口设置都在左边单独一页，不再另开窗口。</p>`;
 }
 
 /* ---- 交互绑定 ---- */
@@ -10654,11 +10910,7 @@ function bindPane(tab){
       catch(e){ toast('同步失败：' + (e.message || '网络错误')); }
     };
     const out = $('#setLogout');
-    if(out) out.onclick = ()=>{
-      SYNC.token=''; SYNC.key=''; SYNC.account=''; SYNC.state='off'; SYNC.last=0; SYNC.error='';
-      syncSave(); renderDock(); updateSyncBadge(); paintSettings();
-      toast('已退出账号，本机数据保留');
-    };
+    if(out) out.onclick = ()=>openLogoutSheet();
     const pw = $('#setPw');
     if(pw) pw.onclick = ()=>{ closeSettings(); openSyncPanel(); setTimeout(()=>{ const b = $('#pwToggle'); if(b) b.click(); }, 80); };
     const del = $('#setDel');
@@ -10679,8 +10931,20 @@ function bindPane(tab){
   }
 
   if(tab === 'remind'){
-    const a = $('#setOpenRemind'); if(a) a.onclick = ()=>{ closeSettings(); openRemindCenter(); };
-    const b = $('#setOpenPush'); if(b) b.onclick = ()=>{ closeSettings(); openNotesPush(); };
+    // 内容和「提醒与日历」弹窗是同一套，控件直接绑在这一页上
+    const repaint = ()=>paintSettings(true);
+    remindRepaintHook = repaint;
+    bindRemindBody(pane, repaint);
+    bindNpfBody(pane, repaint);
+    if(!setRemindReady){
+      setRemindReady = true;
+      icsPullSources();     // 别的设备加的订阅源，这里也能看到
+      icsPullDone();
+      if(isConnected()){
+        feedRefresh().then(()=>{ if(SET_TAB === 'remind') paintSettings(true); });
+        npfApi().then(()=>{ if(SET_TAB === 'remind') paintSettings(true); });
+      }
+    }
   }
 
   if(tab === 'mcp'){
@@ -10697,7 +10961,8 @@ function bindPane(tab){
     };
     const b = $('#setExpBackup'); if(b) b.onclick = ()=>exportBackup();
     const c = $('#setExpMd'); if(c) c.onclick = ()=>exportAllMd();
-    const d = $('#setGoImport'); if(d) d.onclick = ()=>{ SET_TAB = 'import'; paintSettings(); };
+    const i = $('#setImportBtn'); if(i) i.onclick = ()=>importDoc();
+    const k = $('#setImportBackup'); if(k) k.onclick = ()=>importDoc(true);
   }
 
   if(tab === 'share'){
@@ -10717,23 +10982,28 @@ function bindPane(tab){
     });
   }
 
-  if(tab === 'import'){
-    const a = $('#setImportBtn'); if(a) a.onclick = ()=>importDoc();
-    const b = $('#setImportBackup'); if(b) b.onclick = ()=>importDoc(true);
-    if(!bindPane._impBound){
-      bindPane._impBound = true;
-    }
-  }
-
   if(tab === 'data'){
     const a = $('#setTrash'); if(a) a.onclick = ()=>{ closeSettings(); if(typeof openTrashView === 'function') openTrashView(); };
     const b = $('#setGoBackup'); if(b) b.onclick = ()=>{ SET_TAB = 'sync'; paintSettings(); };
   }
 
-  if(tab === 'about'){
-    const a = $('#setHelp'); if(a) a.onclick = ()=>{ closeSettings(); helpTab='io'; openHelpPanel(); };
-    const b = $('#setClient'); if(b) b.onclick = ()=>{ closeSettings(); openClientPanel(); };
-    const c = $('#setAiCfg'); if(c) c.onclick = ()=>{ closeSettings(); openAIConfig(); };
+  if(tab === 'help'){
+    pane.querySelectorAll('[data-htab]').forEach(b=>{
+      b.onclick = ()=>{ helpTab = b.dataset.htab; paintSettings(true); };
+    });
+  }
+
+  if(tab === 'client'){
+    bindDlBody(pane);
+  }
+
+  if(tab === 'ai'){
+    const repaint = ()=>paintSettings(true);
+    bindAiCfg(pane, repaint);
+    if(isConnected() && !setAiReady){
+      setAiReady = true;
+      aiConfig().then(()=>{ if(SET_TAB === 'ai') paintSettings(true); }).catch(()=>{});
+    }
   }
 }
 async function unshareById(id){
@@ -10826,7 +11096,7 @@ async function createToken(){
     const d = await tokFetch('POST', { name });
     const cfg = JSON.stringify({
       mcpServers: {
-        ivynote: {
+        notes: {
           url: location.origin + '/mcp',
           headers: { Authorization: 'Bearer ' + d.token }
         }
@@ -10864,7 +11134,7 @@ async function loadTokens(){
     if(!list.length){ box.innerHTML = '<div class="tok-empty">还没有令牌</div>'; return; }
     box.innerHTML = list.map(t=>`<div class="tok-item">
       <div class="tok-item-main"><b>${esc(t.name || '未命名令牌')}</b>
-        <span>${esc(t.prefix)}…　创建于 ${agoText(t.createdAt)}　${t.lastUsedAt ? '最后使用 ' + agoText(t.lastUsedAt) : '从未使用'}</span></div>
+        <span>${esc(String(t.prefix || '').replace(/^ivy_pat_/, 'pat_'))}…　创建于 ${agoText(t.createdAt)}　${t.lastUsedAt ? '最后使用 ' + agoText(t.lastUsedAt) : '从未使用'}</span></div>
       <button class="tok-del" data-tok="${esc(t.id)}">吊销</button>
     </div>`).join('');
     box.querySelectorAll('[data-tok]').forEach(b=>{
@@ -11403,11 +11673,19 @@ function openAIConfig(onDone){
   if(!isConnected()){ toast('登录后才能配置 AI 接口'); openSyncPanel(); return; }
   const ov = aiCfgEl();
   if(!ov) return;
-  const c = AI.cfg || {};
   ov.innerHTML = `<div class="sheet">
     <div class="sheet-head"><h3>AI 接口设置</h3>
       <button class="pa-btn" id="acClose" title="关闭">${ic('x')}</button></div>
-    <p class="ai-cfg-tip">填一个 <b>OpenAI 兼容</b>接口。DeepSeek 填 <code>https://api.deepseek.com</code>，
+    ${aiCfgHtml()}
+  </div>`;
+  ov.classList.add('open');
+  $('#acClose').onclick = ()=>ov.classList.remove('open');
+  bindAiCfg(ov, onDone);
+}
+/* 表单：弹窗和设置页共用同一份 HTML */
+function aiCfgHtml(){
+  const c = AI.cfg || {};
+  return `<p class="ai-cfg-tip">填一个 <b>OpenAI 兼容</b>接口。DeepSeek 填 <code>https://api.deepseek.com</code>，
       OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot、硅基流动、自建网关同理。<br>
       请求由服务端代发，所以地址必须是<b>公网能访问到的</b>（<code>127.0.0.1</code>、局域网地址连不上）。<br>
       密钥用它所属的账号加密保存，只有你自己能用，页面里读不回原值；注销账号时会一起删掉。</p>
@@ -11432,10 +11710,13 @@ function openAIConfig(onDone){
       <button class="btn-primary" id="acSave">保存</button>
       <button class="btn-ghost" id="acClear">清除配置</button>
     </div>
-    <div class="sheet-status" id="acStatus"></div>
-  </div>`;
-  ov.classList.add('open');
-  $('#acClose').onclick = ()=>ov.classList.remove('open');
+    <div class="sheet-status" id="acStatus"></div>`;
+}
+function bindAiCfg(root, onDone){
+  if(!root) return;
+  const $ = s=>root.querySelector(s);      // 局部 $：只在这个容器里找控件
+  const c = AI.cfg || {};
+  const leave = ()=>{ const sh = root.closest('.sheet'); if(sh) sh.classList.remove('open'); };
 
   const readForm = ()=>({
     baseUrl: ($('#acBase').value || '').trim(),
@@ -11444,7 +11725,7 @@ function openAIConfig(onDone){
   });
   const setStatus = (msg, bad)=>{ const s = $('#acStatus'); if(s) s.innerHTML = bad ? `<b style="color:rgb(var(--danger))">${esc(msg)}</b>` : esc(msg); };
 
-  ov.querySelectorAll('[data-preset]').forEach(b=>{
+  root.querySelectorAll('[data-preset]').forEach(b=>{
     b.onclick = ()=>{
       const p = AI_PRESETS[+b.dataset.preset];
       if(!p) return;
@@ -11506,7 +11787,7 @@ function openAIConfig(onDone){
       const d = await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error || '保存失败');
       AI.cfg = { ok:true, configured:true, baseUrl:d.baseUrl, model:d.model, hasKey:true, keyMask:d.keyMask };
-      ov.classList.remove('open');
+      leave();
       toast('AI 接口已保存');
       if(onDone) onDone(); else aiBoot();
     }catch(e){ setStatus(e.message || '保存失败', true); }
@@ -11531,7 +11812,10 @@ function openAIConfig(onDone){
       if(onDone) onDone();
     }catch(e){ setStatus(e.message || '清除失败', true); }
   };
-  setTimeout(()=>{ const i = $('#acBase'); if(i && !i.value) i.focus(); }, 60);
+  setTimeout(()=>{
+    if(root.closest('#setPane')) return;      // 设置页里不抢焦点，免得页面自己滚
+    const i = $('#acBase'); if(i && !i.value) i.focus();
+  }, 60);
 }
 $('#aiOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiOverlay') closeAI(); });
 $('#aiCfgOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiCfgOverlay') e.currentTarget.classList.remove('open'); });

@@ -2336,7 +2336,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v153', at: '2026-11-17 21:22' };
+window.IVY_BUILD = { id: 'v154', at: '2026-11-17 21:27' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -10213,14 +10213,27 @@ function applyRemote(data){
   const nbm = new Map(S.notebooks.map(n=>[n.id,n]));
   for(const r of (data.notebooks||[])){
     const cur = nbm.get(r.id);
-    if(!cur){ S.notebooks.push(Object.assign({deleted:false, updatedAt:0}, r)); changed = true; }
+    if(!cur){
+      S.notebooks.push(Object.assign({deleted:false, updatedAt:0, parentId:null, order:0}, r));
+      changed = true;
+    }
     else {
       const newer = (r.updatedAt||0) > (cur.updatedAt||0);
       const same  = (r.updatedAt||0) === (cur.updatedAt||0);
       const diff  = cur.name!==r.name || cur.open!==r.open || !!cur.deleted!==!!r.deleted
                     || (cur.color||'')!==(r.color||'')
-                    || (cur.parentId||null)!==(r.parentId||null) || (cur.order||0)!==(r.order||0);
-      if(newer || (same && diff)){ Object.assign(cur, r); changed = true; }
+                    || (cur.parentId||null)!==(r.parentId||null) || (cur.order||0)!==(cur.order||0);
+      if(newer || (same && diff)){
+        /* 层级只认云端「明确给出」的值：老服务端不带 parentId、或那一行还是 NULL 时，
+           不能把本机已经收好的二级关系抹平，否则同步一次笔记本就全跑回一级 */
+        const cP = cur.parentId || null, cO = cur.order || 0;
+        const hasP = Object.prototype.hasOwnProperty.call(r, 'parentId');
+        const rP = hasP ? (r.parentId || null) : null;
+        Object.assign(cur, r);
+        if(!hasP || (rP === null && !newer)){ cur.parentId = cP; cur.order = cO; }
+        else { cur.parentId = rP; cur.order = Number(r.order) || 0; }
+        changed = true;
+      }
     }
   }
   // 把云端同步过来的标签也记进历史库，之后即使从笔记上摘掉也还能再选

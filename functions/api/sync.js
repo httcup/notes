@@ -36,6 +36,8 @@ async function readAll(env, uid) {
     color: r.color || '',
     open: !!r.open,
     deleted: !!r.deleted,
+    parentId: r.parent_id || null,     // 二级收纳：指向父笔记本
+    order: r.sort_order || 0,
     updatedAt: r.updated_at || 0
   }));
   return { notes, notebooks, serverTime: Date.now() };
@@ -93,12 +95,15 @@ export async function onRequest({ request, env }) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notebooks (user_id, id, name, color, open, deleted, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            `INSERT INTO notebooks (user_id, id, name, color, open, deleted, parent_id, sort_order, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
              ON CONFLICT(user_id, id) DO UPDATE SET
                name = excluded.name,
                color = excluded.color,
                open = excluded.open,
                deleted = excluded.deleted,
+               parent_id = excluded.parent_id,
+               sort_order = excluded.sort_order,
                updated_at = excluded.updated_at
              WHERE excluded.updated_at >= notebooks.updated_at`
           ).bind(
@@ -108,6 +113,8 @@ export async function onRequest({ request, env }) {
             /^#[0-9a-fA-F]{3,8}$/.test(nb.color || '') ? nb.color : '',
             nb.open === false ? 0 : 1,
             nb.deleted ? 1 : 0,
+            nb.parentId ? str(nb.parentId, 80) : null,
+            Number(nb.order) || 0,
             Number(nb.updatedAt) || 0
           )
         );

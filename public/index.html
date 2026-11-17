@@ -2273,7 +2273,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v150', at: '2026-11-17 19:14' };
+window.IVY_BUILD = { id: 'v151', at: '2026-11-17 21:09' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -9957,6 +9957,22 @@ function toggleShelf(){
   $('#shelfOpen').classList.toggle('show', !S.shelfOpen);
   save();
 }
+/* 手机上书架是盖在正文上的抽屉：手指一碰右边正文就收起来，不用再去找左边的开关。
+   抽屉是 position:fixed，收起不会让正文重排，所以这一下点击仍然落在原来的位置。 */
+function shelfCloseIfDrawer(){
+  if(document.documentElement.clientWidth > 640) return false;   // 只有抽屉形态才自动收
+  if(!S.shelfOpen) return false;
+  S.shelfOpen = false;
+  document.querySelector('.shelf').classList.add('collapsed');
+  $('#shelfOpen').classList.add('show');
+  save();
+  return true;
+}
+document.addEventListener('pointerdown', e=>{
+  const t = e.target;
+  if(!t || !t.closest || !t.closest('.main-wrap')) return;        // 只认正文区（含右边缘那截）
+  shelfCloseIfDrawer();
+}, true);
 document.addEventListener('keydown', e=>{
   const meta = e.metaKey || e.ctrlKey;
   const overlayOpen = $('#overlay').classList.contains('open');

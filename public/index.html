@@ -129,7 +129,7 @@ body.view-todo .head-actions .notes-only{display:none}
 /* 「笔记」总开关：点标题把下面一整块（笔记本 / 标签 / 回收站）收起来 */
 .sec-fold{
   width:100%;background:none;border:0;font-family:inherit;text-align:left;cursor:pointer;
-  border-radius:7px;padding:2px 0;transition:color .12s;
+  border-radius:7px;padding:2px 16px 2px 0;transition:color .12s;   /* 右侧留 16px：数量对齐下面「回收站」那一列 */
 }
 .sec-fold:hover{color:rgb(var(--ink))}
 .sec-fold .lb{display:flex;align-items:center;gap:6px}
@@ -2383,7 +2383,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v166', at: '2026-11-18 02:50' };
+window.IVY_BUILD = { id: 'v167', at: '2026-11-18 02:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

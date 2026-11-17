@@ -1422,10 +1422,31 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .reg-hint-s{margin-top:6px;font-size:11.5px;line-height:1.7;color:rgb(var(--muted))}
 .field{display:block;margin-bottom:14px}
 /* 修改密码 */
-.pw-toggle{margin:12px 0 4px;font-size:12.5px;color:rgb(var(--muted));text-decoration:underline;text-underline-offset:2.5px;align-self:flex-start}
+.pw-toggle{
+  display:block;width:100%;text-align:left;margin:12px 0 4px;font-size:12.5px;color:rgb(var(--muted));
+  text-decoration:underline;text-underline-offset:2.5px;
+}
 .pw-toggle:hover{color:rgb(var(--ink))}
 .pw-box{margin-top:6px;padding-top:12px;border-top:1px dashed rgb(var(--line))}
 .pw-box[hidden]{display:none}
+/* 注销账号：危险操作用红色系，和普通设置区分开 */
+.pw-toggle.danger{color:rgb(var(--danger))}
+.acct-warn{
+  margin-bottom:12px;padding:10px 12px;border-radius:9px;
+  background:rgb(var(--danger-soft));color:rgb(var(--danger));
+  font-size:12px;line-height:1.72;word-break:break-word;
+}
+.acct-warn b{font-weight:600}
+.acct-tip{margin-top:10px;font-size:11.5px;line-height:1.7;color:rgb(var(--faint))}
+.acct-tip b{color:rgb(var(--danger));font-weight:600}
+.btn-danger{
+  height:32px;padding:0 14px;border-radius:8px;font-size:12.5px;font-weight:600;
+  background:rgb(var(--danger) / .12);color:rgb(var(--danger));
+  transition:background .15s,color .15s,opacity .15s;
+}
+.btn-danger:hover{background:rgb(var(--danger));color:rgb(var(--surface))}
+.btn-danger.armed{background:rgb(var(--danger));color:rgb(var(--surface))}
+.btn-danger:disabled{opacity:.45;cursor:default;background:rgb(var(--danger) / .12);color:rgb(var(--danger))}
 .field span{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));margin-bottom:6px}
 .field input{
   width:100%;height:34px;padding:0 10px;border-radius:8px;border:.5px solid rgb(var(--line));
@@ -1748,7 +1769,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v89', at: '2026-11-17 10:05' };
+window.IVY_BUILD = { id: 'v92', at: '2026-11-17 09:56' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5489,6 +5510,8 @@ function paintHelp(){
         <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
       <div class="help-sec"><h4>忘记密码 / 改密码</h4>
         <p class="help-p">已登录时：⚙ → 云同步设置 → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
+      <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
+        <p class="help-p">⚙ → 云同步设置 → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(helpTab === 'md'){
@@ -9004,6 +9027,12 @@ function paintSyncPanel(){
   }
   const login = $('#syncLogin'); if(login) login.textContent = isConnected() ? '立即同步' : '登录并同步';
   const out = $('#syncLogout'); if(out) out.disabled = !isConnected();
+  // 没登录就没有云端账号可注销，整块收起，避免用户对着灰按钮发愣
+  const aw = $('#acctWrap');
+  if(aw){
+    aw.hidden = !isConnected();
+    if(aw.hidden){ const box = $('#acctBox'); if(box) box.hidden = true; }
+  }
 }
 function openSyncPanel(){
   const ov = $('#syncOverlay');
@@ -9029,6 +9058,18 @@ function openSyncPanel(){
       <label class="field"><span>确认新密码</span>
         <input id="pwNew2" type="password" placeholder="再输一次" autocomplete="off" spellcheck="false"></label>
       <div class="sheet-row"><button class="btn-primary" id="pwSave">保存新密码</button></div>
+    </div>
+    <div id="acctWrap" hidden>
+    <button class="pw-toggle danger" id="acctToggle">注销账号</button>
+    <div class="pw-box" id="acctBox" hidden>
+      <div class="acct-warn" id="acctInfo">正在读取账号信息…</div>
+      <label class="field"><span>当前密码</span>
+        <input id="acctKey" type="password" placeholder="确认是你本人" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span>确认文字</span>
+        <input id="acctConfirm" type="text" placeholder="输入 DELETE" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+      <div class="sheet-row"><button class="btn-danger" id="acctDo">注销账号</button></div>
+      <div class="acct-tip">注销后云端的笔记、笔记本、历史版本、分享和图片会一并删除，<b>无法恢复</b>。本机这份笔记会保留，可继续本地使用或先导出备份。</div>
+    </div>
     </div>
     <div class="sheet-status" id="syncStatusLine"></div>
   </div>`;
@@ -9098,6 +9139,87 @@ function openSyncPanel(){
     finally{ btn.disabled = false; }
   };
   if(!isConnected()) setTimeout(()=>{ const i=$('#syncNameInput'); if(i) i.focus(); }, 60);
+
+  /* ---- 注销账号：删的是云端数据（/api/account），本机笔记不动 ---- */
+  let acctArmed = false, acctTimer = 0, acctInfo = null;
+  const resetArm = ()=>{
+    acctArmed = false; clearTimeout(acctTimer);
+    const b = $('#acctDo');
+    if(b){ b.textContent = '注销账号'; b.classList.remove('armed'); }
+  };
+  const paintAcct = ()=>{
+    const box = $('#acctInfo'); if(!box) return;
+    if(!acctInfo){ box.textContent = '正在读取账号信息…'; return; }
+    if(!acctInfo.canDelete){
+      box.innerHTML = esc(acctInfo.reason || '这个账号不能自助注销');
+      ['acctDo','acctKey','acctConfirm'].forEach(id=>{ const el = $('#'+id); if(el) el.disabled = true; });
+      return;
+    }
+    ['acctDo','acctKey','acctConfirm'].forEach(id=>{ const el = $('#'+id); if(el) el.disabled = false; });
+    const c = acctInfo.counts || {};
+    const parts = [];
+    if(c.notes) parts.push(`<b>${c.notes}</b> 篇笔记`);
+    if(c.trashed) parts.push(`回收站 <b>${c.trashed}</b> 篇`);
+    if(c.notebooks) parts.push(`<b>${c.notebooks}</b> 个笔记本`);
+    if(c.versions) parts.push(`<b>${c.versions}</b> 条历史版本`);
+    if(c.shares) parts.push(`<b>${c.shares}</b> 个公开分享`);
+    box.innerHTML = `账号 <b>${esc(acctInfo.name || accountLabel())}</b> ${parts.length ? '将删除 ' + parts.join('、') : '云端暂无笔记'}`
+      + `，连同上传的图片一起永久删除，<b>无法恢复</b>。本机这份笔记不受影响。`;
+  };
+
+  $('#acctToggle').onclick = async ()=>{
+    const box = $('#acctBox');
+    if(!box) return;
+    box.hidden = !box.hidden;
+    if(box.hidden) return;
+    resetArm();
+    if(!isConnected()){
+      acctInfo = { canDelete:false, reason:'还没有登录云端账号，本机数据可直接删除，不需要注销。' };
+      paintAcct();
+      return;
+    }
+    acctInfo = null; paintAcct();
+    try{ acctInfo = await apiCall('/api/account'); }
+    catch(e){ acctInfo = { canDelete:false, reason: e.message || '读取账号信息失败' }; }
+    paintAcct();
+  };
+
+  $('#acctDo').onclick = async ()=>{
+    if(!acctInfo || !acctInfo.canDelete) return;
+    const key = ($('#acctKey').value || '').trim();
+    const cf = ($('#acctConfirm').value || '').trim();
+    if(key.length < 4){ toast('请输入当前密码'); $('#acctKey').focus(); return; }
+    if(cf.toUpperCase() !== 'DELETE'){ toast('请在确认框里输入 DELETE'); $('#acctConfirm').focus(); return; }
+    const btn = $('#acctDo');
+    if(!acctArmed){                     // 两段式确认，不用原生 confirm（客户端 WebView 里不一定支持）
+      acctArmed = true;
+      btn.textContent = '再点一次，永久删除';
+      btn.classList.add('armed');
+      acctTimer = setTimeout(resetArm, 8000);
+      toast('删除后云端数据无法恢复，再点一次确认');
+      return;
+    }
+    clearTimeout(acctTimer); acctArmed = false;
+    btn.disabled = true; btn.textContent = '正在注销…';
+    try{
+      const d = await apiCall('/api/account', {
+        method:'POST', body:{ action:'delete', key, confirm:'DELETE' }
+      });
+      // 云端已删干净：清掉本机登录态，本机笔记保留，可继续离线使用
+      SYNC.token=''; SYNC.key=''; SYNC.account=''; SYNC.state='off'; SYNC.last=0; SYNC.error='';
+      syncSave(); renderDock(); updateSyncBadge(); closeSyncPanel();
+      const c = (d && d.counts) || {};
+      toast(`账号已注销，云端 ${c.notes||0} 篇笔记已删除；本机这份还在，可继续本地使用`);
+    }catch(e){
+      btn.disabled = false;
+      resetArm();
+      toast(e.message || '注销失败');
+    }
+  };
+  ['acctKey','acctConfirm'].forEach(id=>{
+    const el = $('#'+id);
+    if(el) el.oninput = ()=>{ if(acctArmed) resetArm(); };
+  });
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
 $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverlay') closeSyncPanel(); });

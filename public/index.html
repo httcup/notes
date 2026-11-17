@@ -2338,7 +2338,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v156', at: '2026-11-17 22:00' };
+window.IVY_BUILD = { id: 'v157', at: '2026-11-17 22:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5408,7 +5408,6 @@ function insertBlockAtCaret(){
   if(n) n.body = ta.value;
 }
 const INSERT_ITEMS = [
-  {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()},
   {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', icon:'heading', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
   {name:'二级标题', keys:['bt2','h2'], glyph:'H2', icon:'heading', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
   {name:'三级标题', keys:['bt3','h3'], glyph:'H3', icon:'heading', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
@@ -5443,7 +5442,8 @@ const INSERT_ITEMS = [
     openAI('rewrite', { ctx:c, text:c.text });
   }},
   {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
-  {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')}
+  {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
+  {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()}
 ]
 function insertFilter(q){
   q = String(q || '').trim().toLowerCase();
@@ -6431,7 +6431,7 @@ function helpBodyHtml(tab){
         <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
       <div class="help-sec"><h4>思维导图</h4>
         <p class="help-p">笔记菜单 ⋯ → <b>思维导图</b>（或输入 <code>/导图</code>）。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画成脑图：缩进一级就是子节点，同一缩进就是同级。<b>只读取、不改写</b>，笔记仍然保存为普通 Markdown，导出、同步、导入都不受影响。</p>
-        <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是白底 2 倍图。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
+        <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是<b>整张导图</b>（不受屏幕大小与缩放影响，折叠起来的节点也会画进去），手机上会按屏幕上限自动挑一个合适的清晰度，保证内容不缺。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
         <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
@@ -13236,50 +13236,86 @@ function mmSaveBlob(name, blob){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(u), 4000);
 }
-function mmSvgMarkup(){
-  if(!MM.lay || !MM.root) return '';
-  const svg = document.querySelector('#mmCanvas svg');
-  if(!svg) return '';
-  const clone = svg.cloneNode(true);
-  const vp = clone.querySelector('.mm-vp');
-  if(vp) vp.setAttribute('transform', 'translate(0 0) scale(1)');
-  clone.setAttribute('width', MM.lay.width);
-  clone.setAttribute('height', MM.lay.height);
-  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+/* 导出专用：整棵树重排一次（不受屏幕视口、缩放平移、折叠状态影响）。
+   屏幕上那份 SVG 被容器裁过、还带着缩放平移，直接克隆出来只能得到「一屏」，
+   所以导出永远按数据重建：全部节点展开 + 完整尺寸。 */
+function mmExportGraph(){
+  if(!MM.root || !MM.lay) return null;
+  const cp = n => ({
+    i:n.i, label:n.label, raw:n.raw, done:n.done, text:n.text,
+    depth:n.depth, br:n.br == null ? -1 : n.br, kind:n.kind,
+    children:n.children.map(cp), collapsed:false, w:0, x:0, y:0
+  });
+  const root = cp(MM.root);
+  const lay = mmLayout(root);
+  const bak = { root: MM.root, lay: MM.lay, sel: MM.sel };
+  let xml = '';
+  try{
+    MM.root = root; MM.lay = lay; MM.sel = 0;   // sel=0：导出不带选中虚线框
+    xml = mmSvgString();
+  }finally{
+    MM.root = bak.root; MM.lay = bak.lay; MM.sel = bak.sel;
+  }
+  if(!xml) return null;
+  return { xml, w: Math.max(1, Math.ceil(lay.width)), h: Math.max(1, Math.ceil(lay.height)) };
 }
-/* 当前 SVG 画到 canvas：PNG 与 PDF 共用 */
+function mmSvgMarkup(){
+  const g = mmExportGraph();
+  return g ? '<?xml version="1.0" encoding="UTF-8"?>\n' + g.xml : '';
+}
+/* 手机 canvas 单边/总面积都有硬上限，超了会被悄悄裁掉一截。
+   按设备给一个保守上限，宁可降一点分辨率也要保证整张图都在。 */
+function mmCanvasCap(){
+  const phone = (typeof mmIsPhone === 'function' && mmIsPhone())
+    || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  return phone ? { side: 4096, area: 12e6 } : { side: 16384, area: 96e6 };
+}
+function mmFitScale(w, h, want){
+  const cap = mmCanvasCap();
+  const hard = Math.min(want, cap.side / w, cap.side / h, Math.sqrt(cap.area / (w * h)));
+  return Math.max(0.15, hard);   // 宁可小一点，也不能超出上限被裁掉
+}
+/* 整张图 → canvas：PNG 与 PDF 共用（分带绘制，手机上一次画几千像素高会丢内容） */
 function mmRasterize(k, cb){
-  const svg = document.querySelector('#mmCanvas svg');
-  if(!svg || !MM.lay || !MM.root){ toast('还没有可导出的内容'); return; }
-  const clone = svg.cloneNode(true);
-  const vp = clone.querySelector('.mm-vp');
-  if(vp) vp.setAttribute('transform', 'translate(0 0) scale(1)');
-  clone.setAttribute('width', MM.lay.width);
-  clone.setAttribute('height', MM.lay.height);
-  const src = new XMLSerializer().serializeToString(clone);
-  const url = URL.createObjectURL(new Blob([src], { type:'image/svg+xml;charset=utf-8' }));
+  const g = mmExportGraph();
+  if(!g){ toast('还没有可导出的内容'); return; }
+  const scale = mmFitScale(g.w, g.h, k);
+  const cw = Math.max(1, Math.round(g.w * scale));
+  const ch = Math.max(1, Math.round(g.h * scale));
+  const url = URL.createObjectURL(new Blob([g.xml], { type:'image/svg+xml;charset=utf-8' }));
   const img = new Image();
   img.onload = () => {
-    const cv = document.createElement('canvas');
-    cv.width = Math.round(MM.lay.width * k);
-    cv.height = Math.round(MM.lay.height * k);
-    const ctx = cv.getContext('2d');
+    let cv = null, ctx = null;
+    try{
+      cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      ctx = cv.getContext('2d');
+    }catch(e){ ctx = null; }
+    if(!ctx || !cv.width || !cv.height){
+      URL.revokeObjectURL(url);
+      toast('图太大了，换 SVG 导出更稳');
+      return;
+    }
     ctx.fillStyle = MM.c.bg;
-    ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    ctx.fillRect(0, 0, cw, ch);
+    const band = 1200;                        // 目标坐标里每次最多画 1200px 高
+    for(let y = 0; y < ch; y += band){
+      const dh = Math.min(band, ch - y);
+      const sy = y / scale, sh = dh / scale;
+      ctx.drawImage(img, 0, sy, g.w, sh, 0, y, cw, dh);
+    }
     URL.revokeObjectURL(url);
-    cb(cv);
+    cb(cv, { w: g.w, h: g.h, scale });
   };
-  img.onerror = () => { URL.revokeObjectURL(url); toast('导出失败，可先截图保存'); };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('导出失败，可改用 SVG'); };
   img.src = url;
 }
 function mmExportPng(){
   mmRasterize(2, cv => {
     cv.toBlob(b => {
-      if(!b){ toast('导出失败'); return; }
+      if(!b){ toast('导出失败，可改用 SVG'); return; }
       mmSaveBlob(mmExportName() + '.png', b);
-      toast('已导出 PNG');
+      toast('已导出 PNG（完整导图）');
     }, 'image/png');
   });
 }
@@ -13287,15 +13323,16 @@ function mmExportSvg(){
   const xml = mmSvgMarkup();
   if(!xml){ toast('还没有可导出的内容'); return; }
   mmSaveBlob(mmExportName() + '.svg', new Blob([xml], { type:'image/svg+xml;charset=utf-8' }));
-  toast('已导出 SVG，Figma / Illustrator 里还能继续编辑');
+  toast('已导出 SVG（完整导图），Figma / Illustrator 里还能继续编辑');
 }
-/* 极简 PDF：单页塞一张 2 倍 JPEG，不依赖任何第三方库 */
-function mmPdfBlob(jpegDataUrl, pxW, pxH){
+/* 极简 PDF：单页塞一张完整 JPEG，不依赖任何第三方库 */
+function mmPdfBlob(jpegDataUrl, pxW, pxH, k){
   const bin = atob(String(jpegDataUrl).split(',')[1] || '');
   const img = new Uint8Array(bin.length);
   for(let i = 0; i < bin.length; i++) img[i] = bin.charCodeAt(i);
-  // 2 倍图按 96dpi 折算成 pt：px / 2 * 72 / 96
-  const W = +(pxW / 2 * 0.75).toFixed(2), H = +(pxH / 2 * 0.75).toFixed(2);
+  // 按实际倍率折算成 96dpi 下的 pt：px / k * 72 / 96
+  const kk = k > 0 ? k : 2;
+  const W = +(pxW / kk * 0.75).toFixed(2), H = +(pxH / kk * 0.75).toFixed(2);
   const parts = [];
   let len = 0;
   const put = s => {
@@ -13327,9 +13364,10 @@ function mmPdfBlob(jpegDataUrl, pxW, pxH){
   return new Blob(parts, { type:'application/pdf' });
 }
 function mmExportPdf(){
-  mmRasterize(2, cv => {
-    mmSaveBlob(mmExportName() + '.pdf', mmPdfBlob(cv.toDataURL('image/jpeg', 0.92), cv.width, cv.height));
-    toast('已导出 PDF');
+  mmRasterize(2, (cv, m) => {
+    mmSaveBlob(mmExportName() + '.pdf',
+      mmPdfBlob(cv.toDataURL('image/jpeg', 0.92), cv.width, cv.height, m && m.scale));
+    toast('已导出 PDF（完整导图，单页）');
   });
 }
 /* 大纲：只取文字层，行内 Markdown 记号已经清过 */
@@ -13369,7 +13407,7 @@ function mmExportMm(){
 }
 function openMmExportMenu(anchor){
   popover(anchor, [
-    ['PNG 图片', '2 倍', '', 'image', mmExportPng],
+    ['PNG 图片', '完整导图', '', 'image', mmExportPng],
     ['SVG 矢量图', '可编辑', '', 'graph', mmExportSvg],
     ['PDF 文档', '单页', '', 'file', mmExportPdf],
     '-',

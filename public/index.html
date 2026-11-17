@@ -1848,8 +1848,8 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-nav nav{display:flex;flex-direction:column;gap:2px}
 .set-pick{display:none}
 .set-nav button{
-  text-align:left;height:36px;padding:0 12px;border-radius:9px;font-size:13px;
-  color:rgb(var(--muted));transition:background .13s,color .13s;white-space:nowrap;
+  text-align:left;height:auto;min-height:36px;padding:7px 12px;border-radius:9px;font-size:13px;line-height:1.35;
+  color:rgb(var(--muted));transition:background .13s,color .13s;white-space:normal;
 }
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .set-nav button.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.06)}
@@ -2345,7 +2345,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v160', at: '2026-11-18 02:02' };
+window.IVY_BUILD = { id: 'v161', at: '2026-11-18 02:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5160,6 +5160,13 @@ function agoText(ts){
   if(d < 86400000) return Math.floor(d / 3600000) + ' 小时前';
   return Math.floor(d / 86400000) + ' 天前';
 }
+/* 同步时间要看得准：年月日 + 时分秒，不用「刚刚」这种模糊说法 */
+function syncStamp(ts){
+  if(!ts) return '—';
+  const d = new Date(ts), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+    + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
 function renderMeta(){
   const n = noteById(S.active); if(!n) return;
   const meta = $('#docMeta');
@@ -6437,9 +6444,9 @@ function helpBodyHtml(tab){
       <div class="help-sec"><h4>该选哪个</h4>
         <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
       <div class="help-sec"><h4>忘记密码 / 改密码</h4>
-        <p class="help-p">已登录时：⚙ → 云同步设置 → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
+        <p class="help-p">已登录时：⚙ → <b>账户 / 同步</b> → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
       <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
-        <p class="help-p">⚙ → 云同步设置 → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
+        <p class="help-p">⚙ → <b>账户 / 同步</b> → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
       <div class="help-sec"><h4>AI（站内免费模型 / 自己的接口）</h4>
         <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，次日恢复）；<b>登录后不限次数</b>。第三个填你自己的 OpenAI 兼容接口，同样不限次数。</p>
         <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
@@ -10813,11 +10820,11 @@ function openSyncPanel(){
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
 /* ---------- 设置（整页） ---------- */
 const SET_TABS = [
-  ['account', '账户'],
+  ['account', '账户 / 同步'],
   ['appearance', '外观'],
   ['remind', '提醒与日历'],
   ['mcp', 'API 令牌与 MCP'],
-  ['sync', '同步 / 导出 / 导入'],
+  ['sync', '备份 / 导入 / 导出 / 清理本地笔记'],
   ['share', '分享管理'],
   ['data', '数据'],
   ['help', '使用说明'],
@@ -10953,7 +10960,7 @@ function setAccountHtml(){
       <p class="set-note">忘记密码：找站主在管理后台重置。</p>`;
   }
   const state = SYNC.state === 'ok' ? '已同步' : (SYNC.state === 'busy' ? '同步中…' : (SYNC.state === 'error' ? '同步出错：' + (SYNC.error || '') : '待同步'));
-  const last = SYNC.last ? agoText(SYNC.last) : '—';
+  const last = syncStamp(SYNC.last);
   return `<div class="set-card">
       <div class="set-row"><div><div class="t">${esc(SYNC.account || '主人账号')}</div>
         <div class="d">${state} · 上次同步 ${last}</div></div>
@@ -11084,6 +11091,85 @@ async function doLogout(keepLocal){
   LO_BUSY = false;
 }
 
+/* ---- 清理本地笔记：三次确认，第一步先问要不要下载备份 ---- */
+let WIPE_STEP = 0, WIPE_BUSY = false;
+function closeWipeSheet(){
+  const ov = $('#wipeOv');
+  if(ov) ov.classList.remove('open');
+}
+function openWipeSheet(){
+  let ov = $('#wipeOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'wipeOv'; ov.className = 'lo-ov';
+    ov.addEventListener('mousedown', e => { if(e.target === ov) closeWipeSheet(); });
+    document.body.appendChild(ov);
+  }
+  WIPE_STEP = 1; WIPE_BUSY = false;
+  paintWipeSheet();
+  ov.classList.add('open');
+}
+function paintWipeSheet(){
+  const ov = $('#wipeOv'); if(!ov) return;
+  const live = (S.notes || []).filter(x => !x.trashed && !x.deleted).length;
+  const nb = (S.notebooks || []).filter(x => !x.deleted).length;
+  const logged = !!SYNC.token;
+  const step = WIPE_STEP;
+  const title = step === 1 ? '清空本机数据' : (step === 2 ? '再确认一次' : '最后确认');
+  const lead = step === 1
+    ? `<p class="lo-lead">将删除这台设备上的<b>全部数据</b>：<b>${nb}</b> 个笔记本 · <b>${live}</b> 篇笔记，回收站和历史版本一起清掉，<b>无法恢复</b>。${
+        logged ? '云端和其它设备不受影响，清空后会重新从云端拉下来。'
+               : '你没登录，本机就是唯一一份，删掉就真没了。'}</p>
+       <p class="lo-lead">删之前要不要先<b>下载一份备份</b>？备份是一个 .json 文件，以后能原样导入回来。</p>`
+    : step === 2
+    ? `<p class="lo-lead">第二步：确认删除这台设备上的<b>全部笔记本（${nb} 个）和全部笔记（${live} 篇）</b>。删完没有回收站，<b>无法恢复</b>。</p>`
+    : `<p class="lo-lead">第三步：点「清空并重启」立刻执行，不再询问，<b>无法恢复</b>。</p>`;
+  const foot = step === 1
+    ? `<button class="btn-ghost" id="wipeCancel">取消</button>
+       <div class="lo-acts">
+         <button class="btn-ghost" id="wipeBackup">先下载备份</button>
+         <button class="btn-danger" id="wipeNext">继续</button>
+       </div>`
+    : step === 2
+    ? `<button class="btn-ghost" id="wipeBack">返回</button>
+       <div class="lo-acts">
+         <button class="btn-ghost" id="wipeCancel">取消</button>
+         <button class="btn-danger" id="wipeNext">仍要删除</button>
+       </div>`
+    : `<button class="btn-ghost" id="wipeBack">返回</button>
+       <div class="lo-acts">
+         <button class="btn-ghost" id="wipeCancel">取消</button>
+         <button class="btn-danger armed" id="wipeGo">清空并重启</button>
+       </div>`;
+  ov.innerHTML = `<div class="lo-card" role="dialog" aria-label="清理本地笔记">
+      <div class="lo-hd"><h3>${title}</h3>
+        <button class="info-x" id="wipeX" title="关闭">${ic('x')}</button></div>
+      <div class="lo-body">
+        ${lead}
+        ${step >= 2 ? `<div class="lo-warn on">第 ${step} / 3 步 · 这是一次不可撤销的删除</div>` : ''}
+      </div>
+      <div class="lo-foot">${foot}</div>
+    </div>`;
+  const q = id => ov.querySelector('#' + id);
+  const on = (id, fn) => { const b = q(id); if(b) b.onclick = fn; };
+  on('wipeX', closeWipeSheet);
+  on('wipeCancel', closeWipeSheet);
+  on('wipeBackup', () => { exportBackup(); toast('备份开始下载，确认后再点「继续」'); });
+  on('wipeBack', () => { WIPE_STEP = Math.max(1, WIPE_STEP - 1); paintWipeSheet(); });
+  on('wipeNext', () => { WIPE_STEP = Math.min(3, WIPE_STEP + 1); paintWipeSheet(); });
+  on('wipeGo', async () => {
+    if(WIPE_BUSY) return;
+    WIPE_BUSY = true;
+    const go = q('wipeGo');
+    if(go){ go.disabled = true; go.textContent = '正在清空…'; }
+    LOGOUT_WIPING = true;             // 清完别被迟到的 save() 写回去
+    await wipeLocalNotes();
+    closeWipeSheet();
+    toast('本机数据已清空');
+    setTimeout(() => location.reload(), 700);
+  });
+}
+
 /* ---- 外观 ---- */
 function setAppearanceHtml(){
   const dark = S.theme === 'dark';
@@ -11126,14 +11212,7 @@ function setMcpHtml(){
 
 /* ---- 同步与备份 ---- */
 function setSyncHtml(){
-  const state = !SYNC.token ? '未登录，仅保存在本机'
-    : (SYNC.state === 'ok' ? '已同步' : (SYNC.state === 'busy' ? '同步中…' : (SYNC.state === 'error' ? '同步出错：' + (SYNC.error || '') : '待同步')));
-  return `<div class="set-card">
-      <div class="set-row"><div><div class="t">同步状态</div>
-        <div class="d">${esc(state)}${SYNC.last ? ' · 上次 ' + agoText(SYNC.last) : ''}</div></div>
-        <button class="set-btn" id="setSyncNow2">${SYNC.token ? '立即同步' : '去登录'}</button></div>
-    </div>
-    <div class="set-sec">备份</div>
+  return `<div class="set-sec">备份</div>
     <div class="set-row"><div><div class="t">导出全部笔记（备份文件）</div>
       <div class="d">JSON 格式，含笔记本、标签、置顶与分享状态，可原样恢复</div></div>
       <button class="set-btn" id="setExpBackup">导出</button></div>
@@ -11147,7 +11226,12 @@ function setSyncHtml(){
     <div class="set-row"><div><div class="t">从备份恢复</div>
       <div class="d">合并进现有笔记：同 id 的按更新时间保留较新的那份</div></div>
       <button class="set-btn" id="setImportBackup">选择备份</button></div>
-    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。</p>`;
+    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。</p>
+    <div class="set-sec">清理本地笔记</div>
+    <div class="set-row"><div><div class="t">清空本机全部数据（笔记本 + 笔记）</div>
+      <div class="d">删掉这台设备上的全部笔记本、笔记、回收站与历史版本；三次确认，第一步会先问你要不要下载备份。已登录时云端不受影响，清完会重新拉下来</div></div>
+      <button class="set-btn danger" id="setWipeLocal">清理</button></div>
+    <p class="set-note">没登录时本机就是唯一一份，清掉无法恢复——先「导出备份（.json）」，以后能原样导入回来。</p>`;
 }
 
 /* ---- 分享管理 ---- */
@@ -11161,7 +11245,7 @@ function setShareHtml(){
         <button class="set-btn danger" data-unshare="${esc(n.id)}">取消分享</button></div></div>`).join('');
 }
 
-/* ---- 导入（已合并进「同步 / 导出 / 导入」，这里保留给内部调用） ---- */
+/* ---- 导入（已合并进「备份 / 导入 / 导出 / 清理本地笔记」，这里保留给内部调用） ---- */
 function setImportHtml(){
   return `<div class="set-row"><div><div class="t">导入文件</div>
       <div class="d">Markdown（.md）、HTML、或之前导出的备份文件（.json）</div></div>
@@ -11282,16 +11366,12 @@ function bindPane(tab){
   }
 
   if(tab === 'sync'){
-    const a = $('#setSyncNow2');
-    if(a) a.onclick = async ()=>{
-      if(!SYNC.token){ SET_TAB = 'account'; paintSettings(); return; }
-      try{ await syncNow({ rerender:true }); toast('已同步'); paintSettings(); }
-      catch(e){ toast('同步失败：' + (e.message || '网络错误')); }
-    };
     const b = $('#setExpBackup'); if(b) b.onclick = ()=>exportBackup();
     const c = $('#setExpMd'); if(c) c.onclick = ()=>exportAllMd();
     const i = $('#setImportBtn'); if(i) i.onclick = ()=>importDoc();
     const k = $('#setImportBackup'); if(k) k.onclick = ()=>importDoc(true);
+    const w = $('#setWipeLocal');
+    if(w) w.onclick = () => openWipeSheet();
   }
 
   if(tab === 'share'){

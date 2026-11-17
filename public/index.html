@@ -1743,16 +1743,30 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 .set-ov.open{opacity:1;pointer-events:auto}
 .set-wrap{
-  width:min(960px,100%);height:min(740px,90vh);display:flex;background:rgb(var(--surface));
-  border-radius:18px;box-shadow:var(--shadow-lift);overflow:hidden;
+  width:min(960px,100%);height:min(740px,90vh);display:grid;
+  grid-template-columns:214px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+  background:rgb(var(--surface));border-radius:18px;box-shadow:var(--shadow-lift);overflow:hidden;
   transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
 }
 .set-ov.open .set-wrap{transform:none}
+/* 左栏顶端：标题 + 关闭。手机上它永远在屏幕最上面，不用满屏找 × */
+.set-top{
+  grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:20px 12px 10px 22px;background:rgb(var(--sunken));
+}
+.set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em}
+.set-x{
+  display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
+  height:28px;min-width:28px;padding:0 6px;border-radius:8px;color:rgb(var(--faint));
+  background:transparent;transition:background .13s,color .13s;
+}
+.set-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.set-x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+.set-x i{display:none;font-style:normal;font-size:12.5px}
 .set-nav{
-  width:214px;flex:0 0 auto;padding:22px 12px 16px;background:rgb(var(--sunken));
+  grid-column:1;grid-row:2;min-height:0;padding:0 12px 16px;background:rgb(var(--sunken));
   display:flex;flex-direction:column;gap:2px;overflow:auto;
 }
-.set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em;padding:0 10px 14px}
 .set-nav nav{display:flex;flex-direction:column;gap:2px}
 .set-nav button{
   text-align:left;height:36px;padding:0 12px;border-radius:9px;font-size:13px;
@@ -1760,7 +1774,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .set-nav button.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.06)}
-.set-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.set-main{grid-column:2;grid-row:1 / span 2;min-width:0;min-height:0;display:flex;flex-direction:column}
 .set-head{display:flex;align-items:center;justify-content:space-between;padding:20px 26px 10px}
 .set-head h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
 .set-body{flex:1;overflow:auto;padding:2px 26px 28px;overscroll-behavior:contain}
@@ -1794,13 +1808,28 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-empty{font-size:12px;color:rgb(var(--faint));padding:14px 0}
 @media (max-width:760px){
   .set-ov{padding:0}
-  .set-wrap{width:100%;height:100%;border-radius:0;flex-direction:column}
-  .set-nav{width:100%;flex:0 0 auto;padding:12px 12px 8px;flex-direction:row;gap:6px;overflow-x:auto;align-items:center}
-  .set-title{font-size:17px;padding:0 6px 0 2px;flex:0 0 auto}
+  .set-wrap{
+    width:100%;height:100%;border-radius:0;
+    grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);
+  }
+  /* 顶部固定一行：左边「设置」，右边带文字的关闭按钮（含刘海安全区） */
+  .set-top{padding:calc(10px + env(safe-area-inset-top)) 12px 8px 16px}
+  .set-title{font-size:18px}
+  .set-x{
+    height:32px;padding:0 10px 0 8px;color:rgb(var(--ink-2));
+    background:rgb(var(--surface));box-shadow:0 1px 2px rgb(16 24 32/.08);
+  }
+  .set-x i{display:inline}
+  .set-nav{
+    grid-column:1;grid-row:2;width:auto;flex:0 0 auto;align-items:center;
+    padding:0 12px 8px;flex-direction:row;gap:6px;
+    overflow-x:auto;overflow-y:hidden;white-space:nowrap;-webkit-overflow-scrolling:touch;
+  }
   .set-nav nav{flex-direction:row;gap:6px}
   .set-nav button{height:30px;padding:0 11px;background:rgb(var(--surface));flex:0 0 auto;font-size:12.5px}
-  .set-head{padding:12px 16px 6px}
-  .set-body{padding:2px 16px 22px}
+  .set-main{grid-column:1;grid-row:3}
+  .set-head{padding:10px 16px 4px}
+  .set-body{padding:2px 16px calc(24px + env(safe-area-inset-bottom))}
 }
 
 /* ---- API 令牌与 MCP ---- */
@@ -2199,7 +2228,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v145', at: '2026-11-17 17:41' };
+window.IVY_BUILD = { id: 'v146', at: '2026-11-17 18:29' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -10537,13 +10566,13 @@ function openSettings(tab){
     ov = document.createElement('div');
     ov.className = 'set-ov'; ov.id = 'setOv';
     ov.innerHTML = `<div class="set-wrap">
-      <aside class="set-nav">
+      <div class="set-top">
         <div class="set-title">设置</div>
-        <nav id="setNav"></nav>
-      </aside>
+        <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
+      </div>
+      <aside class="set-nav"><nav id="setNav"></nav></aside>
       <section class="set-main">
-        <div class="set-head"><h2 id="setHead">账户</h2>
-          <button class="pa-btn" id="setClose" title="关闭">${ic('x')}</button></div>
+        <div class="set-head"><h2 id="setHead">账户</h2></div>
         <div class="set-body" id="setPane"></div>
       </section>
     </div>`;

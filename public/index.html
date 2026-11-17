@@ -1986,7 +1986,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v136', at: '2026-11-17 16:44' };
+window.IVY_BUILD = { id: 'v137', at: '2026-11-17 16:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11575,10 +11575,34 @@ function mmBind(){
     if(idx) mmStartRename(idx);
   });
 }
-function mmExportPng(){
-  if(!MM.lay || !MM.root){ toast('还没有可导出的内容'); return; }
+/* ---------- 导出：图片 / 矢量 / PDF / 大纲 ---------- */
+function mmExportName(){
+  const n = noteById(MM.noteId);
+  return String((n && n.title) || '思维导图').replace(/[\\/:*?"<>|\n\r\t]+/g, ' ').trim().slice(0, 60) || '思维导图';
+}
+function mmSaveBlob(name, blob){
+  const a = document.createElement('a');
+  const u = URL.createObjectURL(blob);
+  a.href = u; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u), 4000);
+}
+function mmSvgMarkup(){
+  if(!MM.lay || !MM.root) return '';
   const svg = document.querySelector('#mmCanvas svg');
-  if(!svg){ toast('还没有可导出的内容'); return; }
+  if(!svg) return '';
+  const clone = svg.cloneNode(true);
+  const vp = clone.querySelector('.mm-vp');
+  if(vp) vp.setAttribute('transform', 'translate(0 0) scale(1)');
+  clone.setAttribute('width', MM.lay.width);
+  clone.setAttribute('height', MM.lay.height);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+}
+/* 当前 SVG 画到 canvas：PNG 与 PDF 共用 */
+function mmRasterize(k, cb){
+  const svg = document.querySelector('#mmCanvas svg');
+  if(!svg || !MM.lay || !MM.root){ toast('还没有可导出的内容'); return; }
   const clone = svg.cloneNode(true);
   const vp = clone.querySelector('.mm-vp');
   if(vp) vp.setAttribute('transform', 'translate(0 0) scale(1)');
@@ -11588,7 +11612,6 @@ function mmExportPng(){
   const url = URL.createObjectURL(new Blob([src], { type:'image/svg+xml;charset=utf-8' }));
   const img = new Image();
   img.onload = () => {
-    const k = 2;
     const cv = document.createElement('canvas');
     cv.width = Math.round(MM.lay.width * k);
     cv.height = Math.round(MM.lay.height * k);
@@ -11597,22 +11620,114 @@ function mmExportPng(){
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     URL.revokeObjectURL(url);
-    cv.toBlob(b => {
-      if(!b){ toast('导出失败'); return; }
-      const n = noteById(MM.noteId);
-      const a = document.createElement('a');
-      const u = URL.createObjectURL(b);
-      a.href = u;
-      a.download = ((n && n.title) || '思维导图') + '.png';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(u), 4000);
-      toast('已导出图片');
-    }, 'image/png');
+    cb(cv);
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('导出失败，可先截图保存'); };
   img.src = url;
+}
+function mmExportPng(){
+  mmRasterize(2, cv => {
+    cv.toBlob(b => {
+      if(!b){ toast('导出失败'); return; }
+      mmSaveBlob(mmExportName() + '.png', b);
+      toast('已导出 PNG');
+    }, 'image/png');
+  });
+}
+function mmExportSvg(){
+  const xml = mmSvgMarkup();
+  if(!xml){ toast('还没有可导出的内容'); return; }
+  mmSaveBlob(mmExportName() + '.svg', new Blob([xml], { type:'image/svg+xml;charset=utf-8' }));
+  toast('已导出 SVG，Figma / Illustrator 里还能继续编辑');
+}
+/* 极简 PDF：单页塞一张 2 倍 JPEG，不依赖任何第三方库 */
+function mmPdfBlob(jpegDataUrl, pxW, pxH){
+  const bin = atob(String(jpegDataUrl).split(',')[1] || '');
+  const img = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) img[i] = bin.charCodeAt(i);
+  // 2 倍图按 96dpi 折算成 pt：px / 2 * 72 / 96
+  const W = +(pxW / 2 * 0.75).toFixed(2), H = +(pxH / 2 * 0.75).toFixed(2);
+  const parts = [];
+  let len = 0;
+  const put = s => {
+    const b = new Uint8Array(s.length);
+    for(let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 255;
+    parts.push(b); len += b.length;
+  };
+  const offs = [];
+  const obj = (num, head, stream) => {
+    offs[num] = len;
+    put(num + ' 0 obj\n' + head + '\n');
+    if(stream){ put('stream\n'); parts.push(stream); len += stream.length; put('\nendstream\n'); }
+    put('endobj\n');
+  };
+  put('%PDF-1.4\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+  obj(4, '<< /Type /XObject /Subtype /Image /Width ' + pxW + ' /Height ' + pxH
+        + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + img.length + ' >>', img);
+  const content = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+  const cb = new Uint8Array(content.length);
+  for(let i = 0; i < content.length; i++) cb[i] = content.charCodeAt(i) & 255;
+  obj(5, '<< /Length ' + content.length + ' >>', cb);
+  const xref = len;
+  put('xref\n0 6\n0000000000 65535 f \n');
+  for(let i = 1; i <= 5; i++) put(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  put('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  return new Blob(parts, { type:'application/pdf' });
+}
+function mmExportPdf(){
+  mmRasterize(2, cv => {
+    mmSaveBlob(mmExportName() + '.pdf', mmPdfBlob(cv.toDataURL('image/jpeg', 0.92), cv.width, cv.height));
+    toast('已导出 PDF');
+  });
+}
+/* 大纲：只取文字层，行内 Markdown 记号已经清过 */
+function mmOutlineLines(){
+  const out = [];
+  (function walk(n, lv){
+    const text = String(n.label == null ? '' : n.label).trim();
+    if(text) out.push({ lv, text });
+    n.children.forEach(c=>walk(c, lv + 1));
+  })(MM.root, 0);
+  return out;
+}
+function mmExportMd(){
+  if(!MM.root){ toast('还没有可导出的内容'); return; }
+  const lines = mmOutlineLines();
+  if(!lines.length){ toast('还没有可导出的内容'); return; }
+  const txt = ['# ' + lines[0].text]
+    .concat(lines.slice(1).map(x=>'  '.repeat(Math.max(0, x.lv - 1)) + '- ' + x.text))
+    .join('\n') + '\n';
+  mmSaveBlob(mmExportName() + '.md', new Blob([txt], { type:'text/markdown;charset=utf-8' }));
+  toast('已导出 Markdown 大纲');
+}
+function mmExportOpml(){
+  if(!MM.root){ toast('还没有可导出的内容'); return; }
+  const node = n => '<outline text="' + mmXml(n.label || '') + '">' + n.children.map(node).join('') + '</outline>';
+  const txt = '<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0"><head><title>'
+    + mmXml(mmExportName()) + '</title></head><body>' + node(MM.root) + '</body></opml>\n';
+  mmSaveBlob(mmExportName() + '.opml', new Blob([txt], { type:'text/x-opml;charset=utf-8' }));
+  toast('已导出 OPML，XMind / 幕布 / OmniOutliner 都能导入');
+}
+function mmExportMm(){
+  if(!MM.root){ toast('还没有可导出的内容'); return; }
+  const node = n => '<node TEXT="' + mmXml(n.label || '') + '">' + n.children.map(node).join('') + '</node>';
+  const txt = '<map version="1.0.1">' + node(MM.root) + '</map>\n';
+  mmSaveBlob(mmExportName() + '.mm', new Blob([txt], { type:'application/x-freemind;charset=utf-8' }));
+  toast('已导出 FreeMind 脑图文件');
+}
+function openMmExportMenu(anchor){
+  popover(anchor, [
+    ['PNG 图片', '2 倍', '', 'image', mmExportPng],
+    ['SVG 矢量图', '可编辑', '', 'graph', mmExportSvg],
+    ['PDF 文档', '单页', '', 'file', mmExportPdf],
+    '-',
+    ['Markdown 大纲', '.md', '', 'code', mmExportMd],
+    ['OPML 大纲', 'XMind / 幕布', '', 'outline', mmExportOpml],
+    ['FreeMind 脑图', '.mm', '', 'mind', mmExportMm]
+  ], { align:'right' });
 }
 function closeMindMap(){
   const ov = document.getElementById('mmOv');
@@ -11635,7 +11750,7 @@ function openMindMap(){
       + '<button class="mm-btn" id="mmFold">折叠到二级</button>'
       + '<button class="mm-btn on" id="mmList">含列表项</button>'
       + '<button class="mm-btn" id="mmFit">适应窗口</button>'
-      + '<button class="mm-btn" id="mmPng">导出图片</button>'
+      + '<button class="mm-btn" id="mmExportBtn">导出</button>'
       + '<button class="help-x" id="mmClose" title="关闭">' + ic('x') + '</button>'
       + '</div></div>'
       + '<div class="mm-style-pop" id="mmStylePop" hidden>'
@@ -11701,7 +11816,7 @@ function openMindMap(){
       e.currentTarget.classList.toggle('on', MM.withList);
       mmRefresh(true);
     };
-    ov.querySelector('#mmPng').onclick = mmExportPng;
+    ov.querySelector('#mmExportBtn').onclick = e => { e.stopPropagation(); openMmExportMenu(e.currentTarget); };
     ov.querySelectorAll('[data-mmz]').forEach(b => {
       b.onclick = () => {
         const k = b.dataset.mmz;

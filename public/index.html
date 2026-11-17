@@ -2332,6 +2332,8 @@ const ICONS = {
   bookOpen:'<path d="M12 6.5C10.5 5 8.4 4.4 4 4.5v14c4.4-.1 6.5.5 8 2 1.5-1.5 3.6-2.1 8-2v-14c-4.4-.1-6.5.5-8 2z"/><path d="M12 6.5v14"/>',
   sort:'<path d="M7 20V4M7 4 3.5 7.5M7 4l3.5 3.5M17 4v16M17 20l3.5-3.5M17 20l-3.5-3.5"/>',
   filter:'<path d="M4 5h16l-6.2 7.4V19l-3.6-2v-4.6z"/>',
+  /* 大纲「只看一二级」：一条主干 + 两条带箭头的枝（树形收拢），取代原来的漏斗 */
+  treeTop:'<path d="M7 12h3"/><path d="M10 4.6v14.8"/><path d="M10 7.6h5.4M10 16.4h5.4"/><path d="m15.8 5.3 2.3 2.3-2.3 2.3M15.8 14.1l2.3 2.3-2.3 2.3"/>',
   download:'<path d="M12 4v11M8 11.5l4 4 4-4"/><path d="M5 19h14"/>',
   upload:'<path d="M12 19V8M8 11.5l4-4 4 4"/><path d="M5 5h14"/>',
   check:'<path d="m5 13 4.5 4.5L19 7"/>',
@@ -2382,7 +2384,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v164', at: '2026-11-18 02:40' };
+window.IVY_BUILD = { id: 'v165', at: '2026-11-18 02:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8369,7 +8371,7 @@ function renderOutline(){
   outlineItems = entries;
   outlineEl.innerHTML = `<div class="outline-head">
       <button class="ol-btn ol-close" id="olClose" data-tip="关闭大纲" aria-label="关闭大纲">${ic('x')}</button>
-      <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" data-tip="只显示一级二级标题" aria-label="只显示一级二级标题">${ic('filter')}</button>
+      <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" data-tip="只显示一级二级标题" aria-label="只显示一级二级标题">${ic('treeTop')}</button>
       <button class="ol-btn ${withList?'on':''}" id="olList" data-tip="展开全部" aria-label="展开全部">${ic('expandAll')}</button>
       <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" data-tip="固定显示大纲" aria-label="固定显示大纲">${ic('pin')}</button>
       <div class="ol-tip" id="olTip"></div>

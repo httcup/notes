@@ -1361,7 +1361,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
    大纲是纯浮层，不需要这圈；键盘焦点改用下面的内描边，仍然可见。 */
 .outline,.outline-body{outline:none!important}
 .outline-body:focus-visible,.ol-item:focus-visible{outline:none!important;box-shadow:inset 0 0 0 1.5px rgb(var(--ivy)/.55);border-radius:6px}
-.outline-head{display:flex;align-items:center;justify-content:flex-end;gap:1px;padding:3px 3px 5px;flex:0 0 auto}
+.outline-head{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:1px;padding:3px 3px 5px;flex:0 0 auto}
 .ol-btn{
   width:26px;height:26px;display:grid;place-items:center;border-radius:7px;
   color:rgb(var(--faint));transition:background .14s,color .14s;
@@ -1369,6 +1369,20 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .ol-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .ol-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .ol-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* 悬停说明：原生 title 要等一秒多才弹，这里自己画一枚小气泡——
+   位置由 JS 按按钮中心算，超出卡片就贴到卡片内侧，永远不会被裁。 */
+.ol-tip{
+  position:absolute;top:calc(100% + 3px);left:0;z-index:6;
+  padding:4px 9px;border-radius:7px;white-space:nowrap;
+  font-size:11.5px;font-weight:500;line-height:1.5;letter-spacing:0;
+  background:rgb(var(--ink)/.92);color:rgb(var(--surface));
+  box-shadow:0 8px 20px rgb(var(--ink)/.2);
+  opacity:0;transform:translateY(-3px);pointer-events:none;
+  transition:opacity .1s ease,transform .1s ease;
+}
+.ol-tip.show{opacity:1;transform:translateY(0);transition-delay:.16s}
+/* 触屏没有悬停，别让气泡在点按后残留 */
+@media (hover:none){ .ol-tip{display:none} }
 .outline-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:1px 1px 2px;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .outline-body::-webkit-scrollbar{width:7px}
 .outline-body::-webkit-scrollbar-thumb{background:rgb(var(--ink)/.12);border-radius:7px;border:2px solid transparent;background-clip:content-box}
@@ -2314,6 +2328,7 @@ const ICONS = {
   slash:'<path d="M15 3.8 9 20.2"/>',
   mind:'<rect x="3" y="9.6" width="6.4" height="4.8" rx="1.5"/><rect x="14.6" y="3.4" width="6.4" height="4.8" rx="1.5"/><rect x="14.6" y="15.8" width="6.4" height="4.8" rx="1.5"/><path d="M9.4 12h2.6M12 12V5.8h2.6M12 12v6.2h2.6"/>',
   pin:'<path d="M9.5 3.2h5l-.55 5.1 3.05 3.2H7l3.05-3.2z"/><path d="M12 11.5V20.8"/>',
+  expandAll:'<path d="M6.4 9.8 12 4.2l5.6 5.6"/><path d="m6.4 14.2 5.6 5.6 5.6-5.6"/>',
   bookOpen:'<path d="M12 6.5C10.5 5 8.4 4.4 4 4.5v14c4.4-.1 6.5.5 8 2 1.5-1.5 3.6-2.1 8-2v-14c-4.4-.1-6.5.5-8 2z"/><path d="M12 6.5v14"/>',
   sort:'<path d="M7 20V4M7 4 3.5 7.5M7 4l3.5 3.5M17 4v16M17 20l3.5-3.5M17 20l-3.5-3.5"/>',
   filter:'<path d="M4 5h16l-6.2 7.4V19l-3.6-2v-4.6z"/>',
@@ -2367,7 +2382,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v162', at: '2026-11-18 02:16' };
+window.IVY_BUILD = { id: 'v164', at: '2026-11-18 02:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8353,10 +8368,11 @@ function renderOutline(){
   else if(!withList) entries = entries.filter(e => e.kind === 'h');
   outlineItems = entries;
   outlineEl.innerHTML = `<div class="outline-head">
-      <button class="ol-btn ol-close" id="olClose" title="关闭大纲">${ic('x')}</button>
-      <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" title="${S.outlineTop?'显示全部标题':'只看一、二级标题'}">${ic('filter')}</button>
-      <button class="ol-btn ${withList?'on':''}" id="olList" title="${withList?'大纲里也显示列表项（- 分支）':'只显示标题，不显示列表项'}">${ic('outline')}</button>
-      <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" title="${S.outlineOpen?'取消固定（鼠标移开自动收起）':'固定在页面上'}">${ic('pin')}</button>
+      <button class="ol-btn ol-close" id="olClose" data-tip="关闭大纲" aria-label="关闭大纲">${ic('x')}</button>
+      <button class="ol-btn ${S.outlineTop?'on':''}" id="olTop" data-tip="只显示一级二级标题" aria-label="只显示一级二级标题">${ic('filter')}</button>
+      <button class="ol-btn ${withList?'on':''}" id="olList" data-tip="展开全部" aria-label="展开全部">${ic('expandAll')}</button>
+      <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" data-tip="固定显示大纲" aria-label="固定显示大纲">${ic('pin')}</button>
+      <div class="ol-tip" id="olTip"></div>
     </div>
     <div class="outline-body">`
     + (entries.length ? entries.map(e=>{
@@ -8379,6 +8395,26 @@ function renderOutline(){
   if(listBtn) listBtn.onclick = ()=>{ S.outlineList = !(S.outlineList !== false); renderOutline(); save(); };
   const close = outlineEl.querySelector('#olClose');
   if(close) close.onclick = ()=>closeOutlinePanel();
+  // 悬停/聚焦时在按钮正下方出一枚气泡，宽度超出卡片就贴边收住（不会被裁）
+  const tipEl = outlineEl.querySelector('#olTip');
+  if(tipEl && !matchMedia('(hover:none)').matches){
+    const headEl = outlineEl.querySelector('.outline-head');
+    const showTip = (btn)=>{
+      tipEl.textContent = btn.dataset.tip || '';
+      tipEl.classList.add('show');
+      const hr = headEl.getBoundingClientRect(), br = btn.getBoundingClientRect();
+      const maxL = Math.max(4, hr.width - tipEl.offsetWidth - 4);
+      const want = br.left - hr.left + br.width / 2 - tipEl.offsetWidth / 2;
+      tipEl.style.left = Math.round(Math.min(maxL, Math.max(4, want))) + 'px';
+    };
+    const hideTip = ()=>tipEl.classList.remove('show');
+    outlineEl.querySelectorAll('.ol-btn[data-tip]').forEach(b=>{
+      b.addEventListener('pointerenter', ()=>showTip(b));
+      b.addEventListener('pointerleave', hideTip);
+      b.addEventListener('focus', ()=>showTip(b));
+      b.addEventListener('blur', hideTip);
+    });
+  }
   outlineEl.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{
     jumpToHeading(b.dataset.j);
     updateOutlineActive();
@@ -12300,6 +12336,8 @@ const MM = { noteId:null, root:null, lay:null, s:1, tx:0, ty:0, withList:true,
              ptrs:new Map(), pinch:0, moved:0, byId:new Map(), c:{}, bg:'#fff',
              sel:0, seq:0, style:null, canEdit:false, undo:[], styleId:'', dir:'', uiTab:'dir' };
 const MM_NH = 32, MM_VGAP = 12, MM_HGAP = 56, MM_PAD = 26;
+/* 节点文字：13px 一行高 18；一行最多 248px 就换行，超长的宁可把方框撑高，也不让字跑出框 */
+const MM_LH = 18, MM_TXT_MAX = 248, MM_NW_MAX = 274, MM_NW_MIN = 62;
 const MM_FONT = "-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif";
 let _mmCtx = null;
 function mmCtx(){
@@ -12392,16 +12430,49 @@ function mmBuildTree(note, withList){
   return { root, count, cut, extra,
     style: { kind: headMax ? 'head' : 'list', base: minH || 1, headMax } };
 }
+/* 按可用宽度把一句话切成多行：中文逐字断，英文尽量按词断，太长的一个词才硬切 */
+function mmWrap(label, maxW){
+  const ctx = mmCtx();
+  const s = String(label == null ? '' : label);
+  if(!s) return [''];
+  if(ctx.measureText(s).width <= maxW) return [s];
+  const out = [];
+  let line = '';
+  const flush = () => { if(line) out.push(line.replace(/\s+$/,'')); line = ''; };
+  const tokens = s.match(/[A-Za-z0-9]+[’'\-]?[A-Za-z0-9]*|\s+|[\s\S]/g) || [];
+  for(const tk of tokens){
+    if(line && ctx.measureText(line + tk).width > maxW){
+      if(ctx.measureText(tk).width > maxW){          // 单个词就超宽：逐字硬切
+        flush();
+        for(const ch of tk){
+          if(line && ctx.measureText(line + ch).width > maxW) flush();
+          line += ch;
+        }
+        continue;
+      }
+      flush();
+      line = /^\s+$/.test(tk) ? '' : tk;
+    }else{
+      line += tk;
+    }
+  }
+  flush();
+  return out.length ? out : [s];
+}
 function mmMeasureTree(root, lay){
   const ctx = mmCtx();
   // 一级分支编号，彩虹 / 霓虹样式按它上色，整条枝干同色
   root.br = -1;
   root.children.forEach((c, i) => { c.br = i; });
   (function walk(n){
-    const label = n.label.length > 46 ? n.label.slice(0, 46) + '…' : n.label;
-    n.text = label;
-    const tw = Math.ceil(ctx.measureText(label).width);
-    n.w = Math.max(n.depth === 0 ? 108 : 62, Math.min(268, tw + 26));
+    // 以前是超过 46 个字硬截断（中文 46 字远超框宽，于是文字直接溢出去）：
+    // 现在改成按宽度折行，行数决定方框高度
+    n.lines = mmWrap(n.label, MM_TXT_MAX);
+    n.text = n.lines.join(' ');
+    let tw = 0;
+    for(const ln of n.lines) tw = Math.max(tw, ctx.measureText(ln).width);
+    n.w = Math.max(n.depth === 0 ? 108 : MM_NW_MIN, Math.min(MM_NW_MAX, Math.ceil(tw) + 26));
+    n.h = Math.max(MM_NH, n.lines.length * MM_LH + 14);
     lay.colW[n.depth] = Math.max(lay.colW[n.depth] || 0, n.w);
     lay.maxDepth = Math.max(lay.maxDepth, n.depth);
     n.children.forEach(c => { if(n.br >= 0 && c.br == null) c.br = n.br; walk(c); });
@@ -12464,13 +12535,15 @@ function mmLayoutH(root, lay, dir){
     else if(side === 'left') n.x = xeL[n.depth] - n.w;
     const kids = n.collapsed ? [] : n.children;
     if(!kids.length){
-      n.y = cursor + MM_NH / 2;
-      cursor += MM_NH + MM_VGAP;
+      const hh = n.h || MM_NH;
+      n.y = cursor + hh / 2;
+      cursor += hh + MM_VGAP;
       return;
     }
     const start = cursor;
     kids.forEach(c=>place(c, side));
-    n.y = (start + cursor - MM_VGAP) / 2;
+    // 有子节点就吊在第一个和最后一个子节点的中线（各自高度可能不同）
+    n.y = (kids[0].y + kids[kids.length - 1].y) / 2;
   };
   function placeGroup(list, side){
     cursor = 0;
@@ -12486,7 +12559,8 @@ function mmLayoutH(root, lay, dir){
 
   let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
   (function walk(n){
-    minY = Math.min(minY, n.y - MM_NH / 2); maxY = Math.max(maxY, n.y + MM_NH / 2);
+    const hh = n.h || MM_NH;
+    minY = Math.min(minY, n.y - hh / 2); maxY = Math.max(maxY, n.y + hh / 2);
     minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + n.w);
     if(!n.collapsed) n.children.forEach(walk);
   })(root);
@@ -12516,8 +12590,22 @@ function mmLayoutV(root, lay, dir){
     maxD = Math.max(maxD, n.depth);
     if(!n.collapsed) n.children.forEach(walk);
   })(root);
+  // 每一层按该层最高的节点定行高，折行后的节点不会互相压住
+  const rowH = [];
   (function walk(n){
-    n.y = MM_PAD + (dir === 'up' ? (maxD - n.depth) : n.depth) * (MM_NH + gy) + MM_NH / 2;
+    rowH[n.depth] = Math.max(rowH[n.depth] || 0, n.h || MM_NH);
+    if(!n.collapsed) n.children.forEach(walk);
+  })(root);
+  const rowY = [];
+  if(dir === 'up'){
+    let acc = MM_PAD;
+    for(let d = maxD; d >= 0; d--){ const hh = rowH[d] || MM_NH; rowY[d] = acc + hh / 2; acc += hh + gy; }
+  }else{
+    let acc = MM_PAD;
+    for(let d = 0; d <= maxD; d++){ const hh = rowH[d] || MM_NH; rowY[d] = acc + hh / 2; acc += hh + gy; }
+  }
+  (function walk(n){
+    n.y = rowY[n.depth];
     minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + n.w);
     if(!n.collapsed) n.children.forEach(walk);
   })(root);
@@ -12525,7 +12613,9 @@ function mmLayoutV(root, lay, dir){
   if(dx) mmShiftTreeX(root, dx);
   lay.maxDepth = maxD;
   lay.width = maxX + dx + MM_PAD;
-  lay.height = MM_PAD * 2 + maxD * (MM_NH + gy) + MM_NH;
+  let totalH = MM_PAD * 2;
+  for(let d = 0; d <= maxD; d++) totalH += (rowH[d] || MM_NH) + (d < maxD ? gy : 0);
+  lay.height = totalH;
   return lay;
 }
 /* ---------- 外观预设：同一棵树，六种画法 ---------- */
@@ -12722,8 +12812,8 @@ function mmSvgString(){
       let x1, y1, x2, y2;
       if(vDir){
         const down = lay.dir === 'down';
-        x1 = n.x + n.w / 2; y1 = n.y + (down ? MM_NH / 2 : -MM_NH / 2);
-        x2 = k.x + k.w / 2; y2 = k.y + (down ? -MM_NH / 2 : MM_NH / 2);
+        x1 = n.x + n.w / 2; y1 = n.y + (down ? (n.h || MM_NH) / 2 : -(n.h || MM_NH) / 2);
+        x2 = k.x + k.w / 2; y2 = k.y + (down ? -(k.h || MM_NH) / 2 : (k.h || MM_NH) / 2);
       }else if(k.side === 'left'){
         x1 = n.x; y1 = n.y; x2 = k.x + k.w; y2 = k.y;     // 左侧：从父节点左边缘连到子节点右边缘
       }else{
@@ -12747,15 +12837,21 @@ function mmSvgString(){
   (function walk(n){
     const sel = !!MM.sel && MM.sel === n.i;   // sel=0 表示没选中，别把根节点画成选中态
     const hue = (c.hues && n.br >= 0) ? c.hues[n.br % c.hues.length] : c.accent;
-    const l = n.x, top = n.y - MM_NH / 2, w = n.w, h = MM_NH;
+    const l = n.x, h = n.h || MM_NH, top = n.y - h / 2, w = n.w;
+    // 文字按测量阶段折好的行来画：一行就照旧，多行就逐行 tspan，行高 18
+    const mLines = (n.lines && n.lines.length) ? n.lines : [n.text || n.label || ''];
+    const mTop = n.y - (mLines.length - 1) * MM_LH / 2;
+    const mTspans = (x) => mLines.map((ln, i) =>
+      '<tspan x="' + x + '"' + (i ? ' dy="' + MM_LH + '"' : '') + '>' + mmXml(ln) + '</tspan>').join('');
     nodes.push('<g data-mm="' + n.i + '" style="cursor:pointer">');
     if(p.shape === 'plain'){
-      const txt = n.depth === 0 ? c.root : (n.depth === 1 ? hue : c.ink);
+      // 极简线：只有根节点用重色，二级往下一律和正文同色（分支归属靠下面的色线区分）
+      const txt = n.depth === 0 ? c.root : c.ink;
       const fw = n.depth === 0 ? 700 : (n.depth === 1 ? 600 : 400);
       if(sel) nodes.push('<rect data-sel="1" x="' + (l - 5) + '" y="' + (top - 1) + '" width="' + (w + 10) + '" height="' + (h + 2)
         + '" rx="7" fill="none" stroke="' + c.sel + '" stroke-width="1.4" stroke-dasharray="4 3" opacity=".85"/>');
-      nodes.push('<text x="' + (l + 3) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" font-weight="' + fw
-        + '" fill="' + txt + '">' + mmXml(n.text) + '</text>');
+      nodes.push('<text x="' + (l + 3) + '" y="' + mTop + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" font-weight="' + fw
+        + '" fill="' + txt + '">' + mTspans(l + 3) + '</text>');
       nodes.push('<path d="M' + (l + 3) + ' ' + (top + h - 3) + 'H' + (l + w - 8) + '" stroke="' + (n.depth <= 1 ? hue : c.stroke)
         + '" stroke-width="' + (n.depth === 0 ? 2.2 : 1.1) + '" opacity="' + (n.depth === 0 ? '.85' : '.45') + '" stroke-linecap="round"/>');
     }else{
@@ -12799,7 +12895,7 @@ function mmSvgString(){
       // 卡片风格：一级节点左侧一条色条，一眼分得清分支
       if(p.shape === 'card' && n.depth >= 1)
         nodes.push('<rect x="' + (l + 5) + '" y="' + (top + 7) + '" width="3" height="' + (h - 14) + '" rx="1.5" fill="' + hue + '" opacity=".9"/>');
-      nodes.push('<text x="' + (l + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + txt + '">' + mmXml(n.text) + '</text>');
+      nodes.push('<text x="' + (l + 13) + '" y="' + mTop + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + txt + '">' + mTspans(l + 13) + '</text>');
     }
     if(n.children.length){
       // 有子节点就常显这个圆点：展开时是「−」，折叠时显示藏了几个
@@ -12812,8 +12908,9 @@ function mmSvgString(){
       }
       // 折叠圆点跟着方向走：右向放右边缘、左向放左边缘、上下布局放底/顶边
       let fx = n.x + n.w, fy = n.y;
-      if(lay.dir === 'down'){ fx = n.x + n.w / 2; fy = n.y + MM_NH / 2; }
-      else if(lay.dir === 'up'){ fx = n.x + n.w / 2; fy = n.y - MM_NH / 2; }
+      const nh = n.h || MM_NH;
+      if(lay.dir === 'down'){ fx = n.x + n.w / 2; fy = n.y + nh / 2; }
+      else if(lay.dir === 'up'){ fx = n.x + n.w / 2; fy = n.y - nh / 2; }
       else if(n.side === 'left' || (n.depth === 0 && lay.dir === 'left')){ fx = n.x; }
       nodes.push('<g data-mm-fold="1" style="cursor:pointer">');
       nodes.push('<circle cx="' + fx + '" cy="' + fy + '" r="9" fill="' + fbFill + '" stroke="' + fbStroke + '" stroke-width="2"/>');
@@ -13174,7 +13271,7 @@ function mmPaintSel(idx){
   const old = g.querySelector('[data-sel]');
   if(old) old.remove();
   if(on && mmPreset().shape === 'plain'){
-    const l = n.x, top = n.y - MM_NH / 2, w = n.w, h = MM_NH;
+    const l = n.x, top = n.y - (n.h || MM_NH) / 2, w = n.w, h = n.h || MM_NH;
     g.insertAdjacentHTML('afterbegin', '<rect data-sel="1" x="' + (l - 5) + '" y="' + (top - 1) + '" width="' + (w + 10)
       + '" height="' + (h + 2) + '" rx="7" fill="none" stroke="' + MM.c.sel + '" stroke-width="1.4" stroke-dasharray="4 3" opacity=".85"/>');
   }

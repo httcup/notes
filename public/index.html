@@ -2345,7 +2345,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v159', at: '2026-11-18 01:46' };
+window.IVY_BUILD = { id: 'v160', at: '2026-11-18 02:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6301,6 +6301,13 @@ const HELP_KEYS = [
   ['新建下级条目', '⌘Enter / Ctrl+Enter'], ['删除空块', 'Backspace'],
   ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
 ];
+const HELP_KEYS_MM = [
+  ['新建子节点（往里一层）', 'Tab'],
+  ['新建同级节点', 'Enter'],
+  ['节点改名', '双击节点'],
+  ['展开 / 收起分支', '点节点右侧圆点'],
+  ['收起样式面板 / 关闭导图', 'Esc']
+];
 let helpTab = 'md';
 function openHelpPanel(){
   let ov = $('#helpOv');
@@ -6441,7 +6448,8 @@ function helpBodyHtml(tab){
       <div class="help-sec"><h4>思维导图</h4>
         <p class="help-p">笔记菜单 ⋯ → <b>思维导图</b>（或输入 <code>/导图</code>）。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画成脑图：缩进一级就是子节点，同一缩进就是同级。<b>只读取、不改写</b>，笔记仍然保存为普通 Markdown，导出、同步、导入都不受影响。</p>
         <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是<b>整张导图</b>（不受屏幕大小与缩放影响，折叠起来的节点也会画进去），手机上会按屏幕上限自动挑一个合适的清晰度，保证内容不缺。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
-        <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p></div>
+        <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p>
+        <p class="help-p"><b>键盘更快</b>：选中节点后按 <code>Tab</code> 长一个子节点、按 <code>Enter</code> 长一个同级；什么都没选时按 <code>Tab</code> 或 <code>Enter</code>，都从根节点长出新分支。新节点出来就是改名状态：敲完字按 <code>Tab</code> 落定并继续往下长，按 <code>Enter</code> 只落定，按 <code>Esc</code> 取消这次改名。<code>Esc</code> 也能关掉整个导图（样式面板开着时先收面板）。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(tab === 'md'){
@@ -6482,9 +6490,9 @@ function helpBodyHtml(tab){
 - [ ] 体检预约 @明天 9点
 - [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08</pre></div>`;
   } else {
-    return `<div class="help-sec">` + HELP_KEYS.map(([n,k])=>
-      `<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`
-    ).join('') + `</div>`;
+    const row = ([n,k])=>`<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`;
+    return `<div class="help-sec">` + HELP_KEYS.map(row).join('') + `</div>`
+      + `<div class="help-sec"><h4>思维导图</h4>` + HELP_KEYS_MM.map(row).join('') + `</div>`;
   }
 }
 function helpTabsHtml(){
@@ -13044,10 +13052,12 @@ function mmSetCollapsed(idx){
 function mmAddChild(idx){
   if(!mmGuardEdit()) return;
   const hit = mmFind(idx);
-  if(!hit) return;
+  // 根节点的 i 是 0，mmFind 只走子节点找不到它：没选中时就从根往下长第一根枝
+  const parent = hit ? hit.node : (MM.root && idx === MM.root.i ? MM.root : null);
+  if(!parent) return;
   const node = { i:mmNextId(), label:'新节点', raw:'新节点', done:null, text:'', depth:0, children:[], collapsed:false, kind:'li', w:0, x:0, y:0 };
-  hit.node.children.push(node);
-  hit.node.collapsed = false;
+  parent.children.push(node);
+  parent.collapsed = false;
   MM.sel = node.i;
   mmCommit();
   mmStartRename(node.i);
@@ -13111,6 +13121,8 @@ function mmStartRename(idx){
   inp.addEventListener('keydown', e => {
     e.stopPropagation();
     if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    // 改完名直接 Tab：落定并长出一个子节点，新手也能一路敲下去
+    else if(e.key === 'Tab'){ e.preventDefault(); finish(true); if(MM.sel) mmAddChild(MM.sel); }
     else if(e.key === 'Escape'){ e.preventDefault(); finish(false); }
   });
   inp.addEventListener('blur', () => finish(true));
@@ -13134,7 +13146,8 @@ function mmSyncBar(){
   }else if(!n){
     tip.textContent = '点一个节点：可直接改文字，或用右侧按钮增删移动';
   }else{
-    tip.textContent = '已选「' + (n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label) + '」';
+    const short = n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label;
+    tip.textContent = '已选「' + short + '」' + (mmIsPhone() ? '' : ' · Tab 加子节点、Enter 加同级');
   }
 }
 /* 含正文段落的笔记：复制成一篇纯大纲笔记，随便改也不怕丢内容 */
@@ -13338,6 +13351,37 @@ function mmBind(){
     const idx = g ? +g.dataset.mm : MM.sel;      // 指针捕获时 target 是画布，退回用已选节点
     if(idx) mmStartRename(idx);
   });
+  /* 键盘：Tab 长一个子节点、Enter 长一个同级（跟正文编辑器的习惯一致）。
+     没选节点就从根节点开始；改名框里打字、按钮上有焦点时不抢键。
+     走捕获阶段：Esc 要先被导图拿走，否则会被全局「Esc 关所有浮层」先关掉整张图。 */
+  if(!window._mmKeys){
+    window._mmKeys = true;
+    document.addEventListener('keydown', e => {
+      const ov = document.getElementById('mmOv');
+      if(!ov || !ov.classList.contains('open')) return;
+      if(e.isComposing || e.keyCode === 229) return;
+      if(e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const ae = document.activeElement;
+      if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+      const pop = document.getElementById('mmStylePop');
+      if(e.key === 'Escape'){
+        e.preventDefault(); e.stopPropagation();
+        if(pop && !pop.hidden){ mmToggleStyle(false); return; }   // 先收样式面板
+        closeMindMap();
+        return;
+      }
+      if(ae && ae.tagName === 'BUTTON') return;                   // 按钮上的 Enter 留给按钮
+      if(pop && !pop.hidden) return;
+      if(e.key !== 'Tab' && e.key !== 'Enter') return;
+      e.preventDefault();
+      if(!MM.sel){                       // 还没选节点：从根节点开始长第一个分支
+        if(MM.root) mmAddChild(MM.root.i);
+        return;
+      }
+      if(e.key === 'Tab') mmAddChild(MM.sel);
+      else mmAddSibling(MM.sel);
+    }, true);
+  }
 }
 /* ---------- 导出：图片 / 矢量 / PDF / 大纲 ---------- */
 function mmExportName(){
@@ -13583,7 +13627,7 @@ function openMindMap(){
       + '</div>'
       + '<div class="mm-body">'
       + '<div class="mm-canvas" id="mmCanvas"></div>'
-      + '<div class="mm-pill" id="mmPill">滚轮缩放 · 拖动平移 · 点节点选中 · 双击改名</div>'
+      + '<div class="mm-pill" id="mmPill">滚轮缩放 · 拖动平移 · 点节点选中 · 双击改名 · Tab 加子节点 · Enter 加同级</div>'
       + '<div class="mm-zoom"><button data-mmz="in" title="放大">+</button>'
       + '<button data-mmz="out" title="缩小">−</button>'
       + '<button data-mmz="fit" title="适应窗口">⤢</button></div>'

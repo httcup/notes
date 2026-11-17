@@ -1775,6 +1775,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   display:flex;flex-direction:column;gap:2px;overflow:auto;
 }
 .set-nav nav{display:flex;flex-direction:column;gap:2px}
+.set-pick{display:none}
 .set-nav button{
   text-align:left;height:36px;padding:0 12px;border-radius:9px;font-size:13px;
   color:rgb(var(--muted));transition:background .13s,color .13s;white-space:nowrap;
@@ -1833,25 +1834,42 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
     position:sticky;top:0;z-index:6;display:block;background:rgb(var(--canvas));
     box-shadow:0 .5px 0 rgb(16 24 32/.06);
   }
-  .set-top{padding:calc(10px + env(safe-area-inset-top)) 12px 8px 16px}
+  .set-top{padding:calc(10px + env(safe-area-inset-top)) 12px 6px 16px}
   .set-title{font-size:18px}
   .set-x{
     height:32px;padding:0 10px 0 8px;color:rgb(var(--ink-2));
     background:rgb(var(--surface));box-shadow:0 1px 2px rgb(16 24 32/.08);
   }
   .set-x i{display:inline}
-  .set-nav{
-    flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;
-    padding:0 12px 8px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;
-    -webkit-overflow-scrolling:touch;
+  /* 分类不再横着排一长条：收成一颗「当前分类 ▾」按钮，点开才是菜单 */
+  .set-pick{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    width:calc(100% - 24px);margin:0 12px 8px;height:38px;padding:0 12px;
+    border-radius:10px;border:1px solid rgb(var(--line));background:rgb(var(--surface));
+    color:rgb(var(--ink));font-size:13.5px;font-weight:500;
+    box-shadow:0 1px 2px rgb(16 24 32/.05);
   }
-  .set-nav nav{flex-direction:row;gap:6px}
-  .set-nav button{height:30px;padding:0 11px;background:rgb(var(--surface));flex:0 0 auto;font-size:12.5px}
+  .set-pick .caret{width:15px;height:15px;flex:0 0 auto;transition:transform .18s var(--spring)}
+  .set-side.open .set-pick .caret{transform:rotate(180deg)}
+  .set-nav{
+    display:none;position:absolute;left:12px;right:12px;top:calc(100% - 2px);z-index:20;
+    flex-direction:column;align-items:stretch;gap:2px;padding:6px;
+    max-height:min(72vh,470px);overflow:auto;overscroll-behavior:contain;
+    background:rgb(var(--surface));border:1px solid rgb(var(--line));border-radius:12px;
+    box-shadow:0 14px 34px rgb(16 24 32/.16);
+  }
+  .set-side.open .set-nav{display:flex}
+  .set-nav nav{flex-direction:column;gap:2px}
+  .set-nav button{
+    height:36px;padding:0 10px;background:transparent;flex:0 0 auto;
+    font-size:13.5px;text-align:left;border-radius:8px;
+  }
+  .set-nav button.on{background:rgb(var(--hover));box-shadow:none}
   .set-main{
     display:block;margin:0;border:0;border-radius:0;box-shadow:none;
     background:rgb(var(--surface));
   }
-  .set-head{padding:12px 16px 4px}
+  .set-head{display:none}   /* 手机上当前分类已经写在顶部按钮里，不用再重复一遍 */
   .set-body{
     flex:0 0 auto;height:auto;overflow:visible;
     padding:2px 16px calc(28px + env(safe-area-inset-bottom));
@@ -2255,7 +2273,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v149', at: '2026-11-17 19:07' };
+window.IVY_BUILD = { id: 'v150', at: '2026-11-17 19:14' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4478,7 +4496,7 @@ function bindRemindBody(root, repaint){
     else toast('已同步 ' + (now.count || 0) + ' 条日程，看左侧「日程」最下面');
     if(S.view === 'todo') renderShelf();
   };
-  ov.querySelectorAll('[data-ics-sync]').forEach(b=>{
+  root.querySelectorAll('[data-ics-sync]').forEach(b=>{
     b.onclick = async ()=>{
       b.disabled = true; b.textContent = '同步中…';
       await icsSync(true);
@@ -4488,7 +4506,7 @@ function bindRemindBody(root, repaint){
       toast(s.error ? ('同步失败：' + s.error) : ('已同步 ' + (s.count || 0) + ' 条日程'));
     };
   });
-  ov.querySelectorAll('[data-ics-del]').forEach(b=>{
+  root.querySelectorAll('[data-ics-del]').forEach(b=>{
     b.onclick = ()=>{
       if(!confirm('删除这个日历订阅？左侧「日程」里来自它的条目会消失，日历本身不受影响。')) return;
       removeIcsSource(b.dataset.icsDel);
@@ -4497,7 +4515,7 @@ function bindRemindBody(root, repaint){
       toast('已删除这个日历订阅');
     };
   });
-  ov.querySelectorAll('[data-rc]').forEach(a=>{
+  root.querySelectorAll('[data-rc]').forEach(a=>{
     a.onclick = ()=>{
       const base = FEED.url || '';
       if(!base) return;
@@ -10600,6 +10618,10 @@ function openSettings(tab){
           <div class="set-title">设置</div>
           <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
         </div>
+        <button class="set-pick" id="setPick" aria-haspopup="listbox" aria-expanded="false">
+          <span id="setPickLabel">账户</span>
+          <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
         <aside class="set-nav"><nav id="setNav"></nav></aside>
       </div>
       <section class="set-main">
@@ -10612,9 +10634,21 @@ function openSettings(tab){
     ov.querySelector('#setClose').onclick = closeSettings;
     ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name]) =>
       `<button type="button" data-st="${id}">${name}</button>`).join('');
+    const side = ov.querySelector('.set-side');
+    const pick = ov.querySelector('#setPick');
+    if(pick) pick.onclick = (e)=>{
+      e.stopPropagation();
+      const open = side.classList.toggle('open');
+      pick.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
     ov.querySelectorAll('#setNav [data-st]').forEach(b=>{
-      b.onclick = ()=>{ SET_TAB = b.dataset.st; paintSettings(); };
+      b.onclick = ()=>{ SET_TAB = b.dataset.st; side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); paintSettings(); };
     });
+    // 点菜单以外的地方收起；滚内容时也收起，免得菜单跟着飘
+    ov.addEventListener('click', e=>{
+      if(!side.contains(e.target)){ side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); }
+    });
+    ov.addEventListener('scroll', ()=>{ if(side.classList.contains('open')){ side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); } }, { passive:true });
   }
   if(tab) SET_TAB = tab;
   ov.classList.add('open');
@@ -10627,6 +10661,9 @@ function paintSettings(keepScroll){
   if(prevTab !== SET_TAB){ setRemindReady = false; setAiReady = false; remindRepaintHook = null; }
   nav.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on', b.dataset.st === SET_TAB));
   head.textContent = setTabName(SET_TAB);
+  const pickLabel = $('#setPickLabel'); if(pickLabel) pickLabel.textContent = setTabName(SET_TAB);
+  const ovEl = $('#setOv');
+  if(ovEl && prevTab !== SET_TAB) ovEl.scrollTop = 0;   // 手机上滚的是整个浮层
   pane.innerHTML = setPaneHtml(SET_TAB);
   bindPane(SET_TAB);
   // 同一页里重绘（比如切了个开关）时保持滚动位置，别把人弹回顶部

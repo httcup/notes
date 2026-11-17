@@ -1432,8 +1432,13 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .mm-ov.open{opacity:1;pointer-events:auto}
 .mm-card{position:relative;width:min(1180px,100%);height:min(780px,92vh);display:flex;flex-direction:column;background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;transform:translateY(10px) scale(.995);transition:transform .22s var(--spring)}
 .mm-ov.open .mm-card{transform:none}
-.mm-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;flex-wrap:wrap;cursor:move;user-select:none}
+.mm-hd{display:flex;align-items:flex-start;gap:10px;padding:18px 16px 14px 20px;flex-wrap:wrap;cursor:move;user-select:none}
 .mm-hd.dragging{cursor:grabbing}
+.mm-hd-t{flex:1 1 auto;min-width:0}
+/* 工具栏按钮里的图标只在手机上出现；桌面仍用文字标签 */
+.mm-ic{display:none}
+.mm-lb{display:inline;white-space:nowrap}
+.mm-lb-m{display:none}
 .mm-hd button,.mm-hd a,.mm-hd input{cursor:pointer}
 .mm-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
 .mm-hd h3 svg{width:17px;height:17px;stroke:rgb(var(--ivy));fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -1491,28 +1496,84 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .mm-eb:disabled{opacity:.4;cursor:default}
 .mm-eb.danger:hover:not(:disabled){background:rgb(var(--danger)/.1);color:rgb(var(--danger))}
 .mm-rename{position:fixed;z-index:9500;font:inherit;font-size:13px;padding:0 8px;border:1.5px solid rgb(var(--ivy));border-radius:8px;background:rgb(var(--surface));color:rgb(var(--ink));outline:none;box-shadow:var(--shadow-float)}
-@media (max-width:760px){
-  .mm-ov{padding:0}
+@media (max-width:760px), (max-height:520px){
+  /* ---------- 手机端：整屏卡片，全部按安全区收边，任何按钮都不被裁掉 ---------- */
+  .mm-ov{
+    padding:0;overflow:hidden;
+    /* iOS 上 position:fixed 按「地址栏收起后」的大视口算，底部会被工具栏吃掉一截 */
+    height:100vh;
+  }
+  @supports (height:100dvh){ .mm-ov{height:100dvh} }
   .mm-card{width:100%;height:100%;border-radius:0}
-  .mm-hd{padding:12px 46px 10px 14px;position:relative;cursor:default}
+
+  /* 第一行：标题 + 关闭（关闭按钮不再浮在右上角、也不跟着工具条一起横滑） */
+  .mm-hd{
+    display:flex;flex-wrap:wrap;align-items:center;gap:0;
+    padding:calc(8px + env(safe-area-inset-top)) 8px 0 14px;
+    cursor:default;
+  }
+  .mm-hd-t{flex:1 1 auto;min-width:0;padding:0}
+  .mm-hd h3{font-size:16px;gap:7px}
+  .mm-hd h3 svg{width:16px;height:16px}
   .mm-hd p{display:none}
-  /* 窄屏：工具一行横滑，关闭按钮钉在右上，不再各自换行占三行 */
-  .mm-tools{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;width:100%;gap:5px;scrollbar-width:none}
-  .mm-tools::-webkit-scrollbar{display:none}
-  .mm-btn{height:26px;padding:0 8px;font-size:11.5px;flex:0 0 auto}
+  .mm-close{
+    flex:0 0 auto;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;color:rgb(var(--muted));background:rgb(var(--sunken));
+  }
+  .mm-close svg{width:15px;height:15px}
+  .mm-close:active{background:rgb(var(--hover))}
+
+  /* 第二行：6 个等分工具格（图标 + 短标签），不横滑、不换行 */
+  .mm-tools{
+    order:5;flex:0 0 100%;width:100%;display:flex;flex-wrap:nowrap;gap:2px;
+    padding:6px 0 4px;margin:0;overflow:visible;
+  }
+  .mm-tools .mm-btn{
+    flex:1 1 0;min-width:0;height:44px;padding:2px 1px;border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:10px;line-height:1;background:transparent;color:rgb(var(--ink-2));
+  }
+  .mm-tools .mm-btn:active{background:rgb(var(--hover))}
+  .mm-tools .mm-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+  .mm-style-btn{gap:3px!important}
+  .mm-ic{display:block;line-height:0}
+  .mm-ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .mm-lb{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
+  .mm-lb-d{display:none}
+  .mm-lb-m{display:inline}
+  .mm-swatch{width:16px;height:16px;border-radius:50%}
+
+  .mm-body{border-top:1px solid rgb(var(--line))}
   .mm-zoom{right:8px;bottom:8px}
   .mm-pill{display:none}
-  #mmClose{position:absolute;right:8px;top:9px}
-  .mm-editbar{gap:5px;padding:7px 10px}
-  .mm-eb{height:25px;padding:0 8px;font-size:11.5px}
+
+  /* 第三行（贴底）：节点操作 8 格等分，同样不滚动 */
+  .mm-editbar{
+    display:grid;grid-template-columns:repeat(8,1fr);gap:1px;
+    padding:4px 5px calc(5px + env(safe-area-inset-bottom));
+    overflow:visible;
+  }
   .mm-eb-tip{display:none}
-  /* 窄屏：样式面板改成贴底抽屉，两列排，别把图全遮住 */
-  .mm-style-pop{top:auto;bottom:10px;left:8px;right:8px;width:auto;max-height:62%;overflow:auto;padding:10px}
+  .mm-eb{
+    height:44px;padding:2px 1px;border-radius:10px;background:transparent;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:10px;line-height:1;color:rgb(var(--ink-2));white-space:nowrap;
+  }
+  .mm-eb:active:not(:disabled){background:rgb(var(--hover))}
+  .mm-eb .mm-ic svg{width:17px;height:17px}
+  .mm-eb.danger:active:not(:disabled){background:rgb(var(--danger)/.1);color:rgb(var(--danger))}
+
+  /* 样式面板：贴底抽屉，避开底部安全区，别把整张图盖死 */
+  .mm-style-pop{
+    top:auto;bottom:0;left:0;right:0;width:auto;height:auto;
+    max-height:min(60%,calc(100% - 140px));overflow:auto;
+    padding:12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-radius:14px 14px 0 0;border-left:0;border-right:0;border-bottom:0;
+  }
   .mm-sp-grid{grid-template-columns:repeat(2,1fr);gap:7px}
   .mm-sp-hd span{display:none}
   .mm-sp-hint{display:none}
   .mm-sp-item{padding:5px;gap:4px}
-  .mm-style-pop{max-height:56%}
 }
 
 /* ============ overlay / palette ============ */
@@ -2231,6 +2292,7 @@ const ICONS = {
   upload:'<path d="M12 19V8M8 11.5l4-4 4 4"/><path d="M5 5h14"/>',
   check:'<path d="m5 13 4.5 4.5L19 7"/>',
   plusCircle:'<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
+  minusCircle:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/>',
   fit:'<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
   tag:'<path d="M4 11V5.5A1.5 1.5 0 0 1 5.5 4H11l8.5 8.5a1.6 1.6 0 0 1 0 2.3l-4.7 4.7a1.6 1.6 0 0 1-2.3 0z"/><circle cx="8" cy="8" r="1.2"/>',
   restore:'<path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/>',
@@ -2274,7 +2336,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v152', at: '2026-11-17 21:13' };
+window.IVY_BUILD = { id: 'v153', at: '2026-11-17 21:22' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -12997,11 +13059,12 @@ function mmRefresh(refit){
 }
 /* ---------- 窗口拖动：抓住标题栏把导图挪开，方便对照后面的正文 ---------- */
 const MM_WIN = { dx:0, dy:0, drag:null };
+function mmIsPhone(){ return window.innerWidth <= 760 || window.innerHeight <= 520; }
 function mmWinSet(dx, dy, persist){
   const ov = document.getElementById('mmOv');
   const card = ov && ov.querySelector('.mm-card');
   if(!card) return;
-  if(window.innerWidth <= 760){          // 手机上是全屏，没有可拖的余地
+  if(mmIsPhone()){                       // 手机上是全屏，没有可拖的余地
     MM_WIN.dx = MM_WIN.dy = 0;
     card.style.left = ''; card.style.top = '';
     return;
@@ -13032,7 +13095,7 @@ function mmWinBind(){
   hd._winBound = true;
   hd.addEventListener('pointerdown', e => {
     if(e.button !== 0) return;
-    if(window.innerWidth <= 760) return;
+    if(mmIsPhone()) return;
     if(e.target.closest('button, a, input, textarea, select, #mmStylePop')) return;
     // 自己判双击：pointerdown 里 preventDefault 会吃掉浏览器合成的 dblclick
     const now = Date.now();
@@ -13297,18 +13360,35 @@ function openMindMap(){
     ov = document.createElement('div');
     ov.id = 'mmOv';
     ov.className = 'mm-ov';
+    // 工具栏按钮统一结构：图标（手机上显示）+ 长标签（桌面）+ 短标签（手机），
+    // 手机端才能排成等分的一行，不用横向滚动把后面的按钮挤出去
+    const mmTool = (id, icon, wide, short, title, cls) =>
+      '<button class="mm-btn' + (cls ? ' ' + cls : '') + '" id="' + id + '" title="' + (title || wide) + '">'
+      + '<i class="mm-ic">' + ic(icon) + '</i>'
+      + '<span class="mm-lb"><span class="mm-lb-d">' + wide + '</span><span class="mm-lb-m">' + short + '</span></span>'
+      + '</button>';
+    const mmEdit = (k, icon, wide, short, title, cls) =>
+      '<button class="mm-eb' + (cls ? ' ' + cls : '') + '" data-mme="' + k + '" title="' + (title || wide) + '">'
+      + '<i class="mm-ic">' + ic(icon) + '</i>'
+      + '<span class="mm-lb"><span class="mm-lb-d">' + wide + '</span><span class="mm-lb-m">' + short + '</span></span>'
+      + '</button>';
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-label="思维导图">'
-      + '<div class="mm-hd"><div><h3 title="按住标题栏可以拖动这个窗口，双击回到中间">' + ic('mind') + '思维导图</h3>'
+      + '<div class="mm-hd">'
+      + '<div class="mm-hd-t"><h3 title="按住标题栏可以拖动这个窗口，双击回到中间">' + ic('mind') + '思维导图</h3>'
       + '<p id="mmSub">由标题与缩进列表生成 · 改动会写回笔记</p></div>'
       + '<div class="mm-tools">'
-      + '<button class="mm-btn mm-style-btn" id="mmStyleBtn" title="换一种画法"><i class="mm-swatch" id="mmSwatch"></i><span id="mmStyleName">经典绿</span></button>'
-      + '<button class="mm-btn" id="mmExpand">展开全部</button>'
-      + '<button class="mm-btn" id="mmFold">折叠到二级</button>'
-      + '<button class="mm-btn on" id="mmList">含列表项</button>'
-      + '<button class="mm-btn" id="mmFit">适应窗口</button>'
-      + '<button class="mm-btn" id="mmExportBtn">导出</button>'
-      + '<button class="help-x" id="mmClose" title="关闭">' + ic('x') + '</button>'
-      + '</div></div>'
+      + '<button class="mm-btn mm-style-btn" id="mmStyleBtn" title="换一种画法">'
+      +   '<i class="mm-swatch" id="mmSwatch"></i>'
+      +   '<span class="mm-lb"><span class="mm-lb-d" id="mmStyleName">经典绿</span><span class="mm-lb-m">样式</span></span>'
+      + '</button>'
+      + mmTool('mmExpand', 'plusCircle', '展开全部', '展开', '展开全部节点')
+      + mmTool('mmFold', 'minusCircle', '折叠到二级', '折叠', '只留到第二层')
+      + mmTool('mmList', 'outline', '含列表项', '列表', '是否把列表项也画成节点', 'on')
+      + mmTool('mmFit', 'fit', '适应窗口', '适应', '把整张图缩放到屏幕里')
+      + mmTool('mmExportBtn', 'download', '导出', '导出', '导出图片 / 大纲')
+      + '</div>'
+      + '<button class="help-x mm-close" id="mmClose" title="关闭" aria-label="关闭">' + ic('x') + '</button>'
+      + '</div>'
       + '<div class="mm-style-pop" id="mmStylePop" hidden>'
       + '<div class="mm-sp-hd"><b>结构 / 外观</b><span>只换画法，不动你的笔记内容</span>'
       + '<button class="mm-sp-x" id="mmStyleX" title="收起">' + ic('x') + '</button></div>'
@@ -13332,14 +13412,14 @@ function openMindMap(){
       + '</div>'
       + '<div class="mm-editbar" id="mmEditBar">'
       + '<span class="mm-eb-tip" id="mmEditTip">点一个节点开始编辑</span>'
-      + '<button class="mm-eb" data-mme="child">＋子节点</button>'
-      + '<button class="mm-eb" data-mme="sib">＋同级</button>'
-      + '<button class="mm-eb" data-mme="rename">改名</button>'
-      + '<button class="mm-eb" data-mme="up" title="上移">↑</button>'
-      + '<button class="mm-eb" data-mme="down" title="下移">↓</button>'
-      + '<button class="mm-eb danger" data-mme="del">删除</button>'
-      + '<button class="mm-eb" data-mme="undo">撤销</button>'
-      + '<button class="mm-eb" data-mme="dup">另存为新笔记</button>'
+      + mmEdit('child', 'plusCircle', '＋子节点', '子节点', '新建子节点')
+      + mmEdit('sib', 'sub', '＋同级', '同级', '新建同级节点')
+      + mmEdit('rename', 'pencil', '改名', '改名', '重命名这个节点')
+      + mmEdit('up', 'arrUp', '↑ 上移', '上移', '把节点往上挪')
+      + mmEdit('down', 'arrDown', '↓ 下移', '下移', '把节点往下挪')
+      + mmEdit('del', 'trash', '删除', '删除', '删除这个节点', 'danger')
+      + mmEdit('undo', 'restore', '撤销', '撤销', '撤销上一步')
+      + mmEdit('dup', 'copy', '另存为新笔记', '另存', '把这张导图另存为新笔记')
       + '</div>'
       + '</div>';
     document.body.appendChild(ov);

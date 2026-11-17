@@ -2336,7 +2336,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v154', at: '2026-11-17 21:27' };
+window.IVY_BUILD = { id: 'v155', at: '2026-11-17 21:56' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8338,6 +8338,11 @@ function jumpToHeading(id){
 }
 
 /* ---- 回收站 ---- */
+function kickSync(){
+  try{ if(typeof isConnected==='function' && !isConnected()) return; }catch(e){ return; }
+  if(syncBusy){ queueSync(); return; }
+  syncNow();
+}
 function purgeNote(id, quiet){
   const n = noteById(id);
   if(!n) return;
@@ -8347,7 +8352,7 @@ function purgeNote(id, quiet){
   S.notes = S.notes.filter(x=>x.id!==id);
   S.tabs = (S.tabs||[]).filter(t=>t!==id);
   if(S.active===id) S.active = S.tabs[0] || null;
-  if(!quiet){ renderAll(); save(); toast('已彻底删除'); }
+  if(!quiet){ renderAll(); save(); toast('已彻底删除'); kickSync(); }
 }
 
 function renderTrash(){
@@ -8373,6 +8378,7 @@ function renderTrash(){
     if(!confirm('清空回收站？这 '+ids.length+' 篇笔记将被彻底删除，不可恢复。')) return;
     ids.forEach(id=>purgeNote(id, true));
     renderAll(); save(); toast('回收站已清空');
+    kickSync();                      // 清空是不可逆操作：立刻把墓碑送上去，别等 800ms 节流
   };
 }
 
@@ -10198,11 +10204,18 @@ function mergeDevices(a, b){
 }
 function applyRemote(data){
   let changed = false;
+  // 刚在本地「彻底删除」、墓碑还没推到服务端的笔记：这一轮拉取必须无视它，
+  // 否则云端那条旧的（还在回收站里的）记录会被原样塞回来，看起来就是清空失败
+  const pending = new Set(S.pendingDeletes || []);
   const map = new Map(S.notes.map(n=>[n.id,n]));
   for(const r of (data.notes||[])){
+    if(pending.has(r.id)) continue;
     if(!Array.isArray(r.tags)) r.tags = [];       // 兼容老客户端/老数据
     const cur = map.get(r.id);
-    if(!cur){ S.notes.push(r); changed = true; }
+    if(!cur){
+      if(r.deleted) continue;                     // 服务端的墓碑不必进内存
+      S.notes.push(r); changed = true;
+    }
     else if((r.updatedAt||0) > (cur.updatedAt||0)){
       const oldDevs = Array.isArray(cur.devices) ? cur.devices : [];
       Object.assign(cur, r);
@@ -10330,6 +10343,8 @@ async function pullRemote(){
     const data = await api('GET');
     const changed = applyRemote(data);
     if(changed){ S.notes = S.notes.filter(n=>!n.deleted); renderAfterSync(true, false); persistLocal(); }
+    // 桌面端/手机上定时器都可能被挂起，把还没送出去的墓碑补发一次
+    if((S.pendingDeletes||[]).length) queueSync();
     SYNC.state = 'ok'; SYNC.last = Date.now(); syncSave(); renderDock(); updateSyncBadge();
   }catch(e){
     SYNC.state = 'error'; SYNC.error = e.status===401 ? '登录已过期，请重新输入密码' : (e.message||'网络错误');

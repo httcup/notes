@@ -216,7 +216,7 @@
 
 ```js
 const note = {
-  title: '随手记笔记本',
+  title: '随手笔记',
   evergreen: true
 };
 ```

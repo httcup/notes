@@ -1,5 +1,5 @@
 #!/bin/bash
-# 构建 随手记笔记本 Android 客户端（不依赖 Gradle，直接 aapt2 + javac + d8 + apksigner）
+# 构建 随手笔记 Android 客户端（不依赖 Gradle，直接 aapt2 + javac + d8 + apksigner）
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -49,8 +49,8 @@ echo "==> 2/6 编译资源（aapt2）"
   --java "$OUT/gen" \
   --min-sdk-version 23 \
   --target-sdk-version 34 \
-  --version-code 1 \
-  --version-name 1.0 \
+  --version-code 2 \
+  --version-name 1.1 \
   "$OUT/res/res.zip"
 
 echo "==> 3/6 编译 Java"

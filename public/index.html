@@ -406,6 +406,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   transition:border-color .16s,box-shadow .16s;
 }
 .fmt-bar.stuck{border-bottom-color:rgb(var(--line));box-shadow:0 8px 14px -12px rgb(16 24 32 / .45)}
+.fmt-ital{font-family:Georgia,'Times New Roman',Times,serif;font-style:italic;font-weight:500;font-size:13.5px;line-height:1}
+.fmt-bar button[data-fmt="i"]{padding:0 5px}
 .fmt-bar button[data-fmt="ai"]{color:rgb(var(--ivy-ink))}
 .fmt-bar button[data-fmt="ai"]:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .fmt-bar button[data-fmt="ai"] svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -1917,7 +1919,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v125', at: '2026-11-17 15:49' };
+window.IVY_BUILD = { id: 'v131', at: '2026-11-17 15:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4055,7 +4057,7 @@ function renderTabs(){
       <span class="x" data-close="${id}">${ic('x')}</span>
     </button>`;
   }).join('') + `</div>
-    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('slash')}</button>`;
+    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>`;
   bar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=(e)=>{
     if(e.target.closest('[data-close]')) return;
     S.active = b.dataset.tab; renderAll(); save();
@@ -4566,9 +4568,9 @@ function countWords(md){
 
 /* ---- 标题下的 Markdown 工具条 ---- */
 const FMT_GROUPS = [
-  [['insert','+','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
+  [['insert','/','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
-  [['b','B','加粗'],['i','/','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
+  [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
   [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],['list','列表','列表样式：无序 / 有序'],
    ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）'],
    ['quote','引用','引用块']],
@@ -4586,7 +4588,7 @@ function renderFmtBar(){
   if(!bar) return;
   bar.innerHTML = FMT_GROUPS.map((g,gi)=>
     (gi ? '<span class="fmt-sep"></span>' : '') +
-    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${k==='ai' ? ic('spark') : label}</button>`).join('')
+    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${k==='ai' ? ic('spark') : (k==='i' ? '<span class="fmt-ital">I</span>' : label)}</button>`).join('')
   ).join('');
   bar.querySelectorAll('[data-fmt]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
@@ -10304,10 +10306,11 @@ function mmSvgString(){
     nodes.push('<rect x="' + n.x + '" y="' + top + '" width="' + n.w + '" height="' + MM_NH + '" rx="8" fill="' + lk.fill + '"'
       + (sel ? ' stroke="' + MM.c.root + '" stroke-width="2"' : (lk.stroke === 'none' ? '' : ' stroke="' + lk.stroke + '"')) + '/>');
     nodes.push('<text x="' + (n.x + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + lk.txt + '">' + mmXml(n.text) + '</text>');
-    if(n.children.length && n.collapsed){
+    if(n.children.length){
+      // 有子节点就常显这个圆点：展开时是「−」，折叠时显示藏了几个
       nodes.push('<g data-mm-fold="1" style="cursor:pointer">');
       nodes.push('<circle cx="' + (n.x + n.w) + '" cy="' + n.y + '" r="9" fill="' + MM.c.soft + '" stroke="' + MM.c.bg + '" stroke-width="2"/>');
-      nodes.push('<text x="' + (n.x + n.w) + '" y="' + n.y + '" dy="0.34em" text-anchor="middle" font-family="' + MM_FONT + '" font-size="10.5" font-weight="600" fill="' + MM.c.softTxt + '">' + n.children.length + '</text>');
+      nodes.push('<text x="' + (n.x + n.w) + '" y="' + n.y + '" dy="0.34em" text-anchor="middle" font-family="' + MM_FONT + '" font-size="' + (n.collapsed ? 10.5 : 12) + '" font-weight="600" fill="' + MM.c.softTxt + '">' + (n.collapsed ? n.children.length : '−') + '</text>');
       nodes.push('</g>');
     }
     nodes.push('</g>');
@@ -10442,9 +10445,27 @@ function mmBlockEdit(){
   if(!MM.withList) toast('先打开「含列表项」，否则写回会把列表全删掉');
   else toast('这篇里有正文段落或代码块，写回会覆盖它们；请用「另存为新笔记」再编辑');
 }
+/* 只改选中描边，不重绘整张图——重绘会让第二次点击落到新节点上，双击就失效了 */
+function mmPaintSel(idx){
+  if(!idx) return;
+  const n = MM.byId.get(idx);
+  const rect = document.querySelector('#mmCanvas [data-mm="' + idx + '"] rect');
+  if(!n || !rect) return;
+  if(MM.sel === idx){
+    rect.setAttribute('stroke', MM.c.root);
+    rect.setAttribute('stroke-width', '2');
+  }else{
+    const lk = mmLook(n);
+    if(lk.stroke === 'none') rect.removeAttribute('stroke');
+    else rect.setAttribute('stroke', lk.stroke);
+    rect.removeAttribute('stroke-width');
+  }
+}
 function mmSelect(idx){
+  const prev = MM.sel;
   MM.sel = idx;
-  mmRerender(false);
+  mmPaintSel(prev);
+  mmPaintSel(idx);
   mmSyncBar();
 }
 function mmSetCollapsed(idx){
@@ -10624,6 +10645,10 @@ function mmBind(){
     MM.ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
     try{ box.setPointerCapture(e.pointerId); }catch(err){}
     MM.moved = 0;
+    // 指针被画布捕获后，click 的 target 会落到画布上，节点就选不中了；
+    // 所以按下时先记住按在哪个节点上，抬起时按这个来判断「点的是谁」
+    MM.downNode = e.target.closest ? e.target.closest('[data-mm]') : null;
+    MM.downFold = e.target.closest ? e.target.closest('[data-mm-fold]') : null;
     box.classList.add('grabbing');
   });
   box.addEventListener('pointermove', e => {
@@ -10646,27 +10671,25 @@ function mmBind(){
       MM.moved = 99;
     }
   });
-  const end = e => {
+  const end = (e, cancelled) => {
     MM.ptrs.delete(e.pointerId);
-    if(!MM.ptrs.size){ MM.pinch = 0; box.classList.remove('grabbing'); }
+    if(MM.ptrs.size) return;
+    MM.pinch = 0;
+    box.classList.remove('grabbing');
+    const node = MM.downNode, fold = MM.downFold;
+    MM.downNode = null;
+    MM.downFold = null;
+    if(cancelled || MM.moved > 8) return;        // 拖动 / 缩放，不算点击
+    if(fold && node) mmSetCollapsed(+node.dataset.mm);
+    else if(node) mmSelect(+node.dataset.mm);
+    else if(MM.sel){ const prev = MM.sel; MM.sel = 0; mmPaintSel(prev); mmSyncBar(); }
   };
-  box.addEventListener('pointerup', end);
-  box.addEventListener('pointercancel', end);
-  box.addEventListener('click', e => {
-    if(MM.moved > 8) return;
-    const fold = e.target.closest('[data-mm-fold]');
-    if(fold){
-      const g = fold.closest('[data-mm]');
-      if(g) mmSetCollapsed(+g.dataset.mm);
-      return;
-    }
-    const g = e.target.closest('[data-mm]');
-    if(g){ mmSelect(+g.dataset.mm); return; }
-    if(MM.sel){ MM.sel = 0; mmRerender(false); mmSyncBar(); }
-  });
+  box.addEventListener('pointerup', e => end(e, false));
+  box.addEventListener('pointercancel', e => end(e, true));
   box.addEventListener('dblclick', e => {
-    const g = e.target.closest('[data-mm]');
-    if(g) mmStartRename(+g.dataset.mm);
+    const g = e.target.closest && e.target.closest('[data-mm]');
+    const idx = g ? +g.dataset.mm : MM.sel;      // 指针捕获时 target 是画布，退回用已选节点
+    if(idx) mmStartRename(idx);
   });
 }
 function mmExportPng(){

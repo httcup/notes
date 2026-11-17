@@ -192,10 +192,32 @@ body.view-todo .head-actions .notes-only{display:none}
 .note-item .note-del:hover{background:rgb(var(--danger) / .13);color:rgb(var(--danger))}
 body.ol-touch .note-item .note-del{opacity:.45}
 body.ol-touch .note-item:hover .note-del,body.ol-touch .note-item.active .note-del{opacity:1}
+/* 置顶：行首图标变成图钉，hover 出现快捷开关 */
+.note-item .note-pin{
+  width:19px;height:19px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;
+  color:rgb(var(--faint));opacity:0;transition:opacity .12s,background .12s,color .12s;
+}
+.note-item .note-pin svg{width:13px;height:13px;stroke-width:1.8;color:inherit}
+.note-item:hover .note-pin,.note-item.active .note-pin{opacity:1}
+.note-item .note-pin:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.note-item .note-pin.on{color:rgb(var(--ivy));opacity:0}   /* 已置顶：行首已是图钉，hover 才露出「取消置顶」，免得一行两个图钉 */
+.note-item:hover .note-pin.on,.note-item.active .note-pin.on{opacity:1}
+.note-item.pinned>svg{color:rgb(var(--ivy))}
+body.ol-touch .note-item .note-pin{opacity:.45}
+body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-pin{opacity:1}
+.pin-ico{width:13px;height:13px;flex:0 0 auto;display:grid;place-items:center;color:rgb(var(--ivy))}
+.pin-ico svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.9}
+.pin-group .pin-notes{padding-left:8px}
 /* 触屏 / 窄屏兜底：没有可靠 hover，删除按钮常显淡一点，不然根本点不到 */
 @media (hover:none),(pointer:coarse),(max-width:900px){
   .note-item .note-del{opacity:.5}
   .note-item:hover .note-del,.note-item.active .note-del{opacity:1}
+  .note-item .note-pin{opacity:.5}
+  .note-item:hover .note-pin,.note-item.active .note-pin{opacity:1}
+}
+/* 触屏没有 hover：置顶笔记也留一个淡一点的取消按钮，否则取消不掉 */
+@media (hover:none),(pointer:coarse){
+  .note-item .note-pin.on{opacity:.55}
 }
 .dot-tag{width:5px;height:5px;border-radius:50%}
 
@@ -1282,7 +1304,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .mm-ov.open{opacity:1;pointer-events:auto}
 .mm-card{position:relative;width:min(1180px,100%);height:min(780px,92vh);display:flex;flex-direction:column;background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden;transform:translateY(10px) scale(.995);transition:transform .22s var(--spring)}
 .mm-ov.open .mm-card{transform:none}
-.mm-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;flex-wrap:wrap}
+.mm-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;flex-wrap:wrap;cursor:move;user-select:none}
+.mm-hd.dragging{cursor:grabbing}
+.mm-hd button,.mm-hd a,.mm-hd input{cursor:pointer}
 .mm-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
 .mm-hd h3 svg{width:17px;height:17px;stroke:rgb(var(--ivy));fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mm-hd p{margin-top:6px;font-size:12px;line-height:1.7;color:rgb(var(--faint));max-width:600px}
@@ -1342,7 +1366,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 @media (max-width:760px){
   .mm-ov{padding:0}
   .mm-card{width:100%;height:100%;border-radius:0}
-  .mm-hd{padding:12px 46px 10px 14px;position:relative}
+  .mm-hd{padding:12px 46px 10px 14px;position:relative;cursor:default}
   .mm-hd p{display:none}
   /* 窄屏：工具一行横滑，关闭按钮钉在右上，不再各自换行占三行 */
   .mm-tools{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;width:100%;gap:5px;scrollbar-width:none}
@@ -1962,7 +1986,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v132', at: '2026-11-17 16:30' };
+window.IVY_BUILD = { id: 'v136', at: '2026-11-17 16:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2052,7 +2076,11 @@ function normalizeState(s){
     if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
     if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
     // 老数据 / 云端数据可能没有 tags 字段，统一补成数组
-    s.notes.forEach(n=>{ if(!Array.isArray(n.tags)) n.tags = []; });
+    s.notes.forEach(n=>{
+      if(!Array.isArray(n.tags)) n.tags = [];
+      if(typeof n.pinned !== 'boolean') n.pinned = false;      // 置顶
+      if(n.pinned && typeof n.pinnedAt !== 'number') n.pinnedAt = n.updatedAt || 0;
+    });
     if(!Array.isArray(s.tabs) || !s.tabs.length) s.tabs = s.notes.length? [s.notes[0].id] : [];
     if(!s.active || !s.notes.find(x=>x.id===s.active)) s.active = s.tabs[0] || null;
     if(!Array.isArray(s.pendingDeletes)) s.pendingDeletes = [];
@@ -2409,7 +2437,11 @@ try{
 }catch(e){}
 
 const noteById = id => S.notes.find(n=>n.id===id);
-const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt);
+const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>{
+  if(!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;        // 置顶的永远在上面
+  if(a.pinned && b.pinned) return (b.pinnedAt||0)-(a.pinnedAt||0); // 后置顶的更新，排更前
+  return b.updatedAt-a.updatedAt;
+});
 
 // 一次性清理旧版内置的示例笔记（只删带 seed 标记的，不动自己写的）
 try{
@@ -2605,6 +2637,21 @@ function renderShelf(){
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
   let html = `<div class="sec-label"><span>笔记</span><span class="count">${notes.length}</span></div>`;
+  // 置顶笔记单独列在书架最上面：笔记本折叠着也能一眼看到
+  const pinnedNotes = notes.filter(n=>n.pinned);
+  if(pinnedNotes.length){
+    const pOpen = S.pinOpen !== false;
+    html += `<div class="nb-group pin-group">
+      <div class="nb-row">
+        <button class="nb-head ${pOpen?'open':''}" data-nb="__pin" title="置顶的笔记">
+          <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="pin-ico">${ic('pin')}</span>
+          <span class="t">置顶</span><span class="meta">${pinnedNotes.length}</span>
+        </button>
+      </div>
+      <div class="nb-notes pin-notes ${pOpen?'':'hidden'}">${pinnedNotes.map(noteRow).join('')}</div>
+    </div>`;
+  }
   html += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
@@ -2613,9 +2660,11 @@ function renderShelf(){
 
   function noteRow(n){
     const dots = tagOf(n).slice(0,3).map(t=>`<span class="dot-tag" style="background:${tagColor(t)}"></span>`).join('');
-    return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
-      ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
+    const pin = !!n.pinned;
+    return `<button class="note-item ${n.id===S.active?'active':''}${pin?' pinned':''}" data-open="${n.id}">
+      ${ic(pin ? 'pin' : 'file')}<span class="t">${esc(n.title||'无标题')}</span>
       ${dots?`<span class="tags">${dots}</span>`:''}
+      <span class="note-pin${pin?' on':''}" data-pin="${n.id}" role="button" aria-label="${pin?'取消置顶':'置顶'}" title="${pin?'取消置顶':'置顶'}">${ic('pin')}</span>
       <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
     </button>`;
   }
@@ -2699,6 +2748,13 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
+  shelfBody.querySelectorAll('[data-pin]').forEach(b=>{
+    b.onclick = e=>{
+      e.stopPropagation(); e.preventDefault();
+      togglePin(b.dataset.pin);
+    };
+    b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
+  });
   shelfBody.querySelectorAll('[data-del]').forEach(b=>{
     b.onclick = e=>{
       e.stopPropagation(); e.preventDefault();
@@ -2721,6 +2777,10 @@ function bindShelf(){
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
     if(b.dataset.nb === '__loose'){                // 未归类笔记：虚拟分组，只记折叠状态
       b.onclick = ()=>{ S.looseOpen = !(S.looseOpen !== false); save(); renderShelf(); };
+      return;
+    }
+    if(b.dataset.nb === '__pin'){                  // 置顶分组：同样是虚拟分组
+      b.onclick = ()=>{ S.pinOpen = !(S.pinOpen !== false); save(); renderShelf(); };
       return;
     }
     const nb = S.notebooks.find(x=>x.id===b.dataset.nb);
@@ -4443,6 +4503,13 @@ function openNbMovePicker(anchor, id){
   });
   popover(anchor, items, { align:'left' });
 }
+function togglePin(id){
+  const n = noteById(id); if(!n) return;
+  n.pinned = !n.pinned;
+  n.pinnedAt = n.pinned ? Date.now() : 0;
+  renderAll(); save();
+  toast(n.pinned ? '已置顶，在左侧最上面能直接看到' : '已取消置顶');
+}
 function toggleTrash(id){
   const n = noteById(id); if(!n) return;
   n.trashed = !n.trashed; n.updatedAt = Date.now();
@@ -4897,28 +4964,19 @@ function insertBlockAtCaret(){
   if(n) n.body = ta.value;
 }
 const INSERT_ITEMS = [
-  {name:'AI 改写选中的文字', keys:['ai','gx','改写','runse'], icon:'spark', desc:'润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写：先选中文字', run:()=>{
-    const c = recentSelCtx();
-    if(!c){ toast('先在正文里选中要改写的文字'); return; }
-    openAI('rewrite', { ctx:c, text:c.text });
-  }},
-  {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
   {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()},
-  {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
   {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', icon:'heading', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
   {name:'二级标题', keys:['bt2','h2'], glyph:'H2', icon:'heading', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
   {name:'三级标题', keys:['bt3','h3'], glyph:'H3', icon:'heading', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
   {name:'四级标题', keys:['bt4','h4'], glyph:'H4', icon:'heading', desc:'四级分节', block:1, run:()=>applyFormat('h4')},
   {name:'五级标题', keys:['bt5','h5'], glyph:'H5', icon:'heading', desc:'五级分节', block:1, run:()=>applyFormat('h5')},
   {name:'六级标题', keys:['bt6','h6'], glyph:'H6', icon:'heading', desc:'六级分节', block:1, run:()=>applyFormat('h6')},
-
   {name:'加粗', keys:['jc','jiacu','bold','b'], glyph:'B', icon:'bold', desc:'**加粗文字**', run:()=>applyFormat('b')},
   {name:'斜体', keys:['xt','xieti','italic'], glyph:'/', icon:'italic', desc:'*斜体文字*', run:()=>applyFormat('i')},
   {name:'删除线', keys:['scx','shanchuxian','strike'], glyph:'S', icon:'strike', desc:'~~删除线~~', run:()=>applyFormat('s')},
   {name:'高亮', keys:['gl','gaoliang','mark'], icon:'hl', desc:'==高亮文字==', run:()=>applyFormat('mark')},
   {name:'高亮颜色…', keys:['ys','yanse','hlcolor'], icon:'hl', desc:'27 种预设色 + 自定义取色', run:()=>openHighlightMenu(insertAnchor())},
   {name:'行内代码', keys:['hndm','hangneidaima','icode'], icon:'code', desc:'`行内代码`', run:()=>applyFormat('code')},
-
   {name:'待办', keys:['db','daiban','todo','task'], icon:'todo', desc:'- [ ] 会自动汇总到「日程」', block:1, run:()=>applyFormat('todo')},
   {name:'日期与提醒', keys:['rq','riqi','date'], alt:'@', icon:'clock', desc:'@今天 9点 · ⏰2026-11-12 09:00', run:()=>applyFormat('due')},
   {name:'表格', keys:['bg','biaoge','table'], icon:'table', desc:'先插 3×3，再拖动调行列', block:1, run:()=>applyFormat('table',{rows:3,cols:3})},
@@ -4934,8 +4992,15 @@ const INSERT_ITEMS = [
   {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu(insertAnchor())},
   {name:'外部链接', keys:['wblj','link','url'], icon:'link', desc:'[文字](https://…)', run:()=>applyFormat('link')},
   {name:'分割线', keys:['fgx','fengexian','hr'], icon:'minus', desc:'--- 分隔内容', block:1, run:()=>applyFormat('hr')},
-  {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'导入导出、Markdown 语法与全部快捷键', run:()=>{ helpTab='io'; openHelpPanel(); }}
-];
+  {name:'使用说明与快捷键', keys:['bz','bangzhu','help','?'], icon:'help', desc:'导入导出、Markdown 语法与全部快捷键', run:()=>{ helpTab='io'; openHelpPanel(); }},
+  {name:'AI 改写选中的文字', keys:['ai','gx','改写','runse'], icon:'spark', desc:'润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写：先选中文字', run:()=>{
+    const c = recentSelCtx();
+    if(!c){ toast('先在正文里选中要改写的文字'); return; }
+    openAI('rewrite', { ctx:c, text:c.text });
+  }},
+  {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
+  {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')}
+]
 function insertFilter(q){
   q = String(q || '').trim().toLowerCase();
   if(!q) return INSERT_ITEMS.slice();
@@ -8654,7 +8719,8 @@ function exportBackup(){
       parentId:nb.parentId||null, order:nb.order||0 })),
     notes: S.notes.filter(n=>!n.trashed && !n.deleted).map(n=>({
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
-      tags:n.tags||[], createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
+      tags:n.tags||[], pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
+      createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
   };
   const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -8686,6 +8752,7 @@ function importBackup(text){
     S.notes.unshift({
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
       tags:Array.isArray(n.tags)?n.tags.slice():[], trashed:!!n.trashed,
+      pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
       createdAt:n.createdAt||now, updatedAt:n.updatedAt||now });
     noteAdded++;
   });
@@ -8919,6 +8986,7 @@ function openNoteMenu(anchor){
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
     ['思维导图', '大纲', '', 'mind', ()=>openMindMap()],
+    [(n && n.pinned) ? '取消置顶' : '置顶', (n && n.pinned) ? '✓' : '', '', 'pin', ()=>togglePin(S.active)],
     ['本篇待办', pend ? pend + ' 项未完成' : '', '', 'todo', ()=>openTodoPop(A())],
     ['复制/分享/导出', n && n.shareSlug ? '已分享' : '', '', 'share', ()=>openShareMenu(A())],
     ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(A())],
@@ -9181,6 +9249,7 @@ function localPayload(){
   const live = S.notes.map(n=>({
     id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
     tags:n.tags||[], trashed:!!n.trashed, deleted:!!n.deleted,
+    pinned:!!n.pinned, pinnedAt:n.pinnedAt||0,
     createdAt:n.createdAt||0, updatedAt:n.updatedAt||0
   }));
   // 待删除的笔记以墓碑上传，让云端和其它设备一起消失
@@ -11370,6 +11439,80 @@ function mmRefresh(refit){
     + (built.cut ? ' · 已截取前 600 个' : '') + (MM.canEdit ? ' · 改动会写回笔记（可撤销）' : ' · 只读视图');
   mmSyncBar();   // 打开 / 换笔记时，底部按钮的可用状态要跟着更新
 }
+/* ---------- 窗口拖动：抓住标题栏把导图挪开，方便对照后面的正文 ---------- */
+const MM_WIN = { dx:0, dy:0, drag:null };
+function mmWinSet(dx, dy, persist){
+  const ov = document.getElementById('mmOv');
+  const card = ov && ov.querySelector('.mm-card');
+  if(!card) return;
+  if(window.innerWidth <= 760){          // 手机上是全屏，没有可拖的余地
+    MM_WIN.dx = MM_WIN.dy = 0;
+    card.style.left = ''; card.style.top = '';
+    return;
+  }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = card.offsetWidth, h = card.offsetHeight;
+  const baseLeft = (vw - w) / 2, baseTop = (vh - h) / 2;
+  // 至少留 160px 在屏内、标题栏不能被拖出屏幕上方
+  const left = Math.min(vw - 160, Math.max(160 - w, baseLeft + dx));
+  const top = Math.min(Math.max(6, vh - 64), Math.max(6, baseTop + dy));
+  MM_WIN.dx = Math.round(left - baseLeft);
+  MM_WIN.dy = Math.round(top - baseTop);
+  card.style.left = MM_WIN.dx + 'px';
+  card.style.top = MM_WIN.dy + 'px';
+  if(persist && typeof S === 'object' && S){ S.mmWin = { x:MM_WIN.dx, y:MM_WIN.dy }; try{ save(); }catch(e){} }
+}
+function mmWinRestore(){
+  const w = (typeof S === 'object' && S && S.mmWin) || null;
+  MM_WIN.dx = w ? (w.x || 0) : 0;
+  MM_WIN.dy = w ? (w.y || 0) : 0;
+  mmWinSet(MM_WIN.dx, MM_WIN.dy);
+}
+function mmWinBind(){
+  const ov = document.getElementById('mmOv');
+  if(!ov) return;
+  const hd = ov.querySelector('.mm-hd');
+  if(!hd || hd._winBound) return;
+  hd._winBound = true;
+  hd.addEventListener('pointerdown', e => {
+    if(e.button !== 0) return;
+    if(window.innerWidth <= 760) return;
+    if(e.target.closest('button, a, input, textarea, select, #mmStylePop')) return;
+    // 自己判双击：pointerdown 里 preventDefault 会吃掉浏览器合成的 dblclick
+    const now = Date.now();
+    if(MM_WIN.lastTap && now - MM_WIN.lastTap < 340 &&
+       Math.abs(e.clientX - MM_WIN.lastX) < 8 && Math.abs(e.clientY - MM_WIN.lastY) < 8){
+      MM_WIN.lastTap = 0;
+      mmWinSet(0, 0, true);
+      toast('窗口已回到中间');
+      return;
+    }
+    MM_WIN.lastTap = now; MM_WIN.lastX = e.clientX; MM_WIN.lastY = e.clientY;
+    MM_WIN.drag = { id:e.pointerId, sx:e.clientX, sy:e.clientY, ox:MM_WIN.dx, oy:MM_WIN.dy };
+    try{ hd.setPointerCapture(e.pointerId); }catch(err){}
+    hd.classList.add('dragging');
+    const pop = document.getElementById('mmStylePop');
+    if(pop && !pop.hidden) mmToggleStyle(false);
+    e.preventDefault();
+  });
+  hd.addEventListener('pointermove', e => {
+    const d = MM_WIN.drag;
+    if(!d || d.id !== e.pointerId) return;
+    mmWinSet(d.ox + e.clientX - d.sx, d.oy + e.clientY - d.sy);
+  });
+  const endDrag = e => {
+    const d = MM_WIN.drag;
+    if(!d || d.id !== e.pointerId) return;
+    MM_WIN.drag = null;
+    hd.classList.remove('dragging');
+    mmWinSet(MM_WIN.dx, MM_WIN.dy, true);   // 位置记进账号状态，下次打开还在原处
+  };
+  hd.addEventListener('pointerup', endDrag);
+  hd.addEventListener('pointercancel', endDrag);
+  window.addEventListener('resize', () => {
+    if(document.getElementById('mmOv')) mmWinSet(MM_WIN.dx, MM_WIN.dy);
+  });
+}
 function mmBind(){
   const box = $('#mmCanvas');
   if(!box || box._mmBound) return;
@@ -11484,7 +11627,7 @@ function openMindMap(){
     ov.id = 'mmOv';
     ov.className = 'mm-ov';
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-label="思维导图">'
-      + '<div class="mm-hd"><div><h3>' + ic('mind') + '思维导图</h3>'
+      + '<div class="mm-hd"><div><h3 title="按住标题栏可以拖动这个窗口，双击回到中间">' + ic('mind') + '思维导图</h3>'
       + '<p id="mmSub">由标题与缩进列表生成 · 改动会写回笔记</p></div>'
       + '<div class="mm-tools">'
       + '<button class="mm-btn mm-style-btn" id="mmStyleBtn" title="换一种画法"><i class="mm-swatch" id="mmSwatch"></i><span id="mmStyleName">经典绿</span></button>'
@@ -11599,6 +11742,8 @@ function openMindMap(){
   MM.noteId = n.id;
   ov.classList.add('open');
   mmRefresh(true);
+  mmWinBind();
+  mmWinRestore();
 }
 
 /* ========== 启动 ========== */

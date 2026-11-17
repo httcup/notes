@@ -1917,7 +1917,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v124', at: '2026-11-17 15:44' };
+window.IVY_BUILD = { id: 'v125', at: '2026-11-17 15:49' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8731,13 +8731,13 @@ function openNoteMenu(anchor){
     ['Markdown', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
     '-',
+    ['思维导图', '大纲', '', 'mind', ()=>openMindMap()],
     ['本篇待办', pend ? pend + ' 项未完成' : '', '', 'todo', ()=>openTodoPop(A())],
     ['复制/分享/导出', n && n.shareSlug ? '已分享' : '', '', 'share', ()=>openShareMenu(A())],
     ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(A())],
     ['创建笔记副本', '', '', 'copy', ()=>duplicateNote()],
     ['上传图片/文件', '', '', 'paperclip', ()=>pickFiles()],
     ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
-    ['思维导图', '由大纲生成', '', 'mind', ()=>openMindMap()],
     '-',
     ['AI 排版', '', '', 'spark', ()=>openAI('format')],
     ['AI 对话', '', '', 'spark', ()=>openAI('chat')],

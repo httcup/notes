@@ -1736,23 +1736,22 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .sheet-status{margin-top:14px;padding-top:11px;border-top:1px solid rgb(var(--line));font-size:11.5px;line-height:1.75;color:rgb(var(--faint))}
 .sheet-status b{color:rgb(var(--ink-2));font-weight:600}
 /* ---- 设置（整页） ---- */
+/* 设置页直接铺满整个应用：左栏就是书架的位置（同宽同底色），右边是那块纸 */
 .set-ov{
-  position:fixed;inset:0;z-index:150;background:rgb(16 24 32 / .34);
-  display:grid;place-items:center;padding:24px;opacity:0;pointer-events:none;
-  transition:opacity .18s ease;
+  position:fixed;inset:0;z-index:150;background:rgb(var(--canvas));
+  display:grid;place-items:stretch;padding:0;opacity:0;pointer-events:none;
+  transition:opacity .16s ease;
 }
 .set-ov.open{opacity:1;pointer-events:auto}
 .set-wrap{
-  width:min(960px,100%);height:min(740px,90vh);display:grid;
-  grid-template-columns:214px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
-  background:rgb(var(--surface));border-radius:18px;box-shadow:var(--shadow-lift);overflow:hidden;
-  transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
+  width:100%;height:100%;display:grid;
+  grid-template-columns:var(--shelf-w) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+  background:transparent;
 }
-.set-ov.open .set-wrap{transform:none}
 /* 左栏顶端：标题 + 关闭。手机上它永远在屏幕最上面，不用满屏找 × */
 .set-top{
   grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:20px 12px 10px 22px;background:rgb(var(--sunken));
+  padding:16px 12px 8px 14px;
 }
 .set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em}
 .set-x{
@@ -1764,7 +1763,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 .set-x i{display:none;font-style:normal;font-size:12.5px}
 .set-nav{
-  grid-column:1;grid-row:2;min-height:0;padding:0 12px 16px;background:rgb(var(--sunken));
+  grid-column:1;grid-row:2;min-height:0;padding:0 12px 16px;background:transparent;
   display:flex;flex-direction:column;gap:2px;overflow:auto;
 }
 .set-nav nav{display:flex;flex-direction:column;gap:2px}
@@ -1774,10 +1773,15 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .set-nav button.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.06)}
-.set-main{grid-column:2;grid-row:1 / span 2;min-width:0;min-height:0;display:flex;flex-direction:column}
-.set-head{display:flex;align-items:center;justify-content:space-between;padding:20px 26px 10px}
+.set-main{
+  grid-column:2;grid-row:1 / span 2;min-width:0;min-height:0;display:flex;flex-direction:column;
+  margin:8px 12px 8px 0;background:rgb(var(--surface));border:1px solid #e9ecef;border-radius:14px;
+  box-shadow:var(--shadow-paper);overflow:hidden;
+}
+[data-theme=dark] .set-main{border-color:#2b3035}
+.set-head{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 8px}
 .set-head h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
-.set-body{flex:1;overflow:auto;padding:2px 26px 28px;overscroll-behavior:contain}
+.set-body{flex:1;overflow:auto;padding:2px 24px 26px;overscroll-behavior:contain}
 .set-sec{margin:18px 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;color:rgb(var(--faint))}
 .set-sec:first-child{margin-top:4px}
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid rgb(var(--line)/.7)}
@@ -1807,12 +1811,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-chip.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:600}
 .set-empty{font-size:12px;color:rgb(var(--faint));padding:14px 0}
 @media (max-width:760px){
+  /* 手机上同理：顶部一行「设置 / 关闭」，下面横向分类条，再往下是内容 */
   .set-ov{padding:0}
   .set-wrap{
-    width:100%;height:100%;border-radius:0;
     grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);
   }
-  /* 顶部固定一行：左边「设置」，右边带文字的关闭按钮（含刘海安全区） */
   .set-top{padding:calc(10px + env(safe-area-inset-top)) 12px 8px 16px}
   .set-title{font-size:18px}
   .set-x{
@@ -1827,7 +1830,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   }
   .set-nav nav{flex-direction:row;gap:6px}
   .set-nav button{height:30px;padding:0 11px;background:rgb(var(--surface));flex:0 0 auto;font-size:12.5px}
-  .set-main{grid-column:1;grid-row:3}
+  .set-main{
+    grid-column:1;grid-row:3;margin:0;border:0;border-radius:0;box-shadow:none;
+  }
   .set-head{padding:10px 16px 4px}
   .set-body{padding:2px 16px calc(24px + env(safe-area-inset-bottom))}
 }
@@ -2228,7 +2233,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v146', at: '2026-11-17 18:29' };
+window.IVY_BUILD = { id: 'v147', at: '2026-11-17 18:33' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

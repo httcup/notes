@@ -2345,7 +2345,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v158', at: '2026-11-18 01:02' };
+window.IVY_BUILD = { id: 'v159', at: '2026-11-18 01:46' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6298,7 +6298,8 @@ const HELP_KEYS = [
   ['插入菜单', '⌘/ 或 Ctrl+/'], ['输入斜杠命令', '/'],
   ['切换编辑模式', '⌘E'], ['源码 / 即时渲染', '⌘⇧E'], ['关闭当前标签', '⌥W'],
   ['关闭浮层', 'Esc'], ['新建块', 'Enter'], ['块内换行', '⇧Enter'],
-  ['删除空块', 'Backspace'], ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
+  ['新建下级条目', '⌘Enter / Ctrl+Enter'], ['删除空块', 'Backspace'],
+  ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
 ];
 let helpTab = 'md';
 function openHelpPanel(){
@@ -7856,6 +7857,12 @@ function onBlockKey(e, i, ta, el){
     if(e.key==='Escape'){ e.preventDefault(); closeWikiPop(); return; }
   }
 
+  if(e.key==='Enter' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey){
+    // ⌘Enter / Ctrl+Enter：在当前行下面直接开一条更深的子条目
+    e.preventDefault();
+    if(insertSubItem(ta)){ LIVE.raws[i] = ta.value; growTa(ta); syncBody(); }
+    return;
+  }
   if(e.key==='Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey){
     e.preventDefault();
     handleEnter(i, ta);
@@ -7863,7 +7870,11 @@ function onBlockKey(e, i, ta, el){
   }
   if(e.key==='Tab'){
     e.preventDefault();
-    ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+    if(e.shiftKey){
+      if(!dedentCurLine(ta)) return;            // 已经在最外层，什么都不做
+    }else if(!indentCurLine(ta)){
+      ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');   // 普通段落：光标处补两个空格
+    }
     LIVE.raws[i] = ta.value; growTa(ta); syncBody();
     return;
   }
@@ -7892,6 +7903,43 @@ function onBlockKey(e, i, ta, el){
   if(e.key==='ArrowUp' && !ta.value.includes('\n') && ta.selectionStart===0){
     e.preventDefault(); closeEditing(); focusBlock(i-1, 'end'); return;
   }
+}
+
+/* Tab：列表行整行缩进（空格加在行首，不是光标处，否则会变成行尾两个空格） */
+function indentCurLine(ta){
+  const v = ta.value, s = ta.selectionStart;
+  const ls = v.lastIndexOf('\n', s - 1) + 1;
+  let le = v.indexOf('\n', s); if(le < 0) le = v.length;
+  if(!/^\s*([-*+]|\d+\.)\s+/.test(v.slice(ls, le))) return false;
+  ta.setRangeText('  ', ls, ls, 'preserve');   // 行首补两个空格，光标跟着文字走
+  return true;
+}
+/* ⇧Tab：当前行退一级（最多两个空格），列表项就退回上一层 */
+function dedentCurLine(ta){
+  const v = ta.value, s = ta.selectionStart;
+  const ls = v.lastIndexOf('\n', s - 1) + 1;
+  const m = v.slice(ls).match(/^( {1,2}|\t)/);
+  if(!m) return false;
+  ta.setRangeText('', ls, ls + m[0].length, 'preserve');
+  return true;
+}
+/* ⌘Enter / Ctrl+Enter：在当前行下面直接开一条更深的子条目（列表标记、待办、序号都继承） */
+function insertSubItem(ta){
+  const v = ta.value, s = ta.selectionStart;
+  let le = v.indexOf('\n', s); if(le < 0) le = v.length;
+  const line = v.slice(v.lastIndexOf('\n', s - 1) + 1, le);
+  const m = line.match(/^(\s*)([-*+]|\d+\.)(\s+)(\[[ xX]\]\s+)?/);
+  let ins;
+  if(m){
+    const marker = /^\d+\.$/.test(m[2]) ? '1.' : m[2];
+    ins = '\n' + m[1] + '  ' + marker + ' ' + (m[4] ? '[ ] ' : '');
+  }else{
+    ins = '\n- ';
+  }
+  ta.setRangeText(ins, le, le, 'end');
+  const pos = le + ins.length;
+  try{ ta.setSelectionRange(pos, pos); }catch(err){ }
+  return true;
 }
 
 function handleEnter(i, ta){
@@ -8115,8 +8163,19 @@ function wireEditor(n){
   });
   src.addEventListener('keydown', e=>{
     if(slashKey(e, src)) return;
-    if(e.key==='Tab'){ e.preventDefault(); const s=src.selectionStart,en=src.selectionEnd;
-      src.setRangeText('  ', s, en, 'end'); n.body = src.value; save(); }
+    if(e.key==='Enter' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey){
+      e.preventDefault(); insertSubItem(src); n.body = src.value; save(); grow(src); return;
+    }
+    if(e.key==='Tab'){
+      e.preventDefault();
+      if(e.shiftKey){
+        if(!dedentCurLine(src)) return;
+      }else if(!indentCurLine(src)){
+        const s=src.selectionStart,en=src.selectionEnd;
+        src.setRangeText('  ', s, en, 'end');
+      }
+      n.body = src.value; save(); grow(src);
+    }
   });
   src.addEventListener('blur', ()=>closeSlashMenu());
   src.addEventListener('paste', handlePaste);

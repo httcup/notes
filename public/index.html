@@ -193,10 +193,15 @@ body.view-todo .head-actions .notes-only{display:none}
 body.ol-touch .note-item .note-del{opacity:.45}
 body.ol-touch .note-item:hover .note-del,body.ol-touch .note-item.active .note-del{opacity:1}
 /* 置顶：行首图标变成图钉，hover 出现快捷开关 */
-.note-item .note-pin{
+.note-item .note-move,.note-item .note-pin{
   width:19px;height:19px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;
   color:rgb(var(--faint));opacity:0;transition:opacity .12s,background .12s,color .12s;
 }
+.note-item .note-move svg{width:13px;height:13px;stroke-width:1.8;color:inherit}
+.note-item:hover .note-move,.note-item.active .note-move{opacity:1}
+.note-item .note-move:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+body.ol-touch .note-item .note-move{opacity:.45}
+body.ol-touch .note-item:hover .note-move,body.ol-touch .note-item.active .note-move{opacity:1}
 .note-item .note-pin svg{width:13px;height:13px;stroke-width:1.8;color:inherit}
 .note-item:hover .note-pin,.note-item.active .note-pin{opacity:1}
 .note-item .note-pin:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
@@ -212,8 +217,9 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 @media (hover:none),(pointer:coarse),(max-width:900px){
   .note-item .note-del{opacity:.5}
   .note-item:hover .note-del,.note-item.active .note-del{opacity:1}
-  .note-item .note-pin{opacity:.5}
-  .note-item:hover .note-pin,.note-item.active .note-pin{opacity:1}
+  .note-item .note-pin,.note-item .note-move{opacity:.5}
+  .note-item:hover .note-pin,.note-item.active .note-pin,
+  .note-item:hover .note-move,.note-item.active .note-move{opacity:1}
 }
 /* 触屏没有 hover：置顶笔记也留一个淡一点的取消按钮，否则取消不掉 */
 @media (hover:none),(pointer:coarse){
@@ -1986,7 +1992,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v140', at: '2026-11-17 17:12' };
+window.IVY_BUILD = { id: 'v141', at: '2026-11-17 17:18' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2664,6 +2670,7 @@ function renderShelf(){
     return `<button class="note-item ${n.id===S.active?'active':''}${pin?' pinned':''}" data-open="${n.id}">
       ${ic(pin ? 'pin' : 'file')}<span class="t">${esc(n.title||'无标题')}</span>
       ${dots?`<span class="tags">${dots}</span>`:''}
+      <span class="note-move" data-move="${n.id}" role="button" aria-label="移动到笔记本" title="移动到笔记本">${ic('book')}</span>
       <span class="note-pin${pin?' on':''}" data-pin="${n.id}" role="button" aria-label="${pin?'取消置顶':'置顶'}" title="${pin?'取消置顶':'置顶'}">${ic('pin')}</span>
       <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
     </button>`;
@@ -2748,6 +2755,13 @@ function renderShelf(){
 
 function bindShelf(){
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
+  shelfBody.querySelectorAll('[data-move]').forEach(b=>{
+    b.onclick = e=>{
+      e.stopPropagation(); e.preventDefault();
+      openMoveMenu(b, b.dataset.move);
+    };
+    b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
+  });
   shelfBody.querySelectorAll('[data-pin]').forEach(b=>{
     b.onclick = e=>{
       e.stopPropagation(); e.preventDefault();
@@ -9013,8 +9027,8 @@ function moveNoteTo(n, notebookId){
   const nb = notebookId ? S.notebooks.find(x=>x.id===notebookId) : null;
   toast(nb ? '已移动到「' + nb.name + '」' : '已移出笔记本');
 }
-function openMoveMenu(anchor){
-  const n = noteById(S.active); if(!n) return;
+function openMoveMenu(anchor, noteId){
+  const n = noteById(noteId || S.active); if(!n) return;
   const nbs = nbFlat();
   const items = nbs.map(x=>[
     '　'.repeat(x.lv) + x.nb.name,

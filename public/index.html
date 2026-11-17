@@ -157,13 +157,22 @@ body.view-todo .head-actions .notes-only{display:none}
 .shelf-row.new-nb svg{color:currentColor}
 
 .nb-group{margin-top:2px}
-.nb-row{display:flex;align-items:center;gap:0;border-radius:7px}
+.nb-row{display:flex;align-items:center;gap:0;border-radius:7px;position:relative}
 .nb-row:hover{background:rgb(var(--hover))}
 .nb-more{
-  flex:0 0 auto;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
-  color:rgb(var(--faint));opacity:.28;transition:opacity .12s,background .12s;margin-right:4px;
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  color:rgb(var(--faint));opacity:0;pointer-events:none;
+  transition:opacity .12s,background .12s,color .12s;
 }
-.nb-row:hover .nb-more{opacity:1}
+.nb-row:hover .nb-more,.nb-row:focus-within .nb-more{opacity:1;pointer-events:auto}
+/* 悬停时数字让位给「⋯」，两者不会叠在一起；没有「⋯」的行（置顶 / 未归类）不受影响 */
+.nb-head .meta{transition:opacity .12s}
+.nb-row.has-more:hover .nb-head .meta,
+.nb-row.has-more:focus-within .nb-head .meta{opacity:0}
+/* 有「⋯」的行：右侧留出它的位置（长名字不会被压到），数字再拉回对齐列 */
+.nb-row.has-more .nb-head{padding-right:34px;position:relative}
+.nb-row.has-more .nb-head .meta{position:absolute;right:8px;top:50%;transform:translateY(-50%);margin-left:0}
 .nb-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
 .nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nb-head{
@@ -261,10 +270,13 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-line{position:relative;border-radius:7px}
 .tag-line:hover{background:rgb(var(--hover))}
 .shelf-row.tag-row{padding:5px 8px;padding-right:30px;gap:7px;color:rgb(var(--ink-2))}
+/* 数字脱离流、钉在统一那一列（距右侧 8px），文字因此仍能截断在「⋯」前面 */
+.shelf-row.tag-row .meta{position:absolute;right:8px;top:50%;transform:translateY(-50%)}
 .shelf-row.tag-row .t{font-size:13.5px;font-weight:500}
 .shelf-row.tag-row:hover{background:transparent;color:rgb(var(--ink))}
 .tag-row .meta{transition:opacity .12s}
 .tag-line:hover .tag-row .meta{opacity:0}
+.tag-line.no-menu:hover .tag-row .meta{opacity:1}
 .tag-more{
   position:absolute;right:5px;top:50%;transform:translateY(-50%);
   width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
@@ -396,6 +408,9 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .pa-btn.pa-ol{display:grid}
 body.ol-open .pa-ol{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 /* 所有触屏设备（含 iPad Safari 桌面模式）放大关闭按钮与条目点击区 */
+/* 触屏没有悬停：笔记本行的「⋯」常驻，数字往左让出 30px（不然两个会重叠） */
+/* 触屏没有悬停：「⋯」常驻在行的右侧留白里（不占数字那一列），数字因此仍与其它行对齐 */
+body.ol-touch .nb-more{opacity:.4;pointer-events:auto;right:-14px}
 body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
@@ -2383,7 +2398,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v167', at: '2026-11-18 02:44' };
+window.IVY_BUILD = { id: 'v168', at: '2026-11-18 02:56' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3136,7 +3151,7 @@ function renderShelf(){
       inner += `</div>`;
     }
     return `<div class="nb-group${lv?' nb-sub':''}">
-      <div class="nb-row">
+      <div class="nb-row has-more${open?' open':''}">
         <button class="nb-head ${open?'open':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
           <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
           <span class="nb-dot" style="background:${dot}"></span>
@@ -3174,7 +3189,7 @@ function renderShelf(){
     const open = isTagGroupOpen(k);
     const virtual = k === NO_TAG;
     return `<div class="tag-group">
-      <div class="tag-line">
+      <div class="tag-line${virtual ? ' no-menu' : ''}">
         <button class="shelf-row tag-row ${open?'open':''}" data-tagfold="${esc(k)}">
           <span class="tag-caret">&#9654;</span>
           <span class="tag-hash" style="color:${virtual?'rgb(var(--faint))':tagColor(k)}">#</span>
@@ -6963,6 +6978,27 @@ async function copyMarkdown(){
     legacyCopy(text) ? toast('已复制 Markdown') : toast('复制失败，请手动选择');
   }
 }
+/* 一键复制大纲：标题 + 所有分支，按层级缩进；不带 markdown 记号，贴到哪儿都是一棵干净的树 */
+async function copyOutline(){
+  const n = S.active ? noteById(S.active) : null;
+  if(!n){ toast('没有打开的笔记'); return; }
+  const list = (mdToHtml(n.body).outline || []).filter(e => (e.text || '').trim());
+  if(!list.length){ toast('这篇笔记还没有标题或分支'); return; }
+  const title = (n.title || '').trim();
+  const first = (list[0].text || '').trim();
+  const lines = (title && title !== first ? [title] : []).concat(list.map(e => {
+    const lv = Math.max(1, Math.min(6, e.level || 1));
+    return '  '.repeat(lv - 1) + String(e.text).trim();
+  }));
+  const text = lines.join('\n');
+  const tip = '已复制大纲（' + lines.length + ' 行，含全部分支）';
+  try{
+    await navigator.clipboard.writeText(text);
+    toast(tip);
+  }catch(e){
+    legacyCopy(text) ? toast(tip) : toast('复制失败，请手动选择');
+  }
+}
 async function copyRich(){
   const n = S.active ? noteById(S.active) : null;
   if(!n){ toast('没有打开的笔记'); return; }
@@ -9893,6 +9929,7 @@ function openShareMenu(anchor){
   popover(anchor, [
     ['复制富文本', '', '', 'share', copyRich],
     ['复制 Markdown', '', '', 'code', copyMarkdown],
+    ['复制大纲（含全部分支）', '', '', 'outline', copyOutline],
     '-',
     ['导出 Markdown', '', '', 'download', exportMd],
     ['导出 HTML', '', '', 'download', exportHtml],

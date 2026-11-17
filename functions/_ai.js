@@ -86,3 +86,63 @@ export async function loadAiConfig(env, uid) {
     updatedAt: row.updated_at || 0
   };
 }
+
+/**
+ * 站内免费模型：key 只存在 Cloudflare 的环境变量里，前端永远拿不到。
+ * 这两个模型的“思考模式”都默认开着，写作类任务会被思考 token 吃满、正文为空，
+ * 所以统一带 thinking disabled（实测两家都认这个参数）。
+ */
+export function siteProviders(env) {
+  const list = [];
+  if (env.ZHIPU_KEY) {
+    list.push({
+      id: 'zhipu',
+      name: '智谱 GLM',
+      model: env.ZHIPU_MODEL || 'glm-4.5-flash',
+      baseUrl: env.ZHIPU_BASE || 'https://open.bigmodel.cn/api/paas/v4',
+      key: env.ZHIPU_KEY,
+      extra: { thinking: { type: 'disabled' } },
+      fallback: env.ZHIPU_FALLBACK || 'glm-4.7-flash'
+    });
+  }
+  if (env.SPARK_KEY) {
+    list.push({
+      id: 'spark',
+      name: '讯飞星火',
+      model: env.SPARK_MODEL || 'spark-x2.5-1.7b',
+      baseUrl: env.SPARK_BASE || 'https://maas-api.cn-huabei-1.xf-yun.com/v2',
+      key: env.SPARK_KEY,
+      extra: { thinking: { type: 'disabled' } }
+    });
+  }
+  return list;
+}
+
+/** 给前端看的版本：不含 key / baseUrl */
+export function publicProviders(env) {
+  return siteProviders(env).map((p) => ({ id: p.id, name: p.name, model: p.model }));
+}
+
+export function quotaLimit(env, kind) {
+  const raw = kind === 'anon' ? env.AI_ANON_DAILY : env.AI_USER_DAILY;
+  const n = parseInt(String(raw || ''), 10);
+  if (Number.isFinite(n) && n > 0) return Math.min(n, 2000);
+  return kind === 'anon' ? 20 : 80;
+}
+
+/** 按天原子占一次额度；表没建或 D1 抖动时不拦，只标记未生效 */
+export async function takeQuota(env, id, kind, limit) {
+  const day = new Date().toISOString().slice(0, 10);   // 与 Workers AI 免费额度一样按 UTC 日切
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO usage_daily (user_id, day, kind, used) VALUES (?1, ?2, ?3, 1)
+       ON CONFLICT(user_id, day, kind) DO UPDATE SET used = used + 1
+       RETURNING used`
+    ).bind(id, day, kind).first();
+    const used = Number((row && row.used) || 0);
+    return { ok: used <= limit, used, limit, day };
+  } catch (e) {
+    return { ok: true, used: 0, limit, day, enforced: false, error: String((e && e.message) || e).slice(0, 120) };
+  }
+}
+

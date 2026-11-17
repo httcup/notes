@@ -1,12 +1,13 @@
-// /api/ai  用「你自己的」AI 接口跑一次生成，流式把文字喷回前端
+// /api/ai  跑一次生成，流式把文字喷回前端
 //
-// 站点不内置任何 key：配置来自 /api/ai-config（加密存在账号里），
-// 这里只做三件事：鉴权 → 拼提示词 → 把上游的 SSE 转成纯文本流。
+// 三种来源，前端用 provider 选：
+//   zhipu / spark  站内免费模型（key 只在 Cloudflare 环境变量里，未登录也能用，按 IP 限量）
+//   custom         用户自己的接口（加密存在账号里，必须登录）
 //
 // 为什么流式：长文排版动辄几千字，等整段生成完再返回，前端会像卡死；
 // 纯文本流（不是 SSE）让前端只需要 reader.read() + 拼接，不用自己解析协议。
 import { json, preflight, currentUser } from '../_lib.js';
-import { loadAiConfig, baseBlockReason } from '../_ai.js';
+import { loadAiConfig, baseBlockReason, siteProviders, publicProviders, quotaLimit, takeQuota } from '../_ai.js';
 
 const MAX_TEXT = 20000;
 const MAX_NOTE = 12000;
@@ -195,63 +196,114 @@ function buildMessages(task, body) {
   ];
 }
 
-export async function onRequest({ request, env }) {
+/** 未登录用户按 IP 限量：只存哈希，不落原始 IP */
+async function anonId(request, env) {
+  const ip = String(request.headers.get('cf-connecting-ip') || '').split(',')[0].trim();
+  if (!ip) return 'ip:none';
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ivy-ai-ip|' + ip + '|' + (env.IVY_SECRET || '')));
+  const hex = Array.from(new Uint8Array(buf)).slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return 'ip:' + hex;
+}
+
+async function handle({ request, env }) {
   if (request.method === 'OPTIONS') return preflight();
   if (!env.DB) return json({ error: '还没绑定 D1 数据库' }, 503);
-  if (request.method === 'GET') return json({ ok: true, ready: true });
-  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  const user = await currentUser(request, env);
-  if (!user) return json({ error: '登录后才能用 AI', code: 'login' }, 401);
+  const sites = siteProviders(env);
+
+  // 前端开面板时先问一次：站内有哪些免费模型、每天能用几次（不含任何密钥）
+  if (request.method === 'GET') {
+    const list = publicProviders(env);
+    return json({
+      ok: true,
+      providers: list,
+      defaultProvider: (list[0] && list[0].id) || '',
+      custom: true,
+      limits: { anon: quotaLimit(env, 'anon'), user: quotaLimit(env, 'user') }
+    });
+  }
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const body = await request.json().catch(() => ({}));
   const task = String(body.task || 'chat');
   if (!TASKS[task]) return json({ error: '不认识的 AI 动作' }, 400);
 
-  let cfg;
-  try { cfg = await loadAiConfig(env, user.uid); }
-  catch (e) { return json({ error: String((e && e.message) || e).slice(0, 160) }, 500); }
+  const user = await currentUser(request, env);
+  let provider = String(body.provider || '').trim();
+  let backend;
 
-  if (!cfg || !cfg.baseUrl || !cfg.model || !cfg.key) {
-    return json({ error: '还没有配置自己的 AI 接口', code: 'ai-config-missing' }, 409);
+  if (provider === 'custom' || (!provider && !sites.length)) {
+    // 自己的接口：必须登录，配置来自 /api/ai-config
+    if (!user) return json({ error: '用自己的接口要先登录', code: 'login' }, 401);
+    let cfg;
+    try { cfg = await loadAiConfig(env, user.uid); }
+    catch (e) { return json({ error: String((e && e.message) || e).slice(0, 160) }, 500); }
+    if (!cfg || !cfg.baseUrl || !cfg.model || !cfg.key) {
+      return json({ error: '还没有配置自己的 AI 接口', code: 'ai-config-missing' }, 409);
+    }
+    if (cfg.broken) {
+      return json({ error: '密钥解不开了（服务端密钥改过？），请在设置里重新填一次', code: 'ai-config-missing' }, 409);
+    }
+    const block = baseBlockReason(cfg.baseUrl);
+    if (block) return json({ error: block }, 400);
+    backend = { id: 'custom', name: '我的接口', baseUrl: cfg.baseUrl, model: cfg.model, key: cfg.key, extra: null };
+  } else {
+    if (!provider) provider = sites[0].id;
+    backend = sites.find((p) => p.id === provider);
+    if (!backend) return json({ error: '这个模型现在不可用，换一个试试', code: 'provider' }, 400);
+
+    // 站内 key：登录按账号、未登录按 IP，每天各一份额度
+    const who = user ? user.uid : await anonId(request, env);
+    const limit = quotaLimit(env, user ? 'user' : 'anon');
+    const q = await takeQuota(env, who, 'ai', limit);
+    if (!q.ok) {
+      return json({
+        error: `今天的免费额度用完了（每天 ${limit} 次），明天再来；也可以登录后在「AI 接口设置」里填自己的接口，不限次`,
+        code: 'quota', limit, used: q.used
+      }, 429);
+    }
   }
-  if (cfg.broken) {
-    return json({ error: '密钥解不开了（服务端密钥改过？），请在设置里重新填一次', code: 'ai-config-missing' }, 409);
-  }
-  const block = baseBlockReason(cfg.baseUrl);
-  if (block) return json({ error: block }, 400);
 
   const messages = buildMessages(task, body);
   if (!messages) return json({ error: task === 'chat' ? '没有可发送的内容' : '没有可处理的内容' }, 400);
 
   const t = TASKS[task];
-  const payload = {
-    model: cfg.model,
+  const payload = Object.assign({
+    model: backend.model,
     messages,
     stream: true,
     temperature: t.temperature,
     max_tokens: t.max
-  };
+  }, backend.extra || {});
 
   const ctl = new AbortController();
   const timer = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 180000);
 
+  const callUpstream = (model) => fetch(backend.baseUrl + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer ' + backend.key,
+      accept: 'text/event-stream'
+    },
+    body: JSON.stringify(Object.assign({}, payload, { model })),
+    signal: ctl.signal
+  });
+
+  let model = backend.model;
   let r;
   try {
-    r = await fetch(cfg.baseUrl + '/chat/completions', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: 'Bearer ' + cfg.key,
-        accept: 'text/event-stream'
-      },
-      body: JSON.stringify(payload),
-      signal: ctl.signal
-    });
+    r = await callUpstream(model);
+    // 站内免费模型容易遇到「当前访问量过大」：换一个同家的备用模型再试一次
+    if (!r.ok && backend.fallback && backend.fallback !== model && (r.status === 429 || r.status === 503)) {
+      try { await r.body.cancel(); } catch (e) {}
+      model = backend.fallback;
+      r = await callUpstream(model);
+    }
   } catch (e) {
     clearTimeout(timer);
     const msg = String((e && e.message) || e);
-    return json({ error: /abort/i.test(msg) ? '接口响应超时' : ('连不上接口：' + msg.slice(0, 150)) }, 502);
+    return json({ error: /abort/i.test(msg) ? '接口响应超时' : ('连不上接口：' + msg.slice(0, 150)) }, 424);
   }
 
   if (!r.ok) {
@@ -262,22 +314,32 @@ export async function onRequest({ request, env }) {
       const j = JSON.parse(raw);
       detail = (j.error && (j.error.message || j.error)) || j.message || raw;
     } catch (e) { /* 保持原文 */ }
-    return json({ error: providerMessage(r.status, detail), code: 'provider' }, 502);
+    return json({ error: providerMessage(r.status, detail), code: 'provider', model }, 424);
   }
 
+  const headers = Object.assign(textHeaders(model), { 'x-ai-provider': encodeURIComponent(backend.id) });
   const ctype = String(r.headers.get('content-type') || '');
   // 少数网关无视 stream:true，直接回一整块 JSON —— 兜住它，别让前端看到空白
   if (ctype.indexOf('application/json') >= 0) {
     const j = await r.json().catch(() => ({}));
     clearTimeout(timer);
     const text = contentOf(j);
-    if (!text) return json({ error: '模型没有返回内容' }, 502);
-    return new Response(text, { headers: textHeaders(cfg.model) });
+    if (!text) return json({ error: '模型没有返回内容' }, 424);
+    return new Response(text, { headers });
   }
 
   const stream = streamText(r.body);
   const wrapped = stream.pipeThrough(new TransformStream({
     flush() { clearTimeout(timer); }
   }));
-  return new Response(wrapped, { headers: textHeaders(cfg.model) });
+  return new Response(wrapped, { headers });
+}
+
+// 兜底：任何未捕获的异常都转成 JSON，别让用户看到 Cloudflare 的 502 白页
+export async function onRequest(ctx) {
+  try {
+    return await handle(ctx);
+  } catch (e) {
+    return json({ error: 'AI 服务内部错误：' + String((e && e.stack) || e).slice(0, 300) }, 500);
+  }
 }

@@ -1490,6 +1490,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .ai-title{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:600;color:rgb(var(--ink))}
 .ai-title svg{width:16px;height:16px;color:rgb(var(--ivy-ink))}
 .ai-head-btns{display:flex;gap:2px}
+.ai-prov-bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.ai-prov-bar button{height:26px;padding:0 10px;border-radius:13px;font-size:12px;background:rgb(var(--hover));color:rgb(var(--ink-2));transition:background .12s,color .12s}
+.ai-prov-bar button:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.ai-prov-bar button.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy))}
+.ai-prov-tip{font-size:11.5px;line-height:1.6;color:rgb(var(--faint));margin:0 0 10px}
 .ai-body{flex:1;min-height:0;overflow:auto;padding-right:2px}
 .ai-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:11px;margin-top:10px;border-top:1px solid rgb(var(--line))}
 .ai-hint{font-size:11.5px;line-height:1.5;color:rgb(var(--faint));margin-left:auto;max-width:52%}
@@ -1851,7 +1856,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v102', at: '2026-11-17 11:02' };
+window.IVY_BUILD = { id: 'v104', at: '2026-11-17 11:21' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5652,10 +5657,10 @@ function paintHelp(){
         <p class="help-p">已登录时：⚙ → 云同步设置 → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
       <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
         <p class="help-p">⚙ → 云同步设置 → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
-      <div class="help-sec"><h4>AI（用你自己的接口）</h4>
-        <p class="help-p">AI 不由站点提供：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填一个 <b>OpenAI 兼容</b>接口——DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理。再填 API Key，点<b>「拉取模型」</b>挑一个，保存就能用。</p>
-        <p class="help-p">想先用免费的：<b>豆包</b>（火山方舟，每模型 50 万 tokens，另有每日额度）、<b>智谱</b> GLM Flash 系列（长期免费）、<b>腾讯 TokenHub</b>（混元新平台，每模型 100 万 tokens / 90 天，旧平台的 hunyuan-lite 已于 2026-09 下线）、<b>讯飞星火</b> lite（长期免费，密钥填 APIPassword）、<b>硅基流动</b>标了「免费」的小模型，都有免费额度，填之前点一下面板里的「常用」按钮就自动带出地址和模型。<b>「元宝」是聊天 App，本身不提供 API</b>。</p>
-        <p class="help-p">密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担，站点不代付、不抽成。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
+      <div class="help-sec"><h4>AI（站内免费模型 / 自己的接口）</h4>
+        <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，登录后每天 80 次，次日恢复）；第三个填你自己的 OpenAI 兼容接口，<b>不限次数</b>。</p>
+        <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
+        <p class="help-p">自己填的密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
         <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
@@ -9376,7 +9381,8 @@ $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverl
 /* ========== AI：每个账号自己的接口 ========== */
 /* 站点不内置任何 key。用户在「AI 接口设置」里填自己的 OpenAI 兼容接口，
    密钥由服务端加密后存进账号，前端只拿得到掩码（见 functions/api/ai-config.js）。*/
-const AI = { cfg:null, mode:'rewrite', ctx:null, text:'', task:'', chat:[], ref:true, busy:false, abort:null, last:'' };
+const AI = { cfg:null, mode:'rewrite', ctx:null, text:'', task:'', chat:[], ref:true, busy:false, abort:null, last:'',
+  sites:null, provider:'', limits:null };
 
 function aiOverlayEl(){ return $('#aiOverlay'); }
 function aiCfgEl(){ return $('#aiCfgOverlay'); }
@@ -9396,7 +9402,8 @@ async function aiStream(payload, onText){
   AI.abort = new AbortController();
   const r = await fetch('/api/ai', {
     method:'POST', headers: authHeaders(true),
-    body: JSON.stringify(payload), signal: AI.abort.signal
+    body: JSON.stringify(Object.assign({ provider: AI.provider || undefined }, payload)),
+    signal: AI.abort.signal
   });
   const ctype = String(r.headers.get('content-type') || '');
   if(!r.ok || ctype.indexOf('application/json') >= 0){
@@ -9443,6 +9450,8 @@ function openAI(mode, opt){
         <button class="pa-btn" id="aiClose" title="关闭">${ic('x')}</button>
       </div>
     </div>
+    <div class="ai-prov-bar" id="aiProvBar"></div>
+    <div class="ai-prov-tip" id="aiProvTip"></div>
     <div class="ai-body" id="aiBody"></div>
     <div class="ai-foot" id="aiFoot"></div>
   </div>`;
@@ -9466,25 +9475,78 @@ function aiFromSelection(){
 async function aiBoot(){
   const body = $('#aiBody'), foot = $('#aiFoot');
   if(!body) return;
-  if(!isConnected()){
-    body.innerHTML = `<div class="ai-empty"><b>AI 用你自己的接口。</b><br>
-      登录后填上服务地址、密钥和模型即可；配置跟着账号走，换设备不用重填。<br>
-      密钥加密存在服务端，页面里读不回原值，也不给别的账号用。</div>`;
-    foot.innerHTML = `<button class="btn-primary" id="aiGoLogin">去登录</button>`;
-    $('#aiGoLogin').onclick = ()=>{ closeAI(); openSyncPanel(); };
-    return;
+
+  // 站内免费模型列表来自公开接口，不需要登录
+  if(!AI.sites){
+    try{
+      const r = await fetch('/api/ai', { headers:{ accept:'application/json' } });
+      const d = await r.json().catch(()=>({}));
+      AI.sites = Array.isArray(d.providers) ? d.providers : [];
+      AI.limits = d.limits || null;
+    }catch(e){ AI.sites = []; }
   }
-  body.innerHTML = '<div class="ai-loading">正在读取 AI 配置…</div>';
-  let cfg = AI.cfg;
-  if(!cfg){
-    try{ cfg = await aiConfig(true); }
-    catch(e){
-      body.innerHTML = `<div class="ai-empty">${esc(e.message || '读取配置失败')}</div>`;
+  if(!AI.provider){
+    let saved = '';
+    try{ saved = localStorage.getItem('ivy.ai.provider') || ''; }catch(e){}
+    AI.provider = (AI.sites.some(s=>s.id===saved) ? saved : '')
+      || (AI.sites[0] && AI.sites[0].id) || 'custom';
+  }
+  if(AI.provider !== 'custom' && !AI.sites.some(s=>s.id===AI.provider)){
+    AI.provider = (AI.sites[0] && AI.sites[0].id) || 'custom';
+  }
+  paintProvBar();
+
+  if(AI.provider === 'custom'){
+    if(!isConnected()){
+      body.innerHTML = `<div class="ai-empty"><b>用自己的接口要先登录。</b><br>
+        登录后在「AI 接口设置」里填服务地址、密钥和模型；密钥加密存在账号里，页面读不回原值。<br>
+        不想登录也行，上面选站内免费模型直接用。</div>`;
+      foot.innerHTML = `<button class="btn-primary" id="aiGoLogin">去登录</button>
+        <button class="btn-ghost" id="aiOpenCfg">填自己的接口</button>`;
+      $('#aiGoLogin').onclick = ()=>{ closeAI(); openSyncPanel(); };
+      $('#aiOpenCfg').onclick = ()=>openAIConfig();
       return;
     }
+    body.innerHTML = '<div class="ai-loading">正在读取 AI 配置…</div>';
+    let cfg = AI.cfg;
+    if(!cfg){
+      try{ cfg = await aiConfig(true); }
+      catch(e){
+        body.innerHTML = `<div class="ai-empty">${esc(e.message || '读取配置失败')}</div>`;
+        return;
+      }
+    }
+    if(!cfg.configured){ paintAiSetup(); return; }
   }
-  if(!cfg.configured){ paintAiSetup(); return; }
+
   if(AI.mode === 'chat') paintAiChat(); else paintAiRewrite();
+}
+
+function paintProvBar(){
+  const bar = $('#aiProvBar'), tip = $('#aiProvTip');
+  if(!bar) return;
+  const items = (AI.sites || []).map(s=>({ id:s.id, label:s.name, model:s.model }));
+  items.push({ id:'custom', label:'我的接口', model:'' });
+  bar.innerHTML = items.map(it=>
+    `<button data-prov="${it.id}" class="${AI.provider===it.id?'on':''}" title="${esc(it.model||'用自己的 API')}">${esc(it.label)}</button>`
+  ).join('');
+  bar.querySelectorAll('[data-prov]').forEach(b=>{
+    b.onclick = ()=>{
+      if(AI.busy) return;
+      AI.provider = b.dataset.prov;
+      try{ localStorage.setItem('ivy.ai.provider', AI.provider); }catch(e){}
+      aiBoot();
+    };
+  });
+  if(!tip) return;
+  if(AI.provider === 'custom'){
+    tip.textContent = '用自己的 key，次数不限；密钥加密存在你的账号里。';
+    return;
+  }
+  const site = (AI.sites || []).find(s=>s.id === AI.provider);
+  const lim = AI.limits || { anon:20, user:80 };
+  const quota = isConnected() ? `登录后每天 ${lim.user} 次` : `未登录每天 ${lim.anon} 次`;
+  tip.textContent = site ? `站内免费模型 · ${site.model} · ${quota}` : '';
 }
 
 function paintAiSetup(){
@@ -9505,12 +9567,15 @@ function paintAiRewrite(){
   const chips = [['polish','润色'],['shorten','精简'],['expand','扩写'],['fix','纠错'],
                  ['translate','翻译'],['continue','续写'],['title','起标题'],['summary','摘要']];
   const preview = AI.text.length > 400 ? AI.text.slice(0, 400) + '\n…' : AI.text;
+  const modelLabel = AI.provider === 'custom'
+    ? ((AI.cfg && AI.cfg.model) || '')
+    : (((AI.sites || []).find(s=>s.id === AI.provider) || {}).model || '');
   body.innerHTML = `
     ${isFmt
       ? `<div class="ai-note">只整理标题层级、列表、空行和中英文间距，不改文字内容。结果会替换整篇笔记，替换前建议先导出备份。</div>`
       : `<div class="ai-chips">${chips.map(([k,l])=>`<button class="ai-chip" data-ai-task="${k}">${l}</button>`).join('')}</div>`}
     <div class="ai-src">${esc(preview || '（没有内容）')}</div>
-    <div class="ai-res-label"><span>结果</span><span class="ai-model" id="aiModel">${esc((AI.cfg&&AI.cfg.model)||'')}</span></div>
+    <div class="ai-res-label"><span>结果</span><span class="ai-model" id="aiModel">${esc(modelLabel)}</span></div>
     <textarea class="ai-res" id="aiRes" spellcheck="false" placeholder="${isFmt?'正在排版…':'点上面的动作开始生成'}"></textarea>`;
   foot.innerHTML = `<button class="btn-primary" id="aiApply" disabled>${isFmt?'替换全文':'替换原文'}</button>
     <button class="btn-ghost" id="aiCopy">复制</button>
@@ -9816,8 +9881,8 @@ const AI_PRESETS = [
     note:'阿里云百炼：新用户送千万级 tokens（90 天有效），通义千问全系都在这个兼容地址上。' },
   { name:'硅基流动', base:'https://api.siliconflow.cn/v1', model:'',
     note:'硅基流动：注册送 2000 万 tokens，模型广场里标「免费」的小模型可以长期跑；模型名照抄广场里的完整名。' },
-  { name:'讯飞', base:'https://spark-api-open.xf-yun.com/v1', model:'lite',
-    note:'讯飞星火：lite 版本长期免费（约 2 QPS、8K 输入 / 4K 输出），实名后即可用。密钥要填控制台里的 APIPassword，不是 APIKey 或 APISecret。' },
+  { name:'讯飞', base:'https://maas-api.cn-huabei-1.xf-yun.com/v2', model:'spark-x2.5-1.7b',
+    note:'讯飞星辰 MaaS：spark-x2.5-1.7b 免费（1M 上下文），密钥是 ak- 开头的一整串。旧的 spark-api-open 地址与 lite 模型已下架，别再用。' },
   { name:'DeepSeek', base:'https://api.deepseek.com', model:'deepseek-v4-flash',
     note:'DeepSeek 没有免费额度，但便宜（约 ¥1/百万输入、¥2/百万输出），中文写作最稳。' }
 ];

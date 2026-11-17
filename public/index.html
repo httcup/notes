@@ -476,6 +476,13 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   transition:border-color .16s,box-shadow .16s;
 }
 .fmt-bar.stuck{border-bottom-color:rgb(var(--line));box-shadow:0 8px 14px -12px rgb(16 24 32 / .45)}
+/* 手机上被「钉」到标签栏下面：不参与滚动，所以不用 sticky，自己一条底边线 */
+.fmt-bar.fmt-docked{
+  position:static;top:auto;z-index:auto;flex:0 0 auto;min-width:0;max-width:100%;
+  margin:0;padding:5px 10px 6px;
+  border-bottom:1px solid rgb(var(--line));
+  background:rgb(var(--surface));
+}
 .fmt-ital{font-family:Georgia,'Times New Roman',Times,serif;font-style:italic;font-weight:500;font-size:13.5px;line-height:1}
 .fmt-bar button[data-fmt="i"]{padding:0 5px}
 .fmt-bar button[data-fmt="ai"]{color:rgb(var(--ivy-ink))}
@@ -1828,6 +1835,19 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-side{
   grid-column:1;grid-row:1;display:flex;flex-direction:column;min-height:0;
 }
+/* 设置页里也放一条底部导航：整屏浮层会把书架那条盖住，这里补一份，位置/样式跟书架里的一致 */
+.set-dock{
+  position:relative;left:auto;right:auto;bottom:auto;
+  margin:0 12px 12px;flex:0 0 auto;
+}
+@media (max-width:760px){
+  /* 手机上浮层铺满，导航贴屏幕底，别跟着侧栏那一小块走 */
+  .set-dock{
+    position:fixed;left:12px;right:12px;margin:0;z-index:7;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  .set-body{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+}
 .set-top{
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;
   padding:16px 12px 8px 14px;
@@ -2315,8 +2335,10 @@ const ICONS = {
   bell:'<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10 18a2 2 0 0 0 4 0"/>',
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   notebook:'<path d="M14 3.4H7.2A2.2 2.2 0 0 0 5 5.6v12.8a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2V8z"/><path d="M14 3.4V8h5"/><path d="M8.7 12.4h6.6M8.7 16h4.2"/>',
+  /* 底部导航专用：一页纸 + 一支笔（正文用的 notebook 仍是纯文档样子） */
+  notePen:'<rect x="3.6" y="3.2" width="12.6" height="17.6" rx="2.6"/><path d="M6.8 8h6.2M6.8 11.4h3.8"/><path d="M13.4 18.3l5.9-5.9a1.4 1.4 0 0 1 2 2l-5.9 5.9-2.7.7z"/>',
   folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
-  todo:'<rect x="3.5" y="3.5" width="17" height="17" rx="4.6"/><path d="m7.8 9.3 1.7 1.7 3-3.2"/><path d="M13 8.4h4M8 15h8.2"/>',
+  todo:'<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.4"/><path d="m7.9 12.2 3.1 3.1 5.6-6.2"/>',
   arrUp:'<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
   arrDown:'<path d="M12 5v14"/><path d="m18.5 12.5-6.5 6.5-6.5-6.5"/>',
   sub:'<path d="M6 4v8a2 2 0 0 0 2 2h10"/><path d="m14.5 10.5 3.5 3.5-3.5 3.5"/>',
@@ -2345,7 +2367,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v161', at: '2026-11-18 02:10' };
+window.IVY_BUILD = { id: 'v162', at: '2026-11-18 02:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4646,18 +4668,20 @@ function checkTodoReminders(){
 }
 /* 侧边栏「待办」上的红点：有逾期就亮 */
 function updateTodoBadge(){
-  const btn = document.querySelector('.dock-item[data-view="todo"]');
-  if(!btn) return;
+  const btns = document.querySelectorAll('.dock-item[data-view="todo"]');
+  if(!btns.length) return;
   const c = todoCounts();
-  let dot = btn.querySelector('.todo-dot');
-  if(c.late > 0){
-    if(!dot){
-      dot = document.createElement('span');
-      dot.className = 'todo-dot';
-      btn.appendChild(dot);
-    }
-    dot.textContent = c.late > 9 ? '9+' : String(c.late);
-  } else if(dot) dot.remove();
+  btns.forEach(btn=>{
+    let dot = btn.querySelector('.todo-dot');
+    if(c.late > 0){
+      if(!dot){
+        dot = document.createElement('span');
+        dot.className = 'todo-dot';
+        btn.appendChild(dot);
+      }
+      dot.textContent = c.late > 9 ? '9+' : String(c.late);
+    } else if(dot) dot.remove();
+  });
 }
 
 const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d'];
@@ -4665,20 +4689,29 @@ const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d']
 /* ========== Dock ========== */
 function renderDock(){
   const items = [
-    {k:'notes', icon:'notebook', label:'笔记', href:'notes'},
+    {k:'notes', icon:'notePen', label:'笔记', href:'notes'},
     {k:'todo', icon:'todo', label:'待办'},
     {k:'media', icon:'folder', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];
   // 云同步入口已挪到「设置 → 账户」，底部只留 5 个常用视图 + 设置
-  $('#dock').innerHTML = items.map(it=>`
+  // 设置页是整屏浮层，底部导航会被盖住，所以它自己也放一份（#dockSet2），两边一起画
+  const html = items.map(it=>`
     <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
       ${ic(it.icon)}
     </button>`).join('') +
-    `<button class="dock-item" id="dockSet" title="设置" aria-label="设置">${ic('gear')}</button>`;
-  $('#dock').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
-  const ds = $('#dockSync'); if(ds) ds.onclick = ()=>openSyncPanel();
-  $('#dockSet').onclick=()=>openSettings();
+    `<button class="dock-item" data-dock-set title="设置" aria-label="设置">${ic('gear')}</button>`;
+  [$('#dock'), $('#dockSet2')].filter(Boolean).forEach(host=>{
+    const inSet = host.id === 'dockSet2';       // 设置页里的那一份：点了先关设置，别在浮层背后换视图
+    host.innerHTML = html;
+    host.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
+      if(inSet && typeof closeSettings === 'function') closeSettings();
+      switchView(b.dataset.view);
+    });
+    const ds = host.querySelector('#dockSync'); if(ds) ds.onclick = ()=>openSyncPanel();
+    const st = host.querySelector('[data-dock-set]');
+    if(st) st.onclick = ()=> inSet ? closeSettings() : openSettings();
+  });
   updateTodoBadge();
 }
 
@@ -5025,6 +5058,9 @@ function renderEditor(){
   if(n.title==='' && n.body==='' && n._fresh!==false) n._fresh = true;
 
   scrollEl.style.display='';
+  // 手机上工具条被挪到 .paper 顶部（不进滚动区），重画前先清掉旧的，免得出现两个 #fmtBar
+  const oldFmt = document.getElementById('fmtBar');
+  if(oldFmt && !scrollEl.contains(oldFmt)) oldFmt.remove();
   scrollEl.innerHTML = `
     <div class="doc ${modeClass(S.mode||'live')}" id="doc">
       <textarea class="doc-title" id="docTitle" rows="1" placeholder="标题" spellcheck="false">${esc(n.title)}</textarea>
@@ -5319,8 +5355,36 @@ function renderFmtBar(){
     };
   });
   bindFmtSticky();
+  dockFmtBar();
   if(fmtSync) fmtSync();
 }
+
+/* 手机（≤900px）把 Markdown 工具条从正文流里挪到 .paper 顶部，紧贴标签栏下面：
+   它不再属于滚动区，怎么滚都在（sticky 在 iOS 键盘弹起 / 视觉视口被推走时会失效）。
+   宽屏再放回标题下面，继续用 sticky 那套。 */
+function dockFmtBar(){
+  const bar = document.getElementById('fmtBar');
+  const paper = document.querySelector('.paper');
+  const row = document.querySelector('.content-row');
+  const doc = document.getElementById('doc');
+  const title = document.getElementById('docTitle');
+  if(!bar || !paper || !row) return;
+  const mobile = window.matchMedia('(max-width:900px)').matches;
+  if(mobile){
+    if(bar.parentElement !== paper || bar.nextElementSibling !== row) paper.insertBefore(bar, row);
+    bar.classList.add('fmt-docked');
+  }else{
+    if(!bar.classList.contains('fmt-docked')) return;
+    bar.classList.remove('fmt-docked');
+    if(doc && title && title.parentElement === doc) doc.insertBefore(bar, title.nextSibling);
+    else if(doc) doc.appendChild(bar);
+  }
+}
+let _dockT = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(_dockT);
+  _dockT = setTimeout(()=>{ dockFmtBar(); if(fmtSync) fmtSync(); }, 150);
+});
 
 /* 工具条吸附：正文区滚动时贴在顶部，滚回顶部就还回原位（不然一根横线一直挂着） */
 let fmtSync = null, fmtBound = false;
@@ -10824,7 +10888,7 @@ const SET_TABS = [
   ['appearance', '外观'],
   ['remind', '提醒与日历'],
   ['mcp', 'API 令牌与 MCP'],
-  ['sync', '备份 / 导入 / 导出 / 清理本地笔记'],
+  ['sync', '备份 / 导入 / 导出'],
   ['share', '分享管理'],
   ['data', '数据'],
   ['help', '使用说明'],
@@ -10862,6 +10926,7 @@ function openSettings(tab){
           <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <aside class="set-nav"><nav id="setNav"></nav></aside>
+        <nav class="dock set-dock" id="dockSet2" aria-label="视图导航"></nav>
       </div>
       <section class="set-main">
         <div class="set-head"><h2 id="setHead">账户</h2></div>
@@ -10891,6 +10956,7 @@ function openSettings(tab){
   }
   if(tab) SET_TAB = tab;
   ov.classList.add('open');
+  renderDock();            // 设置页里的那份底部导航（#dockSet2）也要画上，并刷新选中态
   paintSettings();
 }
 function paintSettings(keepScroll){
@@ -11226,12 +11292,7 @@ function setSyncHtml(){
     <div class="set-row"><div><div class="t">从备份恢复</div>
       <div class="d">合并进现有笔记：同 id 的按更新时间保留较新的那份</div></div>
       <button class="set-btn" id="setImportBackup">选择备份</button></div>
-    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。</p>
-    <div class="set-sec">清理本地笔记</div>
-    <div class="set-row"><div><div class="t">清空本机全部数据（笔记本 + 笔记）</div>
-      <div class="d">删掉这台设备上的全部笔记本、笔记、回收站与历史版本；三次确认，第一步会先问你要不要下载备份。已登录时云端不受影响，清完会重新拉下来</div></div>
-      <button class="set-btn danger" id="setWipeLocal">清理</button></div>
-    <p class="set-note">没登录时本机就是唯一一份，清掉无法恢复——先「导出备份（.json）」，以后能原样导入回来。</p>`;
+    <p class="set-note">导入的笔记默认进「未归类」，之后可以在侧栏拖到笔记本里。「清理本地数据」在「数据」里。</p>`;
 }
 
 /* ---- 分享管理 ---- */
@@ -11267,10 +11328,13 @@ function setDataHtml(){
         <button class="set-btn" id="setTrash">回收站</button></div>
     </div>
     <div class="set-sec">清理</div>
+    <div class="set-row"><div><div class="t">清空本机全部数据（笔记本 + 笔记）</div>
+      <div class="d">删掉这台设备上的全部笔记本、笔记、回收站与历史版本；三次确认，第一步会先问你要不要下载备份。已登录时云端不受影响，清完会重新拉下来</div></div>
+      <button class="set-btn danger" id="setWipeLocal">清理</button></div>
     <div class="set-row"><div><div class="t">导出后清理</div>
       <div class="d">先导出备份，再清空回收站里的笔记</div></div>
       <button class="set-btn" id="setGoBackup">先备份</button></div>
-    <p class="set-note">数据优先存在这台设备（IndexedDB），登录后会同步到云端。</p>`;
+    <p class="set-note">数据优先存在这台设备（IndexedDB），登录后会同步到云端。没登录时本机就是唯一一份，清掉无法恢复——先「导出备份（.json）」，以后能原样导入回来。</p>`;
 }
 
 /* ---- 关于 ---- */
@@ -11370,8 +11434,6 @@ function bindPane(tab){
     const c = $('#setExpMd'); if(c) c.onclick = ()=>exportAllMd();
     const i = $('#setImportBtn'); if(i) i.onclick = ()=>importDoc();
     const k = $('#setImportBackup'); if(k) k.onclick = ()=>importDoc(true);
-    const w = $('#setWipeLocal');
-    if(w) w.onclick = () => openWipeSheet();
   }
 
   if(tab === 'share'){
@@ -11394,6 +11456,7 @@ function bindPane(tab){
   if(tab === 'data'){
     const a = $('#setTrash'); if(a) a.onclick = ()=>{ closeSettings(); if(typeof openTrashView === 'function') openTrashView(); };
     const b = $('#setGoBackup'); if(b) b.onclick = ()=>{ SET_TAB = 'sync'; paintSettings(); };
+    const w = $('#setWipeLocal'); if(w) w.onclick = () => openWipeSheet();
   }
 
   if(tab === 'help'){

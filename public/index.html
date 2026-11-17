@@ -257,7 +257,7 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-sec{margin-top:12px}
 .tag-sec-head{
   display:flex;align-items:center;gap:6px;width:calc(100% - 16px);text-align:left;
-  margin:12px 8px 6px;padding:2px 0;
+  margin:12px 8px 6px;padding:2px 0;   /* 数字自己带 8px 外边距，和「笔记 / 回收站」那一列齐平 */
   font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
 }
 .tag-sec-head:hover{color:rgb(var(--ink))}
@@ -2398,7 +2398,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v168', at: '2026-11-18 02:56' };
+window.IVY_BUILD = { id: 'v169', at: '2026-11-18 03:00' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3182,6 +3182,7 @@ function renderShelf(){
   // 万一真有标签名叫「未加标签」，虚拟分组临时改名，避免左侧出现两行同名
   NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   keys.sort((a,b)=> tagGroupName(a).localeCompare(tagGroupName(b), 'zh-CN'));
+  const tagTotal = keys.length;                        // 真实标签数（下面的「未加标签」是虚拟分组）
   keys.push(NO_TAG);                                   // 固定分组，置底
   const secOpen = !S.tagSectionClosed;
   const tagTree = keys.map(k=>{
@@ -3207,7 +3208,7 @@ function renderShelf(){
   // 标签和回收站不跟着「笔记」一起收，各自常驻在下面
   html += `<div class="tag-sec">
     <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
-      <span class="caret">&#9654;</span><span>标签</span>
+      <span class="caret">&#9654;</span><span>标签</span><span class="count">${tagTotal}</span>
     </button>
     ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
   </div>`;

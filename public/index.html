@@ -19,6 +19,7 @@
   --font-serif:"Iowan Old Style",Charter,"Source Serif 4","Songti SC","Noto Serif SC","Source Han Serif SC",STSong,Georgia,serif;
   --font-mono:"SF Mono","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"PingFang SC",monospace;
   --shelf-w:296px;
+  --shelf-w-drawer:min(72vw,280px);   /* 手机抽屉：别占满整屏，右边留一截正文能看见 */
   --spring:cubic-bezier(.22,1,.36,1);
   color-scheme:light;
   --canvas:247 248 249; --surface:255 255 255; --sunken:241 243 245;
@@ -2012,11 +2013,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* 手机上书架改成抽屉：展开时盖在笔记上，而不是把正文挤成一条 */
   .shelf{
     position:fixed;left:0;top:0;bottom:0;z-index:80;
-    width:min(88vw,330px);flex:0 0 auto;margin-left:0;
+    width:var(--shelf-w-drawer);flex:0 0 auto;margin-left:0;
     background:rgb(var(--canvas));
     box-shadow:24px 0 60px -22px rgb(16 24 32 / .22);
   }
-  .shelf.collapsed{margin-left:calc(min(88vw,330px) * -1)}
+  .shelf.collapsed{margin-left:calc(var(--shelf-w-drawer) * -1)}
 }
 .ol-close{display:none;margin-right:auto}
 /* 触屏设备：没有稳定 hover，改用显式展开状态，并放大刻度点击热区 */
@@ -2273,7 +2274,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v151', at: '2026-11-17 21:09' };
+window.IVY_BUILD = { id: 'v152', at: '2026-11-17 21:13' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

@@ -1856,7 +1856,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v104', at: '2026-11-17 11:21' };
+window.IVY_BUILD = { id: 'v107', at: '2026-11-17 11:33' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5658,7 +5658,7 @@ function paintHelp(){
       <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
         <p class="help-p">⚙ → 云同步设置 → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
       <div class="help-sec"><h4>AI（站内免费模型 / 自己的接口）</h4>
-        <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，登录后每天 80 次，次日恢复）；第三个填你自己的 OpenAI 兼容接口，<b>不限次数</b>。</p>
+        <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，次日恢复）；<b>登录后不限次数</b>。第三个填你自己的 OpenAI 兼容接口，同样不限次数。</p>
         <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
         <p class="help-p">自己填的密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
         <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
@@ -8839,6 +8839,8 @@ function syncSave(){
       token: SYNC.token, account: SYNC.account, key: SYNC.key, last: SYNC.last
     }));
   }catch(e){}
+  // 登录/退出都会走到这里：AI 面板开着的话，把「额度」那行立刻改口
+  if(typeof paintProvTip === 'function') paintProvTip();
 }
 const isConnected = ()=> !!(SYNC.token || SYNC.key);
 const accountLabel = ()=> SYNC.account || '默认账号';
@@ -9134,6 +9136,8 @@ function updateSyncBadge(){
     el.innerHTML = `${ic('localSave')}已本地保存`;
     el.title = '笔记已保存到本机浏览器 · 想多设备同步可注册云同步';
   }
+  // AI 面板开着时，登录状态一变就把「额度」那行改口（未登录 20 次 / 登录不限）
+  if(document.getElementById('aiProvBar')) paintProvTip();
 }
 
 const REG_HINT_NEW = `<div class="reg-hint-t">第一次使用？填「用户名 + 自设密码」后点<b>注册新账号</b>，就能开出独立空间，别人看不到你的笔记。</div>
@@ -9523,7 +9527,7 @@ async function aiBoot(){
 }
 
 function paintProvBar(){
-  const bar = $('#aiProvBar'), tip = $('#aiProvTip');
+  const bar = $('#aiProvBar');
   if(!bar) return;
   const items = (AI.sites || []).map(s=>({ id:s.id, label:s.name, model:s.model }));
   items.push({ id:'custom', label:'我的接口', model:'' });
@@ -9538,15 +9542,22 @@ function paintProvBar(){
       aiBoot();
     };
   });
+  paintProvTip();
+}
+
+/* 只刷额度那行字：登录状态变了要立刻改口，不用重绘整条按钮 */
+function paintProvTip(){
+  const tip = $('#aiProvTip');
   if(!tip) return;
   if(AI.provider === 'custom'){
     tip.textContent = '用自己的 key，次数不限；密钥加密存在你的账号里。';
     return;
   }
   const site = (AI.sites || []).find(s=>s.id === AI.provider);
-  const lim = AI.limits || { anon:20, user:80 };
-  const quota = isConnected() ? `登录后每天 ${lim.user} 次` : `未登录每天 ${lim.anon} 次`;
-  tip.textContent = site ? `站内免费模型 · ${site.model} · ${quota}` : '';
+  const lim = AI.limits || { anon:20, user:0 };
+  const quota = isConnected() ? '登录后不限次数' : `未登录每天 ${lim.anon} 次，登录后不限`;
+  const txt = site ? `站内免费模型 · ${site.model} · ${quota}` : '';
+  if(tip.textContent !== txt) tip.textContent = txt;   // 同步保存会频繁调到这里，别每次都写 DOM
 }
 
 function paintAiSetup(){

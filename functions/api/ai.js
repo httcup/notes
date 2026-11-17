@@ -219,7 +219,8 @@ async function handle({ request, env }) {
       providers: list,
       defaultProvider: (list[0] && list[0].id) || '',
       custom: true,
-      limits: { anon: quotaLimit(env, 'anon'), user: quotaLimit(env, 'user') }
+      // 登录账号不限次，所以 user 这里给 0（前端据此显示「不限次数」）
+      limits: { anon: quotaLimit(env, 'anon'), user: 0 },
     });
   }
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -252,15 +253,20 @@ async function handle({ request, env }) {
     backend = sites.find((p) => p.id === provider);
     if (!backend) return json({ error: '这个模型现在不可用，换一个试试', code: 'provider' }, 400);
 
-    // 站内 key：登录按账号、未登录按 IP，每天各一份额度
-    const who = user ? user.uid : await anonId(request, env);
-    const limit = quotaLimit(env, user ? 'user' : 'anon');
-    const q = await takeQuota(env, who, 'ai', limit);
-    if (!q.ok) {
-      return json({
-        error: `今天的免费额度用完了（每天 ${limit} 次），明天再来；也可以登录后在「AI 接口设置」里填自己的接口，不限次`,
-        code: 'quota', limit, used: q.used
-      }, 429);
+    // 站内 key：未登录按 IP 每天限量；登录账号不限次，只顺手记一笔用量（便于看消耗，不拦）
+    if (!user) {
+      const who = await anonId(request, env);
+      const limit = quotaLimit(env, 'anon');
+      const q = await takeQuota(env, who, 'ai', limit);
+      if (!q.ok) {
+        return json({
+          error: `今天的免费额度用完了（每天 ${limit} 次），明天再来；也可以登录后不限次数，或在「AI 接口设置」里填自己的接口`,
+          code: 'quota', limit, used: q.used
+        }, 429);
+      }
+    } else {
+      // 上限给一个够大的数，等于只计数不限制；D1 抖动也不该挡住用户
+      try { await takeQuota(env, user.uid, 'ai', 1000000); } catch (e) { /* 忽略 */ }
     }
   }
 

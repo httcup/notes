@@ -2233,7 +2233,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v147', at: '2026-11-17 18:33' };
+window.IVY_BUILD = { id: 'v148', at: '2026-11-17 19:01' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2932,10 +2932,10 @@ function renderShelf(){
 
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
-  // 「笔记」这个标题也能点：一收就把下面的笔记本、标签、回收站全收起来
+  // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
   const nClosed = !!S.notesClosed;
   let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}" data-act="toggle-notes-sec"
-      title="${nClosed ? '展开笔记本、标签与回收站' : '收起笔记本、标签与回收站'}">
+      title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">
       <span class="lb"><i class="caret">&#9654;</i>笔记</span>
       <span class="count">${notes.length}</span>
     </button>`;
@@ -3037,16 +3037,18 @@ function renderShelf(){
         : `<div class="tag-empty">这个标签下还没有笔记</div>`}</div>` : ''}
     </div>`;
   }).join('');
-  body += `<div class="tag-sec">
+  html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
+
+  // 标签和回收站不跟着「笔记」一起收，各自常驻在下面
+  html += `<div class="tag-sec">
     <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
       <span class="caret">&#9654;</span>${ic('tag')}<span>标签</span>
     </button>
     ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
   </div>`;
 
-  body += `<div style="height:6px"></div>
+  html += `<div style="height:6px"></div>
     <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
-  html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
   shelfBody.innerHTML = html;
   bindShelf();
 }

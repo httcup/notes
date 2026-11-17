@@ -1296,6 +1296,14 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .mm-empty p{margin-top:8px;font-size:12.5px;line-height:1.85;color:rgb(var(--faint))}
 .mm-empty code{font-family:var(--font-mono);font-size:11.5px;background:rgb(var(--sunken));padding:1px 5px;border-radius:4px}
 .mm-empty .mm-btn{margin-top:14px;height:30px;padding:0 14px}
+.mm-editbar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-top:1px solid rgb(var(--line));background:rgb(var(--surface));flex:0 0 auto;overflow-x:auto;scrollbar-width:none}
+.mm-editbar::-webkit-scrollbar{display:none}
+.mm-eb-tip{font-size:11.5px;color:rgb(var(--faint));margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mm-eb{height:26px;padding:0 9px;border-radius:7px;font-size:12px;color:rgb(var(--muted));background:rgb(var(--sunken));white-space:nowrap;flex:0 0 auto;transition:background .14s,color .14s}
+.mm-eb:hover:not(:disabled){background:rgb(var(--hover));color:rgb(var(--ink))}
+.mm-eb:disabled{opacity:.4;cursor:default}
+.mm-eb.danger:hover:not(:disabled){background:rgb(var(--danger)/.1);color:rgb(var(--danger))}
+.mm-rename{position:fixed;z-index:9500;font:inherit;font-size:13px;padding:0 8px;border:1.5px solid rgb(var(--ivy));border-radius:8px;background:rgb(var(--surface));color:rgb(var(--ink));outline:none;box-shadow:var(--shadow-float)}
 @media (max-width:760px){
   .mm-ov{padding:0}
   .mm-card{width:100%;height:100%;border-radius:0}
@@ -1308,6 +1316,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   .mm-zoom{right:8px;bottom:8px}
   .mm-pill{display:none}
   #mmClose{position:absolute;right:8px;top:9px}
+  .mm-editbar{gap:5px;padding:7px 10px}
+  .mm-eb{height:25px;padding:0 8px;font-size:11.5px}
+  .mm-eb-tip{display:none}
 }
 
 /* ============ overlay / palette ============ */
@@ -1905,7 +1916,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v118', at: '2026-11-17 15:17' };
+window.IVY_BUILD = { id: 'v122', at: '2026-11-17 15:39' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5714,7 +5725,8 @@ function paintHelp(){
         <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
       <div class="help-sec"><h4>思维导图</h4>
         <p class="help-p">笔记菜单 ⋯ → <b>思维导图</b>（或输入 <code>/导图</code>）。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画成脑图：缩进一级就是子节点，同一缩进就是同级。<b>只读取、不改写</b>，笔记仍然保存为普通 Markdown，导出、同步、导入都不受影响。</p>
-        <p class="help-p">滚轮缩放、拖动平移、点节点折叠（右侧小圆圈显示子节点数），顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是白底 2 倍图，方便贴到文档或群里。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p></div>
+        <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是白底 2 倍图。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
+        <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(helpTab === 'md'){
@@ -10112,7 +10124,8 @@ $('#aiCfgOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiCfgO
    只读视图——标题（#）与缩进列表（- / 1.）当作层级，不改一个字，
    笔记本身仍然是纯 Markdown，导出、同步、导入全都不受影响。 */
 const MM = { noteId:null, root:null, lay:null, s:1, tx:0, ty:0, withList:true,
-             ptrs:new Map(), pinch:0, moved:0, byId:new Map(), c:{}, bg:'#fff' };
+             ptrs:new Map(), pinch:0, moved:0, byId:new Map(), c:{}, bg:'#fff',
+             sel:0, seq:0, style:null, canEdit:false, undo:[] };
 const MM_NH = 32, MM_VGAP = 12, MM_HGAP = 56, MM_PAD = 26;
 const MM_FONT = "-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif";
 let _mmCtx = null;
@@ -10148,7 +10161,7 @@ function mmBuildTree(note, withList){
   const indents = [];
   let base = 0, count = 0, cut = false, seq = 0, firstHeading = true, minH = 0;
   const lines = String(note.body || '').replace(/\r/g,'').split('\n');
-  let fence = false;
+  let fence = false, extra = false, headMax = 0;
   const push = (parent, node, depth) => {
     node.i = ++seq; node.depth = depth;
     parent.children.push(node);
@@ -10158,8 +10171,9 @@ function mmBuildTree(note, withList){
   };
   for(const raw of lines){
     if(count > 600){ cut = true; break; }
-    if(/^\s*(```|~~~)/.test(raw)){ fence = !fence; continue; }
-    if(fence) continue;
+    if(/^\s*(```|~~~)/.test(raw)){ fence = !fence; extra = true; continue; }   // 代码块写回会丢，标为不可编辑
+    if(fence){ extra = true; continue; }
+    if(!raw.trim()) continue;
     const h = raw.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
     if(h){
       const lv = Math.min(6, h[1].length);
@@ -10174,32 +10188,36 @@ function mmBuildTree(note, withList){
       if(!minH || lv < minH) minH = lv;
       const depth = Math.max(1, Math.min(lv - minH + 1, parents.length));
       const parent = parents[depth - 1] || root;
-      const node = { i:0, label, text:'', depth:0, children:[], collapsed:false, kind:'h', w:0, x:0, y:0 };
+      const node = { i:0, label, raw: String(h[2]).trim(), text:'', depth:0, children:[], collapsed:false, kind:'h', w:0, x:0, y:0 };
       push(parent, node, depth);
       base = depth;
+      headMax = Math.max(headMax, depth);
       indents.length = 0;
       continue;
     }
     if(!withList) continue;
     const li = raw.match(/^(\s*)(?:[-*+]|\d{1,3}[.)])\s+(.+)$/);
-    if(!li) continue;
+    if(!li){ extra = true; continue; }        // 普通段落 / 引用 / 表格：不在树里，写回会覆盖
     const indent = li[1].replace(/\t/g,'  ').length;
-    let label = li[2].replace(/^\[[ xX]\]\s*/, '');
-    label = mmClean(label);
+    const cb = li[2].match(/^\[([ xX])\]\s*/);        // - [ ] / - [x] 待办标记
+    const rawLabel = (cb ? li[2].slice(cb[0].length) : li[2]).trim();
+    const label = mmClean(rawLabel);
     if(!label) continue;
     while(indents.length && indent < indents[indents.length - 1]) indents.pop();
     if(!indents.length || indent > indents[indents.length - 1]) indents.push(indent);
     const k = Math.min(indents.length, 8);
     const depth = Math.min(base + k, parents.length);
     const parent = parents[depth - 1] || parents[parents.length - 1] || root;
-    const node = { i:0, label, text:'', depth:0, children:[], collapsed:false, kind:'li', w:0, x:0, y:0 };
+    const node = { i:0, label, raw: rawLabel, done: cb ? (cb[1].toLowerCase() === 'x') : null,
+                   text:'', depth:0, children:[], collapsed:false, kind:'li', w:0, x:0, y:0 };
     push(parent, node, (parent.depth || 0) + 1);
   }
   // 节点太多时默认只展开到第三层，避免一屏糊成一片
   if(count > 90){
     (function w(n){ if(n.depth >= 3 && n.children.length) n.collapsed = true; n.children.forEach(w); })(root);
   }
-  return { root, count, cut };
+  return { root, count, cut, extra,
+    style: { kind: headMax ? 'head' : 'list', base: minH || 1, headMax } };
 }
 function mmMeasureTree(root, lay){
   const ctx = mmCtx();
@@ -10280,13 +10298,16 @@ function mmSvgString(){
   (function walk(n){
     const lk = mmLook(n);
     const top = n.y - MM_NH / 2;
+    const sel = MM.sel === n.i;
     nodes.push('<g data-mm="' + n.i + '" style="cursor:pointer">');
     nodes.push('<rect x="' + n.x + '" y="' + top + '" width="' + n.w + '" height="' + MM_NH + '" rx="8" fill="' + lk.fill + '"'
-      + (lk.stroke === 'none' ? '' : ' stroke="' + lk.stroke + '"') + '/>');
+      + (sel ? ' stroke="' + MM.c.root + '" stroke-width="2"' : (lk.stroke === 'none' ? '' : ' stroke="' + lk.stroke + '"')) + '/>');
     nodes.push('<text x="' + (n.x + 13) + '" y="' + n.y + '" dy="0.34em" font-family="' + MM_FONT + '" font-size="13" fill="' + lk.txt + '">' + mmXml(n.text) + '</text>');
     if(n.children.length && n.collapsed){
+      nodes.push('<g data-mm-fold="1" style="cursor:pointer">');
       nodes.push('<circle cx="' + (n.x + n.w) + '" cy="' + n.y + '" r="9" fill="' + MM.c.soft + '" stroke="' + MM.c.bg + '" stroke-width="2"/>');
       nodes.push('<text x="' + (n.x + n.w) + '" y="' + n.y + '" dy="0.34em" text-anchor="middle" font-family="' + MM_FONT + '" font-size="10.5" font-weight="600" fill="' + MM.c.softTxt + '">' + n.children.length + '</text>');
+      nodes.push('</g>');
     }
     nodes.push('</g>');
     if(!n.collapsed) n.children.forEach(walk);
@@ -10335,11 +10356,222 @@ function mmToggle(idx){
 /* 结构没变、只是折叠/展开变了：重排 + 重画，不重新解析笔记 */
 function mmRerender(refit){
   if(!MM.root) return;
+  // 增删节点后 byId 必须重建，否则新节点查不到（改名/移动会失效）
+  MM.byId.clear();
+  (function w(n){ MM.byId.set(n.i, n); n.children.forEach(w); })(MM.root);
+  MM.seq = Math.max(MM.seq || 0, ...Array.from(MM.byId.keys()));
   MM.lay = mmLayout(MM.root);
   const canvas = document.querySelector('#mmCanvas');
   if(canvas) canvas.innerHTML = mmSvgString();
+  const sub = document.getElementById('mmSub');
+  if(sub){
+    sub.textContent = '由标题与缩进列表生成 · ' + Math.max(0, MM.byId.size - 1) + ' 个节点'
+      + (MM.canEdit ? ' · 改动会写回笔记（可撤销）' : ' · 只读视图');
+  }
   if(refit) mmFit(); else mmApply();
+  mmSyncBar();
 }
+/* ---------- 编辑：树 → Markdown 写回 ---------- */
+function mmNextId(){ MM.seq = (MM.seq || 0) + 1; return MM.seq; }
+function mmRelevel(){
+  (function walk(n, d){ n.children.forEach(c => { c.depth = d + 1; walk(c, d + 1); }); })(MM.root, 0);
+}
+function mmFind(idx){
+  let hit = null;
+  (function walk(n){
+    n.children.forEach(c => { if(c.i === idx) hit = { node:c, parent:n }; walk(c); });
+  })(MM.root);
+  return hit;
+}
+/* 写回成嵌套列表：原来用标题分层的，标题那几层继续用标题，更深的用 - 缩进 */
+function mmToMarkdown(){
+  const st = MM.style || { kind:'list', base:1, headMax:0 };
+  const out = [];
+  (function walk(n){
+    n.children.forEach(c => {
+      const label = String((c.raw != null && c.raw !== '') ? c.raw : (c.label == null ? '' : c.label))
+        .replace(/\s+/g, ' ').trim();
+      if(st.kind === 'head' && c.depth <= st.headMax && c.depth <= 6){
+        out.push('');
+        out.push('#'.repeat(Math.min(6, st.base + c.depth - 1)) + ' ' + label);
+        out.push('');
+      }else{
+        const lv = st.kind === 'head' ? Math.max(1, c.depth - st.headMax) : Math.max(1, c.depth);
+        const bullet = c.done === true ? '- [x] ' : (c.done === false ? '- [ ] ' : '- ');
+        out.push('  '.repeat(Math.max(0, lv - 1)) + bullet + label);
+      }
+      walk(c);
+    });
+  })(MM.root);
+  let md = out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '').replace(/\s+$/, '');
+  return md ? md + '\n' : '';
+}
+function mmCommit(){
+  const note = noteById(MM.noteId);
+  if(!note || !MM.canEdit) return;
+  const before = note.body;
+  mmRelevel();
+  note.body = mmToMarkdown();
+  note.updatedAt = Date.now();
+  MM.undo.push({ noteId: note.id, body: before });
+  if(MM.undo.length > 40) MM.undo.shift();
+  save();
+  try{ renderAll(); }catch(e){}
+  mmRerender(false);      // 只重排现有树，保住折叠与选中状态
+  mmSyncBar();
+}
+function mmUndo(){
+  const u = MM.undo.pop();
+  if(!u){ toast('没有可撤销的操作'); return; }
+  const note = noteById(u.noteId);
+  if(!note){ toast('找不到这篇笔记'); return; }
+  note.body = u.body;
+  note.updatedAt = Date.now();
+  save();
+  try{ renderAll(); }catch(e){}
+  MM.sel = 0;
+  mmRefresh(true);
+  toast('已撤销上一步');
+}
+function mmGuardEdit(){
+  if(!MM.canEdit){ mmBlockEdit(); return false; }
+  return true;
+}
+function mmBlockEdit(){
+  if(!MM.withList) toast('先打开「含列表项」，否则写回会把列表全删掉');
+  else toast('这篇里有正文段落或代码块，写回会覆盖它们；请用「另存为新笔记」再编辑');
+}
+function mmSelect(idx){
+  MM.sel = idx;
+  mmRerender(false);
+  mmSyncBar();
+}
+function mmSetCollapsed(idx){
+  const n = MM.byId.get(idx);
+  if(!n || !n.children.length) return;
+  n.collapsed = !n.collapsed;
+  mmRerender(false);
+}
+function mmAddChild(idx){
+  if(!mmGuardEdit()) return;
+  const hit = mmFind(idx);
+  if(!hit) return;
+  const node = { i:mmNextId(), label:'新节点', raw:'新节点', done:null, text:'', depth:0, children:[], collapsed:false, kind:'li', w:0, x:0, y:0 };
+  hit.node.children.push(node);
+  hit.node.collapsed = false;
+  MM.sel = node.i;
+  mmCommit();
+  mmStartRename(node.i);
+}
+function mmAddSibling(idx){
+  if(!mmGuardEdit()) return;
+  const hit = mmFind(idx);
+  if(!hit) return;
+  const node = { i:mmNextId(), label:'新节点', raw:'新节点', done:null, text:'', depth:0, children:[], collapsed:false, kind:'li', w:0, x:0, y:0 };
+  const arr = hit.parent.children;
+  arr.splice(arr.indexOf(hit.node) + 1, 0, node);
+  MM.sel = node.i;
+  mmCommit();
+  mmStartRename(node.i);
+}
+function mmDelete(idx){
+  if(!mmGuardEdit()) return;
+  const hit = mmFind(idx);
+  if(!hit) return;
+  const arr = hit.parent.children;
+  arr.splice(arr.indexOf(hit.node), 1);
+  MM.sel = 0;
+  mmCommit();
+  toast('已删除该节点及其子节点');
+}
+function mmMove(idx, dir){
+  if(!mmGuardEdit()) return;
+  const hit = mmFind(idx);
+  if(!hit) return;
+  const arr = hit.parent.children, i = arr.indexOf(hit.node), j = i + dir;
+  if(j < 0 || j >= arr.length) return;
+  arr.splice(j, 0, arr.splice(i, 1)[0]);
+  mmCommit();
+}
+function mmStartRename(idx){
+  if(!mmGuardEdit()) return;
+  const n = MM.byId.get(idx);
+  if(!n) return;
+  const rect = document.querySelector('#mmCanvas [data-mm="' + idx + '"] rect');
+  if(!rect) return;
+  const r = rect.getBoundingClientRect();
+  const inp = document.createElement('input');
+  inp.className = 'mm-rename';
+  inp.value = n.label;
+  inp.setAttribute('spellcheck', 'false');
+  inp.style.left = r.left + 'px';
+  inp.style.top = r.top + 'px';
+  inp.style.width = Math.max(110, r.width) + 'px';
+  inp.style.height = Math.max(28, r.height) + 'px';
+  document.body.appendChild(inp);
+  inp.focus();
+  inp.select();
+  let closed = false;
+  const finish = ok => {
+    if(closed) return;
+    closed = true;
+    const v = inp.value.trim();
+    inp.remove();
+    if(ok && v && v !== n.label){ n.label = v; n.raw = v; mmCommit(); }
+  };
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    else if(e.key === 'Escape'){ e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
+}
+function mmSyncBar(){
+  const bar = document.getElementById('mmEditBar');
+  if(!bar) return;
+  const n = MM.sel ? MM.byId.get(MM.sel) : null;
+  bar.querySelectorAll('[data-mme]').forEach(b => {
+    const k = b.dataset.mme;
+    if(k === 'undo') b.disabled = !MM.undo.length;
+    else if(k === 'dup') b.disabled = false;
+    else b.disabled = !(n && MM.canEdit);
+  });
+  const tip = bar.querySelector('#mmEditTip');
+  if(!tip) return;
+  if(!MM.canEdit){
+    tip.textContent = MM.withList
+      ? '这篇含正文段落 / 代码块，写回会覆盖 · 建议「另存为新笔记」'
+      : '「含列表项」关着时不能编辑（写回会丢列表）';
+  }else if(!n){
+    tip.textContent = '点一个节点：可直接改文字，或用右侧按钮增删移动';
+  }else{
+    tip.textContent = '已选「' + (n.label.length > 16 ? n.label.slice(0, 16) + '…' : n.label) + '」';
+  }
+}
+/* 含正文段落的笔记：复制成一篇纯大纲笔记，随便改也不怕丢内容 */
+function mmDupOutline(){
+  const note = noteById(MM.noteId);
+  if(!note) return;
+  const body = mmToMarkdown();
+  const id = 'n_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const copy = {
+    id, title: (note.title || '未命名') + '（大纲）',
+    body: body || '- 新节点\n',
+    notebookId: note.notebookId || null, tags: [],
+    trashed: false, deleted: false, createdAt: Date.now(), updatedAt: Date.now()
+  };
+  S.notes.push(copy);
+  S.active = id;
+  S.tabs = [id];
+  save();
+  try{ renderAll(); }catch(e){}
+  MM.noteId = id;
+  MM.sel = 0;
+  MM.undo.length = 0;
+  mmRefresh(true);
+  toast('已复制成新的纯大纲笔记，现在可以随便编辑');
+}
+
 function mmRefresh(refit){
   const ov = document.getElementById('mmOv');
   if(!ov) return;
@@ -10349,8 +10581,13 @@ function mmRefresh(refit){
   MM.bg = MM.c.bg;
   const built = mmBuildTree(note, MM.withList);
   MM.root = built.root;
+  MM.style = built.style;
+  // 有正文段落/代码块时写回会覆盖它们；关掉「含列表项」时写回会丢列表——这两种都不让编辑
+  MM.canEdit = !built.extra && MM.withList;
   MM.byId.clear();
   (function w(n){ MM.byId.set(n.i, n); n.children.forEach(w); })(MM.root);
+  MM.seq = MM.byId.size ? Math.max(...Array.from(MM.byId.keys())) : 0;
+  if(MM.sel && !MM.byId.has(MM.sel)) MM.sel = 0;
   const empty = ov.querySelector('#mmEmpty'), canvas = ov.querySelector('#mmCanvas');
   const sub = ov.querySelector('#mmSub');
   if(!built.count){
@@ -10359,6 +10596,7 @@ function mmRefresh(refit){
     canvas.style.display = 'none';
     empty.hidden = false;
     if(sub) sub.textContent = '这篇还没有层级可画';
+    mmSyncBar();
     return;
   }
   empty.hidden = true;
@@ -10367,7 +10605,8 @@ function mmRefresh(refit){
   canvas.innerHTML = mmSvgString();
   if(refit) mmFit(); else mmApply();
   if(sub) sub.textContent = '由标题与缩进列表生成 · ' + built.count + ' 个节点'
-    + (built.cut ? ' · 已截取前 600 个' : '') + ' · 只读，不改动笔记内容';
+    + (built.cut ? ' · 已截取前 600 个' : '') + (MM.canEdit ? ' · 改动会写回笔记（可撤销）' : ' · 只读视图');
+  mmSyncBar();   // 打开 / 换笔记时，底部按钮的可用状态要跟着更新
 }
 function mmBind(){
   const box = $('#mmCanvas');
@@ -10414,8 +10653,19 @@ function mmBind(){
   box.addEventListener('pointercancel', end);
   box.addEventListener('click', e => {
     if(MM.moved > 8) return;
+    const fold = e.target.closest('[data-mm-fold]');
+    if(fold){
+      const g = fold.closest('[data-mm]');
+      if(g) mmSetCollapsed(+g.dataset.mm);
+      return;
+    }
     const g = e.target.closest('[data-mm]');
-    if(g) mmToggle(+g.dataset.mm);
+    if(g){ mmSelect(+g.dataset.mm); return; }
+    if(MM.sel){ MM.sel = 0; mmRerender(false); mmSyncBar(); }
+  });
+  box.addEventListener('dblclick', e => {
+    const g = e.target.closest('[data-mm]');
+    if(g) mmStartRename(+g.dataset.mm);
   });
 }
 function mmExportPng(){
@@ -10471,7 +10721,7 @@ function openMindMap(){
     ov.className = 'mm-ov';
     ov.innerHTML = '<div class="mm-card" role="dialog" aria-label="思维导图">'
       + '<div class="mm-hd"><div><h3>' + ic('mind') + '思维导图</h3>'
-      + '<p id="mmSub">由标题与缩进列表生成 · 只读，不改动笔记内容</p></div>'
+      + '<p id="mmSub">由标题与缩进列表生成 · 改动会写回笔记</p></div>'
       + '<div class="mm-tools">'
       + '<button class="mm-btn" id="mmExpand">展开全部</button>'
       + '<button class="mm-btn" id="mmFold">折叠到二级</button>'
@@ -10482,7 +10732,7 @@ function openMindMap(){
       + '</div></div>'
       + '<div class="mm-body">'
       + '<div class="mm-canvas" id="mmCanvas"></div>'
-      + '<div class="mm-pill" id="mmPill">滚轮缩放 · 拖动平移 · 点节点折叠</div>'
+      + '<div class="mm-pill" id="mmPill">滚轮缩放 · 拖动平移 · 点节点选中 · 双击改名</div>'
       + '<div class="mm-zoom"><button data-mmz="in" title="放大">+</button>'
       + '<button data-mmz="out" title="缩小">−</button>'
       + '<button data-mmz="fit" title="适应窗口">⤢</button></div>'
@@ -10491,7 +10741,19 @@ function openMindMap(){
       + '<p>用 <code># 标题</code> 分章节、<code>- 条目</code> 加缩进就能自动成图，笔记仍然保存为普通 Markdown，导出、同步都不受影响。</p>'
       + '<button class="mm-btn" id="mmDemo">插入示例大纲试试</button>'
       + '</div></div>'
-      + '</div></div>';
+      + '</div>'
+      + '<div class="mm-editbar" id="mmEditBar">'
+      + '<span class="mm-eb-tip" id="mmEditTip">点一个节点开始编辑</span>'
+      + '<button class="mm-eb" data-mme="child">＋子节点</button>'
+      + '<button class="mm-eb" data-mme="sib">＋同级</button>'
+      + '<button class="mm-eb" data-mme="rename">改名</button>'
+      + '<button class="mm-eb" data-mme="up" title="上移">↑</button>'
+      + '<button class="mm-eb" data-mme="down" title="下移">↓</button>'
+      + '<button class="mm-eb danger" data-mme="del">删除</button>'
+      + '<button class="mm-eb" data-mme="undo">撤销</button>'
+      + '<button class="mm-eb" data-mme="dup">另存为新笔记</button>'
+      + '</div>'
+      + '</div>';
     document.body.appendChild(ov);
     ov.addEventListener('mousedown', e => { if(e.target === ov) closeMindMap(); });
     ov.querySelector('#mmClose').onclick = closeMindMap;
@@ -10517,6 +10779,21 @@ function openMindMap(){
         mmZoomAt(k === 'in' ? 1.2 : 1/1.2, box.clientWidth / 2, box.clientHeight / 2);
       };
     });
+    ov.querySelectorAll('[data-mme]').forEach(b => {
+      b.onclick = () => {
+        const k = b.dataset.mme;
+        if(k === 'undo') return mmUndo();
+        if(k === 'dup') return mmDupOutline();
+        const idx = MM.sel;
+        if(!idx){ toast('先在导图里点一个节点'); return; }
+        if(k === 'child') return mmAddChild(idx);
+        if(k === 'sib') return mmAddSibling(idx);
+        if(k === 'rename') return mmStartRename(idx);
+        if(k === 'up') return mmMove(idx, -1);
+        if(k === 'down') return mmMove(idx, 1);
+        if(k === 'del') return mmDelete(idx);
+      };
+    });
     ov.querySelector('#mmDemo').onclick = () => {
       const note = noteById(MM.noteId);
       if(!note) return;
@@ -10529,6 +10806,7 @@ function openMindMap(){
     };
     mmBind();
   }
+  if(MM.noteId !== n.id){ MM.sel = 0; MM.undo.length = 0; }
   MM.noteId = n.id;
   ov.classList.add('open');
   mmRefresh(true);

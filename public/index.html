@@ -395,8 +395,20 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .trash-hint{flex:1 1 100%}
   .trash-head #trashEmpty{margin-left:0;padding:4px 0}
 }
-/* 标题下的 Markdown 工具条：和右上角「+」菜单并存，两个入口都能用 */
-.fmt-bar{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 0;user-select:none}
+/* 标题下的 Markdown 工具条：和右上角「+」菜单并存，两个入口都能用。
+   长文往下翻时吸在正文区顶部，工具条一直够得着；背景要不透明，否则会透出下面的字 */
+.fmt-bar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:0;
+  position:sticky;top:0;z-index:7;
+  margin:12px 0 0;padding:6px 0 7px;user-select:none;
+  background:rgb(var(--surface));
+  border-bottom:1px solid transparent;
+  transition:border-color .16s,box-shadow .16s;
+}
+.fmt-bar.stuck{border-bottom-color:rgb(var(--line));box-shadow:0 8px 14px -12px rgb(16 24 32 / .45)}
+.fmt-bar button[data-fmt="ai"]{color:rgb(var(--ivy-ink))}
+.fmt-bar button[data-fmt="ai"]:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.fmt-bar button[data-fmt="ai"] svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .fmt-bar button{
   height:26px;min-width:24px;padding:0 6px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
   transition:background .14s,color .14s,transform .1s;
@@ -406,6 +418,12 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
 .fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 5px;flex:0 0 auto}
+/* 窄屏：工具条不换行（换行会叠成好几行，吸顶后挡住半屏正文），改成横向滑动 */
+@media (max-width:900px){
+  .fmt-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .fmt-bar::-webkit-scrollbar{display:none}
+  .fmt-bar button,.fmt-bar .fmt-sep{flex:0 0 auto}
+}
 
 /* ---- 斜杠插入菜单（正文里输入 /） ---- */
 .slash{
@@ -1833,7 +1851,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v97', at: '2026-11-17 10:40' };
+window.IVY_BUILD = { id: 'v99', at: '2026-11-17 10:45' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4494,6 +4512,7 @@ const FMT_GROUPS = [
    ['wiki','双链','插入笔记链接，跳到另一篇笔记'],
    ['link','链接','插入外部链接'],
    ['hr','分割','分割线']],
+  [['ai','AI','AI 改写 / 对话 / 排版']],
   [['help','?','Markdown 与快捷键一览']]
 ];
 function renderFmtBar(){
@@ -4501,7 +4520,7 @@ function renderFmtBar(){
   if(!bar) return;
   bar.innerHTML = FMT_GROUPS.map((g,gi)=>
     (gi ? '<span class="fmt-sep"></span>' : '') +
-    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${label}</button>`).join('')
+    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${k==='ai' ? ic('spark') : label}</button>`).join('')
   ).join('');
   bar.querySelectorAll('[data-fmt]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
@@ -4516,10 +4535,57 @@ function renderFmtBar(){
       else if(k==='code') openCodeMenu(b);
       else if(k==='table') openTablePicker(b);
       else if(k==='chart') openChartMenu(b);
+      else if(k==='ai') openAiToolMenu(b);
       else if(k==='help'){ helpTab='md'; openHelpPanel(); }
       else applyFormat(k);
     };
   });
+  bindFmtSticky();
+  if(fmtSync) fmtSync();
+}
+
+/* 工具条吸附：正文区滚动时贴在顶部，滚回顶部就还回原位（不然一根横线一直挂着） */
+let fmtSync = null, fmtBound = false;
+function bindFmtSticky(){
+  if(fmtBound) return;
+  const sc = document.querySelector('.scroll');
+  if(!sc) return;
+  fmtBound = true;
+  fmtSync = ()=>{
+    const bar = document.getElementById('fmtBar');
+    if(!bar) return;
+    const top = sc.getBoundingClientRect().top;
+    bar.classList.toggle('stuck', bar.getBoundingClientRect().top <= top + 1);
+  };
+  sc.addEventListener('scroll', fmtSync, { passive:true });
+  window.addEventListener('resize', fmtSync);
+  fmtSync();
+}
+
+/* 工具条上的 AI 按钮：改写要选区、对话和排版不用 */
+function openAiToolMenu(anchor){
+  const has = !!(recentSelCtx());
+  popover(anchor, [
+    ['AI 改写选中的文字', has ? '' : '先选中', '', 'spark', ()=>{
+      const c = recentSelCtx();
+      if(!c){ toast('先在正文里选中要改写的文字'); return; }
+      openAI('rewrite', { ctx:c, text:c.text });
+    }],
+    ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
+    ['AI 排版', '整理格式', '', 'spark', ()=>openAI('format')]
+  ], { align:'left' });
+}
+/* 选区随时可能被工具条/菜单的点击弄丢，这里兜一层：当前光标选区 → 最近一次有效选区 */
+function recentSelCtx(){
+  const c = selCtx();
+  if(c) return c;
+  const old = SELBAR.ctx;
+  if(!old || !old.text) return null;
+  if(old.kind === 'ta' && old.ta && old.ta.isConnected) return old;
+  if(old.kind === 'dom' && old.host && old.host.isConnected) return old;
+  const n = noteById(S.active);
+  if(n && mapSelToRaw(n.body || '', old.text)) return old;
+  return null;
 }
 
 function openHeadingMenu(anchor){
@@ -4579,6 +4645,13 @@ function insertBlockAtCaret(){
   if(n) n.body = ta.value;
 }
 const INSERT_ITEMS = [
+  {name:'AI 改写选中的文字', keys:['ai','gx','改写','runse'], icon:'spark', desc:'润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写：先选中文字', run:()=>{
+    const c = recentSelCtx();
+    if(!c){ toast('先在正文里选中要改写的文字'); return; }
+    openAI('rewrite', { ctx:c, text:c.text });
+  }},
+  {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
+  {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
   {name:'一级标题', keys:['bt','h1','biaoti'], glyph:'H1', icon:'heading', desc:'笔记里最大的一级标题', block:1, run:()=>applyFormat('h1')},
   {name:'二级标题', keys:['bt2','h2'], glyph:'H2', icon:'heading', desc:'小节标题', block:1, run:()=>applyFormat('h2')},
   {name:'三级标题', keys:['bt3','h3'], glyph:'H3', icon:'heading', desc:'更小的分节', block:1, run:()=>applyFormat('h3')},
@@ -9737,8 +9810,8 @@ const AI_PRESETS = [
     note:'火山方舟：新用户每模型 50 万 tokens，另有每日协作额度（要实名）。模型填控制台里的模型名；报错就换成推理接入点 ID（ep-…）。' },
   { name:'混元', base:'https://api.hunyuan.cloud.tencent.com/v1', model:'hunyuan-lite',
     note:'腾讯云混元：hunyuan-lite 免费，开通还送 100 万 tokens（有效期 1 年）。注意「元宝」App 本身不提供 API，要的是腾讯云混元的密钥。' },
-  { name:'智谱', base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4.5-flash',
-    note:'智谱 GLM 的 Flash 系列长期免费（需实名），模型名可换 glm-4.7-flash 等，以官网为准。' },
+  { name:'智谱', base:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4.7-flash',
+    note:'智谱 GLM 的 Flash 系列长期免费（需实名）：glm-4.7-flash 免费且支持 200K 上下文，glm-4.5-flash 也能用；新用户另有体验资源包，有效期以控制台为准。' },
   { name:'百炼', base:'https://dashscope.aliyuncs.com/compatible-mode/v1', model:'qwen-plus',
     note:'阿里云百炼：新用户送千万级 tokens（90 天有效），通义千问全系都在这个兼容地址上。' },
   { name:'硅基流动', base:'https://api.siliconflow.cn/v1', model:'',

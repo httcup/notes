@@ -1299,12 +1299,16 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 /* popover */
 /* 同样要盖住手机抽屉（80）：坞栏在抽屉里，点齿轮弹出的菜单不能躲到抽屉后面 */
 .popover{
-  position:fixed;z-index:160;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
+  position:fixed;z-index:9000;min-width:196px;max-width:300px;padding:5px;background:rgb(var(--surface));
+  isolation:isolate;force-color-profile:srgb;
+  /* 顶层模式（popover 属性）下 UA 会给 inset:0 / margin:auto，这里显式清掉，位置只由 JS 的 left/top 决定 */
+  inset:auto;margin:0;
   border-radius:10px;box-shadow:var(--shadow-lift);border:.5px solid rgb(var(--line));
   max-height:min(72vh, 580px);overflow-y:auto;overscroll-behavior:contain;
   opacity:0;transform:translateY(-4px) scale(.98);pointer-events:none;transition:opacity .14s,transform .16s var(--spring);
 }
-.popover.open{opacity:1;transform:none;pointer-events:auto}
+.popover.open{opacity:1;transform:translateZ(0);pointer-events:auto}  /* 常驻合成层：老 WebKit 上避免文字被画到浮层之上 */
+.popover::backdrop{background:transparent}   /* 顶层模式下的背景板：不遮不压 */
 .po-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border-radius:6px;font-size:13px;color:rgb(var(--ink-2));text-align:left}
 .po-item:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .po-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:rgb(var(--faint))}
@@ -1708,7 +1712,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="palette-list" id="paletteList"></div>
   </div>
 </div>
-<div class="popover" id="popover"></div>
+<div class="popover" id="popover" popover="manual"></div>
 <div class="nb-ov" id="nbOv">
   <div class="nb-dlg" role="dialog" aria-modal="true" aria-labelledby="nbTitle">
     <div class="nb-top">
@@ -1856,7 +1860,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v107', at: '2026-11-17 11:33' };
+window.IVY_BUILD = { id: 'v110', at: '2026-11-17 14:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4484,7 +4488,7 @@ function openTagPicker(anchor){
 
   inp.oninput = paint;
   inp.onkeydown = e=>{
-    if(e.key === 'Escape'){ e.preventDefault(); po.classList.remove('open'); return; }
+    if(e.key === 'Escape'){ e.preventDefault(); poClose(po); return; }
     if(e.key === 'Enter'){
       e.preventDefault();
       const q = (inp.value||'').trim(); if(!q) return;
@@ -5462,7 +5466,7 @@ function openTablePicker(anchor){
   const done = ()=>{
     if(!pick.r) return;
     const rows = pick.r, cols = pick.c;
-    po.classList.remove('open');
+    poClose(po);
     if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
     if(po._off){ document.removeEventListener('mousedown', po._off); po._off = null; }
     applyFormat('table', { rows, cols });
@@ -5741,7 +5745,7 @@ function openHighlightMenu(anchor){
   const po = $('#popover');
   po.querySelectorAll('[data-hex]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();   // 保住正文选区
-    b.onclick = ()=>{ po.classList.remove('open'); applyFormat('mark', b.dataset.hex); };
+    b.onclick = ()=>{ poClose(po); applyFormat('mark', b.dataset.hex); };
   });
   const add = po.querySelector('[data-hladd]');
   if(add){
@@ -5757,7 +5761,7 @@ function openHighlightMenu(anchor){
         HOLD_BLUR = false;
         inp.onchange = null; inp.onblur = null;
       };
-      inp.onchange = ()=>{ const v = inp.value; finish(); po.classList.remove('open'); applyFormat('mark', v); };
+      inp.onchange = ()=>{ const v = inp.value; finish(); poClose(po); applyFormat('mark', v); };
       inp.onblur = ()=>{ setTimeout(finish, 120); };
       try{ inp.click(); }catch(e){ finish(); }
     };
@@ -5783,7 +5787,7 @@ function emojiGridHtml(gi){
 function bindEmojiGrid(scope, po){
   scope.querySelectorAll('.emo').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();   // 保住光标/选区
-    b.onclick = ()=>{ po.classList.remove('open'); insertPlain(b.dataset.e); };
+    b.onclick = ()=>{ poClose(po); insertPlain(b.dataset.e); };
   });
 }
 function openEmojiMenu(anchor){
@@ -8466,6 +8470,24 @@ function liveAnchor(anchor, id){
   setTimeout(()=>ghost.remove(), 30000);
   return ghost;
 }
+/* 菜单必须压在所有东西上面。支持 Popover API 的浏览器直接把它塞进「顶层」（top layer），
+   任何层叠上下文都盖不住它；不支持的老浏览器退回普通 fixed + 高 z-index（9000）。
+   顺带解决 WKWebView 里浮层被正文文字压住、看着像「半透明」的问题。 */
+function poIsOpen(po){ try{ return po.matches(':popover-open'); }catch(e){ return false; } }
+function poOpen(po){
+  if(!po) return;
+  if(typeof po.showPopover === 'function' && !poIsOpen(po)){
+    try{ po.showPopover(); }catch(e){}
+  }
+  po.classList.add('open');
+}
+function poClose(po){
+  if(!po) return;
+  po.classList.remove('open');
+  if(typeof po.hidePopover === 'function' && poIsOpen(po)){
+    try{ po.hidePopover(); }catch(e){}
+  }
+}
 function popover(anchor, items, opts){
   const po = $('#popover');
   let r = null;
@@ -8490,7 +8512,7 @@ function popover(anchor, items, opts){
     if(it[0]==='#') return it[1];
     return `<button class="po-item ${it[2]||''}" data-i="${idx}">${it[3]?ic(it[3]):''}<span>${esc(it[0])}</span>${it[1]?`<span class="po-key">${it[1]}</span>`:''}</button>`;
   }).join('');
-  po.classList.add('open');
+  poOpen(po);
   const pw = po.offsetWidth, ph = po.offsetHeight;
   const wantLeft = opts && opts.align === 'left' ? r.left : r.right - pw;
   po.style.left = Math.min(Math.max(12, wantLeft), window.innerWidth-pw-12)+'px';
@@ -8499,7 +8521,7 @@ function popover(anchor, items, opts){
     b.onmousedown = ev=>ev.preventDefault();   // 别把正文的选区/焦点抢走
     b.onclick = ()=>{
       const it = items[+b.dataset.i];
-      po.classList.remove('open');
+      poClose(po);
       if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
       if(it[4]) it[4]();
     };
@@ -8508,7 +8530,7 @@ function popover(anchor, items, opts){
   if(po._off) document.removeEventListener('mousedown', po._off);
   const off = (ev)=>{
     if(!po.contains(ev.target)){
-      po.classList.remove('open');
+      poClose(po);
       document.removeEventListener('mousedown', off);
       if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
       if(po._off === off) po._off = null;
@@ -8811,7 +8833,7 @@ document.addEventListener('keydown', e=>{
   if(meta && e.shiftKey && e.key.toLowerCase()==='e'){ e.preventDefault(); setMode(curMode()==='source' ? 'live' : 'source'); return; }
   if(meta && e.key.toLowerCase()==='e'){ e.preventDefault(); toggleMode(); return; }
   if(e.altKey && e.key.toLowerCase()==='w'){ e.preventDefault(); if(S.active) closeTab(S.active); return; }
-  if(e.key==='Escape'){ $('#popover').classList.remove('open'); closeExportPanel(); closeSlashMenu(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); }
+  if(e.key==='Escape'){ poClose($('#popover')); closeExportPanel(); closeSlashMenu(); hideSelBar(); if(syncPanelOpen) closeSyncPanel(); }
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));

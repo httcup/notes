@@ -1466,6 +1466,61 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .sheet-status{margin-top:14px;padding-top:11px;border-top:1px solid rgb(var(--line));font-size:11.5px;line-height:1.75;color:rgb(var(--faint))}
 .sheet-status b{color:rgb(var(--ink-2));font-weight:600}
 
+/* ============ AI（自己的接口） ============ */
+.ai-sheet{width:min(620px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px 14px}
+.ai-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ai-title{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:600;color:rgb(var(--ink))}
+.ai-title svg{width:16px;height:16px;color:rgb(var(--ivy-ink))}
+.ai-head-btns{display:flex;gap:2px}
+.ai-body{flex:1;min-height:0;overflow:auto;padding-right:2px}
+.ai-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:11px;margin-top:10px;border-top:1px solid rgb(var(--line))}
+.ai-hint{font-size:11.5px;line-height:1.5;color:rgb(var(--faint));margin-left:auto;max-width:52%}
+.ai-hint.err{color:rgb(var(--danger))}
+.ai-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.ai-chip{height:28px;padding:0 11px;border-radius:14px;font-size:12.5px;color:rgb(var(--ink-2));background:rgb(var(--hover));transition:background .12s,color .12s}
+.ai-chip:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.ai-chip.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy))}
+.ai-src{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.7;color:rgb(var(--muted));background:rgb(var(--sunken));border-radius:10px;padding:10px 12px;max-height:120px;overflow:auto;margin-bottom:12px}
+.ai-res{width:100%;min-height:220px;max-height:46vh;padding:12px 13px;border-radius:10px;border:.5px solid rgb(var(--line));background:rgb(var(--surface));font-family:var(--font-mono);font-size:13px;line-height:1.7;resize:vertical;outline:none;color:rgb(var(--ink))}
+.ai-res:focus{border-color:rgb(var(--ivy)/.6)}
+.ai-res-label{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;color:rgb(var(--muted));margin:2px 0 6px}
+.ai-model{margin-left:auto;font-weight:400;letter-spacing:0;color:rgb(var(--faint));font-family:var(--font-mono);font-size:11px;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-empty{font-size:12.5px;line-height:1.85;color:rgb(var(--muted));padding:6px 2px 4px}
+.ai-empty b{color:rgb(var(--ink))}
+.ai-loading{font-size:12.5px;color:rgb(var(--faint));padding:10px 2px}
+.ai-note{font-size:12px;line-height:1.7;color:rgb(var(--warn-ink));background:rgb(var(--warn-soft));border-radius:9px;padding:9px 11px;margin-bottom:12px}
+/* 对话 */
+.ai-msgs{display:flex;flex-direction:column;gap:12px;padding:2px 0 6px}
+.ai-msg{display:flex;flex-direction:column;gap:5px}
+.ai-msg .ai-bubble{padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.ai-msg.user{align-items:flex-end}
+.ai-msg.user .ai-bubble{background:rgb(var(--ivy));color:rgb(var(--on-ivy));max-width:86%}
+.ai-msg.bot .ai-bubble{background:rgb(var(--hover));color:rgb(var(--ink));max-width:100%}
+.ai-msg.bot .ai-bubble.err{background:rgb(var(--danger-soft));color:rgb(var(--danger))}
+.ai-msg-acts{display:flex;gap:12px;font-size:11.5px;color:rgb(var(--faint))}
+.ai-msg-acts button:hover{color:rgb(var(--ink))}
+.ai-ref{display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--muted));margin-bottom:8px;cursor:pointer}
+.ai-ref input{width:14px;height:14px;accent-color:rgb(var(--ivy));cursor:pointer}
+.ai-composer{display:flex;gap:8px;align-items:flex-end;width:100%}
+.ai-composer textarea{flex:1;min-height:40px;max-height:120px;padding:9px 11px;border-radius:10px;border:.5px solid rgb(var(--line));background:rgb(var(--sunken));font-size:13px;line-height:1.6;resize:none;outline:none;font-family:inherit;color:rgb(var(--ink))}
+.ai-composer textarea:focus{border-color:rgb(var(--ivy)/.6);background:rgb(var(--surface))}
+/* 配置 */
+.ai-cfg-tip{font-size:12px;line-height:1.8;color:rgb(var(--muted));margin:0 0 14px}
+.ai-cfg-tip b{color:rgb(var(--ink-2))}
+.ai-cfg-tip code{font-family:var(--font-mono);font-size:11.5px;background:rgb(var(--sunken));padding:1px 5px;border-radius:4px}
+.ai-model-row{display:flex;gap:8px}
+.ai-model-row input{flex:1;min-width:0}
+.ai-model-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:132px;overflow:auto}
+.ai-model-list[hidden]{display:none}
+.ai-model-item{font-size:11.5px;padding:4px 9px;border-radius:12px;background:rgb(var(--hover));color:rgb(var(--ink-2));font-family:var(--font-mono);word-break:break-all;text-align:left}
+.ai-model-item:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.ai-model-item.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy))}
+@media (max-width:560px){
+  .ai-sheet{width:96vw;max-height:92vh;padding:14px}
+  .ai-res{min-height:170px;max-height:38vh}
+  .ai-hint{max-width:100%;margin-left:0;order:9}
+}
+
 /* ============ 导出面板 ============ */
 .export-pop{
   position:fixed;z-index:155;padding:15px 17px 17px;width:430px;max-width:calc(100vw - 24px);
@@ -1661,6 +1716,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 <input type="color" id="hlColorIn" class="hl-color-in" value="#f59e0b" tabindex="-1" aria-hidden="true">
 <div class="export-pop" id="exportPop"></div>
 <div class="overlay" id="syncOverlay"></div>
+<div class="overlay" id="aiOverlay"></div>
+<div class="overlay" id="aiCfgOverlay"></div>
 <div class="toasts" id="toasts"></div>
 
 <div class="pomo" id="pomo">
@@ -1761,7 +1818,8 @@ const ICONS = {
   insert:'<path d="M12 5v14M5 12h14"/>',
   timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.6 1.7M9.5 2.5h5M12 2.5v2.2"/>',
   tomato:'<path d="M12 10c-3.4 0-6 2.5-6 5.3s2.6 5.1 6 5.1 6-2.3 6-5.1S15.4 10 12 10Z"/><path d="M12 9.9V6.6"/><path d="M12 10.3C10.3 8.3 8.2 7.2 6 7.1c.9 2.2 2.6 3.6 4.9 3.9M12 10.3c1.7-2 3.8-3.1 6-3.2-.9 2.2-2.6 3.6-4.9 3.9"/>',
-  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  spark:'<path d="M12 3.6l1.8 4.6 4.6 1.8-4.6 1.8L12 16.4l-1.8-4.6L5.6 10l4.6-1.8z"/><path d="M18.4 15.4l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
 };
 function ic(name, cls){
   const p = ICONS[name] || '';
@@ -1769,7 +1827,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v92', at: '2026-11-17 09:56' };
+window.IVY_BUILD = { id: 'v95', at: '2026-11-17 10:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4745,12 +4803,15 @@ function buildSelBar(){
     <button data-sb="mark" title="高亮（==文字==）">${ic('hl')}</button>
     <button data-sb="todo" title="设为待办（- [ ]）">${ic('tbox')}</button>
     <button data-sb="wiki" title="链接到笔记（[[标题]]）"><b class="sb-br">[[</b></button>
-    <button data-sb="link" title="加链接">${ic('link')}</button>`;
+    <button data-sb="link" title="加链接">${ic('link')}</button>
+    <span class="sb-sep"></span>
+    <button data-sb="ai" title="AI 改写 / 润色 / 翻译">${ic('spark')}</button>`;
   bar.querySelectorAll('[data-sb]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别把选区弄丢
     b.onclick = ()=>{
       const k = b.dataset.sb;
       if(k === 'h') openSelHeadingMenu(b);          // 标题给个级别菜单，别猜
+      else if(k === 'ai') aiFromSelection();        // AI 动作都在面板里选
       else applySelFormat(k);
     };
   });
@@ -5512,6 +5573,10 @@ function paintHelp(){
         <p class="help-p">已登录时：⚙ → 云同步设置 → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
       <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
         <p class="help-p">⚙ → 云同步设置 → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
+      <div class="help-sec"><h4>AI（用你自己的接口）</h4>
+        <p class="help-p">AI 不由站点提供：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填一个 <b>OpenAI 兼容</b>接口——DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理。再填 API Key，点<b>「拉取模型」</b>挑一个，保存就能用。</p>
+        <p class="help-p">密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担，站点不代付、不抽成。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
+        <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(helpTab === 'md'){
@@ -8504,6 +8569,9 @@ function openNoteMenu(anchor){
     ['上传图片/文件', '', '', 'paperclip', ()=>pickFiles()],
     ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
     '-',
+    ['AI 排版', '', '', 'spark', ()=>openAI('format')],
+    ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
+    '-',
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);
 }
@@ -8550,6 +8618,7 @@ function openUserMenu(anchor){
     ['导出全部笔记（备份）', '', '', 'download', exportBackup],
     ['导出全部笔记（Markdown）', '', '', 'download', exportAllMd],
     ['客户端下载', '', '', 'localSave', openClientPanel],
+    ['AI 接口设置', '填自己的 key', '', 'spark', ()=>openAIConfig()],
     '-',
     ['使用说明', '', '', 'help', ()=>{ helpTab='io'; openHelpPanel(); }]
   ]);
@@ -9223,6 +9292,550 @@ function openSyncPanel(){
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
 $('#syncOverlay').addEventListener('mousedown', e=>{ if(e.target.id==='syncOverlay') closeSyncPanel(); });
+
+/* ========== AI：每个账号自己的接口 ========== */
+/* 站点不内置任何 key。用户在「AI 接口设置」里填自己的 OpenAI 兼容接口，
+   密钥由服务端加密后存进账号，前端只拿得到掩码（见 functions/api/ai-config.js）。*/
+const AI = { cfg:null, mode:'rewrite', ctx:null, text:'', task:'', chat:[], ref:true, busy:false, abort:null, last:'' };
+
+function aiOverlayEl(){ return $('#aiOverlay'); }
+function aiCfgEl(){ return $('#aiCfgOverlay'); }
+
+async function aiConfig(force){
+  if(AI.cfg && !force) return AI.cfg;
+  if(!isConnected()) throw new Error('登录后才能用 AI');
+  const r = await fetch('/api/ai-config', { headers: authHeaders(false) });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || ('HTTP '+r.status));
+  AI.cfg = d;
+  return d;
+}
+
+/* 读纯文本流：服务端把上游 SSE 转成了裸文字，这里只需要拼接 */
+async function aiStream(payload, onText){
+  AI.abort = new AbortController();
+  const r = await fetch('/api/ai', {
+    method:'POST', headers: authHeaders(true),
+    body: JSON.stringify(payload), signal: AI.abort.signal
+  });
+  const ctype = String(r.headers.get('content-type') || '');
+  if(!r.ok || ctype.indexOf('application/json') >= 0){
+    const d = await r.json().catch(()=>({}));
+    const e = new Error(d.error || ('HTTP ' + r.status));
+    e.code = d.code;
+    throw e;
+  }
+  if(!r.body) throw new Error('这个浏览器不支持流式读取');
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let all = '';
+  for(;;){
+    const { value, done } = await reader.read();
+    if(done) break;
+    all += dec.decode(value, { stream:true });
+    if(onText) onText(all);
+  }
+  return all;
+}
+
+/* ---------- 打开面板 ---------- */
+function openAI(mode, opt){
+  opt = opt || {};
+  AI.mode = mode;
+  AI.ctx = opt.ctx || null;
+  AI.text = String(opt.text != null ? opt.text : '');
+  AI.chat = [];
+  AI.ref = true;
+  AI.busy = false;
+  AI.last = '';
+  if(mode === 'format'){
+    const n = noteById(S.active);
+    AI.text = n ? String(n.body || '') : '';
+  }
+  const ov = aiOverlayEl();
+  if(!ov) return;
+  const title = mode === 'chat' ? 'AI 助手' : (mode === 'format' ? 'AI 排版' : 'AI 改写');
+  ov.innerHTML = `<div class="sheet ai-sheet" role="dialog" aria-label="${title}">
+    <div class="ai-head">
+      <div class="ai-title">${ic('spark')}<span>${title}</span></div>
+      <div class="ai-head-btns">
+        <button class="pa-btn" id="aiCfgBtn" title="AI 接口设置">${ic('gear')}</button>
+        <button class="pa-btn" id="aiClose" title="关闭">${ic('x')}</button>
+      </div>
+    </div>
+    <div class="ai-body" id="aiBody"></div>
+    <div class="ai-foot" id="aiFoot"></div>
+  </div>`;
+  ov.classList.add('open');
+  $('#aiClose').onclick = closeAI;
+  $('#aiCfgBtn').onclick = ()=>openAIConfig();
+  aiBoot();
+}
+function closeAI(){
+  if(AI.abort){ try{ AI.abort.abort(); }catch(e){} AI.abort = null; }
+  AI.busy = false;
+  const ov = aiOverlayEl(); if(ov) ov.classList.remove('open');
+}
+function aiFromSelection(){
+  const c = SELBAR.ctx;
+  if(!c){ toast('先选中一段文字'); return; }
+  hideSelBar();
+  openAI('rewrite', { ctx:c, text:c.text });
+}
+
+async function aiBoot(){
+  const body = $('#aiBody'), foot = $('#aiFoot');
+  if(!body) return;
+  if(!isConnected()){
+    body.innerHTML = `<div class="ai-empty"><b>AI 用你自己的接口。</b><br>
+      登录后填上服务地址、密钥和模型即可；配置跟着账号走，换设备不用重填。<br>
+      密钥加密存在服务端，页面里读不回原值，也不给别的账号用。</div>`;
+    foot.innerHTML = `<button class="btn-primary" id="aiGoLogin">去登录</button>`;
+    $('#aiGoLogin').onclick = ()=>{ closeAI(); openSyncPanel(); };
+    return;
+  }
+  body.innerHTML = '<div class="ai-loading">正在读取 AI 配置…</div>';
+  let cfg = AI.cfg;
+  if(!cfg){
+    try{ cfg = await aiConfig(true); }
+    catch(e){
+      body.innerHTML = `<div class="ai-empty">${esc(e.message || '读取配置失败')}</div>`;
+      return;
+    }
+  }
+  if(!cfg.configured){ paintAiSetup(); return; }
+  if(AI.mode === 'chat') paintAiChat(); else paintAiRewrite();
+}
+
+function paintAiSetup(){
+  const body = $('#aiBody'), foot = $('#aiFoot');
+  if(!body) return;
+  body.innerHTML = `<div class="ai-empty"><b>还差一步：填上你自己的 AI 接口。</b><br>
+    支持任何 OpenAI 兼容服务：DeepSeek、OpenAI、Moonshot、硅基流动、自建网关都可以。<br>
+    填好之后，选中文字能改写，右上角能对话，笔记菜单里能一键排版。</div>`;
+  foot.innerHTML = `<button class="btn-primary" id="aiSetup">填写接口</button>`;
+  $('#aiSetup').onclick = ()=>openAIConfig(()=>{ AI.cfg = null; aiBoot(); });
+}
+
+/* ---------- 改写 / 排版 ---------- */
+function paintAiRewrite(){
+  const body = $('#aiBody'), foot = $('#aiFoot');
+  if(!body) return;
+  const isFmt = AI.mode === 'format';
+  const chips = [['polish','润色'],['shorten','精简'],['expand','扩写'],['fix','纠错'],
+                 ['translate','翻译'],['continue','续写'],['title','起标题'],['summary','摘要']];
+  const preview = AI.text.length > 400 ? AI.text.slice(0, 400) + '\n…' : AI.text;
+  body.innerHTML = `
+    ${isFmt
+      ? `<div class="ai-note">只整理标题层级、列表、空行和中英文间距，不改文字内容。结果会替换整篇笔记，替换前建议先导出备份。</div>`
+      : `<div class="ai-chips">${chips.map(([k,l])=>`<button class="ai-chip" data-ai-task="${k}">${l}</button>`).join('')}</div>`}
+    <div class="ai-src">${esc(preview || '（没有内容）')}</div>
+    <div class="ai-res-label"><span>结果</span><span class="ai-model" id="aiModel">${esc((AI.cfg&&AI.cfg.model)||'')}</span></div>
+    <textarea class="ai-res" id="aiRes" spellcheck="false" placeholder="${isFmt?'正在排版…':'点上面的动作开始生成'}"></textarea>`;
+  foot.innerHTML = `<button class="btn-primary" id="aiApply" disabled>${isFmt?'替换全文':'替换原文'}</button>
+    <button class="btn-ghost" id="aiCopy">复制</button>
+    <button class="btn-ghost" id="aiRetry" disabled>重试</button>
+    <span class="ai-hint" id="aiHint"></span>`;
+
+  body.querySelectorAll('[data-ai-task]').forEach(b=>{
+    b.onclick = ()=>{
+      body.querySelectorAll('[data-ai-task]').forEach(x=>x.classList.toggle('on', x === b));
+      runAiTask(b.dataset.aiTask);
+    };
+  });
+  $('#aiApply').onclick = applyAiResult;
+  $('#aiRetry').onclick = ()=>runAiTask(AI.task || (isFmt ? 'format' : 'polish'));
+  $('#aiCopy').onclick = ()=>{
+    const v = ($('#aiRes') || {}).value || '';
+    if(!v.trim()){ toast('还没有结果'); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
+      .then(()=>toast('已复制')).catch(()=>toast('复制失败，手动选一下'));
+  };
+  if(isFmt) runAiTask('format');
+}
+
+async function runAiTask(task){
+  if(AI.busy) return;
+  const res = $('#aiRes'), hint = $('#aiHint'), apply = $('#aiApply'), retry = $('#aiRetry');
+  if(!res) return;
+  if(!AI.text.trim()){ toast('没有可处理的内容'); return; }
+  AI.task = task;
+  AI.busy = true;
+  AI.last = '';
+  res.value = '';
+  res.readOnly = true;
+  if(apply) apply.disabled = true;
+  if(hint){ hint.className = 'ai-hint'; hint.textContent = '正在生成…'; }
+  try{
+    const text = await aiStream({ task, text: AI.text }, (all)=>{
+      AI.last = all;
+      res.value = all;
+      res.scrollTop = res.scrollHeight;
+    });
+    AI.last = text;
+    if(!text.trim()){
+      if(hint){ hint.className = 'ai-hint err'; hint.textContent = '模型没有返回内容'; }
+    }else{
+      if(hint){ hint.className = 'ai-hint'; hint.textContent = ''; }
+      if(apply) apply.disabled = false;
+      if(retry) retry.disabled = false;
+    }
+  }catch(e){
+    if(e.name === 'AbortError'){
+      if(hint){ hint.className = 'ai-hint'; hint.textContent = '已停止'; }
+    }else{
+      if(hint){ hint.className = 'ai-hint err'; hint.textContent = e.message || '生成失败'; }
+      if(e.code === 'ai-config-missing') AI.cfg = null;
+      if(e.code === 'login'){ closeAI(); openSyncPanel(); return; }
+    }
+    if(AI.last){ if(apply) apply.disabled = false; if(retry) retry.disabled = false; }
+  }finally{
+    AI.busy = false;
+    res.readOnly = false;
+    AI.abort = null;
+  }
+}
+
+function applyAiResult(){
+  const text = (($('#aiRes') || {}).value || '').trim();
+  if(!text) return;
+  if(AI.mode === 'format'){
+    if(!aiReplaceBody(text)){ toast('没有打开的笔记'); return; }
+    closeAI();
+    toast('已替换整篇笔记');
+    return;
+  }
+  if(!aiReplaceSelection(text, AI.ctx)){ toast('定位不到刚才选中的文字，请重新选中再试'); return; }
+  closeAI();
+  toast('已替换选中的文字');
+}
+
+/* ---------- 把结果写回笔记 ---------- */
+function aiReplaceSelection(text, ctx){
+  const n = noteById(S.active);
+  if(!n) return false;
+  // 1) 源码框 / 块输入框还在：直接按原区间替换
+  if(ctx && ctx.kind === 'ta' && ctx.ta && ctx.ta.isConnected){
+    const ta = ctx.ta;
+    ta.focus();
+    try{ ta.setSelectionRange(ctx.s, ctx.e); }catch(e){}
+    ta.setRangeText(text, ctx.s, ctx.e, 'end');
+    ta.dispatchEvent(new Event('input', { bubbles:true }));
+    if(ta.classList && ta.classList.contains('blk-src')){
+      const blk = ta.closest('.blk');
+      commitBlock(blk ? (parseInt(blk.dataset.i, 10) || 0) : 0);
+    }else{
+      n.body = ta.value; n.updatedAt = Date.now();
+      renderMeta(); renderOutline(); save();
+    }
+    return true;
+  }
+  // 2) 渲染区选区：映射回源码区间
+  if(ctx && ctx.kind === 'dom' && ctx.host && ctx.host.isConnected){
+    const blk = ctx.host.classList.contains('blk-view') ? ctx.host.closest('.blk') : null;
+    if(blk){
+      const i = +blk.dataset.i;
+      const raw = LIVE.raws[i] || '';
+      const rg = mapSelToRaw(raw, ctx.text);
+      if(rg){
+        LIVE.raws[i] = raw.slice(0, rg.start) + text + raw.slice(rg.end);
+        paintLive(); syncBody();
+        return true;
+      }
+      return false;
+    }
+    const rg = mapSelToRaw(n.body || '', ctx.text);
+    if(rg){
+      n.body = (n.body || '').slice(0, rg.start) + text + (n.body || '').slice(rg.end);
+      n.updatedAt = Date.now();
+      const src = document.getElementById('source');
+      if(src) src.value = n.body;
+      syncLiveAfterTodo(n);
+      renderProse(); renderOutline(); renderMeta();
+      return true;
+    }
+    return false;
+  }
+  // 3) 兜底：按原文在当前正文里找一次
+  if(ctx && ctx.text){
+    const raw = n.body || '';
+    const rg = mapSelToRaw(raw, ctx.text);
+    if(rg){
+      n.body = raw.slice(0, rg.start) + text + raw.slice(rg.end);
+      n.updatedAt = Date.now();
+      const src = document.getElementById('source');
+      if(src) src.value = n.body;
+      syncLiveAfterTodo(n);
+      renderProse(); renderOutline(); renderMeta();
+      return true;
+    }
+  }
+  return false;
+}
+
+function aiReplaceBody(text){
+  const n = noteById(S.active);
+  if(!n) return false;
+  const clean = String(text).replace(/\r\n/g, '\n').replace(/^```(?:markdown|md)?\s*\n/i, '').replace(/\n```\s*$/, '')
+    .replace(/\n{4,}/g, '\n\n\n').replace(/\s+$/, '');
+  n.body = clean;
+  n.updatedAt = Date.now();
+  const src = document.getElementById('source');
+  if(src) src.value = clean;
+  syncLiveAfterTodo(n);
+  renderProse(); renderOutline(); renderMeta();
+  save();
+  return true;
+}
+
+/* 插入到光标处；没有焦点就接到正文末尾 */
+function aiInsertText(text){
+  if(!text) return false;
+  const ae = document.activeElement;
+  const ta = (ae && ae.tagName === 'TEXTAREA'
+    && (ae.id === 'source' || (ae.classList && ae.classList.contains('blk-src'))))
+    ? ae : (LIVE.ta && LIVE.ta.isConnected ? LIVE.ta : null);
+  if(ta){
+    const s = typeof ta.selectionStart === 'number' ? ta.selectionStart : ta.value.length;
+    const e = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : s;
+    ta.focus();
+    ta.setRangeText(text, s, e, 'end');
+    ta.dispatchEvent(new Event('input', { bubbles:true }));
+    if(ta.classList && ta.classList.contains('blk-src')){
+      const blk = ta.closest('.blk');
+      commitBlock(blk ? (parseInt(blk.dataset.i, 10) || 0) : 0);
+    }
+    return true;
+  }
+  const n = noteById(S.active);
+  if(!n) return false;
+  n.body = (n.body ? String(n.body).replace(/\s+$/, '') + '\n\n' : '') + text;
+  n.updatedAt = Date.now();
+  const src = document.getElementById('source');
+  if(src) src.value = n.body;
+  syncLiveAfterTodo(n);
+  renderProse(); renderOutline(); renderMeta();
+  save();
+  return true;
+}
+
+/* ---------- 对话 ---------- */
+function paintAiChat(){
+  const body = $('#aiBody'), foot = $('#aiFoot');
+  if(!body) return;
+  body.innerHTML = `<div class="ai-msgs" id="aiMsgs"></div>`;
+  const msgs = $('#aiMsgs');
+  if(!AI.chat.length){
+    msgs.innerHTML = `<div class="ai-empty" id="aiEmpty"><b>和 AI 聊几句。</b><br>
+      例如：把这段改得更简洁 / 给这篇文章起五个标题 / 把今天的记录整理成周报 / 解释这个报错。<br>
+      勾上「参考当前笔记」，它会读这篇笔记的正文来回答。</div>`;
+  }else{
+    AI.chat.forEach(m=>aiAddMsg(m.role, m.content));
+  }
+  foot.innerHTML = `
+    <label class="ai-ref"><input type="checkbox" id="aiRef"${AI.ref?' checked':''}>参考当前笔记</label>
+    <button class="btn-ghost" id="aiClearChat">清空对话</button>
+    <div class="ai-composer">
+      <textarea id="aiInput" rows="1" placeholder="问点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
+      <button class="btn-primary" id="aiSend">发送</button>
+    </div>`;
+  $('#aiRef').onchange = (e)=>{ AI.ref = e.target.checked; };
+  $('#aiClearChat').onclick = ()=>{ AI.chat = []; paintAiChat(); };
+  $('#aiSend').onclick = aiSendChat;
+  $('#aiInput').onkeydown = (e)=>{
+    if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); aiSendChat(); }
+  };
+  if(window.innerWidth > 560) setTimeout(()=>{ const i = $('#aiInput'); if(i) i.focus(); }, 60);
+}
+
+function aiAddMsg(role, text){
+  const msgs = $('#aiMsgs');
+  if(!msgs) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-msg ' + (role === 'assistant' ? 'bot' : 'user');
+  const bubble = document.createElement('div');
+  bubble.className = 'ai-bubble';
+  bubble.textContent = text || '';
+  wrap.appendChild(bubble);
+  msgs.appendChild(wrap);
+  const body = $('#aiBody'); if(body) body.scrollTop = body.scrollHeight;
+  return bubble;
+}
+
+function aiMsgActions(bubble, text){
+  const wrap = bubble.parentElement;
+  if(!wrap || !text) return;
+  let acts = wrap.querySelector('.ai-msg-acts');
+  if(!acts){
+    acts = document.createElement('div');
+    acts.className = 'ai-msg-acts';
+    wrap.appendChild(acts);
+  }
+  acts.innerHTML = `<button data-ai-act="copy">复制</button><button data-ai-act="insert">插入到笔记</button>`;
+  acts.querySelector('[data-ai-act="copy"]').onclick = ()=>{
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(()=>toast('已复制')).catch(()=>toast('复制失败，手动选一下'));
+  };
+  acts.querySelector('[data-ai-act="insert"]').onclick = ()=>{
+    closeAI();
+    setTimeout(()=>{
+      if(aiInsertText(text)) toast('已插入笔记');
+      else toast('没有打开的笔记');
+    }, 80);
+  };
+}
+
+async function aiSendChat(){
+  const inp = $('#aiInput');
+  if(!inp || AI.busy) return;
+  const q = inp.value.trim();
+  if(!q) return;
+  inp.value = '';
+  inp.style.height = '';
+  AI.chat.push({ role:'user', content:q });
+  const empty = $('#aiEmpty'); if(empty) empty.remove();
+  aiAddMsg('user', q);
+  AI.busy = true;
+  const bubble = aiAddMsg('assistant', '…');
+  const body = $('#aiBody');
+  try{
+    const n = noteById(S.active);
+    const note = AI.ref && n ? String(n.body || '') : '';
+    const text = await aiStream({ task:'chat', messages: AI.chat.slice(-12), note }, (all)=>{
+      if(bubble) bubble.textContent = all || '…';
+      if(body) body.scrollTop = body.scrollHeight;
+    });
+    const finalText = String(text || '').trim();
+    if(bubble) bubble.textContent = finalText || '（模型没有返回内容）';
+    if(finalText){
+      AI.chat.push({ role:'assistant', content:finalText });
+      aiMsgActions(bubble, finalText);
+    }
+  }catch(e){
+    if(e.name === 'AbortError'){ if(bubble) bubble.textContent = '已停止'; }
+    else{
+      if(bubble){ bubble.textContent = e.message || '生成失败'; bubble.classList.add('err'); }
+      if(e.code === 'login'){ closeAI(); openSyncPanel(); return; }
+    }
+  }finally{
+    AI.busy = false;
+    if(body) body.scrollTop = body.scrollHeight;
+  }
+}
+
+/* ---------- 接口设置 ---------- */
+function openAIConfig(onDone){
+  if(!isConnected()){ toast('登录后才能配置 AI 接口'); openSyncPanel(); return; }
+  const ov = aiCfgEl();
+  if(!ov) return;
+  const c = AI.cfg || {};
+  ov.innerHTML = `<div class="sheet">
+    <div class="sheet-head"><h3>AI 接口设置</h3>
+      <button class="pa-btn" id="acClose" title="关闭">${ic('x')}</button></div>
+    <p class="ai-cfg-tip">填一个 <b>OpenAI 兼容</b>接口。DeepSeek 填 <code>https://api.deepseek.com</code>，
+      OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot、硅基流动、自建网关同理。<br>
+      请求由服务端代发，所以地址必须是<b>公网能访问到的</b>（<code>127.0.0.1</code>、局域网地址连不上）。<br>
+      密钥用它所属的账号加密保存，只有你自己能用，页面里读不回原值；注销账号时会一起删掉。</p>
+    <label class="field"><span>服务地址</span>
+      <input id="acBase" spellcheck="false" placeholder="https://api.deepseek.com" value="${esc(c.baseUrl||'')}"></label>
+    <label class="field"><span>API Key</span>
+      <input id="acKey" type="password" spellcheck="false" autocomplete="off"
+        placeholder="${c.hasKey ? ('已保存 ' + esc(c.keyMask||'••••') + '，留空表示不改') : 'sk-…'}"></label>
+    <label class="field"><span>模型</span>
+      <div class="ai-model-row">
+        <input id="acModel" spellcheck="false" placeholder="deepseek-v4-flash" value="${esc(c.model||'')}">
+        <button class="btn-ghost" id="acModels">拉取模型</button>
+      </div>
+      <div class="ai-model-list" id="acList" hidden></div>
+    </label>
+    <div class="sheet-row">
+      <button class="btn-primary" id="acSave">保存</button>
+      <button class="btn-ghost" id="acClear">清除配置</button>
+    </div>
+    <div class="sheet-status" id="acStatus"></div>
+  </div>`;
+  ov.classList.add('open');
+  $('#acClose').onclick = ()=>ov.classList.remove('open');
+
+  const readForm = ()=>({
+    baseUrl: ($('#acBase').value || '').trim(),
+    model: ($('#acModel').value || '').trim(),
+    key: ($('#acKey').value || '').trim()
+  });
+  const setStatus = (msg, bad)=>{ const s = $('#acStatus'); if(s) s.innerHTML = bad ? `<b style="color:rgb(var(--danger))">${esc(msg)}</b>` : esc(msg); };
+
+  $('#acModels').onclick = async ()=>{
+    const f = readForm();
+    if(!f.baseUrl){ setStatus('先填服务地址', true); return; }
+    const btn = $('#acModels');
+    btn.disabled = true; setStatus('正在连接接口…');
+    try{
+      const r = await fetch('/api/ai-config', {
+        method:'POST', headers: authHeaders(true),
+        body: JSON.stringify({ action:'test', baseUrl: f.baseUrl, key: f.key })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error || '拉取失败');
+      const list = $('#acList');
+      const models = d.models || [];
+      if(!models.length){ setStatus('接口没有返回模型列表，直接手填模型名也可以', true); return; }
+      list.hidden = false;
+      list.innerHTML = models.map(m=>`<button class="ai-model-item" data-m="${esc(m)}">${esc(m)}</button>`).join('');
+      list.querySelectorAll('[data-m]').forEach(b=>{
+        b.onclick = ()=>{
+          $('#acModel').value = b.dataset.m;
+          list.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on', x === b));
+        };
+      });
+      setStatus('拉到 ' + models.length + ' 个模型，点一个填进去');
+    }catch(e){ setStatus(e.message || '拉取失败', true); }
+    finally{ btn.disabled = false; }
+  };
+
+  $('#acSave').onclick = async ()=>{
+    const f = readForm();
+    if(!f.baseUrl){ setStatus('请填服务地址', true); return; }
+    if(!f.model){ setStatus('请填模型名，或点「拉取模型」挑一个', true); return; }
+    if(!f.key && !c.hasKey){ setStatus('请填 API Key', true); return; }
+    const btn = $('#acSave');
+    btn.disabled = true; setStatus('正在保存…');
+    try{
+      const r = await fetch('/api/ai-config', {
+        method:'POST', headers: authHeaders(true),
+        body: JSON.stringify({ baseUrl:f.baseUrl, model:f.model, key:f.key })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error || '保存失败');
+      AI.cfg = { ok:true, configured:true, baseUrl:d.baseUrl, model:d.model, hasKey:true, keyMask:d.keyMask };
+      ov.classList.remove('open');
+      toast('AI 接口已保存');
+      if(onDone) onDone(); else aiBoot();
+    }catch(e){ setStatus(e.message || '保存失败', true); }
+    finally{ btn.disabled = false; }
+  };
+
+  $('#acClear').onclick = async ()=>{
+    const btn = $('#acClear');
+    if(btn.dataset.armed !== '1'){
+      btn.dataset.armed = '1';
+      btn.textContent = '再点一次，清除配置';
+      setTimeout(()=>{ btn.dataset.armed = ''; btn.textContent = '清除配置'; }, 6000);
+      return;
+    }
+    try{
+      const r = await fetch('/api/ai-config', { method:'DELETE', headers: authHeaders(false) });
+      if(!r.ok) throw new Error('清除失败');
+      AI.cfg = { ok:true, configured:false };
+      $('#acBase').value = ''; $('#acKey').value = ''; $('#acModel').value = '';
+      const list = $('#acList'); if(list){ list.hidden = true; list.innerHTML = ''; }
+      setStatus('已清除，密钥也从账号里删掉了');
+      if(onDone) onDone();
+    }catch(e){ setStatus(e.message || '清除失败', true); }
+  };
+  setTimeout(()=>{ const i = $('#acBase'); if(i && !i.value) i.focus(); }, 60);
+}
+$('#aiOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiOverlay') closeAI(); });
+$('#aiCfgOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiCfgOverlay') e.currentTarget.classList.remove('open'); });
 
 /* ========== 启动 ========== */
 (async function boot(){

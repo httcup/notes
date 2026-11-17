@@ -14,7 +14,8 @@ export const USER_SCOPED_TABLES = [
   'ics_sources',    // 苹果日历订阅
   'ics_done',       // 日历勾选状态
   'notes_feeds',    // 笔记推送取数凭证
-  'usage_daily'     // 每日用量计数
+  'usage_daily',    // 每日用量计数
+  'ai_config'       // 自己填的 AI 接口配置（含加密后的密钥）
 ];
 
 // 表名来自上面的常量，不接受任何外部输入，拼进 SQL 是安全的

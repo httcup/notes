@@ -178,6 +178,12 @@ body.has-ol .ol-zone{display:flex}
 @media (max-width:900px){
   .ol-card{width:min(206px,62vw);right:8px;top:60px;max-height:min(64vh,calc(100vh - 140px))}
 }
+/* 宽屏：刻度和大纲卡片贴着正文右边缘，别漂在窗口最右边（正文最宽 680，半边 340）。
+   窗口不够宽时退回贴右边缘，否则卡片会压住刻度、点到就闪 */
+@media (min-width:1300px){
+  .ol-zone{ left:calc(50% + 352px); right:auto }
+  .ol-card{ left:calc(50% + 392px); right:auto }
+}
 @media (prefers-color-scheme: dark){
   .ol-card{box-shadow:0 10px 34px rgb(0 0 0/.5),0 2px 8px rgb(0 0 0/.35)}
 }

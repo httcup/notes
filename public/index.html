@@ -3067,7 +3067,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v208', at: '2026-11-18 17:40' };
+window.IVY_BUILD = { id: 'v209', at: '2026-11-18 17:46' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -9994,6 +9994,23 @@ function wireEditor(n){
   const grow = (el)=>{
     // 双栏下源码栏是固定高度、内部滚动（和右侧联动），别再按内容撑高
     if(el && el.id === 'source' && curMode() === 'split') return;
+    // 源码框是「按内容撑高、由外层 #scroll 滚动」的。先把 height 设回 auto 量高度的那一瞬，
+    // 页面高度会塌下来，浏览器会把 #scroll 的 scrollTop 夹到 0，光标一打字就弹回顶部。
+    // 所以量之前记下位置、量完立刻还回去。
+    if(el && el.id === 'source'){
+      const sc = document.getElementById('scroll');
+      const keep = sc ? sc.scrollTop : 0;
+      // #scroll 带 scroll-behavior:smooth，写 scrollTop 会变成一段动画；量高度时先关掉，
+      // 否则每敲一个字页面就慢慢滑一次，看起来像被弹回顶部
+      const prevB = sc ? sc.style.scrollBehavior : '';
+      if(sc) sc.style.scrollBehavior = 'auto';
+      el.style.height='auto'; el.style.height = el.scrollHeight+'px';
+      if(sc){
+        sc.scrollTop = Math.min(keep, Math.max(0, sc.scrollHeight - sc.clientHeight));
+        sc.style.scrollBehavior = prevB;
+      }
+      return;
+    }
     el.style.height='auto'; el.style.height = el.scrollHeight+'px';
   };
   const growTitle = ()=>{ title.style.height='auto'; title.style.height = title.scrollHeight+'px'; };

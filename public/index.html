@@ -82,7 +82,7 @@ a{color:inherit;text-decoration:none}
 /* ============ shelf ============ */
 .shelf{
   width:var(--shelf-w);flex:0 0 var(--shelf-w);display:flex;flex-direction:column;
-  padding:14px 12px 12px;position:relative;transition:margin-left .34s var(--spring),opacity .2s;
+  padding:8px 12px 12px;position:relative;transition:margin-left .34s var(--spring),opacity .2s;
 }
 .shelf.collapsed{margin-left:calc(var(--shelf-w) * -1);opacity:0;pointer-events:none}
 .shelf-open{
@@ -93,7 +93,7 @@ a{color:inherit;text-decoration:none}
 .shelf-open:hover{color:rgb(var(--ink))}
 .shelf-open.show{display:grid}
 .shelf-open svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
-.shelf-head{display:flex;align-items:center;gap:8px;padding:2px 4px 12px}
+.shelf-head{display:flex;align-items:center;gap:8px;height:52px;padding:0 4px}
 .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
 .brand-name{
   font-family:var(--font-serif);font-size:17.5px;font-weight:700;letter-spacing:0;
@@ -119,7 +119,7 @@ body.view-todo .head-actions .notes-only{display:none}
 .icon-btn:active{transform:scale(.94)}
 .icon-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 
-.shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 16px;scrollbar-gutter:stable}
+.shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 16px;scrollbar-gutter:stable}
 /* 当前选中的笔记本 / 分组：底色 + 更深文字，和中栏标题对应 */
 .nb-head.on{background:rgb(var(--ink)/.05);color:rgb(var(--ink))}
 .nb-head.on .meta{color:rgb(var(--ink-2))}
@@ -129,6 +129,7 @@ body.view-todo .head-actions .notes-only{display:none}
 .notelist{
   width:288px;flex:0 0 288px;display:flex;flex-direction:column;min-width:0;
   border-left:1px solid rgb(var(--line));background:rgb(var(--sunken));
+  padding-top:8px;            /* 和左栏、正文那一列同一条水平线起头 */
 }
 .notelist.hidden{display:none}
 .nl-hd{height:52px;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 10px 0 12px}
@@ -510,7 +511,7 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
   box-shadow:var(--shadow-paper);
 }
 [data-theme=dark] .paper{border-color:#2b3035}
-.tabbar{display:flex;align-items:center;gap:4px;height:44px;padding:0 10px;flex:0 0 auto;overflow:hidden}
+.tabbar{display:flex;align-items:center;gap:4px;height:50px;padding:0 10px;flex:0 0 auto;overflow:hidden}
 .tabs{display:flex;flex:1 1 auto;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
@@ -543,7 +544,7 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tab-new svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 
 /* 右上角操作图标与标题栏（标签 + 新建）同一行、垂直居中：44px 行高里对称留白 */
-.paper-actions{position:absolute;top:5px;right:12px;display:flex;align-items:center;gap:2px;z-index:6}
+.paper-actions{position:absolute;top:7px;right:12px;display:flex;align-items:center;gap:2px;z-index:6}
 /* 顶部「大纲」按钮：桌面 / 窄屏 / 触屏全部显示（.pa-btn 有 display:grid，用双类名保持一致权重） */
 .pa-btn.pa-ol{display:grid}
 body.ol-open .pa-ol{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
@@ -2065,7 +2066,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 /* 左栏：标题 + 关闭 + 分类。整块作为一列，手机上变成吸顶的一条 */
 .set-side{
   grid-column:1;grid-row:1;display:flex;flex-direction:column;min-height:0;
-  background:rgb(var(--sunken)/.75);border-right:.5px solid rgb(var(--line));
+  background:rgb(var(--sunken));border-right:.5px solid rgb(var(--line));
 }
 /* 设置页里也放一条底部导航：整屏浮层会把书架那条盖住，这里补一份，位置/样式跟书架里的一致 */
 .set-dock{
@@ -2224,7 +2225,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   letter-spacing:0;
 }
 .ab-sub{margin-top:8px;font-size:12.5px;color:rgb(var(--muted))}
-.ab-desc{margin:14px auto 0;max-width:432px;font-size:12.5px;line-height:1.9;color:rgb(var(--ink-2))}
+.ab-desc{margin:12px auto 0;max-width:432px;font-size:12.5px;line-height:1.9;color:rgb(var(--ink-2))}
 .about-card{
   background:rgb(var(--sunken)/.5);border:.5px solid rgb(var(--line));border-radius:14px;overflow:hidden;
 }
@@ -2265,6 +2266,47 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   background:#fff;padding:6px;box-shadow:0 6px 20px -12px rgb(16 24 32/.35);
 }
 .qr-tip{margin:14px 0 0;font-size:12px;line-height:1.75;color:rgb(var(--muted));text-align:center}
+/* ---- iPhone：添加到主屏幕（底部提示条 + 三步卡片） ---- */
+.ios-hint{
+  position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:70;
+  display:flex;align-items:center;gap:10px;padding:10px 8px 10px 12px;border-radius:14px;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));
+  box-shadow:0 14px 34px -14px rgb(16 24 32/.45);
+  transform:translateY(140%);opacity:0;transition:transform .32s var(--spring),opacity .2s;
+}
+.ios-hint.show{transform:none;opacity:1}
+.ios-hint .ih-ic{color:rgb(var(--ivy));flex:0 0 auto;display:grid;place-items:center}
+.ios-hint .ih-ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ios-hint .ih-tx{flex:1;min-width:0}
+.ios-hint .ih-tx b{display:block;font-size:13px;font-weight:600;color:rgb(var(--ink))}
+.ios-hint .ih-tx i{display:block;font-style:normal;font-size:11.5px;color:rgb(var(--faint));margin-top:1px}
+.ios-hint .ih-go{
+  flex:0 0 auto;height:32px;padding:0 14px;border-radius:9px;
+  background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-size:12.5px;font-weight:600;
+}
+.ios-hint .ih-go:active{background:rgb(var(--ivy-hover))}
+.ios-hint .ih-x{
+  width:28px;height:28px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;color:rgb(var(--faint));
+}
+.ios-hint .ih-x svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+.ios-card{width:min(400px,100%)}
+.ios-body{padding:6px 20px 22px}
+.ios-step{display:flex;gap:12px;padding:11px 0;border-bottom:.5px solid rgb(var(--line))}
+.ios-step:last-of-type{border-bottom:0}
+.ios-step>i{
+  width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;
+  background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-style:normal;font-size:11.5px;font-weight:700;
+}
+.ios-step b{display:block;font-size:13px;font-weight:600;color:rgb(var(--ink))}
+.ios-step p{margin:4px 0 0;font-size:12px;line-height:1.7;color:rgb(var(--muted))}
+.ios-share{
+  display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;
+  background:rgb(var(--hover));color:rgb(var(--ink-2));font-size:11px;vertical-align:-3px;
+}
+.ios-note{
+  margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgb(var(--sunken));
+  font-size:11.5px;line-height:1.75;color:rgb(var(--muted));
+}
 .set-empty{font-size:12px;color:rgb(var(--faint));padding:14px 0}
 @media (max-width:760px){
   /* 手机上让浮层自己整页滚（比「固定层里再套一个滚动容器」稳得多），
@@ -2516,11 +2558,11 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 /* ---- 手机：列表页 ↔ 笔记页 两级，侧栏仍是抽屉 ---- */
 .m-back{
   display:none;align-items:center;gap:5px;flex:0 0 auto;
-  height:30px;padding:0 9px 0 4px;border-radius:8px;
+  height:30px;padding:0 9px 0 0;margin-left:-4px;border-radius:8px;
   color:rgb(var(--ink));font-size:13px;line-height:1;
 }
 .m-back:hover{background:rgb(var(--hover))}
-.m-back .mb-ar{font-size:19px;line-height:1;color:rgb(var(--muted));margin-top:-3px}
+.m-back .mb-ar{font-size:20px;line-height:1;color:rgb(var(--muted));margin-top:-2px;margin-left:-1px}
 .m-back .mb-t{font-weight:600;white-space:nowrap;letter-spacing:-.01em}
 .m-back .mb-n{font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
 @media (max-width:640px){
@@ -2529,12 +2571,16 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .nl-hd b{font-size:15px}
   .nl-open{display:grid}
   .nl-new{width:34px;height:34px}
+  .tab-new{width:34px;height:34px;border-radius:9px}
+  .tab-new svg{width:18px;height:18px}
   .nl-rows{padding:2px 8px 28px}
   .nl-row{padding:11px 10px 12px;border-radius:10px}
   .nl-row .nl-more,.nl-row .nl-del{top:9px}
   .nl-row .nl-t{font-size:14.5px}
   .nl-row .nl-s{font-size:12.5px;margin-top:4px}
   .nl-row .nl-d{font-size:11.5px}
+  .tabbar{padding-left:10px}
+  .tabbar .tabs{gap:2px}
   .main-wrap{position:fixed;inset:0;z-index:60;padding:0;background:rgb(var(--canvas));display:none}
   body.m-read .main-wrap{display:flex}
   body.m-read .notelist{display:none!important}
@@ -2543,6 +2589,16 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   #shelfOpen{display:none!important}
   .help-wrap{display:block}
   .help-ol{display:none!important}
+}
+/* iOS：手指点一下就放大，是因为被点的输入框字号小于 16px，或系统把连击当双击缩放。
+   这里禁掉双击缩放（捏合仍可用），并把手机上的输入框统一抬到 16px。 */
+html{touch-action:manipulation}
+button,a,[role=button]{-webkit-tap-highlight-color:transparent}
+@media (max-width:900px){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  textarea,select{font-size:16px !important}
+  /* 正文字号用户可能调到 14，手机上兜底到 16，避免一聚焦就整屏放大 */
+  .prose{font-size:max(16px,var(--doc-fs,16px))}
 }
 </style>
 <script>
@@ -2772,7 +2828,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v181', at: '2026-11-18 09:48' };
+window.IVY_BUILD = { id: 'v182', at: '2026-11-18 09:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7048,6 +7104,8 @@ function openHelpPanel(){
         </div>
         <div class="help-tabs">
           <button class="help-tab" data-htab="io">导入 / 导出</button>
+          <button class="help-tab" data-htab="acct">账户与安全</button>
+          <button class="help-tab" data-htab="ai">AI 与导图</button>
           <button class="help-tab" data-htab="md">Markdown 写法</button>
           <button class="help-tab" data-htab="key">快捷键</button>
           <button class="help-tab" data-htab="todo">日程怎么用</button>
@@ -7132,15 +7190,75 @@ function dlBodyHtml(){
             <a class="dl-btn" href="/dl/note-Android.apk" download>下载 APK</a>
             <button class="dl-btn ghost" id="dlAndroid">免安装</button>
           </div>
+          <div class="dl-row">
+            <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="6.2" y="2.2" width="11.6" height="19.6" rx="3"/><path d="M10.2 4.7h3.6" stroke-linecap="round"/><path d="M12 18.6h.01" stroke-linecap="round"/></svg></div>
+            <div class="dl-info"><b>iPhone / iPad 版</b><span>免安装 · 用 Safari 打开本站，加到主屏幕就有独立图标，全屏无地址栏，随网页自动更新</span></div>
+            <button class="dl-btn" id="dlIos">添加到主屏幕</button>
+          </div>
           <div class="dl-tip">
             <b>macOS</b>：解压后把「随手笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手笔记.app</code>。<br>
             <b>Windows</b>：解压后双击 <code>随手笔记.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。<br>
-            <b>Android</b>：点<b>「下载 APK」</b> 装应用版（支持系统通知、导出存到「下载」文件夹）；手机会提示「未知来源」，允许一次即可。不想装包就点<b>「免安装」</b>，用浏览器菜单里的「添加到主屏幕」装成网页应用，随网页自动更新。
+            <b>Android</b>：点<b>「下载 APK」</b> 装应用版（支持系统通知、导出存到「下载」文件夹）；手机会提示「未知来源」，允许一次即可。不想装包就点<b>「免安装」</b>，用浏览器菜单里的「添加到主屏幕」装成网页应用，随网页自动更新。<br>
+            <b>iPhone / iPad</b>：不用下载任何东西。用 <b>Safari</b> 打开本站（微信、小红书里的浏览器不行），点底部中间的<b>分享按钮</b> → 往下滑点<b>「添加到主屏幕」</b> → 右上角「添加」。之后从桌面图标打开就是全屏应用。
           </div>`;
 }
 function bindDlBody(root){
   const ab = root.querySelector('#dlAndroid');
   if(ab) ab.onclick = installAsApp;
+  const ios = root.querySelector('#dlIos');
+  if(ios) ios.onclick = ()=>{
+    if(inStandalone()){ toast('已经在主屏幕里运行了'); return; }
+    openIosInstallSheet();
+  };
+}
+/* iOS 只能手动加：给一张三步卡片，比一句「点菜单」靠谱 */
+function openIosInstallSheet(){
+  let ov = document.getElementById('iosOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'iosOv'; ov.className = 'lo-ov';
+    ov.innerHTML = `<div class="lo-card ios-card" role="dialog" aria-label="添加到主屏幕">
+      <div class="lo-hd"><h3>添加到主屏幕</h3>
+        <button class="qr-close" id="iosClose" title="关闭" aria-label="关闭">${ic('x')}</button></div>
+      <div class="lo-body ios-body">
+        <div class="ios-step"><i>1</i><div><b>用 Safari 打开本站</b><p>微信、小红书、QQ 里的浏览器加不了，右上角「···」→「在 Safari 中打开」。</p></div></div>
+        <div class="ios-step"><i>2</i><div><b>点底部中间的分享按钮</b><p>就是方框里一支向上的箭头 <span class="ios-share">⬆</span>。</p></div></div>
+        <div class="ios-step"><i>3</i><div><b>往下滑，点「添加到主屏幕」</b><p>确认名字后点右上角「添加」，桌面就多了一个图标。</p></div></div>
+        <p class="ios-note">加完从桌面图标打开：没有地址栏、没有浏览器工具栏，和下载的 App 一样；内容跟着网页自动更新，不用重新安装。</p>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('mousedown', e=>{ if(e.target === ov) ov.classList.remove('open'); });
+    ov.querySelector('#iosClose').onclick = ()=>ov.classList.remove('open');
+  }
+  ov.classList.add('open');
+}
+function isIOS(){
+  const ua = navigator.userAgent || '';
+  if(/iPad|iPhone|iPod/.test(ua)) return true;
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;   // iPadOS 伪装成 Mac
+}
+/* iPhone 用 Safari 打开时，底部浮一条「添加到主屏幕」，点开是三歩说明。
+   关掉后 30 天内不再打扰；已经是主屏幕应用则不出现。 */
+function showIosInstallHint(){
+  if(!isIOS() || inStandalone()) return;
+  try{ if(Date.now() - (+localStorage.getItem('ivy.iosHint') || 0) < 30 * 864e5) return; }catch(e){}
+  if(document.getElementById('iosHint')) return;
+  const el = document.createElement('div');
+  el.id = 'iosHint'; el.className = 'ios-hint';
+  el.innerHTML = `<span class="ih-ic">${ic('plusCircle')}</span>
+    <span class="ih-tx"><b>添加到主屏幕</b><i>像 App 一样用，全屏、有图标</i></span>
+    <button class="ih-go" id="ihGo">添加</button>
+    <button class="ih-x" id="ihX" title="关闭" aria-label="关闭">${ic('x')}</button>`;
+  document.body.appendChild(el);
+  const hide = (remember)=>{
+    el.classList.remove('show');
+    setTimeout(()=>el.remove(), 320);
+    if(remember){ try{ localStorage.setItem('ivy.iosHint', String(Date.now())); }catch(e){} }
+  };
+  el.querySelector('#ihGo').onclick = ()=>{ openIosInstallSheet(); hide(true); };
+  el.querySelector('#ihX').onclick = ()=>hide(true);
+  setTimeout(()=>el.classList.add('show'), 1600);
 }
 function paintHelp(){
   const ov = $('#helpOv'); if(!ov) return;
@@ -7162,11 +7280,16 @@ function helpBodyHtml(tab){
         ② <b>.md</b> → 自动<b>按 <code>---</code> 分篇</b>：每篇的第一个 <code># 标题</code> 作标题、其余作正文，一篇一个笔记；只写了一篇时就导入成一篇（正文里自己的分割线不会被误拆）；<br>
         ③ <b>.html</b> → 按网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown；登录状态下内嵌图片会自动转存。</p></div>
       <div class="help-sec"><h4>该选哪个</h4>
-        <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>
+        <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>`;
+  } else if(tab === 'acct'){
+    return `
       <div class="help-sec"><h4>忘记密码 / 改密码</h4>
         <p class="help-p">已登录时：⚙ → <b>账户 / 同步</b> → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
       <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
         <p class="help-p">⚙ → <b>账户 / 同步</b> → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
+    `;
+  } else if(tab === 'ai'){
+    return `
       <div class="help-sec"><h4>AI（站内免费模型 / 自己的接口）</h4>
         <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，次日恢复）；<b>登录后不限次数</b>。第三个填你自己的 OpenAI 兼容接口，同样不限次数。</p>
         <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
@@ -7225,7 +7348,8 @@ function helpBodyHtml(tab){
   }
 }
 function helpTabsHtml(){
-  return [['io','导入 / 导出'],['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']]
+  return [['io','导入 / 导出'],['acct','账户与安全'],['ai','AI 与导图'],
+          ['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']]
     .map(([id,name])=>`<button class="help-tab${helpTab === id ? ' on' : ''}" data-htab="${id}">${name}</button>`).join('');
 }
 /* 高亮：27 个预设色 + 自定义取色。语法 ==文字==（绿）/ ==文字=={.yellow} / ==文字=={c:#f59e0b} */
@@ -11779,7 +11903,8 @@ function setHelpHtml(){
 function renderHelpOutline(){
   const pane = $('#setPane'), doc = $('#setHelpDoc'), ol = $('#setHelpOl');
   if(!pane || !doc || !ol) return;
-  const TABS = [['io','导入 / 导出'],['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']];
+  const TABS = [['io','导入 / 导出'],['acct','账户与安全'],['ai','AI 与导图'],
+                ['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']];
   const secs = Array.from(doc.querySelectorAll('.help-sec'));
 
   // 四个栏目始终排在目录最上面，当前栏目下面再展开它的章节
@@ -12214,7 +12339,6 @@ function setAboutHtml(){
   return `<div class="about-wrap">
     <div class="about-hero">
       <div class="ab-name">随手笔记<span class="ab-ver">${esc(b.id)}</span></div>
-      <div class="ab-sub">ivyNote · 本地优先的 Markdown 笔记</div>
       <p class="ab-desc">随手笔记是一款本地优先的 Markdown 笔记。离线也能写，联网后自动同步；数据优先存在这台设备，登录后同步到云端。</p>
     </div>
     <div class="about-card">
@@ -15105,6 +15229,8 @@ function pomoSet(k, v){
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') pomoTick(); });
   pomoTick(); setInterval(pomoTick, 250);
 })();
+/* iPhone Safari 首次打开：底部浮一条「添加到主屏幕」 */
+setTimeout(()=>{ try{ showIosInstallHint(); }catch(e){} }, 2200);
 </script>
 </body>
 </html>

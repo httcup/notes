@@ -1486,9 +1486,15 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   color:rgb(var(--ivy-ink));background:rgb(var(--ivy-soft));text-decoration:none;
   padding:1.5px 5px;border-radius:5px;font-size:.94em;white-space:nowrap;
 }
-/* 统一垂直节奏：块与块之间只留一个间距，标题不再叠加 1.7em 的上边距 */
+/* 统一垂直节奏：块与块之间只留一个间距（用相邻兄弟的 margin-top，避免外边距叠加）。
+   注意别把这条的间距调成 0——那会让预览里的段落全糊成一整片（源码有换行、预览没段距）。 */
 .prose > *, .blk-view > *{margin-top:0 !important;margin-bottom:0 !important}
-.prose > * + *, .blk + .blk, .blk-view > * + *{margin-top:0 !important}
+.prose > * + *, .blk + .blk, .blk-view > * + *{margin-top:.78em !important}
+/* 标题前后留白比正文段落更大，读起来才有层级 */
+.prose > h1, .prose > h2, .prose > h3, .prose > h4, .prose > h5, .prose > h6{margin-top:1.55em !important}
+.prose > h1 + *, .prose > h2 + *, .prose > h3 + *,
+.prose > h4 + *, .prose > h5 + *, .prose > h6 + *{margin-top:.42em !important}
+.prose > :first-child{margin-top:0 !important}
 .prose > hr, .blk-view > hr{margin-top:1.15em !important;margin-bottom:1.15em !important}
 /* 有边框/底色的块（代码块、表格、引用）留一点呼吸，否则会和相邻文字粘在一起 */
 .prose > pre, .prose > table, .prose > blockquote,
@@ -2879,7 +2885,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v189', at: '2026-11-18 14:52' };
+window.IVY_BUILD = { id: 'v190', at: '2026-11-18 15:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

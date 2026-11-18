@@ -1495,6 +1495,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .prose > h1 + *, .prose > h2 + *, .prose > h3 + *,
 .prose > h4 + *, .prose > h5 + *, .prose > h6 + *{margin-top:.42em !important}
 .prose > :first-child{margin-top:0 !important}
+/* 源码里的连续空行：用一个定高占位撑开，段距仍由上面的相邻块规则负责 */
+.prose > .md-blank{margin:0 !important;padding:0}
+/* 块编辑里同样按空行数撑开，两边看到的留白一致 */
+.blk.blk-gap{margin-top:calc(var(--gap-n) * 1.7em) !important}
 .prose > hr, .blk-view > hr{margin-top:1.15em !important;margin-bottom:1.15em !important}
 /* 有边框/底色的块（代码块、表格、引用）留一点呼吸，否则会和相邻文字粘在一起 */
 .prose > pre, .prose > table, .prose > blockquote,
@@ -2905,7 +2909,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v193', at: '2026-11-18 15:10' };
+window.IVY_BUILD = { id: 'v194', at: '2026-11-18 15:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8588,7 +8592,13 @@ document.addEventListener('keydown', e=>{
 function paintLive(){
   const host = liveHost(); if(!host) return;
   host.innerHTML = '';
-  LIVE.raws.forEach((raw,i)=> host.appendChild(blockEl(raw, i, LIVE.raws.length===1)));
+  LIVE.raws.forEach((raw,i)=>{
+    const el = blockEl(raw, i, LIVE.raws.length===1);
+    // 块之间原本隔了两个以上空行：撑开对应高度，别让几行空白在所见即所得里凭空消失
+    const g = (LIVE.gaps && LIVE.gaps[i]) || 0;
+    if(i && g >= 1){ el.classList.add('blk-gap'); el.style.setProperty('--gap-n', g); }
+    host.appendChild(el);
+  });
   const tail = document.createElement('div'); tail.className = 'lv-tail'; host.appendChild(tail);
   paintHeadings(host);
   renderMermaidBlocks(host);
@@ -9854,8 +9864,20 @@ function mdToHtml(md){
       out.push(ordered ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
       continue;
     }
-    // blank
-    if(!line.trim()){ i++; continue; }
+    // blank：按源码里空行的行数撑开留白。一个空行≈一行高，两个空行就翻倍，
+    // 否则源码里按了几次回车、预览永远只有一个段距，看着像被吃掉了
+    if(!line.trim()){
+      const at = i; let n = 0;
+      while(i<lines.length && !lines[i].trim()){ n++; i++; }
+      const prev = out[out.length-1] || '';
+      const afterHeading = /^<h[1-6][\s>]/.test(prev);   // 标题下的空行照旧收紧，别把标题和正文拽开
+      // 首尾的空行不占高度（文档开头/结尾多几个回车不该顶出一片空白）
+      if(at > 0 && i < lines.length && n >= 1 && !afterHeading){
+        const extra = n * 1.7 - 0.78;                   // .78em 是相邻块自带的段距，这里只补差额
+        if(extra > 0.05) out.push(`<div class="md-blank" aria-hidden="true" style="height:${extra.toFixed(2)}em"></div>`);
+      }
+      continue;
+    }
     // paragraph
     let buf=[line]; i++;
     while(i<lines.length && lines[i].trim() && !/^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s)/.test(lines[i]) && !isTableSep(lines[i])){

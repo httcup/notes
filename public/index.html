@@ -160,6 +160,15 @@ body.view-todo .head-actions .notes-only{display:none}
 .nl-hd b{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nl-hd em{font-style:normal;font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
 .nl-hd .nl-r{margin-left:auto;display:flex;gap:2px;flex:0 0 auto}
+/* 手机上从某个笔记本 / 标签的列表回「全部笔记」：只有窄屏的中栏是整页，才需要这枚返回 */
+.nl-back{
+  display:none;align-items:center;gap:1px;flex:0 0 auto;
+  height:26px;padding:0 8px 0 3px;border-radius:8px;
+  color:rgb(var(--muted));font-size:12.5px;line-height:1;
+  transition:background .14s,color .14s;
+}
+.nl-back .nb-ar{font-size:17px;line-height:1;margin-top:-2px}
+.nl-back:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .nl-open{display:none}
 body.shelf-collapsed .nl-open{display:grid}
 .nl-rows{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 8px 20px;overscroll-behavior:contain}
@@ -236,6 +245,11 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
   transform:rotate(90deg);transition:transform .18s var(--spring);
 }
 .sec-fold.closed .caret{transform:rotate(0)}
+/* 窄屏：标题=回全部笔记，小三角=折叠。手指点得到才算数，把三角的热区撑大 */
+@media (max-width:900px){
+  .sec-fold .caret{padding:8px 7px;margin:-8px -5px -8px -7px;border-radius:6px}
+  .sec-fold .caret:active{background:rgb(var(--hover))}
+}
 .sec-body.hidden{display:none}
 .shelf-row{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
@@ -2768,12 +2782,13 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 }
 .m-back:hover{background:rgb(var(--hover))}
 .m-back .mb-ar{font-size:20px;line-height:1;color:rgb(var(--muted));margin-top:-2px;margin-left:-1px}
-.m-back .mb-t{font-weight:600;white-space:nowrap;letter-spacing:-.01em}
+.m-back .mb-t{font-weight:600;white-space:nowrap;letter-spacing:-.01em;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
 .m-back .mb-n{font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
 @media (max-width:640px){
   .notelist{display:flex!important;flex:1 1 auto;width:auto;flex-basis:auto;border-left:0;background:rgb(var(--canvas))}
   .nl-hd{height:54px;padding:0 8px 0 6px;gap:6px}
   .nl-hd b{font-size:15px}
+  .nl-back.show{display:inline-flex}
   .nl-open{display:grid}
   .nl-new{width:34px;height:34px}
   .tab-new{width:34px;height:34px;border-radius:9px}
@@ -2838,6 +2853,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="nl-hd">
       <button class="icon-btn nl-open" id="nlOpen" title="展开工作区 (⌘\)" aria-label="展开工作区"></button>
       <button class="nl-new" id="nlNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
+      <button class="nl-back" id="nlBack" title="回到全部笔记" aria-label="回到全部笔记"><span class="nb-ar">‹</span>全部</button>
       <b id="nlTitle">全部笔记</b><em id="nlCount">0</em>
       <span class="nl-r">
         <button class="icon-btn" id="nlSearch" title="搜索笔记 (⌘K)" aria-label="搜索笔记"></button>
@@ -3071,7 +3087,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v210', at: '2026-11-18 22:20' };
+window.IVY_BUILD = { id: 'v211', at: '2026-11-18 22:55' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3909,6 +3925,20 @@ function setScope(sc){
   if(window.innerWidth <= 640) shelfCloseIfDrawer();
   renderAll(); save();
 }
+/* 回到「全部笔记」：手机上的唯一出口（侧栏标题、中栏返回、笔记本列表页都走这里）。
+   原来手机上只能点某个笔记本进去，没有回全部笔记的入口。 */
+function goAllNotes(){
+  S.scope = 'all';
+  S.listQuery = '';
+  trashView = false;
+  S.view = 'notes';
+  if(window.innerWidth <= 640){
+    document.body.classList.remove('m-read');    // 手机：从笔记页回到列表页
+    shelfCloseIfDrawer();
+  }
+  renderAll(); save();
+  const rows = $('#nlRows'); if(rows) rows.scrollTop = 0;
+}
 function listScopeNotes(){
   const notes = liveNotes();
   const sc = S.scope || 'all';
@@ -3995,7 +4025,9 @@ function openNoteRowMenu(anchor, id){
   ]);
 }
 function openListMore(anchor){
+  const inAll = !(S.scope && S.scope !== 'all') && !S.listQuery;
   popover(anchor, [
+    ...(inAll ? [] : [['回到全部笔记', '', '', 'notebook', ()=>goAllNotes()], '-']),
     ['新建笔记', '⌘N', '', 'compose', ()=>newNote(S.scope && S.scope.indexOf('nb:')===0 ? S.scope.slice(3) : null)],
     ['新建笔记本', '', '', 'plus', ()=>newNotebook()],
     '-',
@@ -4040,6 +4072,13 @@ function renderList(){
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = title;
   if(cEl) cEl.textContent = String(notes.length);
+  // 不在「全部笔记」时，中栏头部给一枚「‹ 全部」，手机上一点就回去
+  const bkEl = $('#nlBack');
+  if(bkEl){
+    const offAll = !!((S.scope && S.scope !== 'all') || raw);
+    bkEl.classList.toggle('show', offAll);
+    bkEl.onclick = ()=>goAllNotes();
+  }
   const lockedId = scopeLockedNb();
   if(lockedId){
     const lnb = nbById(lockedId);
@@ -4113,9 +4152,9 @@ function renderShelf(){
   const trash = S.notes.filter(n=>n.trashed);
   // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
   const nClosed = !!S.notesClosed;
-  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(!inlineNotes && (S.scope||'all')==='all') ? ' on' : ''}" data-act="toggle-notes-sec"
-      title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">
-      <span class="lb"><i class="caret">&#9654;</i>全部笔记</span>
+  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(S.scope||'all')==='all' ? ' on' : ''}" data-act="scope-all"
+      title="回到全部笔记">
+      <span class="lb"><i class="caret" data-fold-notes>&#9654;</i>全部笔记</span>
       <span class="count">${notes.length}</span>
     </button>`;
   let body = '';
@@ -4296,11 +4335,17 @@ function bindShelf(){
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
     if(a==='clear-tag'){ setScope('all'); }
     if(a==='toggle-tag-pills'){ S.tagPillsClosed = !S.tagPillsClosed; renderShelf(); save(); }
-    if(a==='toggle-notes-sec'){
-      if(window.innerWidth <= 900){ S.notesClosed = !S.notesClosed; renderShelf(); save(); }
-      else setScope('all');                                  // 桌面：点「笔记」回到全部笔记
-    }
+    if(a==='scope-all'){ goAllNotes(); }                     // 任何宽度：点标题 = 看全部笔记
   });
+  /* 小三角单独管折叠：手机上笔记本列表可以收起来，但标题本身已经用来切「全部笔记」了 */
+  if(window.innerWidth <= 900){
+    shelfBody.querySelectorAll('[data-fold-notes]').forEach(c=>{
+      c.onclick = e=>{
+        e.stopPropagation(); e.preventDefault();
+        S.notesClosed = !S.notesClosed; renderShelf(); save();
+      };
+    });
+  }
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderShelf(); renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
     todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
@@ -5772,8 +5817,11 @@ function renderTabs(){
   const bar = $('#tabbar');
   if(S.view!=='notes'){ bar.innerHTML = ''; return; }
   const allN = (()=>{ try{ return liveNotes().length; }catch(e){ return (S.notes||[]).filter(n=>!n.trashed && !n.deleted).length; } })();
-  bar.innerHTML = `<button class="m-back" id="mBack" title="返回全部笔记" aria-label="返回全部笔记">`
-    + `<span class="mb-ar">‹</span><span class="mb-t">全部笔记</span><span class="mb-n">${allN}</span></button>`
+  // 返回键显示当前列表的名字：全部笔记 / 某个笔记本 / 某个标签，回来时对得上
+  const backT = (()=>{ try{ return listScopeTitle(); }catch(e){ return '全部笔记'; } })();
+  const backN = (()=>{ try{ return listScopeNotes().length; }catch(e){ return allN; } })();
+  bar.innerHTML = `<button class="m-back" id="mBack" title="返回${esc(backT)}" aria-label="返回${esc(backT)}">`
+    + `<span class="mb-ar">‹</span><span class="mb-t">${esc(backT)}</span><span class="mb-n">${backN}</span></button>`
     + `<div class="tabs">` + S.tabs.map(id=>{
     const n = noteById(id); if(!n) return '';
     // 笔记本锁着时，标签栏也别把标题露出来

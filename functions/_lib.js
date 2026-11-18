@@ -108,15 +108,46 @@ export function forgetAccount(uid) {
 }
 
 // 支持两种身份：Bearer 令牌（多用户）／x-ivy-key 单口令（主人账号，兼容旧客户端）
-// 云上传白名单：图床 / 云端文件只给指定账号用，其余账号一律存本机。
+// 主人账号：口令走 IVY_KEY，users 表里没有这一行，所有付费能力默认全开
+export function adminUid(env) {
+  return String((env && env.ADMIN_UID) || 'owner');
+}
+
+// 读 VIP 到期时间（毫秒）。0 = 不是 VIP；表没加列或查不到都当 0，不让功能因为迁移没跑就崩
+const vipCache = new Map();     // uid -> { until, at }，30 秒缓存，省掉每个请求一次 D1 往返
+export async function vipState(env, uid) {
+  if (!uid) return { vip: false, until: 0 };
+  if (uid === adminUid(env)) return { vip: true, until: 0, owner: true };
+  const hit = vipCache.get(uid);
+  if (hit && Date.now() - hit.at < 30000) return { vip: hit.until > Date.now(), until: hit.until };
+  let until = 0;
+  try {
+    const row = await env.DB.prepare('SELECT vip_until FROM users WHERE id = ?1').bind(uid).first();
+    until = Number((row && row.vip_until) || 0);
+  } catch (e) {
+    until = 0;
+  }
+  vipCache.set(uid, { until, at: Date.now() });
+  return { vip: until > Date.now(), until };
+}
+export function forgetVip(uid) {
+  vipCache.delete(uid);
+}
+
+// 云上传白名单：图床 / 云端文件只给「白名单账号」或「VIP」用，其余账号一律存本机。
 // PIC_ALLOW 里填 uid 或账号名，逗号分隔；不配时只放行 ADMIN_UID（默认 owner）。
 // 显式写 "*" 才全放开。
-export function cloudUploadAllowed(env, user) {
+export async function cloudUploadAllowed(env, user) {
   if (!user) return false;
-  const raw = String((env && env.PIC_ALLOW) || (env && env.ADMIN_UID) || 'owner').trim();
+  const raw = String((env && env.PIC_ALLOW) || '').trim();
   if (raw === '*') return true;
+  const uid = String(user.uid || '').toLowerCase();
+  const name = String(user.name || '').toLowerCase();
   const list = raw.split(/[,，\s]+/).filter(Boolean).map((s) => s.toLowerCase());
-  return list.includes(String(user.uid || '').toLowerCase()) || list.includes(String(user.name || '').toLowerCase());
+  if (list.includes(uid) || list.includes(name)) return true;
+  if (!list.length && (uid === adminUid(env).toLowerCase())) return true;
+  const v = await vipState(env, user.uid);
+  return !!v.vip;
 }
 
 export async function currentUser(request, env) {

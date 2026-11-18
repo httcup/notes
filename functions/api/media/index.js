@@ -39,7 +39,7 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
-    if (!cloudUploadAllowed(env, user)) {
+    if (!(await cloudUploadAllowed(env, user))) {
       return json({ error: '当前账号未开通云端文件上传，内容只存本机', code: 'not_allowed' }, 403);
     }
     const type = request.headers.get('content-type') || '';

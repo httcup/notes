@@ -8,6 +8,7 @@
 // 纯文本流（不是 SSE）让前端只需要 reader.read() + 拼接，不用自己解析协议。
 import { json, preflight, currentUser } from '../_lib.js';
 import { loadAiConfig, baseBlockReason, siteProviders, publicProviders, quotaLimit, takeQuota } from '../_ai.js';
+import { vipState } from '../_lib.js';
 
 const MAX_TEXT = 20000;
 const MAX_NOTE = 12000;
@@ -80,6 +81,15 @@ const TASKS = {
     max: 900,
     sys: '你是编辑。用 3 到 5 条要点总结内容，输出 Markdown 无序列表，每条一句话，'
       + '覆盖结论、关键事实和待办。不要写前言、不要总结「这篇文章讲了」。'
+  },
+  outline: {
+    label: '大纲',
+    temperature: 0.3,
+    max: 700,
+    sys: '你是笔记整理助手。读完全文后给出层级大纲，只输出 Markdown 无序列表：'
+      + '一级用「- 」，二级用两个空格加「- 」，最多三层；每条 4 到 16 个字，是内容要点而不是句子；'
+      + '总条数不超过 12 条，按原文顺序，覆盖开头到结尾的主要脉络。'
+      + '不要写前言、不要复述长句、不要加粗、不要用 ``` 包裹。'
   },
   format: {
     label: '排版',
@@ -253,20 +263,31 @@ async function handle({ request, env }) {
     backend = sites.find((p) => p.id === provider);
     if (!backend) return json({ error: '这个模型现在不可用，换一个试试', code: 'provider' }, 400);
 
-    // 站内 key：未登录按 IP 每天限量；登录账号不限次，只顺手记一笔用量（便于看消耗，不拦）
+    // 站内 key 按天限额：未登录按 IP 算；登录后基础额度；VIP 不限次（仍计数，便于看消耗）
     if (!user) {
       const who = await anonId(request, env);
       const limit = quotaLimit(env, 'anon');
       const q = await takeQuota(env, who, 'ai', limit);
       if (!q.ok) {
         return json({
-          error: `今天的免费额度用完了（每天 ${limit} 次），明天再来；也可以登录后不限次数，或在「AI 接口设置」里填自己的接口`,
+          error: `今天的免费额度用完了（每天 ${limit} 次），明天再来；登录后有更多次数，或在「AI 接口设置」里填自己的接口`,
           code: 'quota', limit, used: q.used
         }, 429);
       }
     } else {
-      // 上限给一个够大的数，等于只计数不限制；D1 抖动也不该挡住用户
-      try { await takeQuota(env, user.uid, 'ai', 1000000); } catch (e) { /* 忽略 */ }
+      const v = await vipState(env, user.uid);
+      if (v.vip) {
+        try { await takeQuota(env, user.uid, 'ai', 1000000); } catch (e) { /* 忽略 */ }
+      } else {
+        const limit = quotaLimit(env, 'user');
+        const q = await takeQuota(env, user.uid, 'ai', limit);
+        if (!q.ok) {
+          return json({
+            error: `今天的基础 AI 额度用完了（每天 ${limit} 次），明天再来；开通 VIP 可不限次数，也可以在「AI 接口设置」里填自己的接口`,
+            code: 'quota', limit, used: q.used, vip: false
+          }, 429);
+        }
+      }
     }
   }
 

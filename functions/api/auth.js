@@ -1,5 +1,5 @@
 // POST /api/auth  登录 / 注册 / 改密码，换一个 90 天有效的令牌
-import { json, preflight, hashPassword, randomHex, signToken, safeEqual, currentUser } from '../_lib.js';
+import { json, preflight, hashPassword, randomHex, signToken, safeEqual, currentUser, vipState } from '../_lib.js';
 
 const TTL = 90 * 864e5;
 // 注册开关关闭时给新用户的提示（站主可在管理后台开/关）
@@ -51,7 +51,7 @@ export async function onRequest({ request, env }) {
     if (!env.IVY_KEY) return json({ error: '服务端未配置 IVY_KEY' }, 503);
     if (!safeEqual(key, env.IVY_KEY)) return json({ error: '口令不正确' }, 401);
     const token = await signToken({ u: 'owner', n: '主人', e: Date.now() + TTL }, env.IVY_SECRET);
-    return json({ token, name: '主人', uid: 'owner' });
+    return json({ token, name: '主人', uid: 'owner', vip: true, vipOwner: true, vipUntil: 0 });
   }
 
   if (!/^[\w\u4e00-\u9fa5.-]{2,24}$/.test(name)) {
@@ -70,7 +70,8 @@ export async function onRequest({ request, env }) {
     if (!safeEqual(h, row.hash)) return json({ error: '口令不正确' }, 401);
     if (row.disabled) return json({ error: '该账号已被停用，请联系站主' }, 403);
     const token = await signToken({ u: row.id, n: row.name, e: Date.now() + TTL }, env.IVY_SECRET);
-    return json({ token, name: row.name, uid: row.id });
+    const v = await vipState(env, row.id);
+    return json({ token, name: row.name, uid: row.id, vip: v.vip, vipUntil: v.until });
   }
 
   // 账号不存在：注册关了就不再引导去注册，直接说明情况
@@ -87,5 +88,5 @@ export async function onRequest({ request, env }) {
     .bind(id, name, salt, hash, Date.now())
     .run();
   const token = await signToken({ u: id, n: name, e: Date.now() + TTL }, env.IVY_SECRET);
-  return json({ token, name, uid: id, created: true });
+  return json({ token, name, uid: id, created: true, vip: false, vipUntil: 0 });
 }

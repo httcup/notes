@@ -10,7 +10,7 @@
 //
 // 注销成功后，之前发出的令牌会立刻失效（见 _lib.js 的账号存在性校验），
 // 否则旧令牌还能继续往已注销的账号里写数据。
-import { json, preflight, currentUser, hashPassword, safeEqual, forgetAccount } from '../_lib.js';
+import { json, preflight, currentUser, hashPassword, safeEqual, forgetAccount, vipState } from '../_lib.js';
 import { countUserData, purgeUserData } from '../_purge.js';
 
 function adminUid(env) {
@@ -30,9 +30,13 @@ export async function onRequest({ request, env }) {
   try {
     // ── 查：注销页打开时先问一次，把要删的东西摆在用户面前 ──
     if (request.method === 'GET') {
+      const vs = await vipState(env, uid);
       return json({
         ok: true,
         name: user.name || '',
+        vip: vs.vip,
+        vipUntil: vs.until,
+        vipOwner: !!vs.owner,
         canDelete: !isOwner,
         reason: isOwner
           ? '主人账号的口令保存在服务端环境变量 IVY_KEY 里，无法在小程序内注销。如需停用请到 Cloudflare 控制台处理。'

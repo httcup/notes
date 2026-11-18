@@ -1628,6 +1628,16 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .ol-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .ol-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .ol-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* AI 大纲：生成时按钮转圈，结果是不可点的条目 */
+.ol-btn.busy{color:rgb(var(--ivy-ink))}
+.ol-btn.busy svg{animation:olspin .9s linear infinite}
+@keyframes olspin{to{transform:rotate(360deg)}}
+.ol-ai-tag{display:flex;align-items:center;gap:5px;padding:1px 8px 7px;font-size:10.5px;color:rgb(var(--ivy-ink))}
+.ol-ai-tag svg{width:11px;height:11px}
+.ol-ai-item{cursor:default}
+.ol-ai-item:hover{background:none}
+.ol-ai-load{display:flex;align-items:center;gap:8px;padding:12px 8px;font-size:12px;line-height:1.6;color:rgb(var(--muted))}
+.ol-ai-load i{width:11px;height:11px;flex:0 0 auto;border-radius:50%;border:1.6px solid rgb(var(--line));border-top-color:rgb(var(--ivy));animation:olspin .85s linear infinite}
 /* 悬停说明：原生 title 要等一秒多才弹，这里自己画一枚小气泡——
    位置由 JS 按按钮中心算，超出卡片就贴到卡片内侧，永远不会被裁。 */
 .ol-tip{
@@ -2227,6 +2237,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 [data-theme=dark] .set-btn:hover{background:rgb(var(--line))}
 .set-btn.primary{background:rgb(var(--ivy));color:#fff}
 .set-btn.primary:hover{filter:brightness(1.05)}
+.vip-chip{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:11px;font-size:11px;font-weight:600;
+  background:linear-gradient(135deg,#f7e3a8,#e9c86a);color:#7a5a12;border:.5px solid #e3c46f}
+.vip-chip.off{background:rgb(var(--hover));color:rgb(var(--faint));border-color:transparent;font-weight:400}
 .set-btn.danger{background:rgb(var(--warn)/.1);color:rgb(var(--warn))}
 .set-btn.danger:hover{background:rgb(var(--warn)/.16)}
 .set-chips{
@@ -2440,6 +2453,13 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 
 /* ============ AI（自己的接口） ============ */
 .ai-sheet{width:min(620px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px 14px}
+.sum-sheet{width:min(620px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px 14px}
+.sum-meta{font-size:11.5px;color:rgb(var(--faint));margin:-4px 0 10px}
+.sum-body{flex:1;min-height:140px;max-height:56vh;overflow:auto;padding:2px 2px 4px;font-size:14.5px}
+.sum-body p{margin:0 0 .8em}
+.sum-body ul,.sum-body ol{margin:.2em 0 .8em;padding-left:1.35em}
+.sum-body li{margin:.18em 0}
+.sum-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid rgb(var(--line))}
 .ai-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .ai-title{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:600;color:rgb(var(--ink))}
 .ai-title svg{width:16px;height:16px;color:rgb(var(--ivy-ink))}
@@ -2885,7 +2905,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v190', at: '2026-11-18 15:02' };
+window.IVY_BUILD = { id: 'v191', at: '2026-11-18 15:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6233,6 +6253,8 @@ function openAiToolMenu(anchor){
       if(!c){ toast('先在正文里选中要改写的文字'); return; }
       openAI('rewrite', { ctx:c, text:c.text });
     }],
+    ['AI 总结全部', '整篇要点', '', 'spark', ()=>openAiSummary()],
+    ['AI 总结成大纲', '显示在大纲', '', 'spark', ()=>aiOutline(true)],
     ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
     ['AI 排版', '整理格式', '', 'spark', ()=>openAI('format')]
   ], { align:'left' });
@@ -6342,6 +6364,8 @@ const INSERT_ITEMS = [
   }},
   {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
   {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
+  {name:'AI 总结全部', keys:['ai','zj','总结','summary'], icon:'spark', desc:'整篇笔记提炼成几条要点，可复制或插入文末', run:()=>openAiSummary()},
+  {name:'AI 总结成大纲', keys:['ai','dg','大纲','outline'], icon:'spark', desc:'整篇压成层级大纲，直接显示在右侧大纲里', run:()=>aiOutline(true)},
   {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()}
 ]
 function insertFilter(q){
@@ -9250,6 +9274,159 @@ function outlineModeEntries(mode, list){
   }
   return list;
 }
+/* ========== AI 大纲 / AI 总结 ==========
+   大纲按钮：把整篇压成一份层级大纲，直接显示在大纲面板里（不写进笔记）。
+   AI 总结：同一份内容给一段可读摘要，可复制或插到文末。 */
+var AI_OL = { id:'', snap:'', entries:null, show:false, busy:false };
+
+// 和 aiStream 一样是裸文本流，但不碰 AI.abort，免得跟 AI 面板互相打断
+async function aiRunOnce(payload, onText){
+  const r = await fetch('/api/ai', {
+    method:'POST', headers: authHeaders(true),
+    body: JSON.stringify(Object.assign({ provider: AI.provider || undefined }, payload))
+  });
+  const ctype = String(r.headers.get('content-type') || '');
+  if(!r.ok || ctype.indexOf('application/json') >= 0){
+    const d = await r.json().catch(()=>({}));
+    const e = new Error(d.error || ('HTTP ' + r.status));
+    e.code = d.code;
+    throw e;
+  }
+  if(!r.body) throw new Error('这个浏览器不支持流式读取');
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let all = '';
+  for(;;){
+    const { value, done } = await reader.read();
+    if(done) break;
+    all += dec.decode(value, { stream:true });
+    if(onText) onText(all);
+  }
+  return all;
+}
+function aiErrToast(e){
+  if(!e) return;
+  if(e.code === 'ai-config-missing'){
+    toast('先填一下自己的 AI 接口');
+    if(typeof openAIConfig === 'function') openAIConfig(()=>{ AI.cfg = null; });
+    return;
+  }
+  if(e.code === 'login'){ toast('登录后才能用 AI'); if(typeof openSyncPanel === 'function') openSyncPanel(); return; }
+  toast(e.message || 'AI 没跑起来');
+}
+// 模型爱把 - / * / 1. 混着写，这里统一成一棵树
+function parseAiOutline(text){
+  const out = [];
+  String(text || '').split('\n').forEach(raw=>{
+    const line = raw.replace(/\t/g, '  ');
+    const m = line.match(/^(\s*)([-*+]|\d+[.、)])\s+(.*)$/);
+    if(!m) return;
+    const lead = m[1].replace(/\t/g, '  ');
+    const depth = Math.min(2, Math.floor(lead.length / 2));
+    const t = m[3].replace(/^\[[ xX]\]\s*/, '').replace(/[*_`]/g, '').trim();
+    if(!t) return;
+    out.push({ level: 1 + depth, text: t });
+  });
+  if(!out.length){
+    // 没用列表就按行兜底，别让用户看到一片空白
+    String(text || '').split('\n').map(x=>x.replace(/^[-*+\d.、)#\s]+/, '').trim())
+      .filter(Boolean).slice(0, 12).forEach(x=>out.push({ level:1, text:x }));
+  }
+  return out.slice(0, 16);
+}
+
+async function aiOutline(force){
+  const n = noteById(S.active);
+  if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
+  const snap = String(n.body || '');
+  // 生成过、笔记也没改 → 点一下在「AI 大纲 / 原文大纲」之间切换
+  if(!force && AI_OL.id === n.id && AI_OL.snap === snap && AI_OL.entries){
+    AI_OL.show = !AI_OL.show;
+    renderOutline();
+    return;
+  }
+  if(!S.outlineOpen){ S.outlineOpen = true; save(); }   // 生成结果得看得见
+  AI_OL.id = n.id; AI_OL.snap = snap; AI_OL.entries = null;
+  AI_OL.show = true; AI_OL.busy = true;
+  renderOutline();
+  try{
+    const text = await aiRunOnce({ task:'outline', text:snap });
+    const entries = parseAiOutline(text);
+    if(!entries.length) throw new Error('模型没给出可用的大纲，再试一次');
+    AI_OL.entries = entries;
+    AI_OL.busy = false;
+    renderOutline();
+  }catch(e){
+    AI_OL.busy = false; AI_OL.entries = null; AI_OL.show = false;
+    renderOutline();
+    aiErrToast(e);
+  }
+}
+
+function openAiSummary(){
+  const n = noteById(S.active);
+  if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
+  const ov = aiOverlayEl(); if(!ov) return;
+  const title = n.title ? n.title : '无标题';
+  ov.classList.add('open');
+  ov.innerHTML = `<div class="sheet sum-sheet" role="dialog" aria-label="AI 总结">
+    <div class="ai-head">
+      <div class="ai-title">${ic('spark')}<span>AI 总结</span></div>
+      <div class="ai-head-btns"><button class="pa-btn" id="sumClose" title="关闭">${ic('x')}</button></div>
+    </div>
+    <div class="sum-meta">${esc(title)} · ${countWords(n.body)} 字</div>
+    <div class="sum-body prose" id="sumBody"><div class="ol-ai-load"><i></i>正在通读全文，提炼要点…</div></div>
+    <div class="sum-foot">
+      <button class="btn-ghost" id="sumRetry">重新生成</button>
+      <button class="btn-ghost" id="sumCopy">复制</button>
+      <button class="btn-primary" id="sumInsert">插入到文末</button>
+    </div>
+  </div>`;
+  const body = $('#sumBody');
+  let text = '', busy = false, dead = false;
+  const close = ()=>{ dead = true; ov.classList.remove('open'); ov.innerHTML = ''; };
+  ov.onclick = e=>{ if(e.target === ov) close(); };
+  $('#sumClose').onclick = close;
+  const paint = ()=>{
+    if(dead) return;
+    body.innerHTML = text.trim()
+      ? mdToHtml(text).html
+      : '<div class="ol-ai-load"><i></i>正在通读全文，提炼要点…</div>';
+  };
+  const enable = on=>{ $('#sumCopy').disabled = !on; $('#sumInsert').disabled = !on; };
+  const run = async ()=>{
+    if(busy) return;
+    busy = true; text = ''; enable(false);
+    body.innerHTML = '<div class="ol-ai-load"><i></i>正在通读全文，提炼要点…</div>';
+    try{
+      text = await aiRunOnce({ task:'summary', text:String(n.body || '') }, all=>{ text = all; paint(); });
+      paint();
+      if(!text.trim()) toast('模型没有返回内容');
+      else enable(true);
+    }catch(e){
+      if(dead) return;
+      body.innerHTML = '<div class="ol-ai-load">没能生成，再试一次吧</div>';
+      aiErrToast(e);
+    }finally{ busy = false; }
+  };
+  enable(false);
+  $('#sumRetry').onclick = run;
+  $('#sumCopy').onclick = ()=>{
+    if(!text.trim()) return;
+    navigator.clipboard.writeText(text).then(()=>toast('已复制'), ()=>toast('复制失败'));
+  };
+  $('#sumInsert').onclick = ()=>{
+    if(!text.trim()) return;
+    const cur = noteById(S.active); if(!cur) return;
+    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\n' + text.trim() + '\n';
+    cur.updatedAt = Date.now();
+    save(); renderAll();
+    toast('已插入到文末');
+    close();
+  };
+  run();
+}
+
 function renderOutline(){
   const n = noteById(S.active);
   const mini = document.getElementById('olMini');
@@ -9274,32 +9451,45 @@ function renderOutline(){
   const mode = OUTLINE_MODES.some(m => m.id === S.outlineMode)
     ? S.outlineMode
     : (S.outlineTop ? 'lv2' : 'all');       // 兼容老版本存的 outlineTop
-  const entries = outlineModeEntries(mode, mdOut.outline || all);
+  const snap = String(n.body || '');
+  const aiFresh = AI_OL.id === n.id && !!AI_OL.entries && AI_OL.snap === snap;
+  const aiOn = aiFresh && AI_OL.show;
+  const aiBusy = AI_OL.busy && AI_OL.id === n.id;
+  const entries = aiOn ? AI_OL.entries : outlineModeEntries(mode, mdOut.outline || all);
+  const aiItem = e => `<div class="ol-item ol-ai-item l${Math.max(1, Math.min(6, e.level || 1))}" title="${esc(e.text)}"><span class="t">${esc(e.text)}</span></div>`;
   const mi = OUTLINE_MODES.findIndex(m => m.id === mode);
   // 气泡写成「当前 → 点一下会切到哪」，一眼知道现在看的是哪档、下一步是什么
   const modeTip = OUTLINE_MODES[mi].tip + ' → ' + OUTLINE_MODES[(mi + 1) % OUTLINE_MODES.length].tip;
   outlineItems = entries;
   outlineEl.innerHTML = `<div class="outline-head">
       <button class="ol-btn ol-close" id="olClose" data-tip="关闭大纲" aria-label="关闭大纲">${ic('x')}</button>
+      <button class="ol-btn ol-ai ${aiOn?'on':''} ${aiBusy?'busy':''}" id="olAi" data-tip="${aiBusy?'正在生成 AI 大纲…':(aiOn?'切回原文大纲':'AI 总结成大纲')}" aria-label="AI 总结成大纲">${ic('spark')}</button>
       <button class="ol-btn" id="olMode" data-tip="${modeTip}" aria-label="${modeTip}">${ic('treeTop')}</button>
       <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" data-tip="固定显示大纲" aria-label="固定显示大纲">${ic('pin')}</button>
       <div class="ol-tip" id="olTip"></div>
     </div>
     <div class="outline-body">`
-    + (entries.length ? entries.map(e=>{
-        const lv = Math.max(1, Math.min(6, e.level || 1));
-        const t = esc(e.text);
-        if(e.kind === 'li')
-          return `<button class="ol-item ol-li l${lv}${e.task === 'done' ? ' ol-done' : ''}" data-j="${e.id}" title="${t}">`
-            + `<span class="ol-bullet"></span><span class="t">${t}</span><span class="dash"></span></button>`;
-        return `<button class="ol-item l${lv}" data-h="${e.id}" data-j="${e.id}" title="${t}"><span class="t">${t}</span><span class="dash"></span></button>`;
-      }).join('')
-      : `<div class="ol-empty">标题、列表项会出现在这里</div>`)
+    + (aiBusy
+        ? `<div class="ol-ai-load"><i></i>正在读这篇，整理大纲…</div>`
+        : (aiOn
+            ? `<div class="ol-ai-tag">${ic('spark')}AI 大纲 · 点星形切回原文</div>`
+              + (entries.length ? entries.map(aiItem).join('') : `<div class="ol-empty">这次没生成出条目</div>`)
+            : (entries.length ? entries.map(e=>{
+                const lv = Math.max(1, Math.min(6, e.level || 1));
+                const t = esc(e.text);
+                if(e.kind === 'li')
+                  return `<button class="ol-item ol-li l${lv}${e.task === 'done' ? ' ol-done' : ''}" data-j="${e.id}" title="${t}">`
+                    + `<span class="ol-bullet"></span><span class="t">${t}</span><span class="dash"></span></button>`;
+                return `<button class="ol-item l${lv}" data-h="${e.id}" data-j="${e.id}" title="${t}"><span class="t">${t}</span><span class="dash"></span></button>`;
+              }).join('')
+              : `<div class="ol-empty">标题、列表项会出现在这里</div>`)))
     + `</div>`;
   renderMiniTicks(heads, n.body);
 
   const pin = outlineEl.querySelector('#olPin');
   if(pin) pin.onclick = toggleOutlinePin;
+  const aiBtn = outlineEl.querySelector('#olAi');
+  if(aiBtn) aiBtn.onclick = ()=>aiOutline();
   const modeBtn = outlineEl.querySelector('#olMode');
   if(modeBtn) modeBtn.onclick = ()=>{
     const i = OUTLINE_MODES.findIndex(m => m.id === mode);
@@ -9802,7 +9992,7 @@ function mediaShelf(){
   const bytes = all.reduce((a,m)=>a+(m.size||0),0);
   h += `<div style="position:absolute;left:20px;right:20px;bottom:78px;font-size:11px;line-height:1.7;color:rgb(var(--faint))">
       ${all.length} 个文件 · ${fmtSize(bytes)} · 被 ${used} 篇引用<br>${CLOUD_UPLOAD === false
-        ? '当前账号未开通云图床 · 图片只存本机'
+        ? '当前账号未开通 VIP · 图片只存本机'
         : (mediaCat==='pic'
             ? '图床 pic.139t.cn · 存 R2，读图 img.139t.cn'
             : (isConnected()?'图床 + Cloudflare KV · 跨设备可见':'仅本机会话可见 · 去「账号」里登录'))}</div>`;
@@ -11317,25 +11507,49 @@ $('#nlSearch').onclick=()=>openPalette();
 
 /* ========== 账号与云同步 ========== */
 const SYNC_STORE = 'ivy.sync';
-const SYNC = { token:'', account:'', key:'', state:'off', last:0, error:'' };
+const SYNC = { token:'', account:'', key:'', state:'off', last:0, error:'', vip:false, vipUntil:0 };
 try{
   const raw = localStorage.getItem(SYNC_STORE);
   if(raw){
     const s = JSON.parse(raw);
     SYNC.token = s.token||''; SYNC.account = s.account||''; SYNC.key = s.key||''; SYNC.last = s.last||0;
+    SYNC.vip = !!s.vip; SYNC.vipUntil = s.vipUntil||0;
     if(SYNC.token || SYNC.key) SYNC.state = 'idle';
   }
 }catch(e){}
 function syncSave(){
   try{
     localStorage.setItem(SYNC_STORE, JSON.stringify({
-      token: SYNC.token, account: SYNC.account, key: SYNC.key, last: SYNC.last
+      token: SYNC.token, account: SYNC.account, key: SYNC.key, last: SYNC.last,
+      vip: !!SYNC.vip, vipUntil: SYNC.vipUntil || 0
     }));
   }catch(e){}
   // 登录/退出都会走到这里：AI 面板开着的话，把「额度」那行立刻改口
   if(typeof paintProvTip === 'function') paintProvTip();
 }
 const isConnected = ()=> !!(SYNC.token || SYNC.key);
+// VIP：图床/云端上传 + 站内 AI 不限次（到期时间 0 表示永久，主人账号就是这种）
+const isVip = ()=> !!SYNC.vip && (!SYNC.vipUntil || SYNC.vipUntil > Date.now());
+let VIP_FETCH_AT = 0;
+async function refreshVip(force){
+  if(!isConnected()) return;
+  if(!force && Date.now() - VIP_FETCH_AT < 600000) return;   // 10 分钟问一次就够
+  VIP_FETCH_AT = Date.now();
+  try{
+    const r = await fetch('/api/account', { headers: authHeaders(false) });
+    if(!r.ok) return;
+    const d = await r.json();
+    const changed = !!d.vip !== !!SYNC.vip || (d.vipUntil || 0) !== (SYNC.vipUntil || 0);
+    SYNC.vip = !!d.vip;
+    SYNC.vipUntil = d.vipUntil || 0;
+    if(changed){
+      CLOUD_UPLOAD = null;          // 权益变了，下次上传重新探一遍
+      syncSave();
+      try{ if(typeof paintSettings === 'function' && document.getElementById('setOv') && document.getElementById('setOv').classList.contains('open')) paintSettings(); }catch(e){}
+      try{ if(S.view === 'media'){ renderShelf(); renderMedia(); } }catch(e){}
+    }
+  }catch(e){}
+}
 const accountLabel = ()=> SYNC.account || '默认账号';
 
 function syncTip(){
@@ -11379,6 +11593,9 @@ async function doAuth(account, key, create){
   if(!r.ok){ const e = new Error(d.error || '登录失败'); e.status = r.status; throw e; }
   SYNC.token = d.token; SYNC.account = account || ''; SYNC.key = key;
   SYNC.last = 0; SYNC.state = 'idle';
+  SYNC.vip = !!d.vip; SYNC.vipUntil = d.vipUntil || 0;
+  CLOUD_UPLOAD = null;
+  VIP_FETCH_AT = Date.now();
   syncSave();
   return d;
 }
@@ -11531,6 +11748,7 @@ async function syncNow(opts={}){
     syncSave();
     renderAfterSync(changed, opts.rerender);
     persistLocal();
+    refreshVip(false);
   }catch(e){
     SYNC.state = 'error';
     SYNC.error = e.status===401 ? '登录已过期，请重新输入密码' : (e.message||'网络错误');
@@ -12375,6 +12593,11 @@ function setAiHtml(){
 }
 
 /* ---- 账户 ---- */
+function vipDayText(ts){
+  if(!ts) return '长期';
+  const d = new Date(Number(ts));
+  return (d.getMonth()+1) + '月' + d.getDate() + '日';
+}
 function setAccountHtml(){
   const logged = !!SYNC.token;
   if(!logged){
@@ -12398,6 +12621,11 @@ function setAccountHtml(){
       <div class="set-row"><div><div class="t">${esc(SYNC.account || '主人账号')}</div>
         <div class="d">${state} · 上次同步 ${last}</div></div>
         <button class="set-btn" id="setSyncNow">立即同步</button></div>
+      <div class="set-row"><div><div class="t">${isVip() ? 'VIP 会员' : '普通账号'}</div>
+        <div class="d">${isVip()
+          ? '图片/文件可上传图床与云端，站内 AI 不限次数' + (SYNC.vipUntil ? ' · 有效期到 ' + vipDayText(SYNC.vipUntil) : ' · 长期有效')
+          : '图片只存本机，站内 AI 每天有基础额度；开通 VIP 可解锁不限次'}</div></div>
+        ${isVip() ? '<span class="vip-chip">VIP</span>' : '<span class="vip-chip off">未开通</span>'}</div>
       <div class="set-row"><div><div class="t">退出登录</div>
         <div class="d">退出时可选：笔记留在这台设备，或一起清空</div></div>
         <button class="set-btn danger" id="setLogout">退出</button></div>

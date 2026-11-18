@@ -34,7 +34,7 @@ export async function onRequest({ request, env }) {
   const user = await currentUser(request, env);
   if (!user) return json({ error: '未登录或口令不正确' }, 401);
   // 图床只给白名单账号用，其余账号存本机（前端收到 403 会退回内嵌图片）
-  if (!cloudUploadAllowed(env, user)) {
+  if (!(await cloudUploadAllowed(env, user))) {
     return json({ error: '当前账号未开通云图床，图片只存本机', code: 'not_allowed' }, 403);
   }
   if (!env.PIC_TOKEN) return notReady(env);

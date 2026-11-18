@@ -101,6 +101,7 @@
   .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;background:#f0efe9;color:var(--ink2)}
   .tag.ok{background:var(--ivy-l);color:var(--ivy-d)}
   .tag.off{background:var(--danger-l);color:var(--danger)}
+  .tag.vip{background:#fdf3d9;color:#9a6b12;border:1px solid #f0ddaa}
   .ops{display:flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap}
   .mini{height:28px;padding:0 9px;border-radius:8px;border:1px solid var(--line);background:#fff;
     font-size:12px;color:var(--ink2);white-space:nowrap}
@@ -237,7 +238,8 @@
     ban:'<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M5.6 5.6l12.8 12.8"/>',
     trash:'<path d="M4 7h16M9.5 7V4.8h5V7M6.5 7l.9 12.2h9.2L17.5 7"/>',
     warn:'<path d="M12 4.2 21 19.8H3z"/><path d="M12 10v4.2M12 17.2v.2"/>',
-    down:'<path d="M12 4v10.5M7.6 10.4 12 14.8l4.4-4.4"/><path d="M4.5 18.5h15"/>'
+    down:'<path d="M12 4v10.5M7.6 10.4 12 14.8l4.4-4.4"/><path d="M4.5 18.5h15"/>',
+    star:'<path d="M12 3.6 14.6 9l5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.8 1-5.9L3.5 9.8 9.4 9z"/>'
   };
   function svg(d){ return '<svg viewBox="0 0 24 24">' + d + '</svg>'; }
 
@@ -247,6 +249,11 @@
     t.classList.add('on');
     clearTimeout(t._h);
     t._h = setTimeout(function(){ t.classList.remove('on'); }, 2200);
+  }
+  function fmtDay(ts){
+    if(!ts) return '—';
+    var d = new Date(Number(ts));
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
   function fmtBytes(n){
     if(!n) return '0 B';
@@ -414,7 +421,9 @@
         ? '<span class="tag off">已停用</span>'
         : '<span class="tag ok">正常</span>';
       var self = a.self ? ' <span class="tag">我自己</span>' : '';
+      var vip = a.vip ? ' <span class="tag vip">VIP · ' + esc(fmtDay(a.vipUntil)) + '</span>' : '';
       var ops = '<button class="mini" data-open="' + esc(a.uid) + '">查看</button>';
+      ops += '<button class="mini" data-vip="' + esc(a.uid) + '">' + (a.vip ? 'VIP·改' : 'VIP') + '</button>';
       if(!a.self){
         ops += '<button class="mini" data-pass="' + esc(a.uid) + '">改密码</button>';
         ops += a.disabled
@@ -425,7 +434,7 @@
       }
       var trash = a.trash ? ' · 回收站 ' + a.trash : '';
       return '<div class="row">' +
-        '<div class="who"><b>' + esc(a.name) + ' ' + status + self + '</b><i>' + esc(a.uid) + '</i></div>' +
+        '<div class="who"><b>' + esc(a.name) + ' ' + status + vip + self + '</b><i>' + esc(a.uid) + '</i></div>' +
         '<div class="num c-notes">' + a.live + trash + '<s>' + a.notebooks + ' 个笔记本</s></div>' +
         '<div class="num c-size">' + fmtBytes(a.bytes) + '<s>' + (a.feed ? '已开订阅' : '未订阅') + '</s></div>' +
         '<div class="num c-time">' + esc(fmtTime(a.lastAt || a.createdAt)) + '<s>' + (a.disabled ? '停用于 ' + fmtTime(a.disabledAt) : '') + '</s></div>' +
@@ -445,6 +454,7 @@
     var l = $('#list');
     l.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ openDetail(b.dataset.open); }; });
     l.querySelectorAll('[data-pass]').forEach(function(b){ b.onclick = function(){ askPass(find(b.dataset.pass)); }; });
+    l.querySelectorAll('[data-vip]').forEach(function(b){ b.onclick = function(){ askVip(find(b.dataset.vip)); }; });
     l.querySelectorAll('[data-disable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.disable), true); }; });
     l.querySelectorAll('[data-enable]').forEach(function(b){ b.onclick = function(){ askDisable(find(b.dataset.enable), false); }; });
     l.querySelectorAll('[data-purge]').forEach(function(b){ b.onclick = function(){ askDestroy(find(b.dataset.purge), 'purge'); }; });
@@ -553,6 +563,46 @@
       api('/api/admin', { method:'POST', body: JSON.stringify({ action: on ? 'disable' : 'enable', uid: a.uid }) })
         .then(function(){ closeOv(); toast(on ? '已停用「' + a.name + '」' : '已恢复「' + a.name + '」'); load(); })
         .catch(function(e){ closeOv(); toast(e.message); });
+    };
+  }
+
+  /* ---------- 设为 / 续期 / 取消 VIP ---------- */
+  function askVip(a){
+    if(!a) return;
+    var active = !!a.vip;
+    $('#ov').innerHTML =
+      '<div class="dlg">' +
+        '<div class="dlg-h"><div class="ico">' + svg(ICON.star) + '</div><h3>' + (active ? '管理 VIP' : '设为 VIP') + '</h3></div>' +
+        '<div class="dlg-b">' +
+          '「' + esc(a.name) + '」' + (active ? '当前是 VIP，有效期到 <b>' + esc(fmtDay(a.vipUntil)) + '</b>。' : '目前不是 VIP。') +
+          '<div style="margin-top:10px;padding:9px 11px;border-radius:10px;background:#faf9f4;border:1px solid var(--line);font-size:13px;line-height:1.75">' +
+            '<b>VIP 权益</b><br>· 图片 / 文件上传到图床与云端<br>· 站内 AI 不限次数（用自己的接口本来就不限）' +
+          '</div>' +
+          '<div style="margin-top:12px;display:flex;align-items:center;gap:8px">' +
+            '<input type="number" id="vipDays" value="30" min="1" max="3650" style="width:96px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px">' +
+            '<span style="color:#8b938c;font-size:13px">天' + (active ? '（在当前到期时间上往后加）' : '') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dlg-f">' + (active ? '<button class="btn line" id="vipOff">取消 VIP</button>' : '') +
+          '<button class="btn line" data-close>关闭</button>' +
+          '<button class="btn" id="okGo">' + (active ? '续期' : '设为 VIP') + '</button></div>' +
+      '</div>';
+    openOv();
+    var ok = $('#okGo');
+    ok.onclick = function(){
+      var days = parseInt(($('#vipDays').value || '0'), 10);
+      if(!(days > 0)){ toast('填一个大于 0 的天数'); return; }
+      ok.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action:'vip', uid:a.uid, days:days }) })
+        .then(function(d){ closeOv(); toast('已开通到 ' + fmtDay(d.vipUntil)); load(); })
+        .catch(function(e){ ok.disabled = false; toast(e.message); });
+    };
+    var off = $('#vipOff');
+    if(off) off.onclick = function(){
+      off.disabled = true;
+      api('/api/admin', { method:'POST', body: JSON.stringify({ action:'unvip', uid:a.uid }) })
+        .then(function(){ closeOv(); toast('已取消「' + a.name + '」的 VIP'); load(); })
+        .catch(function(e){ off.disabled = false; toast(e.message); });
     };
   }
 

@@ -8,7 +8,7 @@
 //        enable  恢复
 //        purge   清空该账号的所有数据，账号本身保留
 //        delete  连账号一起删掉
-import { json, preflight, currentUser, hashPassword, randomHex, forgetAccount } from '../_lib.js';
+import { json, preflight, currentUser, hashPassword, randomHex, forgetAccount, forgetVip } from '../_lib.js';
 // 注销与「清空账号」共用同一份表清单，避免漏表造成数据残留
 import { purgeUserData } from '../_purge.js';
 
@@ -46,7 +46,7 @@ async function overview(env) {
          FROM notes GROUP BY user_id`
     ),
     env.DB.prepare('SELECT user_id, COUNT(*) nbs FROM notebooks WHERE deleted = 0 GROUP BY user_id'),
-    env.DB.prepare('SELECT id, name, created_at, disabled, disabled_at FROM users ORDER BY created_at'),
+    env.DB.prepare('SELECT id, name, created_at, disabled, disabled_at, vip_until FROM users ORDER BY created_at'),
     env.DB.prepare('SELECT user_id, COUNT(*) c FROM notes_feeds GROUP BY user_id'),
     env.DB.prepare('SELECT user_id, COUNT(*) c FROM ics_sources GROUP BY user_id')
   ]);
@@ -71,6 +71,8 @@ async function overview(env) {
       createdAt: u.created_at || 0,
       disabled: !!u.disabled,
       disabledAt: u.disabled_at || 0,
+      vipUntil: Number(u.vip_until || 0),
+      vip: Number(u.vip_until || 0) > Date.now(),
       self: u.id === ((env && env.ADMIN_UID) || 'owner')
     });
   }
@@ -285,7 +287,7 @@ export async function onRequest({ request, env }) {
         return json({ error: '不能对自己（主人账号）做这个操作' }, 400);
       }
 
-      const exists = await env.DB.prepare('SELECT id, name, disabled FROM users WHERE id = ?1').bind(target).first();
+      const exists = await env.DB.prepare('SELECT id, name, disabled, vip_until FROM users WHERE id = ?1').bind(target).first();
       // 主人账号不在 users 表里，其余账号必须存在（清空孤儿数据除外）
       if (!exists && action !== 'purge') return json({ error: '账号不存在' }, 404);
 
@@ -308,6 +310,22 @@ export async function onRequest({ request, env }) {
         await env.DB.prepare('UPDATE users SET salt = ?2, hash = ?3 WHERE id = ?1')
           .bind(target, salt, hash).run();
         return json({ ok: true, uid: target, name: exists.name || '' });
+      }
+      // 设为 / 取消 VIP：days 是续期天数（从「当前到期时间」和「现在」里较晚的那个往后加）
+      if (action === 'vip' || action === 'unvip') {
+        if (!exists) return json({ error: '账号不存在' }, 404);
+        let until = 0;
+        if (action === 'vip') {
+          const days = Math.floor(Number(body.days || 0));
+          if (!Number.isFinite(days) || days <= 0) return json({ error: '天数要大于 0' }, 400);
+          if (days > 3650) return json({ error: '一次最多 3650 天' }, 400);
+          const now = Date.now();
+          const from = Math.max(now, Number(exists.vip_until || 0));
+          until = from + days * 86400000;
+        }
+        await env.DB.prepare('UPDATE users SET vip_until = ?2 WHERE id = ?1').bind(target, until).run();
+        forgetVip(target);
+        return json({ ok: true, uid: target, name: exists.name || '', vip: until > Date.now(), vipUntil: until });
       }
       if (action === 'purge' || action === 'delete') {
         // 走 _purge.js：表清单只有一份，不会漏表；顺带清掉该账号上传的图片

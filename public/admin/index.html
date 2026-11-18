@@ -421,9 +421,13 @@
         ? '<span class="tag off">已停用</span>'
         : '<span class="tag ok">正常</span>';
       var self = a.self ? ' <span class="tag">我自己</span>' : '';
-      var vip = a.vip ? ' <span class="tag vip">VIP · ' + esc(fmtDay(a.vipUntil)) + '</span>' : '';
+      var vip = a.vip
+        ? ' <span class="tag vip">VIP · ' + ((a.owner || !a.vipUntil) ? '永久' : esc(fmtDay(a.vipUntil))) + '</span>'
+        : '';
       var ops = '<button class="mini" data-open="' + esc(a.uid) + '">查看</button>';
-      ops += '<button class="mini" data-vip="' + esc(a.uid) + '">' + (a.vip ? 'VIP·改' : 'VIP') + '</button>';
+      if(!a.self){
+        ops += '<button class="mini" data-vip="' + esc(a.uid) + '">' + (a.vip ? 'VIP·改' : 'VIP') + '</button>';
+      }
       if(!a.self){
         ops += '<button class="mini" data-pass="' + esc(a.uid) + '">改密码</button>';
         ops += a.disabled
@@ -594,7 +598,7 @@
       if(!(days > 0)){ toast('填一个大于 0 的天数'); return; }
       ok.disabled = true;
       api('/api/admin', { method:'POST', body: JSON.stringify({ action:'vip', uid:a.uid, days:days }) })
-        .then(function(d){ closeOv(); toast('已开通到 ' + fmtDay(d.vipUntil)); load(); })
+        .then(function(d){ closeOv(); toast(d.note || ('已开通到 ' + fmtDay(d.vipUntil))); load(); })
         .catch(function(e){ ok.disabled = false; toast(e.message); });
     };
     var off = $('#vipOff');

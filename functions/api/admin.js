@@ -78,7 +78,12 @@ async function overview(env) {
   }
   // 主人账号不在 users 表里（口令走环境变量），单独补一行
   if (!seen.has('owner')) {
-    accounts.unshift({ uid: 'owner', name: '主人', createdAt: 0, disabled: false, disabledAt: 0, self: true });
+    // 主人账号吃环境变量口令，不在 users 表里；它永远是 VIP，标在行上免得后台显示「未开通」
+    accounts.unshift({
+      uid: String((env && env.ADMIN_UID) || 'owner'), name: '主人',
+      createdAt: 0, disabled: false, disabledAt: 0,
+      vip: true, vipUntil: 0, owner: true, self: true
+    });
   }
   for (const a of accounts) {
     const n = notes.get(a.uid) || {};
@@ -283,7 +288,16 @@ export async function onRequest({ request, env }) {
 
       const target = String(body.uid || '').trim();
       if (!OK_UID.test(target)) return json({ error: 'uid 不合法' }, 400);
-      if (target === ((env && env.ADMIN_UID) || 'owner')) {
+      const isOwnerTarget = target === ((env && env.ADMIN_UID) || 'owner');
+      // 主人账号天生就是 VIP（不走 users 表），不用设、也不该报错
+      if (isOwnerTarget && (action === 'vip' || action === 'unvip')) {
+        return json({
+          ok: true, uid: target, name: '主人', owner: true,
+          vip: true, vipUntil: 0,
+          note: '主人账号默认永久 VIP，不需要设置'
+        });
+      }
+      if (isOwnerTarget) {
         return json({ error: '不能对自己（主人账号）做这个操作' }, 400);
       }
 

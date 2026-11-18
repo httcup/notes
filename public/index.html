@@ -2905,7 +2905,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v191', at: '2026-11-18 15:12' };
+window.IVY_BUILD = { id: 'v193', at: '2026-11-18 15:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -9363,6 +9363,19 @@ async function aiOutline(force){
   }
 }
 
+// 把模型返回的总结转成引用块：每行前加「> 」，列表符号原样留着（预览里还是要点列表）
+function summaryQuote(text){
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .trim()
+    .split('\n')
+    .map(l => l.replace(/^(\s*)#+\s*/, '$1'))      // 模型偶尔给个 ### 小标题，引用里用不上
+    .map(l => l.replace(/^\s*>\s?/, ''))           // 已经带 > 的别叠成 >>
+    .filter(l => l.trim())
+    .map(l => '> ' + l.trim())
+    .join('\n');
+}
+
 function openAiSummary(){
   const n = noteById(S.active);
   if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
@@ -9418,7 +9431,8 @@ function openAiSummary(){
   $('#sumInsert').onclick = ()=>{
     if(!text.trim()) return;
     const cur = noteById(S.active); if(!cur) return;
-    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\n' + text.trim() + '\n';
+    // 落成「AI 总结：」+ 引用块：和正文分开，读完就知道这段是机器提炼的，以后想删也好找
+    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\nAI 总结：\n' + summaryQuote(text) + '\n';
     cur.updatedAt = Date.now();
     save(); renderAll();
     toast('已插入到文末');
@@ -9463,8 +9477,8 @@ function renderOutline(){
   outlineItems = entries;
   outlineEl.innerHTML = `<div class="outline-head">
       <button class="ol-btn ol-close" id="olClose" data-tip="关闭大纲" aria-label="关闭大纲">${ic('x')}</button>
-      <button class="ol-btn ol-ai ${aiOn?'on':''} ${aiBusy?'busy':''}" id="olAi" data-tip="${aiBusy?'正在生成 AI 大纲…':(aiOn?'切回原文大纲':'AI 总结成大纲')}" aria-label="AI 总结成大纲">${ic('spark')}</button>
       <button class="ol-btn" id="olMode" data-tip="${modeTip}" aria-label="${modeTip}">${ic('treeTop')}</button>
+      <button class="ol-btn ol-ai ${aiOn?'on':''} ${aiBusy?'busy':''}" id="olAi" data-tip="${aiBusy?'正在生成 AI 大纲…':(aiOn?'切回原文大纲':'AI 总结成大纲')}" aria-label="AI 总结成大纲">${ic('spark')}</button>
       <button class="ol-btn ${S.outlineOpen?'on':''}" id="olPin" data-tip="固定显示大纲" aria-label="固定显示大纲">${ic('pin')}</button>
       <div class="ol-tip" id="olTip"></div>
     </div>
@@ -9771,7 +9785,23 @@ function mdToHtml(md){
     if(/^>\s?/.test(line)){
       let buf=[];
       while(i<lines.length && /^>\s?/.test(lines[i])){ buf.push(lines[i].replace(/^>\s?/,'')); i++; }
-      out.push(`<blockquote>${buf.map(b=>`<p>${inlineMd(b)}</p>`).join('')}</blockquote>`);
+      // 引用块里也常有列表（「AI 总结」插进来的就是这种），按列表渲染，别把「- 」当正文
+      let inner = '', list = null, listOrdered = false;
+      const flush = ()=>{ if(list){ inner += `<${listOrdered?'ol':'ul'}>${list.join('')}</${listOrdered?'ol':'ul'}>`; list = null; } };
+      buf.forEach(b=>{
+        const lm = b.match(/^\s*([-*+]|\d+\.)\s+(.*)$/);
+        if(lm){
+          if(!list) listOrdered = /\d/.test(lm[1]);
+          list = list || [];
+          list.push(`<li>${inlineMd(lm[2])}</li>`);
+          return;
+        }
+        flush();
+        if(!b.trim()) return;                    // 引用里的空行不生成空段落
+        inner += `<p>${inlineMd(b)}</p>`;
+      });
+      flush();
+      out.push(`<blockquote>${inner}</blockquote>`);
       continue;
     }
     // table

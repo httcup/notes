@@ -119,7 +119,57 @@ body.view-todo .head-actions .notes-only{display:none}
 .icon-btn:active{transform:scale(.94)}
 .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 
-.shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 64px;scrollbar-gutter:stable}
+.shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 16px;scrollbar-gutter:stable}
+/* 当前选中的笔记本 / 分组：底色 + 更深文字，和中栏标题对应 */
+.nb-head.on{background:rgb(var(--ink)/.05);color:rgb(var(--ink))}
+.nb-head.on .meta{color:rgb(var(--ink-2))}
+.sec-fold.on{color:rgb(var(--ink))}
+
+/* ============ 中间：笔记列表（侧栏只放工作区，笔记在这里列） ============ */
+.notelist{
+  width:288px;flex:0 0 288px;display:flex;flex-direction:column;min-width:0;
+  border-left:1px solid rgb(var(--line));background:rgb(var(--sunken));
+}
+.notelist.hidden{display:none}
+.nl-hd{height:52px;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 10px 0 12px}
+.nl-new{
+  width:28px;height:28px;flex:0 0 auto;display:grid;place-items:center;border-radius:7px;
+  color:rgb(var(--ink-2));transition:background .14s,color .14s;
+}
+.nl-new:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.nl-new svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nl-hd b{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nl-hd em{font-style:normal;font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
+.nl-hd .nl-r{margin-left:auto;display:flex;gap:2px;flex:0 0 auto}
+.nl-open{display:none}
+body.shelf-collapsed .nl-open{display:grid}
+.nl-rows{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 8px 20px;overscroll-behavior:contain}
+.nl-row{
+  position:relative;display:block;width:100%;text-align:left;padding:7px 10px 8px;border-radius:8px;
+  color:rgb(var(--ink-2));transition:background .12s;
+}
+.nl-row:hover{background:rgb(var(--hover))}
+.nl-row.on{background:rgb(var(--surface));box-shadow:0 0 0 .5px rgb(var(--line)),0 1px 2px rgb(16 24 32/.04)}
+.nl-row .nl-t1{display:flex;align-items:baseline;gap:6px;padding-right:20px}
+.nl-row .nl-t{font-size:13px;font-weight:500;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.nl-row .nl-d{font-size:11px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;transition:opacity .12s}
+.nl-row:hover .nl-d{opacity:0}
+.nl-row .nl-more{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
+  color:rgb(var(--muted));opacity:0;pointer-events:none;transition:opacity .12s,background .12s;
+}
+.nl-row:hover .nl-more{opacity:1;pointer-events:auto}
+.nl-row .nl-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
+.nl-row .nl-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body.ol-touch .nl-row .nl-more{opacity:.4;pointer-events:auto}
+.nl-row .nl-s{display:block;margin-top:3px;font-size:12px;color:rgb(var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nl-row .nl-pin{position:absolute;left:2px;top:13px;width:4px;height:4px;border-radius:50%;background:rgb(var(--ivy))}
+.nl-row .nl-t{white-space:nowrap}
+.nl-empty{padding:20px 12px;font-size:12px;color:rgb(var(--faint));line-height:1.8}
+@media (max-width:1180px) and (min-width:901px){ .notelist{width:250px;flex-basis:250px} }
+@media (max-width:900px){ .notelist{display:none!important} }
+
 .sec-label{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
   font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
@@ -181,6 +231,8 @@ body.view-todo .head-actions .notes-only{display:none}
 }
 .nb-row:hover .nb-head{color:rgb(var(--ink))}
 .nb-head .meta{font-size:11px;font-weight:400;color:rgb(var(--faint));margin-left:auto;flex:0 0 auto}
+.nb-head .nb-fold{width:12px;height:12px;flex:0 0 auto;display:grid;place-items:center;border-radius:3px}
+.nb-head .nb-fold:hover{background:rgb(var(--ink)/.09)}
 .nb-head svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
 .nb-head.open svg.chev{transform:rotate(90deg)}
 .nb-head .t{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -295,7 +347,16 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 
 /* 标签胶囊（苹果备忘录式）：侧栏最底部一排可换行的标签，点一下即筛选 */
 .tag-pills-sec{margin:16px 8px 4px;padding-top:13px;border-top:1px solid rgb(var(--line))}
-.tag-pills-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px}
+.tag-pills-sec.closed{margin-bottom:0}
+.tag-pills-title{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  text-align:left;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px;padding:0;
+}
+.tag-pills-sec.closed .tag-pills-title{margin-bottom:0}
+.tag-pills-title:hover{color:rgb(var(--ink-2))}
+.tag-pills-title .tp-lb{display:flex;align-items:center;gap:5px}
+.tag-pills-title .caret{width:9px;font-size:8px;line-height:1;text-align:center;color:rgb(var(--faint));transition:transform .18s}
+.tag-pills-title.open .caret{transform:rotate(90deg)}
 .tag-pills-title .tp-total{font-size:11px;font-variant-numeric:tabular-nums;padding-right:8px}
 .tag-pills{display:flex;flex-wrap:wrap;gap:6px}
 .tag-pill{
@@ -376,6 +437,8 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
   background:rgb(var(--surface)/.86);backdrop-filter:blur(14px) saturate(1.4);
   border-radius:13px;box-shadow:var(--shadow-float);
 }
+/* 主侧栏的底部图标排已收进顶部「视图 / 设置」菜单，设置页里的 #dockSet2 不受影响 */
+#dock{display:none}
 .dock-item{
   height:34px;min-width:34px;width:34px;padding:0;display:flex;align-items:center;justify-content:center;gap:6px;
   border-radius:9px;color:rgb(var(--muted));font-size:12.5px;flex:0 0 auto;position:relative;
@@ -433,6 +496,19 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tab:hover .x,.tab.active .x{opacity:.7}
 .tab .x:hover{background:rgb(var(--ink)/.08);opacity:1}
 .tab .x svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+/* 正文顶部搜索框：搜全部笔记，输入即筛中栏 */
+.tb-search{
+  margin-left:auto;margin-right:78px;flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  width:212px;height:28px;padding:0 9px;border-radius:8px;background:rgb(var(--ink)/.05);color:rgb(var(--muted));
+  transition:background .14s,box-shadow .14s;
+}
+.tb-search:focus-within{background:rgb(var(--surface));box-shadow:0 0 0 .5px rgb(var(--ivy)/.55),0 1px 3px rgb(16 24 32/.07)}
+.tb-search svg{width:14px;height:14px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
+.tb-search input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:inherit;font-size:12.5px;color:rgb(var(--ink))}
+.tb-search input::placeholder{color:rgb(var(--faint))}
+.tb-search kbd{font:500 10px/1 var(--font-mono);color:rgb(var(--faint));border:1px solid rgb(var(--line));border-radius:4px;padding:2px 4px;flex:0 0 auto}
+@media (max-width:1240px){ .tb-search{width:150px} .tb-search kbd{display:none} }
+@media (max-width:900px){ .tb-search{display:none} }
 .tab-new{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:rgb(var(--faint))}
 .tab-new:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .tab-new svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
@@ -2237,9 +2313,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       </div>
       <div class="head-actions" id="headActions">
         <button class="icon-btn todo-only" id="btnTodoHelp" title="待办使用说明" aria-label="待办使用说明"></button>
-        <button class="icon-btn" id="btnSearch" title="搜索笔记 (⌘K)" aria-label="搜索笔记"></button>
-        <button class="icon-btn notes-only" id="btnNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
-        <button class="icon-btn" id="btnShelf" title="收起书架 (⌘\)" aria-label="收起书架"></button>
+        <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
+        <button class="icon-btn" id="btnViewMenu" title="视图 / 设置" aria-label="视图与设置"></button>
+        <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
         <label class="head-sw todo-only" title="显示今天已完成">
           <input type="checkbox" id="headDoneSw"><i></i><span>显示今天已完成</span>
         </label>
@@ -2249,6 +2325,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="shelf-foot"><div class="build-tag" id="buildTag" title="点击查看版本信息"></div></div>
     <nav class="dock" id="dock"></nav>
   </aside>
+  <section class="notelist" id="noteList">
+    <div class="nl-hd">
+      <button class="icon-btn nl-open" id="nlOpen" title="展开工作区 (⌘\)" aria-label="展开工作区"></button>
+      <button class="nl-new" id="nlNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
+      <b id="nlTitle">全部笔记</b><em id="nlCount">0</em>
+      <span class="nl-r"><button class="icon-btn" id="nlMore" title="更多" aria-label="更多"></button></span>
+    </div>
+    <div class="nl-rows" id="nlRows"></div>
+  </section>
   <main class="main-wrap">
     <button class="shelf-open" id="shelfOpen" title="展开书架 (⌘\)"></button>
     <section class="paper">
@@ -2403,6 +2488,7 @@ const ICONS = {
   notebook:'<path d="M14 3.4H7.2A2.2 2.2 0 0 0 5 5.6v12.8a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2V8z"/><path d="M14 3.4V8h5"/><path d="M8.7 12.4h6.6M8.7 16h4.2"/>',
   /* 底部导航专用：一页纸 + 一支笔（正文用的 notebook 仍是纯文档样子） */
   notePen:'<rect x="3.6" y="3.2" width="12.6" height="17.6" rx="2.6"/><path d="M6.8 8h6.2M6.8 11.4h3.8"/><path d="M13.4 18.3l5.9-5.9a1.4 1.4 0 0 1 2 2l-5.9 5.9-2.7.7z"/>',
+  compose:'<path d="M11.5 4.6H6.4A2.4 2.4 0 0 0 4 7v10.6A2.4 2.4 0 0 0 6.4 20H17a2.4 2.4 0 0 0 2.4-2.4v-5.2"/><path d="M17.8 3.9a1.9 1.9 0 0 1 2.7 2.7l-7.6 7.6-3.5.8.8-3.5z"/>',
   folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
   todo:'<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.4"/><path d="m7.9 12.2 3.1 3.1 5.6-6.2"/>',
   arrUp:'<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
@@ -2433,7 +2519,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v170', at: '2026-11-18 08:44' };
+window.IVY_BUILD = { id: 'v172', at: '2026-11-18 09:01' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2460,8 +2546,12 @@ function seed(){
     outlineMode: 'all',         /* 大纲层级：all 全部分支 / lv2 二级分支 / h1 一级标题，点图标循环 */
     mode: 'live',
     tagFilter: '',
+    scope: 'all',
+    listQuery: '',
+    listSort: 'new',
     tagLibrary: [],
     tagSectionClosed: false,
+    tagPillsClosed: false,
     tagClosed: {},
     media: []
   };
@@ -2516,11 +2606,16 @@ function normalizeState(s){
     if(!s.outlineHoverV1){ s.outlineOpen = false; s.outlineHoverV1 = true; }
     if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
     if(typeof s.tagFilter !== 'string') s.tagFilter = '';
+    if(!['notes','todo','media','graph'].includes(s.view)) s.view = 'notes';
+    if(typeof s.scope !== 'string' || !s.scope) s.scope = 'all';
+    if(typeof s.listQuery !== 'string') s.listQuery = '';
+    if(!['new','title'].includes(s.listSort)) s.listSort = 'new';
     // 思维导图外观：老数据默认经典绿
     if(!['classic','minimal','candy','card','org','neon'].includes(s.mmStyle)) s.mmStyle = 'classic';
     if(!['both','right','left','down','up'].includes(s.mmDir)) s.mmDir = 'right';
     if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
     if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
+    if(typeof s.tagPillsClosed !== 'boolean') s.tagPillsClosed = false;
     if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
     // 老数据 / 云端数据可能没有 tags 字段，统一补成数组
     s.notes.forEach(n=>{
@@ -2973,11 +3068,14 @@ const shelfBody = $('#shelfBody');
 const brandName = $('#brandName');
 
 function paintRowIcons(){
-  $('#btnSearch').innerHTML = ic('search');
-  $('#btnNew').innerHTML = ic('plus');
+  const nlNew = $('#nlNew'); if(nlNew) nlNew.innerHTML = ic('compose');
+  const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
+  const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('notebook');
+  const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
   $('#btnShelf').innerHTML = ic('panelLeft');
   $('#btnTodoHelp').innerHTML = ic('info');
   $('#shelfOpen').innerHTML = ic('panelLeft');
+  const nlOpen = $('#nlOpen'); if(nlOpen) nlOpen.innerHTML = ic('panelLeft');
 }
 
 /* ========== 标签：历史库 / 颜色 / 计数 ========== */
@@ -3042,7 +3140,6 @@ function tagNoteRow(n){
   </button>`;
 }
 /* ---------- 标签胶囊区（侧栏最底部，苹果备忘录式） ---------- */
-let tagFilter = null;                 // 当前按哪个标签筛选；null = 不筛选
 const TAG_PILLS_MAX = 8;              // 平铺上限，其余收进「+N」
 
 function tagPillKeys(notes){
@@ -3058,38 +3155,42 @@ function tagPillsHtml(notes){
   const rest = keys.length - shown.length;
   const cnt = k => notes.filter(n=>tagOf(n).includes(k)).length;
 
-  let pills = `<button class="tag-pill${tagFilter?'':' on'}" data-tagall="1" title="查看全部标签">`
+  let pills = `<button class="tag-pill${(S.scope && S.scope.indexOf('tag:')===0) ? '' : ' on'}" data-tagall="1" title="查看全部标签">`
     + `<span class="tp-t">所有标签</span><span class="tp-n">${keys.length}</span></button>`;
   shown.forEach(k=>{
     const c = cnt(k);
-    pills += `<button class="tag-pill${tagFilter===k?' on':''}" data-tagpill="${esc(k)}" title="#${esc(k)} · ${c} 篇">`
+    pills += `<button class="tag-pill${S.scope==='tag:'+k?' on':''}" data-tagpill="${esc(k)}" title="#${esc(k)} · ${c} 篇">`
       + `<span class="tp-h">#</span><span class="tp-t">${esc(k)}</span><span class="tp-n">${c}</span></button>`;
   });
   if(rest > 0) pills += `<button class="tag-pill more" data-tagall="1" title="还有 ${rest} 个标签">+${rest}</button>`;
-  if(untagged) pills += `<button class="tag-pill${tagFilter===NO_TAG?' on':''}" data-tagpill="${NO_TAG}" title="${NO_TAG_LABEL} · ${untagged} 篇">`
+  if(untagged) pills += `<button class="tag-pill${S.scope==='tag:'+NO_TAG?' on':''}" data-tagpill="${NO_TAG}" title="${NO_TAG_LABEL} · ${untagged} 篇">`
       + `<span class="tp-h">#</span><span class="tp-t">${esc(NO_TAG_LABEL)}</span><span class="tp-n">${untagged}</span></button>`;
 
-  return `<div class="tag-pills-sec">
-    <div class="tag-pills-title"><span>标签</span><span class="tp-total">${keys.length}</span></div>
-    <div class="tag-pills">${pills}</div>
+  const tagOpen = !S.tagPillsClosed;
+  return `<div class="tag-pills-sec${tagOpen?'':' closed'}">
+    <button class="tag-pills-title${tagOpen?' open':''}" data-act="toggle-tag-pills"
+        title="${tagOpen?'收起标签':'展开标签'}" aria-expanded="${tagOpen?'true':'false'}">
+      <span class="tp-lb"><i class="caret">&#9654;</i>标签</span><span class="tp-total">${keys.length}</span>
+    </button>
+    ${tagOpen ? `<div class="tag-pills">${pills}</div>` : ''}
   </div>`;
 }
 function setTagFilter(k){
-  tagFilter = (k && tagFilter !== k) ? k : null;
-  renderShelf();
-  shelfBody.scrollTop = 0;
+  // 兼容旧调用：标签筛选现在走中间列表的 scope
+  setScope(k ? 'tag:' + k : 'all');
 }
 function openAllTags(anchor){
   const notes = liveNotes();
   const keys = tagPillKeys(notes);
   const items = [];
-  if(tagFilter) items.push(['‹ 清除筛选', '', '', null, ()=>setTagFilter(null)]);
+  const onTag = (S.scope || '').indexOf('tag:') === 0;
+  if(onTag) items.push(['‹ 清除筛选', '', '', null, ()=>setScope('all')]);
   keys.forEach(k=>{
     const c = notes.filter(n=>tagOf(n).includes(k)).length;
-    items.push(['#' + k, String(c), tagFilter===k?'on':'', null, ()=>{ tagFilter=k; renderShelf(); shelfBody.scrollTop=0; }]);
+    items.push(['#' + k, String(c), S.scope === 'tag:'+k ? '✓' : '', null, ()=>setScope('tag:' + k)]);
   });
   const untagged = notes.filter(n=>!tagOf(n).length).length;
-  if(untagged) items.push([NO_TAG_LABEL, String(untagged), '', null, ()=>{ tagFilter=NO_TAG; renderShelf(); shelfBody.scrollTop=0; }]);
+  if(untagged) items.push([NO_TAG_LABEL, String(untagged), S.scope === 'tag:'+NO_TAG ? '✓' : '', null, ()=>setScope('tag:' + NO_TAG)]);
   if(!keys.length && !untagged) items.push(['还没有用过标签', '', 'muted', null, null]);
   popover(anchor, items, { align:'left' });
 }
@@ -3105,23 +3206,6 @@ function noteItemHtml(n){
     <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
   </button>`;
 }
-/* 标签筛选视图：不按笔记本分组，扁平列出命中笔记，底部仍留胶囊方便切换 */
-function tagFilterShelf(){
-  const notes = liveNotes();
-  const hit = notes.filter(n => tagFilter===NO_TAG ? !tagOf(n).length : tagOf(n).includes(tagFilter));
-  let html = `<button class="shelf-back" data-act="clear-tag"><span class="arw">‹</span>全部笔记</button>
-    <div class="shelf-filter-hd">
-      <span class="t">${tagFilter===NO_TAG ? esc(NO_TAG_LABEL) : '#'+esc(tagFilter)}</span>
-      <span class="c">${hit.length} 篇</span>
-    </div>`;
-  html += hit.length
-    ? `<div class="nb-notes">${hit.map(noteItemHtml).join('')}</div>`
-    : `<div class="shelf-empty">这个标签下还没有笔记<br>在编辑器里给笔记加上标签即可</div>`;
-  html += tagPillsHtml(notes);
-  shelfBody.innerHTML = html;
-  bindShelf();
-}
-
 function rememberTag(t){
   if(!t) return;
   if(!Array.isArray(S.tagLibrary)) S.tagLibrary = [];
@@ -3201,6 +3285,142 @@ function nbReorder(id, dir){
   toast(dir < 0 ? '已上移' : '已下移');
 }
 
+/* ============ 中栏：笔记列表（侧栏只放工作区，笔记在这里列） ============ */
+function setScope(sc){
+  S.scope = sc || 'all';
+  S.listQuery = '';
+  trashView = false;                       // 从回收站回到正常浏览
+  S.view = 'notes';
+  const box = $('#tbSearchInput'); if(box) box.value = '';
+  renderAll(); save();
+}
+function listScopeNotes(){
+  const notes = liveNotes();
+  const sc = S.scope || 'all';
+  if(sc === 'loose') return notes.filter(n=>!n.notebookId);
+  if(sc.indexOf('tag:') === 0){
+    const k = sc.slice(4);
+    return k === NO_TAG ? notes.filter(n=>!tagOf(n).length) : notes.filter(n=>tagOf(n).includes(k));
+  }
+  if(sc.indexOf('nb:') === 0){
+    const id = sc.slice(3);
+    const ids = [id].concat(nbDescIds(id));
+    return notes.filter(n=>ids.indexOf(n.notebookId) >= 0);
+  }
+  return notes;
+}
+function listScopeTitle(){
+  const sc = S.scope || 'all';
+  if(sc === 'loose') return '未归类笔记';
+  if(sc.indexOf('tag:') === 0){
+    const k = sc.slice(4);
+    return k === NO_TAG ? NO_TAG_LABEL : '#' + k;
+  }
+  if(sc.indexOf('nb:') === 0){
+    const nb = nbById(sc.slice(3));
+    return nb ? nb.name : '笔记本';
+  }
+  return '全部笔记';
+}
+function listWhen(ts){
+  if(!ts) return '';
+  const d = new Date(ts), now = new Date();
+  if(d.toDateString() === now.toDateString()) return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  if(d.toDateString() === new Date(now.getTime() - 864e5).toDateString()) return '昨天';
+  if(d.getFullYear() === now.getFullYear()) return (d.getMonth()+1) + '月' + d.getDate() + '日';
+  return d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate();
+}
+function listSnippet(n){
+  return String(n.body||'')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`~>#|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 90);
+}
+function listRowHtml(n){
+  const snip = listSnippet(n);
+  return `<div class="nl-row${n.id===S.active?' on':''}" data-open="${n.id}" role="button" tabindex="0">
+    ${n.pinned?'<span class="nl-pin"></span>':''}
+    <span class="nl-t1"><span class="nl-t">${esc(n.title||'无标题')}</span><span class="nl-d">${listWhen(n.updatedAt)}</span></span>
+    <span class="nl-s">${snip ? esc(snip) : '&nbsp;'}</span>
+    <span class="nl-more" data-nlmenu="${n.id}" role="button" title="更多">${ic('more')}</span>
+  </div>`;
+}
+function openListMenu(anchor, id){
+  const n = noteById(id); if(!n) return;
+  popover(anchor, [
+    [n.pinned ? '取消置顶' : '置顶', n.pinned ? '✓' : '', '', 'pin', ()=>{ S.active = id; togglePin(id); }],
+    ['移动到笔记本', '', '', 'book', ()=>{ S.active = id; openMoveMenu(anchor, id); }],
+    ['创建副本', '', '', 'copy', ()=>{ S.active = id; duplicateNote(); }],
+    '-',
+    ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(id)]
+  ]);
+}
+function openListMore(anchor){
+  popover(anchor, [
+    ['新建笔记', '⌘N', '', 'compose', ()=>newNote(S.scope && S.scope.indexOf('nb:')===0 ? S.scope.slice(3) : null)],
+    ['新建笔记本', '', '', 'plus', ()=>newNotebook()],
+    '-',
+    ['按最近更新', S.listSort === 'new' ? '✓' : '', '', 'clock', ()=>{ S.listSort='new'; renderList(); save(); }],
+    ['按标题排序', S.listSort === 'title' ? '✓' : '', '', 'sort', ()=>{ S.listSort='title'; renderList(); save(); }]
+  ]);
+}
+/* 顶部「视图 / 设置」菜单：原来侧栏底部那排图标收在这里 */
+function openViewMenu(anchor){
+  let todo = 0;
+  try{ todo = collectTodos().filter(t=>!t.done).length; }catch(e){}
+  popover(anchor, [
+    ['笔记', S.view==='notes' ? '✓' : '', '', 'notePen', ()=>switchView('notes')],
+    ['待办', S.view==='todo' ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', ()=>switchView('todo')],
+    ['媒体库', S.view==='media' ? '✓' : '', '', 'image', ()=>switchView('media')],
+    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', ()=>switchView('graph')],
+    '-',
+    ['设置', '', '', 'gear', ()=>openSettings()]
+  ], {align:'left'});
+}
+function renderList(){
+  const host = $('#noteList'); if(!host) return;
+  const hide = S.view !== 'notes' || trashView;
+  host.classList.toggle('hidden', hide);
+  if(hide) return;
+  const rows = $('#nlRows');
+  const raw = String(S.listQuery||'').trim();
+  const q = raw.toLowerCase();
+  let notes = listScopeNotes();
+  let title = listScopeTitle();
+  if(q){
+    notes = liveNotes().filter(n=>{
+      const t = String(n.title||'').toLowerCase();
+      const b = String(n.body||'').toLowerCase();
+      return t.indexOf(q) >= 0 || b.indexOf(q) >= 0;
+    });
+    title = '搜索「' + raw + '」';
+  }
+  if(S.listSort === 'title'){
+    notes = notes.slice().sort((a,b)=>String(a.title||'无标题').localeCompare(String(b.title||'无标题'), 'zh-CN'));
+  }
+  const tEl = $('#nlTitle'), cEl = $('#nlCount');
+  if(tEl) tEl.textContent = title;
+  if(cEl) cEl.textContent = String(notes.length);
+  const keepTop = rows.scrollTop;
+  rows.innerHTML = notes.length ? notes.map(listRowHtml).join('')
+    : `<div class="nl-empty">${q ? '没有匹配的笔记' : '这里还没有笔记'}</div>`;
+  rows.scrollTop = keepTop;                 // 重画后别把列表滚回顶部
+  rows.querySelectorAll('[data-open]').forEach(el=>{
+    el.onclick = (e)=>{
+      if(e.target.closest('[data-nlmenu]')) return;
+      openNote(el.dataset.open);
+    };
+    el.oncontextmenu = (e)=>{ e.preventDefault(); openListMenu(el, el.dataset.open); };
+  });
+  rows.querySelectorAll('[data-nlmenu]').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); openListMenu(b, b.dataset.nlmenu); };
+  });
+}
+
 function renderShelf(){
   brandName.textContent = ({notes:'随手笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '随手笔记';
   document.body.classList.toggle('view-todo', S.view === 'todo');
@@ -3211,25 +3431,20 @@ function renderShelf(){
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
 
-  // 标签筛选态：整栏换成「该标签下的笔记」，底部胶囊仍在，方便横向切换
-  if(tagFilter){
-    if(tagFilter !== NO_TAG && !usedTags(liveNotes()).includes(tagFilter)) tagFilter = null;
-    else { tagFilterShelf(); return; }
-  }
-
+  const inlineNotes = window.innerWidth <= 900;   // 窄屏：侧栏仍内联列笔记（抽屉里选笔记），桌面走中栏
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
   // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
   const nClosed = !!S.notesClosed;
-  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}" data-act="toggle-notes-sec"
+  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(!inlineNotes && (S.scope||'all')==='all') ? ' on' : ''}" data-act="toggle-notes-sec"
       title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">
       <span class="lb"><i class="caret">&#9654;</i>笔记</span>
       <span class="count">${notes.length}</span>
     </button>`;
   let body = '';
-  // 置顶笔记单独列在书架最上面：笔记本折叠着也能一眼看到
+  // 置顶笔记单独列在书架最上面（只在小屏内联模式下需要；桌面在中栏里置顶优先）
   const pinnedNotes = notes.filter(n=>n.pinned);
-  if(pinnedNotes.length){
+  if(inlineNotes && pinnedNotes.length){
     const pOpen = S.pinOpen !== false;
     body += `<div class="nb-group pin-group">
       <div class="nb-row">
@@ -3242,7 +3457,7 @@ function renderShelf(){
       <div class="nb-notes pin-notes ${pOpen?'':'hidden'}">${pinnedNotes.map(noteRow).join('')}</div>
     </div>`;
   }
-  body += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
+  if(inlineNotes) body += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
   notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
@@ -3254,20 +3469,17 @@ function renderShelf(){
     const own = byNb[nb.id] || [];
     const kids = nbKids(nb.id);
     const open = nb.open !== false;
+    const on = S.scope === 'nb:' + nb.id;
     const dot = /^#[\da-fA-F]{3,8}$/.test(nb.color || '') ? nb.color : '#287a52';
-    let inner = '';
-    if(kids.length || own.length){
-      inner = `<div class="nb-body ${open?'':'hidden'}">`;
-      if(kids.length) inner += `<div class="nb-kids">${kids.map(k=>nbGroupHtml(k, lv+1)).join('')}</div>`;
-      if(own.length) inner += `<div class="nb-notes">${own.map(noteRow).join('')}</div>`;
-      inner += `</div>`;
-    }
+    const kidHtml = kids.length ? `<div class="nb-kids">${kids.map(k=>nbGroupHtml(k, lv+1)).join('')}</div>` : '';
+    const noteHtml = (inlineNotes && own.length) ? `<div class="nb-notes">${own.map(noteRow).join('')}</div>` : '';
+    const inner = (kidHtml || noteHtml) ? `<div class="nb-body ${open?'':'hidden'}">${kidHtml}${noteHtml}</div>` : '';
     return `<div class="nb-group${lv?' nb-sub':''}">
       <div class="nb-row has-more${open?' open':''}">
-        <button class="nb-head ${open?'open':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
-          <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+        <button class="nb-head ${open?'open':''}${on?' on':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
+          <span class="nb-fold" data-nbfold="${nb.id}"><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
           <span class="nb-dot" style="background:${dot}"></span>
-          <span class="t">${esc(nb.name)}</span><span class="meta">${kids.length ? nbNoteCount(nb.id) : own.length}</span>
+          <span class="t">${esc(nb.name)}</span><span class="meta">${nbNoteCount(nb.id)}</span>
         </button>
         <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 收纳 / 排序">${ic('more')}</button>
       </div>
@@ -3278,14 +3490,15 @@ function renderShelf(){
 
   if(loose.length){
     const lopen = S.looseOpen !== false;          // 未归类默认展开
+    const on = S.scope === 'loose';
     body += `<div class="nb-group">
       <div class="nb-row">
-        <button class="nb-head ${lopen?'open':''}" data-nb="__loose">
-          <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+        <button class="nb-head ${lopen?'open':''}${on?' on':''}" data-nb="__loose" title="未归类笔记">
+          <span class="nb-fold" data-nbfold="__loose"${inlineNotes?'':' style="visibility:hidden"'}><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
           <span class="t">未归类笔记</span><span class="meta">${loose.length}</span>
         </button>
       </div>
-      <div class="nb-notes ${lopen?'':'hidden'}">${loose.map(noteRow).join('')}</div>
+      ${inlineNotes ? `<div class="nb-notes ${lopen?'':'hidden'}">${loose.map(noteRow).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -3302,6 +3515,7 @@ function renderShelf(){
 }
 
 function bindShelf(){
+  const inlineNotes = window.innerWidth <= 900;   // 与 renderShelf 保持同一判定
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
   shelfBody.querySelectorAll('[data-move]').forEach(b=>{
     b.onclick = e=>{
@@ -3325,7 +3539,11 @@ function bindShelf(){
     b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
   });
   shelfBody.querySelectorAll('[data-tagpill]').forEach(b=>{
-    b.onclick = e=>{ e.stopPropagation(); setTagFilter(b.dataset.tagpill); };
+    b.onclick = e=>{
+      e.stopPropagation();
+      const k = b.dataset.tagpill;
+      setScope(S.scope === 'tag:'+k ? 'all' : 'tag:'+k);
+    };
     b.oncontextmenu = e=>{
       e.preventDefault(); e.stopPropagation();
       if(b.dataset.tagpill !== NO_TAG) openTagMenu(b, b.dataset.tagpill);
@@ -3335,17 +3553,29 @@ function bindShelf(){
     b.onclick = e=>{ e.stopPropagation(); openAllTags(b); };
   });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
-    if(b.dataset.nb === '__loose'){                // 未归类笔记：虚拟分组，只记折叠状态
-      b.onclick = ()=>{ S.looseOpen = !(S.looseOpen !== false); save(); renderShelf(); };
+    const key = b.dataset.nb;
+    if(key === '__loose'){
+      if(inlineNotes){
+        b.onclick = ()=>{ S.looseOpen = !(S.looseOpen !== false); save(); renderShelf(); };
+      }else{
+        b.onclick = ()=>setScope('loose');
+      }
       return;
     }
-    if(b.dataset.nb === '__pin'){                  // 置顶分组：同样是虚拟分组
+    if(key === '__pin'){
       b.onclick = ()=>{ S.pinOpen = !(S.pinOpen !== false); save(); renderShelf(); };
       return;
     }
-    const nb = S.notebooks.find(x=>x.id===b.dataset.nb);
+    const nb = S.notebooks.find(x=>x.id===key);
     if(!nb) return;
-    b.onclick = ()=>{ nb.open = !nb.open; nb.updatedAt = Date.now(); renderShelf(); save(); };
+    b.onclick = (e)=>{
+      if(e.target.closest('[data-nbfold]')){                 // 点小三角：只折叠 / 展开
+        nb.open = !(nb.open !== false); nb.updatedAt = Date.now();
+        renderShelf(); save(); return;
+      }
+      nb.open = true;                                        // 点名字：在中间列表里打开这个笔记本
+      setScope('nb:' + nb.id);
+    };
     b.oncontextmenu = e=>{ e.preventDefault(); openNotebookMenu(b, nb.id); };
   });
   shelfBody.querySelectorAll('[data-nbmenu]').forEach(b=>{
@@ -3360,8 +3590,12 @@ function bindShelf(){
       openTrashView();
     }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
-    if(a==='clear-tag'){ setTagFilter(null); }
-    if(a==='toggle-notes-sec'){ S.notesClosed = !S.notesClosed; renderShelf(); save(); }
+    if(a==='clear-tag'){ setScope('all'); }
+    if(a==='toggle-tag-pills'){ S.tagPillsClosed = !S.tagPillsClosed; renderShelf(); save(); }
+    if(a==='toggle-notes-sec'){
+      if(window.innerWidth <= 900){ S.notesClosed = !S.notesClosed; renderShelf(); save(); }
+      else setScope('all');                                  // 桌面：点「笔记」回到全部笔记
+    }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
@@ -4838,7 +5072,13 @@ function renderTabs(){
       <span class="x" data-close="${id}">${ic('x')}</span>
     </button>`;
   }).join('') + `</div>
-    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>`;
+    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>
+    <div class="tb-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input id="tbSearchInput" type="text" placeholder="搜索全部笔记" value="${esc(S.listQuery||'')}"
+        autocomplete="off" spellcheck="false" aria-label="搜索全部笔记" />
+      <kbd>⌘K</kbd>
+    </div>`;
   bar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=(e)=>{
     if(e.target.closest('[data-close]')) return;
     S.active = b.dataset.tab; renderAll(); save();
@@ -4847,6 +5087,15 @@ function renderTabs(){
     e.stopPropagation(); closeTab(x.dataset.close);
   });
   $('#tabNew').onclick=()=>newNote();
+  const si = $('#tbSearchInput');
+  if(si){
+    si.oninput = ()=>{ S.listQuery = si.value; renderList(); };
+    si.onkeydown = (e)=>{
+      if(e.key === 'Escape'){ si.value=''; S.listQuery=''; renderList(); si.blur(); }
+      if(e.key === 'Enter'){ const first = $('#nlRows .nl-row'); if(first) first.click(); }
+    };
+    si.onfocus = ()=>{ if(S.view !== 'notes') switchView('notes'); };
+  }
 }
 
 /* ========== 笔记操作 ========== */
@@ -5101,7 +5350,7 @@ function toggleTrash(id){
   renderAll(); save(); toast(n.trashed?'已移到回收站':'已恢复');
 }
 let trashView = false;
-function openTrashView(){ trashView = true; tagFilter = null; S.view='notes'; S.active=null; S.tabs=[]; renderAll(); }
+function openTrashView(){ trashView = true; S.listQuery = ''; S.view='notes'; S.active=null; S.tabs=[]; renderAll(); }
 
 /* ========== 主区渲染 ========== */
 const scrollEl = $('#scroll');
@@ -5113,8 +5362,9 @@ function renderAll(){
   // 否则手机首屏会按「书架展开时」的窄宽度去算标题高度，标题下面留一大片空白
   const collapsed = !S.shelfOpen;
   document.querySelector('.shelf').classList.toggle('collapsed', collapsed);
+  document.body.classList.toggle('shelf-collapsed', collapsed);
   $('#shelfOpen').classList.toggle('show', collapsed);
-  renderShelf(); renderDock(); renderTabs(); renderMain();
+  renderShelf(); renderList(); renderDock(); renderTabs(); renderMain();
 }
 
 function renderMain(){
@@ -9290,7 +9540,7 @@ function renderGraph(){
 
 /* ========== 视图切换 ========== */
 function switchView(v){
-  S.view = v; trashView=false; tagFilter = null;
+  S.view = v; trashView=false; S.listQuery = '';
   if(v!=='notes') { /* 保留 tabs */ }
   hideSelBar();
   renderAll(); save();
@@ -10391,6 +10641,7 @@ function paintPaletteSel(){
 function toggleShelf(){
   S.shelfOpen = !S.shelfOpen;
   document.querySelector('.shelf').classList.toggle('collapsed', !S.shelfOpen);
+  document.body.classList.toggle('shelf-collapsed', !S.shelfOpen);
   $('#shelfOpen').classList.toggle('show', !S.shelfOpen);
   save();
 }
@@ -10439,7 +10690,7 @@ document.addEventListener('keydown', e=>{
     if(code === 'Digit2'){ e.preventDefault(); applyFormat('h2'); return; }
     if(code === 'Digit3'){ e.preventDefault(); applyFormat('h3'); return; }
   }
-  if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu($('#paInsert') || $('#btnSearch')); return; }
+  if(meta && e.key === '/'){ e.preventDefault(); openInsertMenu($('#nlNew') || $('#tabbar')); return; }
   if(meta && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
   if(meta && e.key.toLowerCase()==='n'){ e.preventDefault(); newNote(); return; }
   if(meta && e.key==='\\'){ e.preventDefault(); toggleShelf(); return; }
@@ -10450,12 +10701,15 @@ document.addEventListener('keydown', e=>{
 });
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
-$('#btnSearch').onclick=()=>openPalette();
-$('#btnNew').onclick=()=>newNote();
 $('#btnShelf').onclick=()=>toggleShelf();
+$('#btnNewNb').onclick=()=>newNotebook();
+$('#btnViewMenu').onclick=(e)=>openViewMenu(e.currentTarget);
 $('#btnTodoHelp').onclick=()=>{ helpTab='todo'; openHelpPanel(); };
 $('#headDoneSw').onchange=(e)=>{ S.todoShowDoneToday = e.target.checked; save(); renderShelf(); };
 $('#shelfOpen').onclick=()=>toggleShelf();
+$('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
+$('#nlOpen').onclick=()=>toggleShelf();
+$('#nlMore').onclick=(e)=>openListMore(e.currentTarget);
 
 /* ========== 账号与云同步 ========== */
 const SYNC_STORE = 'ivy.sync';

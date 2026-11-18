@@ -267,10 +267,24 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 /* 悬停时数字让位给「⋯」，两者不会叠在一起；没有「⋯」的行（置顶 / 未归类）不受影响 */
 
 /* 有「⋯」的行：右侧留出它的位置（长名字不会被压到），数字再拉回对齐列 */
-.nb-row .nb-head{padding-right:30px;position:relative}
+.nb-row .nb-head{padding-right:56px;position:relative}
 .nb-row .nb-head .meta{position:absolute;right:38px;top:50%;transform:translateY(-50%);margin-left:0}
 .nb-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
 .nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* 每行的锁按钮：落在数字左边、⋯ 的右边，点一下锁上 / 解锁 */
+.nb-lockbtn{
+  position:absolute;right:56px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  color:rgb(var(--faint));opacity:0;pointer-events:none;
+  transition:opacity .12s,background .12s,color .12s;
+}
+.nb-lockbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nb-lockbtn.has-lock{opacity:.5;pointer-events:auto}     /* 设过密码：常驻，暗一点不抢眼 */
+.nb-lockbtn.has-lock.open{opacity:.36}                   /* 已解锁：更淡 */
+.nb-lockbtn.shut{color:rgb(var(--ivy))}                  /* 锁着：用主题色点出来 */
+.nb-row:hover .nb-lockbtn,.nb-row:focus-within .nb-lockbtn{opacity:.85;pointer-events:auto}
+.nb-lockbtn:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink));opacity:1}
+body.ol-touch .nb-lockbtn.has-lock{opacity:.62;width:26px;height:26px;right:53px}
 .nb-head{
   display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;
   color:rgb(var(--ink-2));font-size:13.5px;font-weight:500;letter-spacing:0;
@@ -3020,7 +3034,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v200', at: '2026-11-18 16:44' };
+window.IVY_BUILD = { id: 'v201', at: '2026-11-18 16:31' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4100,14 +4114,23 @@ function renderShelf(){
     const kidHtml = kids.length ? `<div class="nb-kids">${kids.map(k=>nbGroupHtml(k, lv+1)).join('')}</div>` : '';
     const noteHtml = (inlineNotes && own.length) ? `<div class="nb-notes">${own.map(noteRow).join('')}</div>` : '';
     const inner = (kidHtml || noteHtml) ? `<div class="nb-body ${open?'':'hidden'}">${kidHtml}${noteHtml}</div>` : '';
+    /* 锁按钮：锁着显示闭合锁，点一下输密码；已经解锁显示开锁，点一下立即锁上；
+       还没设过密码的笔记本平时不露，悬停时才出现（点一下去设密码） */
+    const lkOwn = nbLockOf(nb);
+    const lkShut = nbLocked(nb.id);
+    const lkShow = !!(lkOwn || lkShut);
+    const lkTip = lkShut ? '已加密 · 点一下输入密码解锁'
+      : lkOwn ? '已解锁 · 点一下立即锁定'
+      : '点一下给这个笔记本设密码';
     return `<div class="nb-group${lv?' nb-sub':''}">
       <div class="nb-row has-more${open?' open':''}">
         <button class="nb-head ${open?'open':''}${on?' on':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
           <span class="nb-fold" data-nbfold="${nb.id}"><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
           <span class="nb-dot" style="background:${dot}"></span>
-          ${nbLockOf(nb) ? `<span class="nb-lock" title="${LOCK_OPEN.has(nb.id) ? '已解锁' : '已加密，点开要密码'}">${ic(LOCK_OPEN.has(nb.id) ? 'lockOpen' : 'lock')}</span>` : ''}
           <span class="t">${esc(nb.name)}</span><span class="meta">${nbNoteCount(nb.id)}</span>
         </button>
+        <button class="nb-lockbtn${lkShow?' has-lock':''}${lkShut?' shut':' open'}" data-nblock="${nb.id}"
+          title="${lkTip}" aria-label="${lkTip}">${ic(lkShut ? 'lock' : (lkOwn ? 'lockOpen' : 'lock'))}</button>
         <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 收纳 / 排序">${ic('more')}</button>
       </div>
       ${inner}
@@ -4212,6 +4235,18 @@ function bindShelf(){
   });
   shelfBody.querySelectorAll('[data-nbmenu]').forEach(b=>{
     b.onclick = e=>{ e.stopPropagation(); openNotebookMenu(b, b.dataset.nbmenu); };
+  });
+  /* 行尾的锁按钮：锁着→输密码，已解锁→立刻锁上，没设过→去设密码 */
+  shelfBody.querySelectorAll('[data-nblock]').forEach(b=>{
+    b.onclick = e=>{
+      e.stopPropagation();
+      const id = b.dataset.nblock, nb = nbById(id);
+      if(!nb) return;
+      const shutId = lockedNbIdOf(id);           // 可能是它自己，也可能是上面那层
+      if(shutId){ LK_PENDING_SCOPE = null; openLockDlg('unlock', shutId); return; }
+      if(nbLockOf(nb)){ lockNow(id); return; }
+      openLockDlg('set', id);
+    };
   });
   shelfBody.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
     const a = b.dataset.act;
@@ -6391,23 +6426,26 @@ window.addEventListener('resize', ()=>{
 /* 双栏：以标题为锚点对齐左右，段内按比例插值。
    纯比例联动会让两边越滚越偏（源码一行 = 渲染后一段带间距），锚点法每个标题处严格对齐。*/
 let SPLIT_ANCH = null;
+let SPLIT_LOCK_UNTIL = 0;           // 程序自己滚的那一下别再被反向同步弹回去
 function invalidateSplitAnchors(){ SPLIT_ANCH = null; }
+// 左栏是 textarea，滚动按「折行后的行数」走，先估算一行能放几个字符
+function srcCharsPerLine(src){
+  try{
+    const cs = getComputedStyle(src);
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const chW = ctx.measureText('0123456789').width / 10 || (parseFloat(cs.fontSize)*0.6);
+    const usable = Math.max(40, src.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0));
+    return Math.max(8, Math.floor(usable / chW));
+  }catch(e){ return 60; }
+}
 function buildSplitAnchors(){
   const n = noteById(S.active);
   const src = document.getElementById('source');
   const prose = document.getElementById('prose');
   if(!n || !src || !prose) return null;
   const body = n.body || '';
-  // 左栏是 textarea，它的滚动是按「折行后的行数」走的，所以要先估算每行能放几个字符
-  const cs = getComputedStyle(src);
-  let perLine = 60;
-  try{
-    const ctx = document.createElement('canvas').getContext('2d');
-    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    const chW = ctx.measureText('0123456789').width / 10 || (parseFloat(cs.fontSize)*0.6);
-    const usable = Math.max(40, src.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0));
-    perLine = Math.max(8, Math.floor(usable / chW));
-  }catch(e){}
+  const perLine = srcCharsPerLine(src);
   const headRows = [];
   let row = 0;
   body.split('\n').forEach(ln=>{
@@ -6443,21 +6481,64 @@ function mapSplitPos(fromEl, toEl, anchors, reverse){
   const k = Math.min(1, Math.max(0, (f - a.f) / span));
   return Math.min(maxTo, Math.max(0, (a.t + (b.t - a.t) * k) * maxTo));
 }
+function splitFracToTop(lf, anchors, maxTo){
+  const A = anchors.map(a=>({ f:a.lf, t:a.rf }));
+  let i = 0;
+  while(i < A.length-1 && A[i+1].f <= lf) i++;
+  const a = A[i], b = A[Math.min(i+1, A.length-1)];
+  const span = (b.f - a.f) || 1;
+  const k = Math.min(1, Math.max(0, (lf - a.f) / span));
+  return Math.min(maxTo, Math.max(0, (a.t + (b.t - a.t) * k) * maxTo));
+}
+/* 光标一挪就把右栏带到对应段落：已经在视野里就不动，省得每按一次方向键都跳一下 */
+let SPLIT_CARET_T = 0;
+function syncPreviewToCaret(){
+  if(curMode() !== 'split') return;
+  const src = document.getElementById('source');
+  const prose = document.getElementById('prose');
+  if(!src || !prose) return;
+  if(document.activeElement !== src) return;
+  const body = src.value || '';
+  const pos = typeof src.selectionStart === 'number' ? src.selectionStart : 0;
+  const perLine = srcCharsPerLine(src);
+  const lines = body.split('\n');
+  const caretLine = (body.slice(0, pos).match(/\n/g) || []).length;
+  let rows = 0, total = 0;
+  for(let i = 0; i < lines.length; i++){
+    const r = Math.max(1, Math.ceil(lines[i].length / perLine));
+    if(i < caretLine) rows += r;
+    total += r;
+  }
+  const lf = Math.min(1, rows / Math.max(1, total));
+  if(!SPLIT_ANCH) SPLIT_ANCH = buildSplitAnchors();
+  if(!SPLIT_ANCH) return;
+  const maxTo = Math.max(1, prose.scrollHeight - prose.clientHeight);
+  const anchorTop = splitFracToTop(lf, SPLIT_ANCH, maxTo);
+  const h = prose.clientHeight, cur = prose.scrollTop;
+  // 对应位置已经露在右栏中间这一屏里就不动，免得每按一下方向键都抖一下
+  if(anchorTop >= cur + h * 0.12 && anchorTop <= cur + h * 0.88) return;
+  const top = Math.max(0, Math.min(maxTo, anchorTop - h * 0.28));
+  if(Math.abs(top - cur) < h * 0.16) return;
+  const now = (window.performance || Date).now();
+  SPLIT_LOCK_UNTIL = now + 520;                     // 平滑滚动会连着发事件，挡久一点
+  try{ prose.scrollTo({ top, behavior:'smooth' }); }catch(e){ prose.scrollTop = top; }
+}
 function wireSplitSync(){
   const src = document.getElementById('source');
   const prose = document.getElementById('prose');
   if(!src || !prose) return;
-  let lock = 0;
+  if(src._splitWired === prose) return;      // 同一对元素只绑一次
+  src._splitWired = prose;
   const bind = (a, b, reverse)=>{
     a.addEventListener('scroll', ()=>{
       const now = (window.performance || Date).now();
-      if(now - lock < 22) return;          // 22ms 内不再响应，挡掉自己触发的回声
+      if(now < SPLIT_LOCK_UNTIL) return;     // 挡住自己触发的那串回声
       const maxA = a.scrollHeight - a.clientHeight;
       const maxB = b.scrollHeight - b.clientHeight;
       if(maxA <= 4 || maxB <= 4) return;
       if(!SPLIT_ANCH) SPLIT_ANCH = buildSplitAnchors();
       if(!SPLIT_ANCH) return;
-      lock = now;
+      SPLIT_LOCK_UNTIL = now + 60;
       b.scrollTop = mapSplitPos(a, b, SPLIT_ANCH, reverse);
     }, { passive:true });
     // 双栏各自滚动时同步大纲高亮 / 右缘刻度（#scroll 本身不动，监听不到）
@@ -6465,8 +6546,12 @@ function wireSplitSync(){
   };
   bind(src, prose, false);
   bind(prose, src, true);
+  // 光标动了（点一下某行、方向键、Home/End、选中文字）→ 右栏跟过去
+  const kick = ()=>{ clearTimeout(SPLIT_CARET_T); SPLIT_CARET_T = setTimeout(syncPreviewToCaret, 60); };
+  ['click','keyup','select'].forEach(ev=>src.addEventListener(ev, kick));
+  src.addEventListener('input', kick);
 }
-window.addEventListener('resize', ()=>{ SPLIT_ANCH = null; }, { passive:true });
+window.addEventListener('resize', ()=>{ SPLIT_ANCH = null; SPLIT_LOCK_UNTIL = 0; }, { passive:true });
 
 function agoText(ts){
   const d = Date.now() - (ts || 0);
@@ -8375,6 +8460,7 @@ function renderProse(){
   const out = mdToHtml(n.body);
   const prose = $('#prose');
   prose.innerHTML = n.body.trim() ? out.html : `<p class="empty">空笔记。双击开始写点什么…</p>`;
+  SPLIT_ANCH = null;      // 右栏重排过了，双栏锚点得重算
   prose.querySelectorAll('.wikilink').forEach(a=>a.onclick=(e)=>{
     e.preventDefault(); openWikiLink(a.dataset.wiki);
   });
@@ -8846,6 +8932,15 @@ function focusInField(){
   const ae = document.activeElement;
   return !!(ae && (ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT'));
 }
+/* 真正「看得见」的输入焦点：预览态里那个隐藏的块输入框有时还留着焦点，
+   把粘贴丢进去等于什么都没发生 —— 用户看到的就是「粘贴为空」 */
+function focusedVisibleField(){
+  const ae = document.activeElement;
+  if(!ae) return false;
+  if(!(ae.isContentEditable || ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) return false;
+  const r = ae.getBoundingClientRect();
+  return r.width > 4 && r.height > 4;
+}
 document.addEventListener('cut', e=>{
   const r = liveSelRange();
   if(!r || inRealEditor()) return;
@@ -8864,7 +8959,24 @@ document.addEventListener('cut', e=>{
   if(deleteLiveSelection()) toast('已剪切');
 });
 document.addEventListener('paste', e=>{
-  if((S.mode || 'live') !== 'live' || inRealEditor()) return;
+  /* 隐形捕获框：预览态没有可编辑元素，⌘V 原本什么都不会发生。
+     这里临时放一个聚焦的 textarea 接住原生粘贴 —— 原生粘贴不需要任何剪贴板权限，
+     比 navigator.clipboard.readText() 稳得多（后者被拒就什么都不粘）。 */
+  if(PASTE_CATCH && e.target === PASTE_CATCH.ta){
+    const at = PASTE_CATCH.at;
+    const cd = e.clipboardData;
+    e.preventDefault();
+    const files = [...((cd && cd.files) || [])];
+    const text = (cd && (cd.getData('text/x-ivy-md') || cd.getData('text/plain'))) || '';
+    endPasteCatcher();
+    if(files.length){ insertFiles(files, null).then(insertToast); return; }
+    if(text) pasteIntoLive(text, at || null);
+    else toast('剪贴板里没有文字');
+    return;
+  }
+  if((S.mode || 'live') !== 'live') return;
+  // 焦点在「看不见的块输入框」里不算在编辑：那种情况粘贴会被吞掉，得我们自己接管
+  if(inRealEditor() && focusedVisibleField()) return;
   const host = liveHost(); if(!host) return;
   const cd = e.clipboardData;
   if(!cd) return;
@@ -8874,8 +8986,40 @@ document.addEventListener('paste', e=>{
   if(!text) return;
   e.preventDefault();
   pasteIntoLive(text);
-});
+}, true);
 let CLIP_AT = null;                     // 剪切时记住位置，⌘V 才能粘回原处
+let PASTE_CATCH = null;                 // 隐形捕获框（见上面的 paste 监听）
+function startPasteCatcher(at){
+  endPasteCatcher();
+  const ta = document.createElement('textarea');
+  ta.setAttribute('aria-hidden', 'true');
+  ta.setAttribute('tabindex', '-1');
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  PASTE_CATCH = { ta, at: at || null, t: 0 };
+  // 有的浏览器不派发 paste 事件但照样插进文本框，input 兜一层，别漏
+  ta.addEventListener('input', ()=>{
+    if(!PASTE_CATCH || PASTE_CATCH.ta !== ta) return;
+    const txt = ta.value, keep = PASTE_CATCH.at;
+    if(!txt) return;
+    endPasteCatcher();
+    pasteIntoLive(txt, keep || null);
+  });
+  try{ ta.focus({ preventScroll:true }); }catch(e){ try{ ta.focus(); }catch(err){} }
+  // 1.4 秒还没等到 paste（剪贴板空的 / 浏览器拦了）就退回收粘贴框
+  PASTE_CATCH.t = setTimeout(()=>{
+    if(!PASTE_CATCH || PASTE_CATCH.ta !== ta) return;
+    const keep = PASTE_CATCH.at;
+    endPasteCatcher();
+    openPasteDlg({ kind:'live', at: keep });
+  }, 1400);
+}
+function endPasteCatcher(){
+  if(!PASTE_CATCH) return;
+  clearTimeout(PASTE_CATCH.t);
+  try{ PASTE_CATCH.ta.remove(); }catch(e){}
+  PASTE_CATCH = null;
+}
 /* ===== 剪贴板三件套（预览态的块是只读 div，⌘C/⌘X/⌘V 都得自己接管） =====
    取「按块拼出来的纯文本」而不是 sel.toString()：块与块之间那个换行不能丢。 */
 function blocksSelText(blocks, r, a, b){
@@ -9034,7 +9178,7 @@ document.addEventListener('keydown', e=>{
   if(!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return;
   const k = String(e.key || '').toLowerCase();
   if(k !== 'x' && k !== 'v') return;
-  if((S.mode || 'live') !== 'live' || inRealEditor()) return;
+  if((S.mode || 'live') !== 'live' || (inRealEditor() && focusedVisibleField())) return;
   if(!S.active) return;
   const sel = liveSelRange();
   if(k === 'x'){
@@ -9048,16 +9192,13 @@ document.addEventListener('keydown', e=>{
     if(deleteLiveSelection()){ CLIP_AT = at; toast('已剪切'); }
     return;
   }
-  // ⌘V：预览态的块不是可编辑元素，浏览器根本不会派发 paste 事件
-  if(focusInField() && !sel && !CLIP_AT) return;      // 标题 / AI 输入框里粘贴，交给浏览器
-  e.preventDefault();
-  const at = CLIP_AT;
+  // ⌘V：预览态的块不是可编辑元素，浏览器不会派发 paste 事件
+  if(focusedVisibleField() && !sel && !CLIP_AT) return;      // 标题 / 块内输入框里粘贴，交给浏览器
+  const at = CLIP_AT || (sel ? liveSelStart(sel) : null);
   CLIP_AT = null;
-  if(!navigator.clipboard || !navigator.clipboard.readText){ openPasteDlg({ kind:'live', at }); return; }
-  navigator.clipboard.readText().then(t=>{
-    if(t) pasteIntoLive(t, at);
-    else toast('剪贴板里没有文字');
-  }).catch(()=>openPasteDlg({ kind:'live', at }));    // 读不到就给个能原生粘贴的框，别卡死
+  /* 这里千万不能 preventDefault：要放行原生粘贴，让它落进刚聚焦的隐形框。
+     （之前靠 navigator.clipboard.readText()，权限一被拒就什么都不粘，看起来就是"粘贴为空"）*/
+  startPasteCatcher(at);
 }, true);
 function liveSelStart(r){
   const host = liveHost();

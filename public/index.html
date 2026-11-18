@@ -2039,6 +2039,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   padding:14px 10px 12px 14px;margin-bottom:4px;border-bottom:1px solid rgb(var(--line));
 }
 .set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em}
+.set-acts{display:flex;align-items:center;gap:2px;flex:0 0 auto}
 .set-x{
   display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
   height:32px;min-width:32px;padding:0 7px;border-radius:8px;color:rgb(var(--muted));
@@ -2565,7 +2566,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v174', at: '2026-11-18 09:16' };
+window.IVY_BUILD = { id: 'v175', at: '2026-11-18 09:17' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3417,16 +3418,18 @@ function openListMore(anchor){
   ]);
 }
 /* 顶部「视图 / 设置」菜单：原来侧栏底部那排图标收在这里 */
-function openViewMenu(anchor){
+function openViewMenu(anchor, opts){
   let todo = 0;
   try{ todo = collectTodos().filter(t=>!t.done).length; }catch(e){}
+  const after = opts && opts.after;
+  const go = fn => ()=>{ if(after) after(); fn(); };
   popover(anchor, [
-    ['笔记', S.view==='notes' ? '✓' : '', '', 'notePen', ()=>switchView('notes')],
-    ['待办', S.view==='todo' ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', ()=>switchView('todo')],
-    ['媒体库', S.view==='media' ? '✓' : '', '', 'image', ()=>switchView('media')],
-    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', ()=>switchView('graph')],
+    ['笔记', S.view==='notes' ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
+    ['待办', S.view==='todo' ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
+    ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
+    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))],
     '-',
-    ['设置', '', '', 'gear', ()=>openSettings()]
+    ['设置', '', '', 'gear', go(()=>openSettings())]
   ], {align:'left'});
 }
 function renderList(){
@@ -11395,7 +11398,10 @@ function openSettings(tab){
       <div class="set-side">
         <div class="set-top">
           <div class="set-title">设置</div>
-          <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
+          <div class="set-acts">
+            <button class="set-x" id="setMenu" title="视图 / 设置" aria-label="视图与设置">${ic('menu')}</button>
+            <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
+          </div>
         </div>
         <button class="set-pick" id="setPick" aria-haspopup="listbox" aria-expanded="false">
           <span id="setPickLabel">账户</span>
@@ -11411,6 +11417,8 @@ function openSettings(tab){
     ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeSettings(); });
     document.body.appendChild(ov);
     ov.querySelector('#setClose').onclick = closeSettings;
+    const setMenuBtn = ov.querySelector('#setMenu');
+    if(setMenuBtn) setMenuBtn.onclick = (e)=> openViewMenu(e.currentTarget, { after: closeSettings });
     ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name]) =>
       `<button type="button" data-st="${id}">${name}</button>`).join('');
     const side = ov.querySelector('.set-side');

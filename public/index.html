@@ -492,10 +492,10 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 }
 [data-theme=dark] .paper{border-color:#2b3035}
 .tabbar{display:flex;align-items:center;gap:4px;height:44px;padding:0 10px;flex:0 0 auto;overflow:hidden}
-.tabs{display:flex;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.tabs{display:flex;flex:1 1 auto;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
-  display:flex;align-items:center;gap:6px;max-width:180px;height:28px;padding:0 8px 0 10px;
+  display:flex;flex:0 0 auto;align-items:center;gap:6px;max-width:180px;height:28px;padding:0 8px 0 10px;
   border-radius:7px;font-size:12.5px;color:rgb(var(--muted));white-space:nowrap;
   transition:background .15s,color .15s;
 }
@@ -912,7 +912,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
   .slash{width:min(258px,86vw)}
   /* 格式工具条收进 + 之后，手机上必须保留右上角这个插入入口 */
-  .paper .tabbar{padding-right:200px}
+  .paper .tabbar{padding-right:76px}
 }
 
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
@@ -2278,8 +2278,8 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* right 收到 2px：书架抽屉宽 330px，让番茄钟和「⋯」在抽屉打开时也点得到 */
   .paper-actions{top:8px;right:2px;gap:0}
   .pa-btn{width:28px;height:28px}
-  /* 右上角 6 个图标占 168px，标签栏要让出这段，别压着标签 */
-  .tabbar{padding-right:180px}
+  /* 右上角只剩番茄钟与「⋯」两个图标，标签栏留出这段就够（原来是 6 个图标时的 180px） */
+  .tabbar{padding-right:76px}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
@@ -2345,6 +2345,33 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 .share-card .sc-copy:hover{filter:brightness(1.06)}
 .share-card .sc-unshare{background:rgb(var(--hover));color:rgb(var(--danger,var(--ink)))}
 .share-card .sc-unshare:hover{background:rgb(var(--danger)/.1)}
+
+/* ---- 手机：列表页 ↔ 笔记页 两级，侧栏仍是抽屉 ---- */
+.m-back{
+  width:34px;height:34px;flex:0 0 auto;display:none;place-items:center;border-radius:8px;
+  color:rgb(var(--muted));font-size:22px;line-height:1;padding:0 0 2px;
+}
+.m-back:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+@media (max-width:640px){
+  .notelist{display:flex!important;flex:1 1 auto;width:auto;flex-basis:auto;border-left:0;background:rgb(var(--canvas))}
+  .nl-hd{height:54px;padding:0 8px 0 6px;gap:6px}
+  .nl-hd b{font-size:15px}
+  .nl-open{display:grid}
+  .nl-new{width:34px;height:34px}
+  .nl-rows{padding:2px 8px 28px}
+  .nl-row{padding:11px 10px 12px;border-radius:10px}
+  .nl-row .nl-t{font-size:14.5px}
+  .nl-row .nl-s{font-size:12.5px;margin-top:4px}
+  .nl-row .nl-d{font-size:11.5px}
+  .main-wrap{position:fixed;inset:0;z-index:60;padding:0;background:rgb(var(--canvas));display:none}
+  body.m-read .main-wrap{display:flex}
+  body.m-read .notelist{display:none!important}
+  .main-wrap .paper{border:0;border-radius:0;box-shadow:none;width:100%;margin:0;padding-top:env(safe-area-inset-top)}
+  body.m-read .m-back{display:grid}
+  #shelfOpen{display:none!important}
+  .help-wrap{display:block}
+  .help-ol{display:none!important}
+}
 </style>
 <script>
 /* QR Code Generator (qrcode-generator 1.4.4, MIT, Kazuhiko Arase) — 分享二维码用 */
@@ -2566,7 +2593,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v176', at: '2026-11-18 09:19' };
+window.IVY_BUILD = { id: 'v177', at: '2026-11-18 09:23' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3340,6 +3367,7 @@ function setScope(sc){
   trashView = false;                       // 从回收站回到正常浏览
   S.view = 'notes';
   const box = $('#tbSearchInput'); if(box) box.value = '';
+  if(window.innerWidth <= 640) shelfCloseIfDrawer();
   renderAll(); save();
 }
 function listScopeNotes(){
@@ -3485,14 +3513,14 @@ function renderShelf(){
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
 
-  const inlineNotes = window.innerWidth <= 900;   // 窄屏：侧栏仍内联列笔记（抽屉里选笔记），桌面走中栏
+  const inlineNotes = window.innerWidth > 640 && window.innerWidth <= 900;   // 平板竖屏：侧栏内联列笔记；手机走列表页
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
   // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
   const nClosed = !!S.notesClosed;
   let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(!inlineNotes && (S.scope||'all')==='all') ? ' on' : ''}" data-act="toggle-notes-sec"
       title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">
-      <span class="lb"><i class="caret">&#9654;</i>笔记</span>
+      <span class="lb"><i class="caret">&#9654;</i>全部笔记</span>
       <span class="count">${notes.length}</span>
     </button>`;
   let body = '';
@@ -3569,7 +3597,7 @@ function renderShelf(){
 }
 
 function bindShelf(){
-  const inlineNotes = window.innerWidth <= 900;   // 与 renderShelf 保持同一判定
+  const inlineNotes = window.innerWidth > 640 && window.innerWidth <= 900;   // 与 renderShelf 保持同一判定
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
   shelfBody.querySelectorAll('[data-move]').forEach(b=>{
     b.onclick = e=>{
@@ -5119,7 +5147,7 @@ function renderDock(){
 function renderTabs(){
   const bar = $('#tabbar');
   if(S.view!=='notes'){ bar.innerHTML = ''; return; }
-  bar.innerHTML = `<div class="tabs">` + S.tabs.map(id=>{
+  bar.innerHTML = `<button class="m-back" id="mBack" title="返回笔记列表" aria-label="返回笔记列表">‹</button><div class="tabs">` + S.tabs.map(id=>{
     const n = noteById(id); if(!n) return '';
     return `<button class="tab ${id===S.active?'active':''}" data-tab="${id}">
       <span class="t">${esc(n.title||'无标题')}</span>
@@ -5141,6 +5169,7 @@ function renderTabs(){
     e.stopPropagation(); closeTab(x.dataset.close);
   });
   $('#tabNew').onclick=()=>newNote();
+  const mb = $('#mBack'); if(mb) mb.onclick = ()=>document.body.classList.remove('m-read');
   const si = $('#tbSearchInput');
   if(si){
     si.oninput = ()=>{ S.listQuery = si.value; renderList(); };
@@ -5161,6 +5190,7 @@ function newNote(notebookId){
   if(!S.tabs.includes(n.id)) S.tabs.push(n.id);
   S.view = 'notes';
   renderAll(); save();
+  if(window.innerWidth <= 640) document.body.classList.add('m-read');
   setTimeout(()=>{ const t=$('#docTitle'); if(t) t.focus(); }, 30);
   return n;
 }
@@ -5198,6 +5228,7 @@ function openNote(id){
   S.active = id; S.view='notes';
   if(!S.tabs.includes(id)) S.tabs.push(id);
   renderAll(); save();
+  if(window.innerWidth <= 640) document.body.classList.add('m-read');   // 手机：进到笔记页
 }
 function closeTab(id){
   const i = S.tabs.indexOf(id); if(i<0) return;
@@ -5412,6 +5443,8 @@ const outlineEl = $('#outline');
 const paperActions = $('#paperActions');
 
 function renderAll(){
+  // 手机首屏：抽屉先收起，主界面是列表页（之后按用户操作展开）
+  if(window.innerWidth <= 640 && !window.__mInit){ window.__mInit = true; S.shelfOpen = false; }
   // 先把书架折叠状态落到 DOM 上，再渲染正文：
   // 否则手机首屏会按「书架展开时」的窄宽度去算标题高度，标题下面留一大片空白
   const collapsed = !S.shelfOpen;

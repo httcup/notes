@@ -192,10 +192,28 @@ body.shelf-collapsed .nl-open{display:grid}
 .nl-row .nl-del:hover{background:rgb(var(--danger)/.12);color:rgb(var(--danger))}
 .nl-row .nl-del svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
+/* 手机上行内两颗图标视觉只有 22px，热区往下扩到 40px（宽度刚好相接、不互相盖住） */
+@media (max-width:900px){
+  .nl-row .nl-more::after,.nl-row .nl-del::after{
+    content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:26px;height:40px;
+  }
+}
 .nl-row .nl-s{display:block;margin-top:3px;font-size:12px;color:rgb(var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nl-row .nl-pin{position:absolute;left:2px;top:13px;width:4px;height:4px;border-radius:50%;background:rgb(var(--ivy))}
 .nl-row .nl-t{white-space:nowrap}
 .nl-empty{padding:20px 12px;font-size:12px;color:rgb(var(--faint));line-height:1.8}
+.nl-empty-first{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px;min-height:min(430px,56vh);padding:24px 16px 40px}
+.nl-empty-search{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:26px 16px}
+.nl-empty .ne-ico{
+  width:46px;height:46px;border-radius:15px;display:grid;place-items:center;
+  background:rgb(var(--hover));color:rgb(var(--muted));margin-bottom:3px;
+}
+.nl-empty .ne-ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nl-empty .ne-t{font-size:13.5px;font-weight:600;color:rgb(var(--ink-2));letter-spacing:.1px}
+.nl-empty .ne-d{font-size:12px;color:rgb(var(--faint));max-width:100%;line-height:1.72}
+.nl-empty .ne-btn{height:33px;margin-top:5px;padding:0 15px;font-size:12.5px;border-radius:9px}
+.nl-empty .ne-btn + .ne-btn{margin-top:0}
 @media (max-width:1180px) and (min-width:901px){ .notelist{width:250px;flex-basis:250px} }
 @media (max-width:900px){ .notelist{display:none!important} }
 
@@ -2848,7 +2866,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v185', at: '2026-11-18 10:25' };
+window.IVY_BUILD = { id: 'v186', at: '2026-11-18 11:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3736,6 +3754,25 @@ function listRowHtml(n){
     <span class="nl-more" data-nlmenu="${n.id}" role="button" title="更多">${ic('more')}</span>
   </div>`;
 }
+/* 正在编辑的那篇：中栏那一行的标题 / 摘要 / 时间要跟着动。
+   整表重绘会在每敲一个字时闪一下，所以只改这一行；按标题排序时才延迟重排。 */
+let _rowSyncT = 0;
+function syncListRow(n){
+  const rows = $('#nlRows');
+  if(!rows || !n || !n.id) return;
+  let row = null;
+  try{ row = rows.querySelector('.nl-row[data-open="' + (window.CSS && CSS.escape ? CSS.escape(String(n.id)) : String(n.id)) + '"]'); }
+  catch(e){ return; }
+  if(!row) return;
+  const t = row.querySelector('.nl-t'); if(t) t.textContent = n.title || '无标题';
+  const s = row.querySelector('.nl-s');
+  if(s){ const sn = listSnippet(n); s.innerHTML = sn ? esc(sn) : '&nbsp;'; }
+  const d = row.querySelector('.nl-d'); if(d) d.textContent = listWhen(n.updatedAt);
+  if(S.listSort === 'title'){
+    clearTimeout(_rowSyncT);
+    _rowSyncT = setTimeout(()=>{ try{ renderList(); }catch(e){} }, 460);
+  }
+}
 function openNoteRowMenu(anchor, id){
   const n = noteById(id); if(!n) return;
   popover(anchor, [
@@ -3793,9 +3830,30 @@ function renderList(){
   if(tEl) tEl.textContent = title;
   if(cEl) cEl.textContent = String(notes.length);
   const keepTop = rows.scrollTop;
-  rows.innerHTML = notes.length ? notes.map(listRowHtml).join('')
-    : `<div class="nl-empty">${q ? '没有匹配的笔记' : '这里还没有笔记'}</div>`;
+  const emptyHtml = q
+    ? `<div class="nl-empty nl-empty-search">
+         <div class="ne-t">没有匹配的笔记</div>
+         <div class="ne-d">换个关键词，或者清空搜索看全部。</div>
+         <button class="btn-ghost ne-btn" data-empty-clear>清空搜索</button>
+       </div>`
+    : `<div class="nl-empty nl-empty-first">
+         <div class="ne-ico">${ic('compose')}</div>
+         <div class="ne-t">还没有笔记</div>
+         <div class="ne-d">写下的内容先存在这台设备，登录后会同步到云端。</div>
+         <button class="btn-primary ne-btn" data-empty-new>新建第一篇笔记</button>
+         <button class="btn-ghost ne-btn" data-empty-help>看看使用说明</button>
+       </div>`;
+  rows.innerHTML = notes.length ? notes.map(listRowHtml).join('') : emptyHtml;
   rows.scrollTop = keepTop;                 // 重画后别把列表滚回顶部
+  rows.querySelectorAll('[data-empty-new]').forEach(b=>{
+    b.onclick = ()=>newNote(S.scope && S.scope.indexOf('nb:')===0 ? S.scope.slice(3) : null);
+  });
+  rows.querySelectorAll('[data-empty-clear]').forEach(b=>{
+    b.onclick = ()=>{ S.listQuery = ''; renderList(); };
+  });
+  rows.querySelectorAll('[data-empty-help]').forEach(b=>{
+    b.onclick = ()=>{ try{ openHelpPanel(); }catch(e){} };
+  });
   rows.querySelectorAll('[data-open]').forEach(el=>{
     el.onclick = (e)=>{
       if(e.target.closest('[data-nlmenu]')) return;
@@ -9057,7 +9115,7 @@ function wireEditor(n){
 
   title.addEventListener('input', ()=>{
     n.title = title.value; n.updatedAt = Date.now();
-    renderTabs(); renderShelf(); save(); growTitle(); renderMeta();
+    renderTabs(); renderShelf(); syncListRow(n); save(); growTitle(); renderMeta();
   });
   title.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); src.focus(); }
@@ -9066,7 +9124,7 @@ function wireEditor(n){
 
   src.addEventListener('input', ()=>{
     n.body = src.value; n.updatedAt = Date.now();
-    grow(src); renderMeta(); save();
+    grow(src); renderMeta(); save(); syncListRow(n);
     histTouch();
     if(curMode()==='split'){ livePreviewSoon(); }
     slashMaybe(src); dueMaybe(src);
@@ -10796,7 +10854,7 @@ function paintNotesPush(){
   bindNpfBody(ov, paintNotesPush);
 }
 function npfBodyHtml(){
-  const SC_LINK = 'https://www.icloud.com/shortcuts/c729f17ccbd84f93a0a44d4192a61982';
+  const SC_LINK = 'https://www.icloud.com/shortcuts/b5004addd3cc499fbc3ca2a3ccee45e1';
   const feedBlock = NPF.token
     ? `<code class="rc-link" id="npfLink">${esc(NPF.token)}
          <button class="rc-copy" id="npfCopy" title="复制订阅 token">${ic('link')}</button></code>
@@ -13277,6 +13335,8 @@ function aiCfgHtml(){
 function bindAiCfg(root, onDone){
   if(!root) return;
   const $ = s=>root.querySelector(s);      // 局部 $：只在这个容器里找控件
+  // 未登录时「AI 接口设置」页只有一句提示、没有表单，此时不能再往下绑控件
+  if(!$('#acModels')) return;
   const c = AI.cfg || {};
   const leave = ()=>{ const sh = root.closest('.sheet'); if(sh) sh.classList.remove('open'); };
 

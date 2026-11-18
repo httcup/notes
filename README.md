@@ -70,6 +70,7 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `DELETE /api/media/:uid/:id` → 需本人令牌
 `POST /api/pic`（multipart，字段 `file`，需登录）→ 转发到自家图床 **pic.139t.cn**，返回 `{key,url,markdown,name,size,type,dedup}`，`url` 是 `https://img.139t.cn/...` 的完整地址；编辑器粘贴/拖入图片走这里，正文插 Markdown 图片地址
 `GET /api/pic?limit=60&cursor=` → 图床图库列表（给「媒体库」用）；`DELETE /api/pic?key=2026/11/xxx.png` → 删图
+> **谁能用云上传**：`PIC_ALLOW` 里填 uid 或账号名（逗号分隔），只有名单里的账号能把图片传到图床、把文件传到云端；其余账号（含未登录）一律存本机，前端会收到 403 并自动退回内嵌图片。不配时默认只放行 `ADMIN_UID`（默认 `owner`）；写 `*` 才全放开。
 > 图床长期上传 token 只存服务端 Secret **`PIC_TOKEN`**（`wrangler pages secret put PIC_TOKEN --project-name=notes`），浏览器拿不到；可选 `PIC_BASE` 改接口地址。没配 `PIC_TOKEN` 时 `/api/pic` 返回 503，前端自动退回本站 KV 媒体库（`/api/media`），功能不中断。
 
 `POST /api/capture` body `{ url, title, text, source, notebook }`（需 `x-capture-key` 或登录态）→ 把外部网页/微博/微信文章写成一条笔记，落在「剪藏」笔记本，返回 `{ noteId, mode, via, format }`。同一链接重复保存会更新同一篇（id 由链接哈希生成）。除 JSON 外也接受表单、纯文本、嵌套 JSON。

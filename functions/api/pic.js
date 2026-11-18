@@ -1,7 +1,7 @@
 // /api/pic  自家图床（pic.139t.cn → img.139t.cn）的上传代理
 // 只给已登录用户用；长期上传 token 只存在服务端（PIC_TOKEN），不下发到浏览器。
 // 这样浏览器不跨域、不碰密钥，换设备也不用各存一份 token。
-import { json, preflight, currentUser } from '../_lib.js';
+import { json, preflight, currentUser, cloudUploadAllowed } from '../_lib.js';
 
 const DEFAULT_BASE = 'https://pic.139t.cn';
 
@@ -33,6 +33,10 @@ export async function onRequest({ request, env }) {
 
   const user = await currentUser(request, env);
   if (!user) return json({ error: '未登录或口令不正确' }, 401);
+  // 图床只给白名单账号用，其余账号存本机（前端收到 403 会退回内嵌图片）
+  if (!cloudUploadAllowed(env, user)) {
+    return json({ error: '当前账号未开通云图床，图片只存本机', code: 'not_allowed' }, 403);
+  }
   if (!env.PIC_TOKEN) return notReady(env);
 
   const url = new URL(request.url);

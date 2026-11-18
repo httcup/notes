@@ -2879,7 +2879,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v188', at: '2026-11-18 14:40' };
+window.IVY_BUILD = { id: 'v189', at: '2026-11-18 14:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4058,7 +4058,7 @@ function bindShelf(){
       else setScope('all');                                  // 桌面：点「笔记」回到全部笔记
     }
   });
-  shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
+  shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderShelf(); renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
     todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
   });
@@ -9760,38 +9760,57 @@ function refreshMermaid(){
 /* ========== 媒体库 ========== */
 let mediaCat = 'all';
 const CATS = [
-  {k:'all', label:'全部'}, {k:'image', label:'图片'}, {k:'video', label:'视频'},
+  {k:'all', label:'全部'}, {k:'pic', label:'图床图片'}, {k:'image', label:'图片'}, {k:'video', label:'视频'},
   {k:'audio', label:'音频'}, {k:'file', label:'文件'}, {k:'unused', label:'未引用'}, {k:'trash', label:'回收站'}
 ];
 function kindOf(f){ if(f.type.startsWith('image')) return 'image'; if(f.type.startsWith('video')) return 'video'; if(f.type.startsWith('audio')) return 'audio'; return 'file'; }
-function mediaCount(k){
-  const all = allMedia();
-  if(k==='all') return all.length;
-  if(k==='unused') return all.filter(m=>!m.noteId).length;
-  if(k==='trash') return 0;
-  return all.filter(m=>kindOf(m)===k).length;
+// 一次渲染内复用：判断某个媒体文件是否被某篇笔记引用（图床图片没有 noteId，只能看正文）
+function buildUsedIndex(){
+  const bodies = (S.notes||[]).filter(n=>!n.trashed && !n.deleted && n.body).map(n=>n.body);
+  return function isUsed(m){
+    if(!m) return false;
+    if(m.noteId) return true;
+    const u = m.url;
+    if(!u) return false;
+    for(const body of bodies){ if(body.indexOf(u) >= 0) return true; }
+    return false;
+  };
 }
 function fmtSize(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 
 function mediaShelf(){
+  const all = allMedia();
+  const isUsed = buildUsedIndex();
+  const fixed = {
+    all: all.length,
+    pic: all.filter(m=>m.pic).length,
+    unused: all.filter(m=>!isUsed(m)).length,
+    trash: 0
+  };
+  const countOf = k => (k in fixed) ? fixed[k] : all.filter(m=>kindOf(m)===k).length;
   let h = ``;
   h += CATS.map(c=>`<button class="shelf-row" data-media-cat="${c.k}" style="${mediaCat===c.k?'background:rgb(var(--hover));color:rgb(var(--ink))':''}">
       <span class="t" style="font-weight:${mediaCat===c.k?500:400}">${c.label}</span>
-      <span class="meta">${mediaCount(c.k)}</span></button>`).join('');
-  const all = allMedia();
-  const used = all.filter(m=>m.noteId).length;
+      <span class="meta">${countOf(c.k)}</span></button>`).join('');
+  const used = all.filter(m=>isUsed(m)).length;
   const bytes = all.reduce((a,m)=>a+(m.size||0),0);
   h += `<div style="position:absolute;left:20px;right:20px;bottom:78px;font-size:11px;line-height:1.7;color:rgb(var(--faint))">
-      ${all.length} 个文件 · ${fmtSize(bytes)} · 被 ${used} 篇引用<br>${isConnected()?'Cloudflare KV · 跨设备可见':'仅本机会话可见 · 去「账号」里登录'}</div>`;
+      ${all.length} 个文件 · ${fmtSize(bytes)} · 被 ${used} 篇引用<br>${CLOUD_UPLOAD === false
+        ? '当前账号未开通云图床 · 图片只存本机'
+        : (mediaCat==='pic'
+            ? '图床 pic.139t.cn · 存 R2，读图 img.139t.cn'
+            : (isConnected()?'图床 + Cloudflare KV · 跨设备可见':'仅本机会话可见 · 去「账号」里登录'))}</div>`;
   return h;
 }
 
 function renderMedia(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
+  const isUsed = buildUsedIndex();
   const list = allMedia().filter(m=>{
     if(mediaCat==='all') return true;
-    if(mediaCat==='unused') return !m.noteId;
+    if(mediaCat==='pic') return !!m.pic;
+    if(mediaCat==='unused') return !isUsed(m);
     return kindOf(m)===mediaCat;
   });
   scrollEl.style.display='';
@@ -9805,7 +9824,11 @@ function renderMedia(){
           <button class="media-del" data-mdel="${i}" title="删除这个文件" aria-label="删除">${ic('trash')}</button>
         </div>`).join('')}</div>`
       : `<div class="media-empty">
-          ${ic('image')}<span>还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。</span>
+          ${ic('image')}<span>${mediaCat==='pic'
+            ? (CLOUD_UPLOAD === false
+                ? '当前账号未开通云图床，粘贴的图片只存在本机笔记里。'
+                : (isConnected() ? '图床里还没有图片。在笔记里粘贴或拖入图片就会传到这里。' : '登录后粘贴或拖入的图片才会传到图床。'))
+            : '还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。'}</span>
         </div>`}
     </div>`;
   const ms = $('#mediaSearch');
@@ -11565,6 +11588,7 @@ let remoteMedia = null;
 let mediaLoading = false;
 let picMedia = null;
 let picLoading = false;
+let CLOUD_UPLOAD = null;   // null=还没探明，false=这个账号没开通云上传（图片/文件只存本机）
 async function loadRemoteMedia(force){
   if(!isConnected()){ remoteMedia = []; return; }
   if(mediaLoading) return;
@@ -11592,6 +11616,9 @@ async function loadPicMedia(force){
     if(r.ok){
       const d = await r.json();
       picMedia = (d.items||[]).map(it=>Object.assign({remote:true, pic:true}, it));
+    } else if(r.status===403){
+      picMedia = [];
+      CLOUD_UPLOAD = false;          // 该账号不在白名单里
     } else if(r.status===503 || r.status===404){
       picMedia = [];                 // 图床没配，别每回都试
     }
@@ -11616,6 +11643,7 @@ async function uploadToPic(file, name){
   const r = await fetch('/api/pic', {method:'POST', headers: authHeaders(false), body: fd});
   const d = await r.json().catch(()=>({}));
   if(!r.ok){
+    if(r.status === 403) CLOUD_UPLOAD = false;
     const e = new Error(d.error || ('图床上传失败 HTTP ' + r.status));
     e.status = r.status;
     throw e;
@@ -11625,10 +11653,12 @@ async function uploadToPic(file, name){
 }
 async function uploadMediaFile(file, name){
   if(!isConnected()) return null;
+  if(CLOUD_UPLOAD === false) return null;      // 这个账号没开通云上传，直接存本机
   try{
     const up = await uploadToPic(file, name);
     if(up && up.url) return up;
   }catch(e){
+    if(e.status === 403){ CLOUD_UPLOAD = false; return null; }
     // 图床没配好 → 退回本站媒体库；图床明确拒绝（格式不支持、太大）→ 如实报错
     if(e.status !== 503 && e.status !== 404) throw e;
   }
@@ -11636,7 +11666,10 @@ async function uploadMediaFile(file, name){
   fd.append('file', file, name || file.name || 'file');
   const r = await fetch('/api/media', {method:'POST', headers: authHeaders(false), body: fd});
   const d = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(d.error || ('上传失败 HTTP '+r.status));
+  if(!r.ok){
+    if(r.status === 403){ CLOUD_UPLOAD = false; return null; }
+    throw new Error(d.error || ('上传失败 HTTP '+r.status));
+  }
   remoteMedia = null;
   return d;
 }
@@ -11763,6 +11796,7 @@ async function insertFiles(files, target){
     }else{
       skipped++;
       if(!online) toast('未登录只能插入图片，其他文件请登录后再传');
+      else if(CLOUD_UPLOAD === false) toast('当前账号未开通云端文件上传，只能插入图片');
     }
   }
   uploadPillDone();
@@ -11795,14 +11829,16 @@ function insertToast(r){
   }else if(r.local){
     toast(isConnected()
       ? r.local + ' 张图片上传失败，已先存到本机（不影响查看，稍后可再试）'
-      : r.local + ' 张图片只存本机 · 登录后可用图床上传');
+      : (CLOUD_UPLOAD === false
+          ? r.local + ' 张图片已存本机（当前账号未开通云图床）'
+          : r.local + ' 张图片上传失败，已先存到本机（不影响查看，稍后可再试）'));
   }
 }
 
 /* 登录后，把以前没登录时内嵌在本机的图片补传到图床，正文换成图床地址 */
 let INLINE_MIGRATING = false;
 async function migrateInlineImages(){
-  if(INLINE_MIGRATING || !isConnected()) return 0;
+  if(INLINE_MIGRATING || !isConnected() || CLOUD_UPLOAD === false) return 0;
   const targets = (S.notes || []).filter(n=>!n.trashed && !n.deleted && /!\[[^\]]*\]\(data:image\//.test(n.body || ''));
   if(!targets.length) return 0;
   const srcEl = document.getElementById('source');

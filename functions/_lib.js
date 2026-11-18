@@ -108,6 +108,17 @@ export function forgetAccount(uid) {
 }
 
 // 支持两种身份：Bearer 令牌（多用户）／x-ivy-key 单口令（主人账号，兼容旧客户端）
+// 云上传白名单：图床 / 云端文件只给指定账号用，其余账号一律存本机。
+// PIC_ALLOW 里填 uid 或账号名，逗号分隔；不配时只放行 ADMIN_UID（默认 owner）。
+// 显式写 "*" 才全放开。
+export function cloudUploadAllowed(env, user) {
+  if (!user) return false;
+  const raw = String((env && env.PIC_ALLOW) || (env && env.ADMIN_UID) || 'owner').trim();
+  if (raw === '*') return true;
+  const list = raw.split(/[,，\s]+/).filter(Boolean).map((s) => s.toLowerCase());
+  return list.includes(String(user.uid || '').toLowerCase()) || list.includes(String(user.name || '').toLowerCase());
+}
+
 export async function currentUser(request, env) {
   const authz = request.headers.get('authorization') || '';
   const m = authz.match(/^Bearer\s+(.+)$/i);

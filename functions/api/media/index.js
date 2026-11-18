@@ -1,5 +1,5 @@
 // /api/media  列表 + 上传（文件存在 KV，单文件上限 20MB；绑了 R2 会优先用 R2）
-import { json, preflight, currentUser, randomHex } from '../../_lib.js';
+import { json, preflight, currentUser, randomHex, cloudUploadAllowed } from '../../_lib.js';
 
 const MAX = 20 * 1024 * 1024;
 
@@ -39,6 +39,9 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
+    if (!cloudUploadAllowed(env, user)) {
+      return json({ error: '当前账号未开通云端文件上传，内容只存本机', code: 'not_allowed' }, 403);
+    }
     const type = request.headers.get('content-type') || '';
     if (!type.includes('multipart/form-data')) return json({ error: '请用 multipart/form-data 上传' }, 415);
 

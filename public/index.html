@@ -684,6 +684,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .trash-head{gap:4px;margin-bottom:16px}
   .trash-hint{flex:1 1 100%}
   .trash-head #trashEmpty{margin-left:0;padding:4px 0}
+  /* 手机上「恢复 / 彻底删除」太细，手指点不准：把热区撑到能点，行高也放宽一点 */
+  .view-pad .note-item{padding:10px 6px;gap:6px}
+  .view-pad .note-item .meta-btn{padding:7px 9px;border-radius:7px;font-size:13px}
+  .view-pad .note-item .t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 /* 标题下的 Markdown 工具条：和右上角「+」菜单并存，两个入口都能用。
    长文往下翻时吸在正文区顶部，工具条一直够得着；背景要不透明，否则会透出下面的字 */
@@ -3067,7 +3071,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v209', at: '2026-11-18 17:46' };
+window.IVY_BUILD = { id: 'v210', at: '2026-11-18 22:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5788,7 +5792,12 @@ function renderTabs(){
     e.stopPropagation(); closeTab(x.dataset.close);
   });
   $('#tabNew').onclick=()=>newNote();
-  const mb = $('#mBack'); if(mb) mb.onclick = ()=>document.body.classList.remove('m-read');
+  const mb = $('#mBack');
+  if(mb) mb.onclick = ()=>{
+    document.body.classList.remove('m-read');
+    // 从回收站出来时把视图一起切回去，否则列表会一直是「回收站隐藏行」的空态
+    if(typeof trashView !== 'undefined' && trashView){ trashView = false; renderAll(); }
+  };
 }
 
 /* ========== 笔记操作 ========== */
@@ -6060,7 +6069,13 @@ function toggleTrash(id){
   renderAll(); save(); toast(n.trashed?'已移到回收站':'已恢复');
 }
 let trashView = false;
-function openTrashView(){ trashView = true; S.listQuery = ''; S.view='notes'; S.active=null; S.tabs=[]; renderAll(); }
+function openTrashView(){
+  trashView = true; S.listQuery = ''; S.view='notes'; S.active=null; S.tabs=[];
+  // 手机上主区平时是 display:none，只有 body.m-read 才显示（列表页 ↔ 笔记页）。
+  // 回收站画在正文区里，所以这里必须把 m-read 打开，否则点完是一片空白
+  if(window.innerWidth <= 640) document.body.classList.add('m-read');
+  renderAll();
+}
 
 /* ========== 主区渲染 ========== */
 const scrollEl = $('#scroll');
@@ -10753,6 +10768,10 @@ function purgeNote(id, quiet){
 
 function renderTrash(){
   const list = S.notes.filter(n=>n.trashed);
+  // 手机上 Markdown 工具条被 dock 到 .paper 顶部（不在 #scroll 里），
+  // 重画回收站时它不会被清掉，会一直挂在「回收站」标题上面 —— 这里先摘掉
+  const dockedBar = document.getElementById('fmtBar');
+  if(dockedBar && !scrollEl.contains(dockedBar)) dockedBar.remove();
   scrollEl.innerHTML = `<div class="view-pad">
     <h2 style="font-family:var(--font-serif);font-size:22px;margin:0 0 4px">回收站</h2>
     <div class="trash-head">

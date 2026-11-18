@@ -746,6 +746,58 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .nb-ov.open{display:flex;animation:nbFade .18s ease}
 @keyframes nbFade{from{opacity:0}to{opacity:1}}
+/* ---- 笔记本密码锁 ---- */
+.lk-ov{
+  position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;
+  padding:16px;background:rgb(16 24 32 / .34);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+}
+.lk-ov.open{display:flex;animation:nbFade .18s ease}
+.lk-dlg{
+  width:min(360px,100%);background:rgb(var(--surface));border:.5px solid rgb(var(--line));
+  border-radius:18px;box-shadow:var(--shadow-lift);padding:20px 20px 16px;
+  animation:nbIn .24s var(--spring);
+}
+.lk-ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  background:rgb(var(--ivy)/.12);color:rgb(var(--ivy));margin-bottom:12px}
+.lk-ico svg{width:19px;height:19px}
+.lk-dlg h3{margin:0 0 6px;font-size:16.5px;font-weight:600;color:rgb(var(--ink))}
+.lk-desc{margin:0 0 14px;font-size:12.5px;line-height:1.7;color:rgb(var(--muted))}
+.lk-field{margin-bottom:8px}
+.lk-field[hidden]{display:none!important}
+.lk-field input{
+  width:100%;height:40px;border-radius:10px;border:.5px solid rgb(var(--line));
+  background:rgb(var(--canvas));padding:0 12px;font-size:14px;color:rgb(var(--ink));outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.lk-field input:focus{border-color:rgb(var(--ivy)/.55);box-shadow:0 0 0 3px rgb(var(--ivy)/.1)}
+.lk-err{min-height:18px;font-size:12px;color:rgb(var(--danger));line-height:1.5}
+.lk-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.lk-btn{height:36px;padding:0 16px;border-radius:10px;font-size:13.5px;font-weight:500;transition:filter .15s}
+.lk-btn.ghost{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.lk-btn.go{background:rgb(var(--ivy));color:#fff}
+.lk-btn.go:hover{filter:brightness(1.06)}
+.lk-btn:disabled{opacity:.55}
+/* 侧栏里的锁标记 */
+.nb-lock{display:inline-grid;place-items:center;width:13px;height:13px;margin-right:4px;color:rgb(var(--faint));flex:0 0 auto}
+.nb-lock svg{width:12px;height:12px}
+/* 文档区的锁屏 / 列表里的锁卡片 */
+.lock-screen{display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;padding:64px 24px}
+.lock-screen .ls-ico{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;
+  background:rgb(var(--ivy)/.1);color:rgb(var(--ivy))}
+.lock-screen .ls-ico svg{width:24px;height:24px}
+.lock-screen h3{margin:6px 0 0;font-size:17px;font-weight:600;color:rgb(var(--ink))}
+.lock-screen p{margin:0;font-size:13px;line-height:1.75;color:rgb(var(--muted));max-width:300px}
+.lock-screen .ls-btn{margin-top:8px;height:38px;padding:0 18px;border-radius:10px;
+  background:rgb(var(--ivy));color:#fff;font-size:13.5px;font-weight:500}
+.lock-mini{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:44px 16px}
+.lock-mini .ls-ico{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:rgb(var(--ivy)/.1);color:rgb(var(--ivy))}
+.lock-mini .ls-ico svg{width:20px;height:20px}
+.lock-mini .lm-t{font-size:13.5px;font-weight:600;color:rgb(var(--ink))}
+.lock-mini .lm-d{font-size:12px;line-height:1.7;color:rgb(var(--faint));max-width:230px}
+.lock-mini .lm-btn{margin-top:2px;height:32px;padding:0 14px;border-radius:9px;
+  background:rgb(var(--ivy));color:#fff;font-size:12.5px}
 .nb-dlg{
   width:min(400px,100%);background:rgb(var(--surface));border:.5px solid rgb(var(--line));
   border-radius:18px;box-shadow:var(--shadow-lift);padding:20px 20px 16px;
@@ -2778,6 +2830,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     </div>
   </div>
 </div>
+<div class="lk-ov" id="lkOv">
+  <div class="lk-dlg" role="dialog" aria-modal="true" aria-labelledby="lkTitle">
+    <div class="lk-ico" id="lkIco"></div>
+    <h3 id="lkTitle">解锁笔记本</h3>
+    <p class="lk-desc" id="lkDesc">输入密码后才能看到里面的笔记。</p>
+    <div class="lk-field" id="lkOldWrap" hidden><input type="password" id="lkOld" placeholder="当前密码" autocomplete="current-password"></div>
+    <div class="lk-field" id="lkNewWrap" hidden><input type="password" id="lkNew" placeholder="设置密码（至少 4 位）" autocomplete="new-password"></div>
+    <div class="lk-field" id="lkNew2Wrap" hidden><input type="password" id="lkNew2" placeholder="再输一次确认" autocomplete="new-password"></div>
+    <div class="lk-field" id="lkHintWrap" hidden><input type="text" id="lkHint" maxlength="40" placeholder="密码提示（可选，只有本机看得到）" autocomplete="off"></div>
+    <div class="lk-err" id="lkErr"></div>
+    <div class="lk-foot">
+      <button class="lk-btn ghost" id="lkCancel">取消</button>
+      <button class="lk-btn go" id="lkOk">解锁</button>
+    </div>
+  </div>
+</div>
 <div class="slash" id="slashMenu"></div>
 <div class="selbar" id="selBar"></div>
 <input type="color" id="hlColorIn" class="hl-color-in" value="#f59e0b" tabindex="-1" aria-hidden="true">
@@ -2829,6 +2897,8 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   minus:'<path d="M5 12h14"/>',
   panelLeft:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/>',
+  lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/>',
+  lockOpen:'<rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 7.6-1.6"/>',
   file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M19 18v3H6.5A2.5 2.5 0 0 1 4 18.5"/>',
   trash:'<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
@@ -2909,7 +2979,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v196', at: '2026-11-18 15:36' };
+window.IVY_BUILD = { id: 'v197', at: '2026-11-18 15:48' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3428,7 +3498,8 @@ try{
 }catch(e){}
 
 const noteById = id => S.notes.find(n=>n.id===id);
-const liveNotes = () => S.notes.filter(n=>!n.trashed).sort((a,b)=>{
+const LOCK_OPEN = new Set();     // 本次会话解锁过的笔记本；刷新页面就重新上锁
+const liveNotes = () => S.notes.filter(n=>!n.trashed && !noteLocked(n)).sort((a,b)=>{
   if(!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;        // 置顶的永远在上面
   if(a.pinned && b.pinned) return (b.pinnedAt||0)-(a.pinnedAt||0); // 后置顶的更新，排更前
   return b.updatedAt-a.updatedAt;
@@ -3734,6 +3805,11 @@ function nbReorder(id, dir){
 
 /* ============ 中栏：笔记列表（侧栏只放工作区，笔记在这里列） ============ */
 function setScope(sc){
+  if(sc && sc.indexOf('nb:') === 0 && nbLocked(sc.slice(3))){
+    LK_PENDING_SCOPE = sc;
+    openLockDlg('unlock', sc.slice(3));
+    return;
+  }
   S.scope = sc || 'all';
   S.listQuery = '';
   trashView = false;                       // 从回收站回到正常浏览
@@ -3872,6 +3948,21 @@ function renderList(){
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = title;
   if(cEl) cEl.textContent = String(notes.length);
+  const lockedId = scopeLockedNb();
+  if(lockedId){
+    const lnb = nbById(lockedId);
+    if(tEl) tEl.textContent = lnb ? lnb.name : '已加密的笔记本';
+    if(cEl) cEl.textContent = '—';
+    rows.innerHTML = `<div class="lock-mini">
+        <div class="ls-ico">${ic('lock')}</div>
+        <div class="lm-t">这个笔记本已加密</div>
+        <div class="lm-d">输入密码后才能看到里面的笔记${(nbLockOf(lnb)||{}).hint ? ' · 提示：' + esc(nbLockOf(lnb).hint) : ''}</div>
+        <button class="lm-btn" data-lock-open>输入密码</button>
+      </div>`;
+    const lb = rows.querySelector('[data-lock-open]');
+    if(lb) lb.onclick = ()=>openLockDlg('unlock', lockedId);
+    return;
+  }
   const keepTop = rows.scrollTop;
   const emptyHtml = q
     ? `<div class="nl-empty nl-empty-search">
@@ -3970,6 +4061,7 @@ function renderShelf(){
         <button class="nb-head ${open?'open':''}${on?' on':''}" data-nb="${nb.id}" title="${esc(nb.name)}">
           <span class="nb-fold" data-nbfold="${nb.id}"><svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
           <span class="nb-dot" style="background:${dot}"></span>
+          ${nbLockOf(nb) ? `<span class="nb-lock" title="${LOCK_OPEN.has(nb.id) ? '已解锁' : '已加密，点开要密码'}">${ic(LOCK_OPEN.has(nb.id) ? 'lockOpen' : 'lock')}</span>` : ''}
           <span class="t">${esc(nb.name)}</span><span class="meta">${nbNoteCount(nb.id)}</span>
         </button>
         <button class="nb-more" data-nbmenu="${nb.id}" title="重命名 / 收纳 / 排序">${ic('more')}</button>
@@ -4063,6 +4155,11 @@ function bindShelf(){
       if(e.target.closest('[data-nbfold]')){                 // 点小三角：只折叠 / 展开
         nb.open = !(nb.open !== false); nb.updatedAt = Date.now();
         renderShelf(); save(); return;
+      }
+      if(nbLocked(nb.id)){                                   // 锁着的先要密码，别直接展开
+        LK_PENDING_SCOPE = 'nb:' + nb.id;
+        openLockDlg('unlock', nb.id);
+        return;
       }
       nb.open = true;                                        // 点名字：在中间列表里打开这个笔记本
       setScope('nb:' + nb.id);
@@ -4330,6 +4427,7 @@ function collectTodos(noteId){
   const list = [];
   (S.notes || []).forEach(n=>{
     if(n.trashed) return;
+    if(noteLocked(n)) return;                 // 锁着的笔记本不参与待办汇总
     if(noteId && n.id !== noteId) return;
     const lines = String(n.body || '').split('\n');
     let inFence = false;
@@ -5562,8 +5660,10 @@ function renderTabs(){
     + `<span class="mb-ar">‹</span><span class="mb-t">全部笔记</span><span class="mb-n">${allN}</span></button>`
     + `<div class="tabs">` + S.tabs.map(id=>{
     const n = noteById(id); if(!n) return '';
+    // 笔记本锁着时，标签栏也别把标题露出来
+    const tLabel = noteLocked(n) ? '已加密' : esc(n.title||'无标题');
     return `<button class="tab ${id===S.active?'active':''}" data-tab="${id}">
-      <span class="t">${esc(n.title||'无标题')}</span>
+      <span class="t">${noteLocked(n) ? ic('lock') : ''}${tLabel}</span>
       <span class="x" data-close="${id}">${ic('x')}</span>
     </button>`;
   }).join('') + `</div>
@@ -5804,6 +5904,18 @@ function openNotebookMenu(anchor, id){
     items.push(['下移', '', '', 'arrDown', pos < sibs.length - 1 ? ()=>nbReorder(id, 1) : null]);
   }
   items.push('-');
+  const lk = !!nbLockOf(nb);
+  if(!lk){
+    items.push(['设置密码', '打开要密码', '', 'lock', ()=>openLockDlg('set', id)]);
+  }else if(LOCK_OPEN.has(id)){
+    items.push(['立即锁定', '', '', 'lock', ()=>lockNow(id)]);
+    items.push(['修改密码', '', '', 'pencil', ()=>openLockDlg('set', id)]);
+    items.push(['取消密码', '', '', 'lockOpen', ()=>openLockDlg('remove', id)]);
+  }else{
+    items.push(['输入密码打开', '', '', 'lock', ()=>openLockDlg('unlock', id)]);
+    items.push(['取消密码', '', '', 'lockOpen', ()=>openLockDlg('remove', id)]);
+  }
+  items.push('-');
   items.push(['删除笔记本', '', 'danger', 'trash', ()=>delNotebook(id)]);
   popover(anchor, items);
 }
@@ -5875,6 +5987,166 @@ function renderMain(){
 }
 
 /* ---- 编辑器 ---- */
+/* ========== 笔记本密码锁 ==========
+   密码用 PBKDF2-SHA256 存成校验值（不存明文），解锁状态只留在内存里，刷新即重新上锁。
+   注意：这是「打开要密码」的访问锁，笔记正文本身仍是明文存的。 */
+const LK_ITER = 150000;
+function lkB64e(u8){ let out=''; for(let i=0;i<u8.length;i++) out += String.fromCharCode(u8[i]); return btoa(out); }
+function lkB64d(str){ const bin = atob(str); const u8 = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i); return u8; }
+async function lkHash(pw, saltB64, iter){
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: lkB64d(saltB64), iterations: iter || LK_ITER, hash:'SHA-256' }, key, 256);
+  return lkB64e(new Uint8Array(bits));
+}
+function nbLockOf(nb){ return (nb && nb.lock && nb.lock.hash && nb.lock.salt) ? nb.lock : null; }
+// 子笔记本跟着父笔记本一起锁：一路往上找，只要有一层锁着且没解锁，就进不去
+function nbLocked(nbId){
+  let cur = nbId ? nbById(nbId) : null, guard = 0;
+  while(cur && guard++ < 30){
+    if(nbLockOf(cur) && !LOCK_OPEN.has(cur.id)) return true;
+    cur = cur.parentId ? nbById(cur.parentId) : null;
+  }
+  return false;
+}
+function noteLocked(n){ return !!(n && n.notebookId && nbLocked(n.notebookId)); }
+function scopeLockedNb(){
+  const sc = S.scope || 'all';
+  if(sc.indexOf('nb:') !== 0) return null;
+  const id = sc.slice(3);
+  return nbLocked(id) ? id : null;
+}
+function lockNow(nbId){
+  const nb = nbById(nbId); if(!nb) return;
+  LOCK_OPEN.delete(nbId);
+  renderAll(); save();
+  toast('已锁定「' + nb.name + '」');
+}
+/* ---- 密码对话框 ---- */
+let LK_DLG = null;
+let LK_PENDING_SCOPE = null;      // 解锁成功后要自动跳过去的位置
+function openLockDlg(mode, nbId){
+  const nb = nbById(nbId); if(!nb) return;
+  const ov = $('#lkOv'); if(!ov) return;
+  const has = !!nbLockOf(nb);
+  const isSet = mode === 'set';
+  LK_DLG = { mode, nbId };
+  $('#lkTitle').textContent = mode === 'unlock' ? '解锁「' + nb.name + '」'
+    : mode === 'remove' ? '取消「' + nb.name + '」的密码'
+    : (has ? '修改「' + nb.name + '」的密码' : '给「' + nb.name + '」设密码');
+  $('#lkDesc').textContent = mode === 'unlock'
+    ? '这个笔记本设了密码，输入后才能看到里面的笔记。'
+    : mode === 'remove' ? '输入当前密码确认后，这个笔记本就不用密码了。'
+    : '密码只存在本机与你的同步里，忘了就进不去，建议顺手留个提示。';
+  $('#lkIco').innerHTML = ic(mode === 'remove' ? 'lockOpen' : 'lock');
+  $('#lkOk').textContent = mode === 'unlock' ? '解锁' : mode === 'remove' ? '取消密码' : (has ? '保存' : '设置密码');
+  $('#lkOldWrap').hidden = !(mode !== 'set' || has);
+  $('#lkNewWrap').hidden = !isSet;
+  $('#lkNew2Wrap').hidden = !isSet;
+  $('#lkHintWrap').hidden = !isSet;
+  $('#lkOld').placeholder = mode === 'unlock' ? '输入密码' : '当前密码';
+  $('#lkOld').value = ''; $('#lkNew').value = ''; $('#lkNew2').value = '';
+  $('#lkHint').value = isSet ? ((nbLockOf(nb) || {}).hint || '') : '';
+  $('#lkErr').textContent = '';
+  $('#lkOk').disabled = false;
+  ov.classList.add('open');
+  setTimeout(()=>{ try{ (mode === 'set' && !has ? $('#lkNew') : $('#lkOld')).focus(); }catch(e){} }, 50);
+}
+function closeLockDlg(){
+  const ov = $('#lkOv'); if(ov) ov.classList.remove('open');
+  LK_DLG = null;
+  LK_PENDING_SCOPE = null;
+}
+async function submitLockDlg(){
+  if(!LK_DLG) return;
+  const { mode, nbId } = LK_DLG;
+  const nb = nbById(nbId);
+  if(!nb){ closeLockDlg(); return; }
+  const warn = m=>{ $('#lkErr').textContent = m; };
+  const okBtn = $('#lkOk');
+  const lock = nbLockOf(nb);
+  $('#lkErr').textContent = '';
+  if(mode !== 'set' && !lock){ closeLockDlg(); return; }
+
+  if(mode !== 'set'){
+    const pw = $('#lkOld').value;
+    if(!pw) return warn('先输入密码');
+    okBtn.disabled = true;
+    try{
+      const h = await lkHash(pw, lock.salt, lock.iter);
+      if(h !== lock.hash){ warn('密码不对，再试一次'); return; }
+      if(mode === 'unlock'){
+        LOCK_OPEN.add(nb.id);
+        const next = LK_PENDING_SCOPE; LK_PENDING_SCOPE = null;
+        closeLockDlg(); save();
+        if(next && next.indexOf('nb:') === 0) S.scope = next;
+        renderAll();
+        toast('已解锁「' + nb.name + '」');
+      }else{
+        delete nb.lock; nb.updatedAt = Date.now();
+        closeLockDlg(); save(); renderAll();
+        toast('已取消「' + nb.name + '」的密码');
+      }
+    }catch(e){
+      warn('操作失败：' + (e.message || '这个浏览器不支持加密'));
+    }finally{ okBtn.disabled = false; }
+    return;
+  }
+
+  // 设置 / 修改密码
+  if(lock){
+    const oldPw = $('#lkOld').value;
+    if(!oldPw) return warn('先输入当前密码');
+    okBtn.disabled = true;
+    try{
+      const h = await lkHash(oldPw, lock.salt, lock.iter);
+      if(h !== lock.hash){ warn('当前密码不对'); return; }
+    }catch(e){
+      warn('校验失败：' + (e.message || ''));
+      return;
+    }finally{ okBtn.disabled = false; }
+  }
+  const pw = $('#lkNew').value, pw2 = $('#lkNew2').value;
+  if(pw.length < 4) return warn('密码至少 4 位');
+  if(pw !== pw2) return warn('两次输入不一致');
+  okBtn.disabled = true;
+  try{
+    const salt = lkB64e(crypto.getRandomValues(new Uint8Array(16)));
+    const hash = await lkHash(pw, salt, LK_ITER);
+    nb.lock = { salt, hash, iter: LK_ITER, hint: String($('#lkHint').value || '').trim().slice(0, 40), at: Date.now() };
+    nb.updatedAt = Date.now();
+    LOCK_OPEN.add(nb.id);
+    closeLockDlg(); save(); renderAll();
+    toast(lock ? '密码已修改' : '已给「' + nb.name + '」加密');
+  }catch(e){
+    warn('设置失败：' + (e.message || '这个浏览器不支持加密'));
+  }finally{ okBtn.disabled = false; }
+}
+(function bindLockDlg(){
+  const ov = document.getElementById('lkOv'); if(!ov) return;
+  document.getElementById('lkCancel').onclick = closeLockDlg;
+  document.getElementById('lkOk').onclick = submitLockDlg;
+  ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeLockDlg(); });
+  ['lkOld','lkNew','lkNew2','lkHint'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.addEventListener('keydown', e=>{
+      if(e.key === 'Enter'){ e.preventDefault(); submitLockDlg(); }
+      if(e.key === 'Escape'){ e.preventDefault(); closeLockDlg(); }
+    });
+    el.addEventListener('input', ()=>{ $('#lkErr').textContent = ''; });
+  });
+})();
+/* 文档区锁屏 */
+function lockScreenHtml(nbName, hint){
+  return `<div class="lock-screen">
+    <div class="ls-ico">${ic('lock')}</div>
+    <h3>${esc(nbName || '这个笔记本')}已加密</h3>
+    <p>输入密码后才能看到里面的笔记。${hint ? '<br>提示：' + esc(hint) : ''}</p>
+    <button class="ls-btn" id="lockUnlockBtn">输入密码</button>
+  </div>`;
+}
+
 function renderEditor(){
   if(trashView){
     renderTrash(); outlineEl.classList.add('hidden');
@@ -5896,6 +6168,19 @@ function renderEditor(){
     </div>`;
     scrollEl.style.display='flex';
     outlineEl.innerHTML = ''; outlineEl.classList.add('hidden');
+    return;
+  }
+  if(noteLocked(n)){
+    const lnb = n.notebookId ? nbById(n.notebookId) : null;
+    scrollEl.style.display = '';
+    scrollEl.innerHTML = lockScreenHtml(lnb ? lnb.name : '这个笔记本', (nbLockOf(lnb) || {}).hint || '');
+    paperActions.innerHTML = '';
+    const oldBar = document.getElementById('fmtBar'); if(oldBar) oldBar.remove();
+    outlineEl.innerHTML = ''; outlineEl.classList.add('hidden');
+    document.body.classList.remove('outline-pinned');
+    document.body.classList.add('ol-hidden');
+    const ub = document.getElementById('lockUnlockBtn');
+    if(ub) ub.onclick = ()=>openLockDlg('unlock', n.notebookId);
     return;
   }
   if(n.title==='' && n.body==='' && n._fresh!==false) n._fresh = true;
@@ -9364,6 +9649,7 @@ function parseAiOutline(text){
 
 async function aiOutline(force){
   const n = noteById(S.active);
+  if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
   if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
   const snap = String(n.body || '');
   // 生成过、笔记也没改 → 点一下在「AI 大纲 / 原文大纲」之间切换
@@ -9405,6 +9691,7 @@ function summaryQuote(text){
 
 function openAiSummary(){
   const n = noteById(S.active);
+  if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
   if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
   const ov = aiOverlayEl(); if(!ov) return;
   const title = n.title ? n.title : '无标题';
@@ -10958,7 +11245,7 @@ function exportBackup(){
     notebooks: S.notebooks.filter(nb=>!nb.deleted).map(nb=>({
       id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
       parentId:nb.parentId||null, order:nb.order||0 })),
-    notes: S.notes.filter(n=>!n.trashed && !n.deleted).map(n=>({
+    notes: S.notes.filter(n=>!n.trashed && !n.deleted && !noteLocked(n)).map(n=>({
       id:n.id, title:n.title||'', body:n.body||'', notebookId:n.notebookId||null,
       tags:n.tags||[], pinned:!!n.pinned, pinnedAt:n.pinnedAt||0, devices:n.devices||[],
       createdAt:n.createdAt||0, updatedAt:n.updatedAt||0 }))
@@ -10969,7 +11256,7 @@ function exportBackup(){
   toast('已备份 '+data.notes.length+' 篇笔记（含笔记本分类）');
 }
 function exportAllMd(){
-  const live = S.notes.filter(n=>!n.trashed && !n.deleted);
+  const live = S.notes.filter(n=>!n.trashed && !n.deleted && !noteLocked(n));
   const all = live.map(n=>`# ${n.title||'无标题'}\n\n${n.body}`).join('\n\n---\n\n');
   const blob = new Blob([all],{type:'text/markdown;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -11707,7 +11994,8 @@ function localPayload(){
     notebooks: S.notebooks.map(nb=>({
       id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
       deleted:!!nb.deleted, updatedAt:nb.updatedAt||0,
-      parentId:nb.parentId||null, order:nb.order||0
+      parentId:nb.parentId||null, order:nb.order||0,
+      lock: nbLockOf(nb) ? nb.lock : null      // 密码锁校验值，跟着笔记本一起走
     }))
   };
 }
@@ -11758,11 +12046,14 @@ function applyRemote(data){
         /* 层级只认云端「明确给出」的值：老服务端不带 parentId、或那一行还是 NULL 时，
            不能把本机已经收好的二级关系抹平，否则同步一次笔记本就全跑回一级 */
         const cP = cur.parentId || null, cO = cur.order || 0;
+        const curLock = cur.lock || null;
+        const hasLock = Object.prototype.hasOwnProperty.call(r, 'lock');
         const hasP = Object.prototype.hasOwnProperty.call(r, 'parentId');
         const rP = hasP ? (r.parentId || null) : null;
         Object.assign(cur, r);
         if(!hasP || (rP === null && !newer)){ cur.parentId = cP; cur.order = cO; }
         else { cur.parentId = rP; cur.order = Number(r.order) || 0; }
+        if(!hasLock) cur.lock = curLock;        // 云端没这个字段，别把本机密码锁抹掉
         changed = true;
       }
     }

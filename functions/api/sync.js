@@ -10,6 +10,20 @@ function safeTags(s) {
   }
 }
 
+// 笔记本密码锁：只认 salt/hash/iter/hint 这几个字段，别把乱七八糟的东西存进来
+function safeLock(raw) {
+  if (!raw) return null;
+  let v = raw;
+  if (typeof raw === 'string') {
+    try { v = JSON.parse(raw); } catch (e) { return null; }
+  }
+  if (!v || typeof v !== 'object') return null;
+  const salt = str(v.salt, 120), hash = str(v.hash, 200);
+  if (!salt || !hash) return null;
+  const iter = Math.max(10000, Math.min(600000, Number(v.iter) || 150000));
+  return { salt, hash, iter, hint: str(v.hint, 80), at: Number(v.at) || 0 };
+}
+
 function str(v, max) {
   return typeof v === 'string' ? v.slice(0, max) : '';
 }
@@ -38,6 +52,7 @@ async function readAll(env, uid) {
     deleted: !!r.deleted,
     parentId: r.parent_id || null,     // 二级收纳：指向父笔记本
     order: r.sort_order || 0,
+    lock: safeLock(r.lock),            // 笔记本密码锁（salt/hash），没锁就是 null
     updatedAt: r.updated_at || 0
   }));
   return { notes, notebooks, serverTime: Date.now() };
@@ -95,8 +110,8 @@ export async function onRequest({ request, env }) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
         stmts.push(
           env.DB.prepare(
-            `INSERT INTO notebooks (user_id, id, name, color, open, deleted, parent_id, sort_order, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+            `INSERT INTO notebooks (user_id, id, name, color, open, deleted, parent_id, sort_order, updated_at, lock)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
              ON CONFLICT(user_id, id) DO UPDATE SET
                name = excluded.name,
                color = excluded.color,
@@ -104,7 +119,8 @@ export async function onRequest({ request, env }) {
                deleted = excluded.deleted,
                parent_id = excluded.parent_id,
                sort_order = excluded.sort_order,
-               updated_at = excluded.updated_at
+               updated_at = excluded.updated_at,
+               lock = excluded.lock
              WHERE excluded.updated_at >= notebooks.updated_at`
           ).bind(
             uid,
@@ -115,7 +131,8 @@ export async function onRequest({ request, env }) {
             nb.deleted ? 1 : 0,
             nb.parentId ? str(nb.parentId, 80) : null,
             Number(nb.order) || 0,
-            Number(nb.updatedAt) || 0
+            Number(nb.updatedAt) || 0,
+            safeLock(nb.lock) ? JSON.stringify(safeLock(nb.lock)) : null
           )
         );
       }

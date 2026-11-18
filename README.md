@@ -71,6 +71,11 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `POST /api/pic`（multipart，字段 `file`，需登录）→ 转发到自家图床 **pic.139t.cn**，返回 `{key,url,markdown,name,size,type,dedup}`，`url` 是 `https://img.139t.cn/...` 的完整地址；编辑器粘贴/拖入图片走这里，正文插 Markdown 图片地址
 `GET /api/pic?limit=60&cursor=` → 图床图库列表（给「媒体库」用）；`DELETE /api/pic?key=2026/11/xxx.png` → 删图
 > **谁能用云上传**：`PIC_ALLOW` 名单里的账号，或 **VIP** 账号（`users.vip_until` 未过期）。其余账号（含未登录）一律存本机，前端收到 403 会自动退回内嵌图片。不配 `PIC_ALLOW` 时只放行 `ADMIN_UID`（默认 `owner`）；写 `*` 才全放开。
+### 笔记本密码锁
+笔记本可以设密码（右键笔记本 →「设置密码」）。密码用 PBKDF2-SHA256（15 万次迭代）存成 `salt + hash`，不存明文；解锁状态只留在内存，刷新页面就重新上锁。锁住的笔记本：列表/搜索/待办汇总/标签统计都不显示里面的笔记，标签栏标题显示「已加密」，文档区换成锁屏页。子笔记本跟随父笔记本一起锁。
+
+`lock` 字段随笔记本同步（D1 `notebooks.lock`，迁移见 `schema-v18.sql`），所以换设备打开也要密码。**注意这是访问锁，不是内容加密**：正文本身仍以明文存在本机 localStorage 与云端，能拿到账号或开发者工具的人还是能读到。
+
 > **VIP**：后台 `/admin` 给账号开通/续期（按天累加），权益＝图床与云端上传 + 站内 AI 不限次。非 VIP 登录账号站内 AI 每天 `AI_USER_DAILY`（默认 80）次；用自己接口的 key 不受限。主人账号（`ADMIN_UID`）永远按 VIP 处理。
 > 图床长期上传 token 只存服务端 Secret **`PIC_TOKEN`**（`wrangler pages secret put PIC_TOKEN --project-name=notes`），浏览器拿不到；可选 `PIC_BASE` 改接口地址。没配 `PIC_TOKEN` 时 `/api/pic` 返回 503，前端自动退回本站 KV 媒体库（`/api/media`），功能不中断。
 

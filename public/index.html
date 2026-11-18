@@ -84,6 +84,14 @@ a{color:inherit;text-decoration:none}
   width:var(--shelf-w);flex:0 0 var(--shelf-w);display:flex;flex-direction:column;
   padding:8px 12px 12px;position:relative;transition:margin-left .34s var(--spring),opacity .2s;
 }
+/* 桌面：左栏也做成一张卡片，和列表、正文同一高度、同样的上下留白 */
+@media (min-width:901px){
+  .shelf{
+    margin:8px 0 8px 8px;padding:0 8px 8px;border-radius:12px;
+    background:rgb(var(--sunken));
+  }
+  .shelf.collapsed{margin-left:calc(var(--shelf-w) * -1 - 16px)}
+}
 .shelf.collapsed{margin-left:calc(var(--shelf-w) * -1);opacity:0;pointer-events:none}
 .shelf-open{
   position:fixed;left:12px;top:12px;z-index:40;width:32px;height:32px;display:none;place-items:center;
@@ -92,6 +100,8 @@ a{color:inherit;text-decoration:none}
 }
 .shelf-open:hover{color:rgb(var(--ink))}
 .shelf-open.show{display:grid}
+/* 桌面收起侧栏后，列表头自带一枚展开按钮，别再叠一个浮动的 */
+@media (min-width:901px){ .shelf-open.show{display:none} }
 .shelf-open svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .shelf-head{display:flex;align-items:center;gap:8px;height:52px;padding:0 4px}
 .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
@@ -129,7 +139,15 @@ body.view-todo .head-actions .notes-only{display:none}
 .notelist{
   width:288px;flex:0 0 288px;display:flex;flex-direction:column;min-width:0;
   border-left:1px solid rgb(var(--line));background:rgb(var(--sunken));
-  padding-top:8px;            /* 和左栏、正文那一列同一条水平线起头 */
+}
+/* 桌面：列表也是一张卡片，和左栏 / 正文三块上下齐平、缝宽一致 */
+@media (min-width:901px){
+  .notelist{
+    margin:8px;border:1px solid rgb(var(--line));border-radius:12px;
+    overflow:hidden;background:rgb(var(--sunken));
+  }
+  /* 卡片多了 1px 边框，表头收 1px 才能和左右两列同一条中线 */
+  .notelist .nl-hd{height:50px}
 }
 .notelist.hidden{display:none}
 .nl-hd{height:52px;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 10px 0 12px}
@@ -184,13 +202,13 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .sec-label{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
   font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
-  margin:12px 8px 6px;
+  margin:12px 0 6px;padding:0 52px 0 8px;
 }
 .sec-label .count{font-size:11px;font-weight:500;color:rgb(var(--faint))}
 /* 「笔记」总开关：点标题把下面一整块（笔记本 / 标签 / 回收站）收起来 */
 .sec-fold{
   width:100%;background:none;border:0;font-family:inherit;text-align:left;cursor:pointer;
-  border-radius:7px;padding:2px 16px 2px 0;transition:color .12s;   /* 右侧留 16px：数量对齐下面「回收站」那一列 */
+  border-radius:7px;padding:2px 38px 2px 0;transition:color .12s;   /* 右侧留出「⋯」和数字那一列 */
 }
 .sec-fold:hover{color:rgb(var(--ink))}
 .sec-fold .lb{display:flex;align-items:center;gap:6px}
@@ -209,7 +227,8 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .shelf-row:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .shelf-row svg{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:rgb(var(--faint))}
 .shelf-row .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-.shelf-row .meta{font-size:11px;color:rgb(var(--faint));flex:0 0 auto}
+.shelf-row{padding-right:52px}
+.shelf-row .meta{position:absolute;right:38px;top:50%;transform:translateY(-50%);font-size:11px;color:rgb(var(--faint))}
 /* 回收站和「笔记 / 标签」同属大类：字号、字重、颜色都对齐，只是它带图标 */
 .shelf-row[data-act="trash"]{margin-top:2px;gap:6px;padding-left:8px}
 .shelf-row[data-act="trash"] .t{font-size:14.5px;font-weight:600;color:rgb(var(--ink-2))}
@@ -221,19 +240,17 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .nb-row{display:flex;align-items:center;gap:0;border-radius:7px;position:relative}
 .nb-row:hover{background:rgb(var(--hover))}
 .nb-more{
-  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
   width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
   color:rgb(var(--faint));opacity:0;pointer-events:none;
   transition:opacity .12s,background .12s,color .12s;
 }
 .nb-row:hover .nb-more,.nb-row:focus-within .nb-more{opacity:1;pointer-events:auto}
 /* 悬停时数字让位给「⋯」，两者不会叠在一起；没有「⋯」的行（置顶 / 未归类）不受影响 */
-.nb-head .meta{transition:opacity .12s}
-.nb-row.has-more:hover .nb-head .meta,
-.nb-row.has-more:focus-within .nb-head .meta{opacity:0}
+
 /* 有「⋯」的行：右侧留出它的位置（长名字不会被压到），数字再拉回对齐列 */
-.nb-row.has-more .nb-head{padding-right:34px;position:relative}
-.nb-row.has-more .nb-head .meta{position:absolute;right:8px;top:50%;transform:translateY(-50%);margin-left:0}
+.nb-row .nb-head{padding-right:30px;position:relative}
+.nb-row .nb-head .meta{position:absolute;right:38px;top:50%;transform:translateY(-50%);margin-left:0}
 .nb-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
 .nb-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .nb-head{
@@ -361,7 +378,7 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-pills-sec.closed{margin-bottom:0}
 .tag-pills-title{
   display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
-  text-align:left;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px;padding:0;
+  text-align:left;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px;padding:0 30px 0 0;
 }
 .tag-pills-sec.closed .tag-pills-title{margin-bottom:0}
 .tag-pills-title:hover{color:rgb(var(--ink-2))}
@@ -505,13 +522,13 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .avatar:hover{transform:scale(1.06)}
 
 /* ============ paper ============ */
-.main-wrap{flex:1;min-width:0;display:flex;padding:8px 12px 8px 0}.paper{
+.main-wrap{flex:1;min-width:0;display:flex;padding:8px 8px 8px 0}.paper{
   flex:1;min-width:0;display:flex;flex-direction:column;position:relative;overflow:hidden;
   background:rgb(var(--surface));border:1px solid #e9ecef;border-radius:14px;
   box-shadow:var(--shadow-paper);
 }
 [data-theme=dark] .paper{border-color:#2b3035}
-.tabbar{display:flex;align-items:center;gap:4px;height:50px;padding:0 10px;flex:0 0 auto;overflow:hidden}
+.tabbar{display:flex;align-items:center;gap:4px;height:50px;padding:0 88px 0 10px;flex:0 0 auto;overflow:hidden}
 .tabs{display:flex;flex:1 1 auto;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{
@@ -551,7 +568,7 @@ body.ol-open .pa-ol{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 /* 所有触屏设备（含 iPad Safari 桌面模式）放大关闭按钮与条目点击区 */
 /* 触屏没有悬停：笔记本行的「⋯」常驻，数字往左让出 30px（不然两个会重叠） */
 /* 触屏没有悬停：「⋯」常驻在行的右侧留白里（不占数字那一列），数字因此仍与其它行对齐 */
-body.ol-touch .nb-more{opacity:.4;pointer-events:auto;right:-14px}
+body.ol-touch .nb-more{opacity:.45;pointer-events:auto}
 body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
@@ -645,14 +662,14 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .fmt-bar button[data-fmt="ai"]:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .fmt-bar button[data-fmt="ai"] svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .fmt-bar button{
-  height:26px;min-width:24px;padding:0 6px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
+  height:26px;min-width:23px;padding:0 5px;border-radius:6px;font-size:12px;color:rgb(var(--muted));
   transition:background .14s,color .14s,transform .1s;
 }
 .fmt-bar button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .fmt-bar button:active{transform:scale(.95)}
 .fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
-.fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 5px;flex:0 0 auto}
+.fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 4px;flex:0 0 auto}
 /* 窄屏：工具条不换行（换行会叠成好几行，吸顶后挡住半屏正文），改成横向滑动 */
 @media (max-width:900px){
   .fmt-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -2262,8 +2279,8 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .qr-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 .qr-body{display:flex;flex-direction:column;align-items:center;padding:10px 20px 24px}
 .qr-img{
-  width:230px;max-width:100%;height:auto;display:block;border-radius:10px;
-  background:#fff;padding:6px;box-shadow:0 6px 20px -12px rgb(16 24 32/.35);
+  width:236px;max-width:100%;height:auto;display:block;border-radius:12px;
+  background:#fff;padding:0;box-shadow:0 8px 22px -14px rgb(16 24 32/.4);
 }
 .qr-tip{margin:14px 0 0;font-size:12px;line-height:1.75;color:rgb(var(--muted));text-align:center}
 /* ---- iPhone：添加到主屏幕（底部提示条 + 三步卡片） ---- */
@@ -2635,7 +2652,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <button class="icon-btn nl-open" id="nlOpen" title="展开工作区 (⌘\)" aria-label="展开工作区"></button>
       <button class="nl-new" id="nlNew" title="新建笔记 (⌘N)" aria-label="新建笔记"></button>
       <b id="nlTitle">全部笔记</b><em id="nlCount">0</em>
-      <span class="nl-r"><button class="icon-btn" id="nlMore" title="更多" aria-label="更多"></button></span>
+      <span class="nl-r">
+        <button class="icon-btn" id="nlSearch" title="搜索笔记 (⌘K)" aria-label="搜索笔记"></button>
+        <button class="icon-btn" id="nlMore" title="更多" aria-label="更多"></button>
+      </span>
     </div>
     <div class="nl-rows" id="nlRows"></div>
   </section>
@@ -2828,7 +2848,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v184', at: '2026-11-18 10:10' };
+window.IVY_BUILD = { id: 'v185', at: '2026-11-18 10:25' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3373,6 +3393,29 @@ try{
     localStorage.setItem('ivy.purgedSeeds','1');
   }
 }catch(e){}
+/* 一次性清掉早期版本内置的《使用说明》示例笔记（按内容特征识别，避免误删自己写的同名笔记） */
+try{
+  if(!localStorage.getItem('ivy.purgedGuideNote')){
+    const isGuide = (n)=> n && n.title === '使用说明'
+      && typeof n.body === 'string'
+      && n.body.includes('一份随时可查的手册')
+      && (n.body.includes('三十秒上手') || n.body.includes('五分钟上手'));
+    const hits = S.notes.filter(isGuide);
+    if(hits.length){
+      S.pendingDeletes = (S.pendingDeletes || []).concat(hits.map(n=>n.id));
+      S.notes = S.notes.filter(n=>!isGuide(n));
+      S.tabs = S.tabs.filter(id=>S.notes.some(n=>n.id===id));
+      if(!S.notes.some(n=>n.id === S.active)){
+        const first = S.notes.filter(n=>!n.trashed).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+        S.active = first ? first.id : null;
+        if(first && !S.tabs.length) S.tabs = [first.id];
+      }
+      try{ persistLocal(); }catch(e){}
+    }
+    localStorage.setItem('ivy.purgedGuideNote','1');
+  }
+}catch(e){}
+
 S.pendingDeletes = Array.isArray(S.pendingDeletes) ? S.pendingDeletes : [];
 
 /* ========== 主题 ========== */
@@ -3412,6 +3455,7 @@ const brandName = $('#brandName');
 function paintRowIcons(){
   const nlNew = $('#nlNew'); if(nlNew) nlNew.innerHTML = ic('compose');
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
+  const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
   const st = $('#btnSettings'); if(st) st.innerHTML = ic('gear');
@@ -3633,7 +3677,6 @@ function setScope(sc){
   S.listQuery = '';
   trashView = false;                       // 从回收站回到正常浏览
   S.view = 'notes';
-  const box = $('#tbSearchInput'); if(box) box.value = '';
   if(window.innerWidth <= 640) shelfCloseIfDrawer();
   renderAll(); save();
 }
@@ -5423,13 +5466,7 @@ function renderTabs(){
       <span class="x" data-close="${id}">${ic('x')}</span>
     </button>`;
   }).join('') + `</div>
-    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>
-    <div class="tb-search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-      <input id="tbSearchInput" type="text" placeholder="搜索全部笔记" value="${esc(S.listQuery||'')}"
-        autocomplete="off" spellcheck="false" aria-label="搜索全部笔记" />
-      <kbd>⌘K</kbd>
-    </div>`;
+    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>`;
   bar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=(e)=>{
     if(e.target.closest('[data-close]')) return;
     S.active = b.dataset.tab; renderAll(); save();
@@ -5439,15 +5476,6 @@ function renderTabs(){
   });
   $('#tabNew').onclick=()=>newNote();
   const mb = $('#mBack'); if(mb) mb.onclick = ()=>document.body.classList.remove('m-read');
-  const si = $('#tbSearchInput');
-  if(si){
-    si.oninput = ()=>{ S.listQuery = si.value; renderList(); };
-    si.onkeydown = (e)=>{
-      if(e.key === 'Escape'){ si.value=''; S.listQuery=''; renderList(); si.blur(); }
-      if(e.key === 'Enter'){ const first = $('#nlRows .nl-row'); if(first) first.click(); }
-    };
-    si.onfocus = ()=>{ if(S.view !== 'notes') switchView('notes'); };
-  }
 }
 
 /* ========== 笔记操作 ========== */
@@ -11161,6 +11189,7 @@ $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
 $('#nlOpen').onclick=()=>toggleShelf();
 $('#nlMore').onclick=(e)=>openListMore(e.currentTarget);
+$('#nlSearch').onclick=()=>openPalette();
 
 /* ========== 账号与云同步 ========== */
 const SYNC_STORE = 'ivy.sync';
@@ -12339,7 +12368,7 @@ function setAboutHtml(){
   return `<div class="about-wrap">
     <div class="about-hero">
       <div class="ab-name">随手笔记<span class="ab-ver">${esc(b.id)}</span></div>
-      <p class="ab-desc">随手笔记是一款本地优先的 Markdown 笔记。离线也能写，联网后自动同步；数据优先存在这台设备，登录后同步到云端。</p>
+      <p class="ab-desc">随手笔记是一款本地优先的 Markdown 笔记。离线也能写，数据优先存在这台设备，不登录当做离线笔记使用，登录账号会自动同步到云端，多端同步。</p>
     </div>
     <div class="about-card">
       <div class="ab-row static">
@@ -12368,7 +12397,6 @@ function setAboutHtml(){
         <span class="ab-go">›</span>
       </button>
     </div>
-    <div class="about-foot">用心打造，愿你的笔记四季常青。</div>
   </div>`;
 }
 /* 「发送消息」：扫码关注后发消息，我能收到 */
@@ -12381,7 +12409,7 @@ function openContactQr(){
       <div class="lo-hd"><h3>发送消息</h3>
         <button class="qr-close" id="qrClose" title="关闭" aria-label="关闭">${ic('x')}</button></div>
       <div class="lo-body qr-body">
-        <img class="qr-img" src="qr-contact.png" alt="微信二维码" width="300" height="247" loading="lazy">
+        <img class="qr-img" src="qr-contact.png" alt="微信二维码" width="900" height="900" loading="lazy">
         <p class="qr-tip">扫码关注后发送消息，我能收到你的信息。</p>
       </div>
     </div>`;

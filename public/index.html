@@ -555,7 +555,7 @@ body.ol-touch .nb-more{opacity:.4;pointer-events:auto;right:-14px}
 body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
-.shelf-open.show ~ .paper .tabbar{padding-left:48px}
+@media (min-width:641px){ .shelf-open.show ~ .paper .tabbar{padding-left:48px} }
 .pa-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;color:rgb(var(--muted));transition:background .15s,color .15s}
 .pa-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 /* 触屏（iPad/手机）没有 hover：按下的瞬间给同样的颜色反馈 */
@@ -2300,9 +2300,10 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .ios-step b{display:block;font-size:13px;font-weight:600;color:rgb(var(--ink))}
 .ios-step p{margin:4px 0 0;font-size:12px;line-height:1.7;color:rgb(var(--muted))}
 .ios-share{
-  display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;
-  background:rgb(var(--hover));color:rgb(var(--ink-2));font-size:11px;vertical-align:-3px;
+  display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;
+  background:rgb(var(--hover));color:rgb(var(--ink-2));vertical-align:-4px;
 }
+.ios-share svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .ios-note{
   margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgb(var(--sunken));
   font-size:11.5px;line-height:1.75;color:rgb(var(--muted));
@@ -2580,7 +2581,6 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .nl-row .nl-s{font-size:12.5px;margin-top:4px}
   .nl-row .nl-d{font-size:11.5px}
   .tabbar{padding-left:10px}
-  .tabbar .tabs{gap:2px}
   .main-wrap{position:fixed;inset:0;z-index:60;padding:0;background:rgb(var(--canvas));display:none}
   body.m-read .main-wrap{display:flex}
   body.m-read .notelist{display:none!important}
@@ -2828,7 +2828,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v182', at: '2026-11-18 09:58' };
+window.IVY_BUILD = { id: 'v183', at: '2026-11-18 09:59' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7222,7 +7222,7 @@ function openIosInstallSheet(){
         <button class="qr-close" id="iosClose" title="关闭" aria-label="关闭">${ic('x')}</button></div>
       <div class="lo-body ios-body">
         <div class="ios-step"><i>1</i><div><b>用 Safari 打开本站</b><p>微信、小红书、QQ 里的浏览器加不了，右上角「···」→「在 Safari 中打开」。</p></div></div>
-        <div class="ios-step"><i>2</i><div><b>点底部中间的分享按钮</b><p>就是方框里一支向上的箭头 <span class="ios-share">⬆</span>。</p></div></div>
+        <div class="ios-step"><i>2</i><div><b>点底部中间的分享按钮</b><p>就是方框里一支向上的箭头 <span class="ios-share"><svg viewBox="0 0 24 24"><path d="M12 3.6v10.6"/><path d="m8.2 6.9 3.8-3.3 3.8 3.3"/><path d="M7.2 12.2H5.4v8h13.2v-8h-1.8"/></svg></span>。</p></div></div>
         <div class="ios-step"><i>3</i><div><b>往下滑，点「添加到主屏幕」</b><p>确认名字后点右上角「添加」，桌面就多了一个图标。</p></div></div>
         <p class="ios-note">加完从桌面图标打开：没有地址栏、没有浏览器工具栏，和下载的 App 一样；内容跟着网页自动更新，不用重新安装。</p>
       </div>

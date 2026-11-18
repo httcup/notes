@@ -2689,7 +2689,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v178', at: '2026-11-18 09:36' };
+window.IVY_BUILD = { id: 'v179', at: '2026-11-18 09:38' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8909,15 +8909,10 @@ function updateOutlineActive(){
   const mini = document.getElementById('olMini');
   if(mini) mini.querySelectorAll('.ol-tick').forEach(t=>t.classList.toggle('on', t.dataset.h === cur));
 }
+/* 图钉 = 「大纲」菜单里那一项：同一个开关。
+   开着时点它收起（面板连同固定一起撤掉），关着时点它打开。 */
 function toggleOutlinePin(){
-  S.outlineOpen = !S.outlineOpen;
-  outlineEl.classList.toggle('pinned', !!S.outlineOpen);
-  document.body.classList.toggle('outline-pinned', !!S.outlineOpen);
-  const pin = outlineEl.querySelector('#olPin');
-  if(pin){
-    pin.classList.toggle('on', !!S.outlineOpen);
-  }
-  save();
+  setOutlinePanel(!document.body.classList.contains('ol-open'));
 }
 /* 大纲顶栏那一个图标点一下换一档：全部分支 → 二级分支 → 一级标题 → 回到全部 */
 const OUTLINE_MODES = [
@@ -9020,7 +9015,7 @@ function renderOutline(){
     jumpToHeading(b.dataset.j);
     updateOutlineActive();
     // 触屏上跳完把面板收起，别挡住正文（固定状态下保持展开）
-    if(OL_TOUCH && !S.outlineOpen) setOutlinePanel(false);
+    if(OL_TOUCH) setOutlinePanel(false);
   });
   updateOutlineActive();
 }
@@ -9029,14 +9024,19 @@ function renderOutline(){
 function setOutlinePanel(on){
   on = !!on;
   document.body.classList.toggle('ol-open', on);
+  S.outlineOpen = on;                       // 图钉亮不亮跟着走，两处永远一致
+  outlineEl.classList.toggle('pinned', on);
+  document.body.classList.toggle('outline-pinned', on);
+  const pin = outlineEl.querySelector('#olPin');
+  if(pin) pin.classList.toggle('on', on);
   const btn = document.getElementById('paOutline');
   if(btn) btn.classList.toggle('on', on);
+  save();
   if(on){ renderOutline(); updateOutlineActive(); }
 }
 function toggleOutlinePanel(){ setOutlinePanel(!document.body.classList.contains('ol-open')); }
-/* 彻底收起：图钉固定（.pinned）也会把卡片点亮，只清 ol-open 会显得「× 没用」 */
+/* × 和图钉一样，只是「关掉」，不保留任何固定态 */
 function closeOutlinePanel(){
-  if(S.outlineOpen) toggleOutlinePin();
   setOutlinePanel(false);
 }
 

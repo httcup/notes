@@ -1942,6 +1942,19 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 @keyframes toastIn{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
 .toast.out{opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s}
+
+/* 图片上传浮层：只在真要等一会儿时出现 */
+.upload-pill{
+  position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,10px);
+  display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;z-index:120;
+  font-size:12.5px;line-height:1;color:rgb(var(--canvas));background:rgb(var(--ink));
+  box-shadow:var(--shadow-float);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
+}
+.upload-pill.on{opacity:1;transform:translate(-50%,0)}
+.upload-pill svg{width:14px;height:14px;flex:0 0 auto}
+.upload-pill.on svg{animation:upPulse 1.1s ease-in-out infinite}
+@keyframes upPulse{0%,100%{opacity:.45}50%{opacity:1}}
+@media (max-width:640px){.upload-pill{bottom:calc(78px + env(safe-area-inset-bottom))}}
 .hint{position:fixed;bottom:14px;right:16px;font-size:11px;color:rgb(var(--faint));z-index:5}
 
 /* ---- 番茄钟：顶部图标开设置，倒计时作右下角背景水印 ---- */
@@ -2866,7 +2879,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v186', at: '2026-11-18 11:20' };
+window.IVY_BUILD = { id: 'v188', at: '2026-11-18 14:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6106,7 +6119,10 @@ function openTagPicker(anchor){
 }
 
 function countWords(md){
-  const t = md.replace(/```[\s\S]*?```/g,'').replace(/[#>*_`\-\|\[\]()!]/g,'').replace(/\s+/g,'');
+  // 未登录时图片是内嵌 data URL，那一长串 base64 不能算进字数
+  const t = String(md || '')
+    .replace(/!\[[^\]]*\]\(data:[^)]*\)/g, '')
+    .replace(/```[\s\S]*?```/g,'').replace(/[#>*_`\-\|\[\]()!]/g,'').replace(/\s+/g,'');
   return t.length;
 }
 
@@ -8336,7 +8352,7 @@ document.addEventListener('paste', e=>{
   const cd = e.clipboardData;
   if(!cd) return;
   const files = [...(cd.files || [])];
-  if(files.length){ e.preventDefault(); insertFiles(files, null); return; }
+  if(files.length){ e.preventDefault(); insertFiles(files, null).then(insertToast); return; }
   const text = cd.getData('text/x-ivy-md') || cd.getData('text/plain') || '';
   if(!text) return;
   e.preventDefault();
@@ -8609,7 +8625,7 @@ function blockEl(raw, i, only){
   ta.addEventListener('drop', e=>{
     e.preventDefault();
     const files = [...((e.dataTransfer && e.dataTransfer.files)||[])];
-    if(files.length) insertFiles(files, ta);
+    if(files.length) insertFiles(files, ta).then(insertToast);
   });
   return el;
 }
@@ -8997,7 +9013,7 @@ function onBlockPaste(e){
     .filter(x=>x.kind==='file').map(x=>x.getAsFile()).filter(Boolean);
   if(!files.length) return;      // 纯文本粘贴走浏览器默认
   e.preventDefault();
-  insertFiles(files, e.currentTarget);
+  insertFiles(files, e.currentTarget).then(insertToast);
 }
 
 /* ---- 光标定位：点哪儿就从哪儿开始改 ---- */
@@ -9806,9 +9822,12 @@ function renderMedia(){
   scrollEl.querySelectorAll('.media-card').forEach(c=>{
     c.onclick = ()=>{ const m = list[+c.dataset.mi]; if(m) window.open(m.url, '_blank', 'noopener'); };
   });
-  // 首次进入异步拉一次云端列表
-  if(isConnected() && !remoteMedia && !mediaLoading){
-    loadRemoteMedia(true).then(()=>{ if(S.view==='media'){ renderShelf(); renderMedia(); } });
+  // 首次进入异步拉一次云端列表（图床 + 旧媒体库并取）
+  if(isConnected()){
+    const jobs = [];
+    if(!remoteMedia && !mediaLoading) jobs.push(loadRemoteMedia(true));
+    if(!picMedia && !picLoading) jobs.push(loadPicMedia(true));
+    if(jobs.length) Promise.all(jobs).then(()=>{ if(S.view==='media'){ renderShelf(); renderMedia(); } });
   }
 }
 
@@ -9828,6 +9847,25 @@ async function deleteMedia(m){
     msg += '\n\n没有笔记在用它，删了就没了，不能恢复。';
   }
   if(!confirm(msg)) return;
+
+  if(m.pic){
+    if(!isConnected()){ toast('没连上云端，删不了图床文件'); return; }
+    try{
+      const r = await fetch('/api/pic?key=' + encodeURIComponent(m.key), { method:'DELETE', headers: authHeaders(false) });
+      if(!r.ok){
+        const d = await r.json().catch(()=>({}));
+        throw new Error(d.error || ('HTTP ' + r.status));
+      }
+    }catch(e){
+      toast('删除失败：' + (e.message || '网络错误'));
+      return;
+    }
+    picMedia = null;
+    await loadPicMedia(true);
+    toast('已删除「' + m.name + '」');
+    if(S.view === 'media'){ renderShelf(); renderMedia(); }
+    return;
+  }
 
   if(m.remote){
     if(!isConnected()){ toast('没连上云端，删不了云端文件'); return; }
@@ -9859,8 +9897,7 @@ function pickFiles(){
   inp.type='file'; inp.multiple = true;
   inp.onchange = async ()=>{
     const files = [...inp.files];
-    await insertFiles(files);
-    toast(files.length+' 个文件已插入');
+    insertToast(await insertFiles(files));
   };
   inp.click();
 }
@@ -9876,13 +9913,13 @@ function handlePaste(e){
   if(!files.length) return;
   e.preventDefault();
   const src = e.currentTarget;
-  insertFiles(files, src).then(()=>toast(files.length+' 个文件已插入'));
+  insertFiles(files, src).then(insertToast);
 }
 function handleDrop(e){
   const files = [...(e.dataTransfer?.files||[])];
   if(!files.length) return;
   e.preventDefault();
-  insertFiles(files).then(()=>toast('已插入 '+files.length+' 个附件'));
+  insertFiles(files).then(insertToast);
 }
 
 /* ========== 关系图 ========== */
@@ -11446,6 +11483,8 @@ async function syncNow(opts={}){
   const firstTime = !SYNC.last;
   SYNC.state = 'busy'; SYNC.error = ''; renderDock(); updateSyncBadge();
   try{
+    // 本机内嵌的图片先补传到图床，别把几十兆的 base64 一股脑推给服务器
+    try{ await migrateInlineImages(); }catch(e){}
     if(firstTime){
       // 首次连接：云端已有数据时，丢弃本机示例笔记，避免污染服务器
       const pre = await api('GET');
@@ -11519,9 +11558,13 @@ document.addEventListener('visibilitychange', ()=>{
 });
 window.addEventListener('pagehide', flushSync);
 
-/* ========== 云端媒体（KV / R2） ========== */
+/* ========== 云端媒体 ==========
+   图片走自家图床 pic.139t.cn（存 R2，读图 img.139t.cn），正文里是完整图片地址；
+   图床没配好时自动退回本站 KV 媒体库（/api/media），功能不中断。 */
 let remoteMedia = null;
 let mediaLoading = false;
+let picMedia = null;
+let picLoading = false;
 async function loadRemoteMedia(force){
   if(!isConnected()){ remoteMedia = []; return; }
   if(mediaLoading) return;
@@ -11538,17 +11581,59 @@ async function loadRemoteMedia(force){
   }catch(e){ remoteMedia = remoteMedia || []; }
   mediaLoading = false;
 }
+// 图床里的图片（媒体库列表用）
+async function loadPicMedia(force){
+  if(!isConnected()){ picMedia = []; return; }
+  if(picLoading) return;
+  if(picMedia && !force) return;
+  picLoading = true;
+  try{
+    const r = await fetch('/api/pic?limit=100', {headers: authHeaders(false)});
+    if(r.ok){
+      const d = await r.json();
+      picMedia = (d.items||[]).map(it=>Object.assign({remote:true, pic:true}, it));
+    } else if(r.status===503 || r.status===404){
+      picMedia = [];                 // 图床没配，别每回都试
+    }
+  }catch(e){ picMedia = picMedia || []; }
+  picLoading = false;
+}
 function allMedia(){
+  const pic = (picMedia||[]).map(it=>({
+    id: it.id, key: it.key, name: it.name, size: it.size, type: it.type,
+    url: it.url, createdAt: it.createdAt, remote: true, pic: true
+  }));
   const remote = (remoteMedia||[]).map(it=>({
     id: it.id, name: it.name, size: it.size, type: it.type,
     url: it.url, createdAt: it.createdAt, remote: true
   }));
-  return remote.concat(S.media);
+  return pic.concat(remote, S.media);
 }
-async function uploadMediaFile(file){
-  if(!isConnected()) return null;
+// 传到自家图床；图床没配置（503/404）时返回 null，让调用方退回 /api/media
+async function uploadToPic(file, name){
   const fd = new FormData();
-  fd.append('file', file, file.name || 'file');
+  fd.append('file', file, name || file.name || 'file');
+  const r = await fetch('/api/pic', {method:'POST', headers: authHeaders(false), body: fd});
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok){
+    const e = new Error(d.error || ('图床上传失败 HTTP ' + r.status));
+    e.status = r.status;
+    throw e;
+  }
+  picMedia = null;
+  return d;
+}
+async function uploadMediaFile(file, name){
+  if(!isConnected()) return null;
+  try{
+    const up = await uploadToPic(file, name);
+    if(up && up.url) return up;
+  }catch(e){
+    // 图床没配好 → 退回本站媒体库；图床明确拒绝（格式不支持、太大）→ 如实报错
+    if(e.status !== 503 && e.status !== 404) throw e;
+  }
+  const fd = new FormData();
+  fd.append('file', file, name || file.name || 'file');
   const r = await fetch('/api/media', {method:'POST', headers: authHeaders(false), body: fd});
   const d = await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(d.error || ('上传失败 HTTP '+r.status));
@@ -11558,27 +11643,137 @@ async function uploadMediaFile(file){
 function mdForFile(name, url, type){
   return (type && type.startsWith('image')) ? `\n![${name}](${url})\n` : `\n[${name}](${url})\n`;
 }
-// 先试云上传，失败或未登录则退回本机 blob
+
+/* ========== 图床：粘贴 / 拖入图片 → 自动上传 → 插入 Markdown 地址 ==========
+   登录用户：传到本站图床（/api/media，KV 或 R2），插入完整公开地址，
+             复制到别处（Typora、公众号、别的 Markdown 编辑器）都能直接显示。
+   未登录：不走网络，压缩后内嵌成本机图片（data URL），刷新、关掉再开都还在。 */
+function absUrl(u){
+  if(!u) return u;
+  return /^(https?:|data:|blob:)/i.test(u) ? u : location.origin + u;
+}
+function isImageFile(f){ return !!(f && f.type && f.type.indexOf('image/') === 0); }
+
+// 大图先缩一缩再传，省流量也快；小图原样传，避免重新编码掉清晰度
+async function shrinkImage(file, maxSide, quality, forceJpeg){
+  const type = file.type || '';
+  if(/svg|gif/i.test(type)) return file;                 // 矢量/动图不重编码
+  const needBySize = file.size > 1200 * 1024;
+  const objUrl = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res, rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im);
+      im.onerror = ()=>rej(new Error('decode'));
+      im.src = objUrl;
+    });
+    const w = img.naturalWidth || img.width || 0;
+    const h = img.naturalHeight || img.height || 0;
+    if(!w || !h) return file;
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+    if(!forceJpeg && !needBySize && scale === 1) return file;
+    const cw = Math.max(1, Math.round(w * scale));
+    const ch = Math.max(1, Math.round(h * scale));
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext('2d');
+    if(!ctx) return file;
+    const outType = (!forceJpeg && /png/i.test(type)) ? 'image/png' : 'image/jpeg';
+    if(outType === 'image/jpeg'){ ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); }  // 透明底转 JPEG 会发黑，先铺白
+    ctx.drawImage(img, 0, 0, cw, ch);
+    const blob = await new Promise(res=>cv.toBlob(res, outType, quality));
+    if(!blob) return file;
+    if(!forceJpeg && scale === 1 && blob.size >= file.size) return file;   // 压完反而更大，用原图
+    return blob;
+  }catch(e){
+    return file;
+  }finally{
+    URL.revokeObjectURL(objUrl);
+  }
+}
+function blobToDataUrl(blob){
+  return new Promise((res, rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>res(String(fr.result || ''));
+    fr.onerror = ()=>rej(new Error('read'));
+    fr.readAsDataURL(blob);
+  });
+}
+// 上传时的浮层提示，图片大也不会「点了没反应」
+function uploadPill(text){
+  let el = document.getElementById('uploadPill');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'uploadPill';
+    el.className = 'upload-pill';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = ic('cloud') + '<span>' + esc(text) + '</span>';
+  el.classList.add('on');
+  return el;
+}
+function uploadPillDone(){
+  const el = document.getElementById('uploadPill');
+  if(el) el.classList.remove('on');
+}
+
 async function insertFiles(files, target){
   const src = target || (curMode()==='live' ? ensureLiveInput() : document.getElementById('source'));
-  if(!src || !files.length) return;
+  const list = [...(files || [])];
+  if(!src || !list.length) return null;
+
+  const online = isConnected();
   const parts = [];
-  for(const f of files){
-    try{
-      const up = await uploadMediaFile(f);
-      if(up){ parts.push(mdForFile(up.name, up.url, up.type)); continue; }
-    }catch(err){
-      toast('上传失败：'+(err.message||'网络错误')+'，已暂存到本机');
+  let uploaded = 0, local = 0, skipped = 0, big = false;
+  list.forEach(f=>{ if(f && f.size > 300 * 1024) big = true; });
+  if(list.length > 1 || big) uploadPill((online ? '正在上传到图床 ' : '正在存到本机 ') + '1/' + list.length);
+
+  for(let i = 0; i < list.length; i++){
+    const f = list[i];
+    if(list.length > 1) uploadPill((online ? '正在上传到图床 ' : '正在存到本机 ') + (i + 1) + '/' + list.length);
+    if(!f || !f.size){ skipped++; continue; }
+    const img = isImageFile(f);
+    const name = f.name || (img ? 'image.jpg' : 'file');
+
+    if(online){
+      try{
+        const send = img ? await shrinkImage(f, 2200, 0.9, false) : f;
+        const up = await uploadMediaFile(send, name);
+        if(up && up.url){
+          parts.push(mdForFile(up.name || name, absUrl(up.url), up.type || f.type));
+          uploaded++;
+          continue;
+        }
+      }catch(err){
+        // 图床没通（未绑定存储、网络抖动、超大文件…）→ 图片退回本机内嵌，先别丢
+        if(!img){ skipped++; toast('上传失败：' + (err.message || '网络错误')); continue; }
+      }
     }
-    const m = addMedia(f);
-    parts.push(mdForFile(m.name, m.url, m.type));
+
+    if(img){
+      try{
+        const small = await shrinkImage(f, 1600, 0.82, true);   // 内嵌图强制 JPEG，控制体积
+        const dataUrl = await blobToDataUrl(small);
+        if(!dataUrl){ skipped++; continue; }
+        parts.push(`\n![${name.replace(/[\[\]]/g, '')}](${dataUrl})\n`);
+        local++;
+      }catch(e){
+        skipped++;
+      }
+    }else{
+      skipped++;
+      if(!online) toast('未登录只能插入图片，其他文件请登录后再传');
+    }
   }
+  uploadPillDone();
+  if(!parts.length) return { uploaded, local, skipped, empty: true };
+
   const text = parts.join('');
-  const p = typeof src.selectionStart==='number' ? src.selectionStart : src.value.length;
+  const p = typeof src.selectionStart === 'number' ? src.selectionStart : src.value.length;
   src.setRangeText(text, p, src.selectionEnd, 'end');
   src.dispatchEvent(new Event('input', {bubbles:true}));
   if(src.classList && src.classList.contains('blk-src')){
-    const i = parseInt(src.dataset.i,10) || 0;
+    const i = parseInt(src.dataset.i, 10) || 0;
     LIVE.raws[i] = src.value;
     syncBody();
     commitBlock(i);            // 立刻渲染，图片当场可见
@@ -11586,7 +11781,64 @@ async function insertFiles(files, target){
     const n = noteById(S.active);
     if(n){ n.body = src.value; n.updatedAt = Date.now(); save(); renderMeta(); }
   }
-  if(S.view==='media') renderMedia();
+  if(S.view === 'media') renderMedia();
+  return { uploaded, local, skipped, empty: false };
+}
+
+// 插完给一句人话，别让用户猜图到哪去了
+function insertToast(r){
+  if(!r || r.empty) return;
+  if(r.uploaded && !r.local){
+    toast(r.uploaded + ' 张图片已上传图床，已插入 Markdown 地址');
+  }else if(r.uploaded && r.local){
+    toast(r.uploaded + ' 张已上传图床，' + r.local + ' 张上传失败已存本机');
+  }else if(r.local){
+    toast(isConnected()
+      ? r.local + ' 张图片上传失败，已先存到本机（不影响查看，稍后可再试）'
+      : r.local + ' 张图片只存本机 · 登录后可用图床上传');
+  }
+}
+
+/* 登录后，把以前没登录时内嵌在本机的图片补传到图床，正文换成图床地址 */
+let INLINE_MIGRATING = false;
+async function migrateInlineImages(){
+  if(INLINE_MIGRATING || !isConnected()) return 0;
+  const targets = (S.notes || []).filter(n=>!n.trashed && !n.deleted && /!\[[^\]]*\]\(data:image\//.test(n.body || ''));
+  if(!targets.length) return 0;
+  const srcEl = document.getElementById('source');
+  INLINE_MIGRATING = true;
+  let done = 0, i = 0, changed = false;
+  try{
+    for(const n of targets){
+      // 正在打字的这篇先跳过，别把光标底下的内容换掉
+      const typing = n.id === S.active && ((typeof LIVE !== 'undefined' && LIVE && LIVE.editing >= 0) || (srcEl && document.activeElement === srcEl));
+      if(typing) continue;
+      i++;
+      uploadPill('正在把本机图片传到图床 ' + i + '/' + targets.length);
+      let body = String(n.body || '');
+      const re = /!\[([^\]]*)\]\((data:image\/[a-z0-9.+-]+;base64,[^)]+)\)/gi;
+      const hits = [];
+      let m;
+      while((m = re.exec(body))) hits.push([m[0], m[1] || 'image', m[2]]);
+      for(const [all, alt, data] of hits){
+        try{
+          const blob = await (await fetch(data)).blob();
+          const up = await uploadMediaFile(blob, alt.slice(0, 40));
+          if(up && up.url){ body = body.split(all).join('![' + alt + '](' + absUrl(up.url) + ')'); done++; }
+        }catch(e){}
+      }
+      if(body !== n.body){ n.body = body; n.updatedAt = Date.now(); changed = true; }
+    }
+  }finally{
+    uploadPillDone();
+    INLINE_MIGRATING = false;
+  }
+  if(changed){
+    save();
+    try{ if(S.view === 'notes'){ renderMain(); renderMeta(); renderShelf(); } }catch(e){}
+    if(done) toast(done + ' 张本机图片已传到图床');
+  }
+  return done;
 }
 
 function paintSyncPip(){

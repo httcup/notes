@@ -68,6 +68,9 @@ wrangler.toml          D1 绑定（仅本地开发与 d1 命令使用，构建�
 `POST /api/media`（multipart，字段 `file`，≤20MB）→ 同上单条
 `GET /api/media/:uid/:id` → 文件本体（公开，靠 32 位随机 key 不可猜）
 `DELETE /api/media/:uid/:id` → 需本人令牌
+`POST /api/pic`（multipart，字段 `file`，需登录）→ 转发到自家图床 **pic.139t.cn**，返回 `{key,url,markdown,name,size,type,dedup}`，`url` 是 `https://img.139t.cn/...` 的完整地址；编辑器粘贴/拖入图片走这里，正文插 Markdown 图片地址
+`GET /api/pic?limit=60&cursor=` → 图床图库列表（给「媒体库」用）；`DELETE /api/pic?key=2026/11/xxx.png` → 删图
+> 图床长期上传 token 只存服务端 Secret **`PIC_TOKEN`**（`wrangler pages secret put PIC_TOKEN --project-name=notes`），浏览器拿不到；可选 `PIC_BASE` 改接口地址。没配 `PIC_TOKEN` 时 `/api/pic` 返回 503，前端自动退回本站 KV 媒体库（`/api/media`），功能不中断。
 
 `POST /api/capture` body `{ url, title, text, source, notebook }`（需 `x-capture-key` 或登录态）→ 把外部网页/微博/微信文章写成一条笔记，落在「剪藏」笔记本，返回 `{ noteId, mode, via, format }`。同一链接重复保存会更新同一篇（id 由链接哈希生成）。除 JSON 外也接受表单、纯文本、嵌套 JSON。
 `GET /api/capture?k=<CAPTURE_KEY>&url=<文章地址>` → 直接剪藏，给只能发 GET 的 webhook 用。

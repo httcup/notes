@@ -57,6 +57,9 @@ h1.title{
 .body p{margin:0}
 .body ul,.body ol{padding-left:1.35em;margin:.3em 0}
 .body li{margin:.24em 0}
+.body li>ul,.body li>ol{margin:.12em 0 .1em;padding-left:1.1em}
+.body li>ul li,.body li>ol li{margin:.16em 0;font-size:.97em}
+.body li>ul li::marker{color:rgb(var(--faint)/.75)}
 .body li::marker{color:rgb(var(--faint))}
 .body blockquote{margin:.7em 0;padding:2px 0 2px 15px;border-left:2px solid rgb(var(--ivy) / .35);color:rgb(var(--ink-2))}
 .body code{font-family:var(--font-mono);font-size:.86em;background:rgb(var(--code-bg));padding:2px 5px;border-radius:5px;border:.5px solid rgb(var(--line))}
@@ -267,6 +270,25 @@ function inlineMd(s){
   return s;
 }
 
+/* 连续列表项按缩进拼成真正嵌套的 ul/ol（插进来的分支大纲才有层级） */
+function sNestedList(items, ordered){
+  if (!items.length) return '';
+  const tag = ordered ? 'ol' : 'ul';
+  let html = '', depth = -1;
+  items.forEach(it => {
+    // 一次最多往下走一层，跳级的缩进按下一层算，结构不会错
+    const d = Math.max(0, Math.min(it.d || 0, 3, depth < 0 ? 0 : depth + 1));
+    if (depth < 0) { html += '<' + tag + '><li' + it.attrs + '>' + it.inner; depth = d; return; }
+    if (d === depth) { html += '</li><li' + it.attrs + '>' + it.inner; return; }
+    if (d > depth) { html += '<' + tag + '><li' + it.attrs + '>' + it.inner; depth = d; return; }
+    for (let k = depth; k > d; k--) html += '</li></' + tag + '>';
+    html += '</li><li' + it.attrs + '>' + it.inner;
+    depth = d;
+  });
+  for (let k = depth; k >= 0; k--) html += '</li></' + tag + '>';
+  return html;
+}
+
 function mdToHtml(md){
   const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
   const out = [];
@@ -303,18 +325,27 @@ function mdToHtml(md){
     if (/^\s*([-*+]|\d+\.)\s+/.test(line)) {
       const ordered = /^\s*\d+\./.test(line);
       const items = [];
+      const stack = [];
       while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
-        let l = lines[i].replace(/^\s*([-*+]|\d+\.)\s+/, '');
+        const rawLine = lines[i];
+        const ind = (rawLine.match(/^\s*/)[0] || '').replace(/\t/g, '  ').length;
+        let l = rawLine.replace(/^\s*([-*+]|\d+\.)\s+/, '');
+        let attrs = '', inner = '';
         if (/^\[[ xX]\]\s/.test(l)) {
           const chk = /^\[[xX]\]/.test(l);
           l = l.replace(/^\[[ xX]\]\s/, '');
-          items.push('<li class="task"><input type="checkbox" disabled ' + (chk ? 'checked' : '') + '>' + inlineMd(l) + '</li>');
+          attrs = ' class="task"';
+          inner = '<input type="checkbox" disabled ' + (chk ? 'checked' : '') + '>' + inlineMd(l);
         } else {
-          items.push('<li>' + inlineMd(l) + '</li>');
+          inner = inlineMd(l);
         }
+        // 缩进栈：同级进栈、退回上一级出栈，得到这一项在第几层
+        while (stack.length && ind <= stack[stack.length - 1]) stack.pop();
+        if (!stack.length || ind > stack[stack.length - 1]) stack.push(ind);
+        items.push({ d: Math.min(stack.length - 1, 3), attrs, inner });
         i++;
       }
-      out.push(ordered ? '<ol>' + items.join('') + '</ol>' : '<ul>' + items.join('') + '</ul>');
+      out.push(sNestedList(items, ordered));
       continue;
     }
     if (!line.trim()) { i++; continue; }

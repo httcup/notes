@@ -1548,6 +1548,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .prose h6{font-size:.9em;color:rgb(var(--muted))}
 .prose ul,.prose ol{margin:0 0 1.05em;padding-left:1.35em}
 .prose li{margin:.3em 0}
+/* 嵌套列表：缩进小一点、上下收紧，分支大纲插进正文后一眼能看出层级 */
+.prose li>ul,.prose li>ol{margin:.15em 0 .1em;padding-left:1.15em}
+.prose li>ul li,.prose li>ol li{margin:.18em 0}
+.prose li>ul li::marker{color:rgb(var(--faint)/.75)}
 .prose li::marker{color:rgb(var(--faint))}
 .prose blockquote{
   margin:1.2em 0;padding:2px 0 2px 16px;border-left:2px solid rgb(var(--ivy)/.35);
@@ -1747,6 +1751,11 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 @keyframes olspin{to{transform:rotate(360deg)}}
 .ol-ai-tag{display:flex;align-items:center;gap:5px;padding:1px 8px 7px;font-size:10.5px;color:rgb(var(--ivy-ink))}
 .ol-ai-tag svg{width:11px;height:11px}
+.ol-ai-tag .ol-ai-ins{
+  margin-left:auto;height:20px;padding:0 8px;border:0;border-radius:6px;cursor:pointer;
+  background:rgb(var(--ivy)/.1);color:rgb(var(--ivy-ink));font-family:inherit;font-size:10.5px;font-weight:600;
+}
+.ol-ai-tag .ol-ai-ins:hover{background:rgb(var(--ivy)/.18)}
 .ol-ai-item{cursor:default}
 .ol-ai-item:hover{background:none}
 .ol-ai-load{display:flex;align-items:center;gap:8px;padding:12px 8px;font-size:12px;line-height:1.6;color:rgb(var(--muted))}
@@ -3053,7 +3062,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v205', at: '2026-11-18 17:08' };
+window.IVY_BUILD = { id: 'v206', at: '2026-11-18 17:22' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6801,6 +6810,7 @@ function openAiToolMenu(anchor){
     }],
     ['AI 总结全部', '整篇要点', '', 'spark', ()=>openAiSummary()],
     ['AI 总结成大纲', '显示在大纲', '', 'spark', ()=>aiOutline(true)],
+    ['AI 大纲插入文末', '按分支缩进', '', 'spark', ()=>aiOutlineToEnd()],
     ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
     ['AI 排版', '整理格式', '', 'spark', ()=>openAI('format')]
   ], { align:'left' });
@@ -6912,6 +6922,7 @@ const INSERT_ITEMS = [
   {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
   {name:'AI 总结全部', keys:['ai','zj','总结','summary'], icon:'spark', desc:'整篇笔记提炼成几条要点，可复制或插入文末', run:()=>openAiSummary()},
   {name:'AI 总结成大纲', keys:['ai','dg','大纲','outline'], icon:'spark', desc:'整篇压成层级大纲，直接显示在右侧大纲里', run:()=>aiOutline(true)},
+  {name:'AI 大纲插入文末', keys:['ai','dg','大纲','outline','插入'], icon:'spark', desc:'生成层级大纲，按分支缩进插到笔记末尾', run:()=>aiOutlineToEnd()},
   {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()}
 ]
 function insertFilter(q){
@@ -10275,6 +10286,51 @@ function parseAiOutline(text){
   return out.slice(0, 16);
 }
 
+/* AI 大纲落成正文：按分支层级缩进成嵌套列表，插到文末 */
+function outlineToMarkdown(entries){
+  const list = (entries || []).filter(e => e && String(e.text || '').trim());
+  if(!list.length) return '';
+  const base = Math.min.apply(null, list.map(e => Number(e.level) || 1));
+  return list.map(e => {
+    const lv = Math.max(0, Math.min(5, (Number(e.level) || base) - base));
+    return '  '.repeat(lv) + '- ' + String(e.text).replace(/\s+/g, ' ').trim();
+  }).join('\n');
+}
+function insertOutlineAtEnd(entries){
+  const n = noteById(S.active);
+  if(noteLocked(n)){ toast('先解锁这个笔记本'); return false; }
+  const md = outlineToMarkdown(entries);
+  if(!n){ toast('先打开一篇笔记'); return false; }
+  if(!md){ toast('这次没生成出可用的条目'); return false; }
+  // 和 AI 总结一样：先一条分割线，再标一句这是机器生成的
+  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 生成大纲\n' + md + '\n';
+  n.updatedAt = Date.now();
+  save(); renderAll(); kickSync();
+  toast('AI 大纲已插到文末');
+  return true;
+}
+/* 工具栏 / 命令面板直接「生成大纲并插入」：不用先看面板，生成完就落到文末 */
+async function aiOutlineToEnd(){
+  const n = noteById(S.active);
+  if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
+  if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
+  const snap = String(n.body || '');
+  AI_OL.id = n.id; AI_OL.snap = snap; AI_OL.entries = null; AI_OL.busy = true; AI_OL.show = true;
+  renderOutline();
+  try{
+    const text = await aiRunOnce({ task:'outline', text:snap });
+    const entries = parseAiOutline(text);
+    if(!entries.length) throw new Error('模型没给出可用的大纲，再试一次');
+    AI_OL.entries = entries; AI_OL.busy = false;
+    renderOutline();
+    insertOutlineAtEnd(entries);
+  }catch(e){
+    AI_OL.busy = false; AI_OL.entries = null; AI_OL.show = false;
+    renderOutline();
+    aiErrToast(e);
+  }
+}
+
 async function aiOutline(force){
   const n = noteById(S.active);
   if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
@@ -10380,7 +10436,8 @@ function openAiSummary(){
     if(!text.trim()) return;
     const cur = noteById(S.active); if(!cur) return;
     // 落成「AI 总结：」+ 引用块：和正文分开，读完就知道这段是机器提炼的，以后想删也好找
-    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\nAI 总结：\n' + summaryQuote(text) + '\n';
+    // 前面先一条分割线，跟正文明确隔开
+    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 总结：\n' + summaryQuote(text) + '\n';
     cur.updatedAt = Date.now();
     save(); renderAll();
     toast('已插入到文末');
@@ -10434,7 +10491,7 @@ function renderOutline(){
     + (aiBusy
         ? `<div class="ol-ai-load"><i></i>正在读这篇，整理大纲…</div>`
         : (aiOn
-            ? `<div class="ol-ai-tag">${ic('spark')}AI 大纲 · 点星形切回原文</div>`
+            ? `<div class="ol-ai-tag">${ic('spark')}AI 大纲 · 点星形切回原文<button class="ol-ai-ins" id="olAiIns" type="button" title="按分支缩进插入到文末">插入文末</button></div>`
               + (entries.length ? entries.map(aiItem).join('') : `<div class="ol-empty">这次没生成出条目</div>`)
             : (entries.length ? entries.map(e=>{
                 const lv = Math.max(1, Math.min(6, e.level || 1));
@@ -10456,6 +10513,8 @@ function renderOutline(){
   if(pin) pin.onclick = toggleOutlinePin;
   const aiBtn = outlineEl.querySelector('#olAi');
   if(aiBtn) aiBtn.onclick = ()=>aiOutline();
+  const aiIns = outlineEl.querySelector('#olAiIns');
+  if(aiIns) aiIns.onclick = ()=>{ if(AI_OL.entries) insertOutlineAtEnd(AI_OL.entries); };
   const modeBtn = outlineEl.querySelector('#olMode');
   if(modeBtn) modeBtn.onclick = ()=>{
     const i = OUTLINE_MODES.findIndex(m => m.id === mode);
@@ -10614,6 +10673,21 @@ function flashJump(el){
   clearTimeout(el._jfT);
   el._jfT = setTimeout(()=>el.classList.remove('jump-flash'), 1700);
 }
+/* 目标要停在吸顶工具条下面：.fmt-bar 是 position:sticky，只让 28px 会被它盖住 */
+function jumpTopPad(){
+  let pad = 28;
+  const fb = document.querySelector('.fmt-bar');
+  if(!fb || !fb.getBoundingClientRect) return pad;
+  try{
+    const cs = getComputedStyle(fb);
+    // 手机上是 static（dock 在标签栏下，不占滚动区），只有 sticky 才需要让位
+    if(cs.position === 'sticky'){
+      const h = Math.round(fb.getBoundingClientRect().height);
+      if(h > 8) pad += h + 6;
+    }
+  }catch(e){}
+  return pad;
+}
 function jumpToHeading(id){
   if(S.mode === 'source'){
     // 源码模式没有标题元素，按行号估算位置（滚的是外层 #scroll，textarea 本身 overflow:hidden）
@@ -10632,7 +10706,7 @@ function jumpToHeading(id){
   const t = all.find(el=>el.getClientRects().length);
   if(!t) return;
   const sc = scrollableAncestor(t);
-  const top = t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 28;
+  const top = t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - jumpTopPad();
   setScrollTo(sc, top);
   setTimeout(()=>flashJump(t), 40);
 }
@@ -10714,6 +10788,25 @@ function inlineMd(s){
   s = s.replace(/\u0001(\d+)\u0001/g, (m, i)=>codes[+i] || '');
   return s;
 }
+/* 把连续列表项按缩进拼成真正嵌套的 ul/ol。
+   以前全部拍平成一层兄弟 li，缩进的子项和父项长得一模一样，插进来的分支大纲看不出层级 */
+function nestedList(items, ordered){
+  if(!items.length) return '';
+  const tag = ordered ? 'ol' : 'ul';
+  let html = '', depth = -1;
+  items.forEach(it=>{
+    // 一次最多往下走一层，跳级的缩进（0 → 2）也按下一层算，结构不会错乱
+    const d = Math.max(0, Math.min(it.d || 0, 3, depth < 0 ? 0 : depth + 1));
+    if(depth < 0){ html += `<${tag}><li${it.attrs}>${it.inner}`; depth = d; return; }
+    if(d === depth){ html += `</li><li${it.attrs}>${it.inner}`; return; }
+    if(d > depth){ html += `<${tag}><li${it.attrs}>${it.inner}`; depth = d; return; }
+    for(let k = depth; k > d; k--) html += `</li></${tag}>`;
+    html += `</li><li${it.attrs}>${it.inner}`;
+    depth = d;
+  });
+  for(let k = depth; k >= 0; k--) html += `</li></${tag}>`;
+  return html;
+}
 function mdToHtml(md){
   const lines = String(md||'').replace(/\r\n?/g,'\n').split('\n');
   const headings = []; let hIdx = 0;
@@ -10790,7 +10883,7 @@ function mdToHtml(md){
     // lists
     if(/^\s*([-*+]|\d+\.)\s+/.test(line)){
       const ordered = /^\s*\d+\./.test(line);
-      let items = [];
+      const items = [];
       while(i<lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])){
         const rawLine = lines[i];
         const ind = (rawLine.match(/^\s*/)[0] || '').replace(/\t/g,'  ').length;
@@ -10803,14 +10896,16 @@ function mdToHtml(md){
           cls=' class="task"';
           task = chk ? 'done' : 'todo';
           pure = l;
-          items.push(`<li${cls} id="li${liIdx}"><input type="checkbox" disabled ${chk?'checked':''}>${inlineMd(l)}</li>`);
-        } else {
-          items.push(`<li id="li${liIdx}">${inlineMd(l)}</li>`);
         }
         // 缩进栈：同级进栈、退回上一级出栈，得到这一项在第几层
         while(liStack.length && ind <= liStack[liStack.length - 1]) liStack.pop();
         if(!liStack.length || ind > liStack[liStack.length - 1]) liStack.push(ind);
         const depth = Math.min(liStack.length - 1, 3);
+        const id = 'li' + liIdx;
+        const inner = task
+          ? `<input type="checkbox" disabled ${task === 'done' ? 'checked' : ''}>${inlineMd(l)}`
+          : inlineMd(l);
+        items.push({ d: depth, attrs: `${cls} id="${id}"`, inner });
         const plain = pure
           .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
           .replace(/\[\[([^\]]+)\]\]/g,'$1')
@@ -10819,12 +10914,12 @@ function mdToHtml(md){
         if(plain) outline.push({
           kind:'li', text:plain, task, depth,
           level: Math.min(6, (curH || 0) + 1 + depth),
-          id: 'li' + (liIdx++)
+          id
         });
-        else liIdx++;
+        liIdx++;
         i++;
       }
-      out.push(ordered ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
+      out.push(nestedList(items, ordered));
       continue;
     }
     // blank：按源码里空行的行数撑开留白。一个空行≈一行高，两个空行就翻倍，

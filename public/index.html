@@ -1946,7 +1946,33 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .mm-eb:disabled{opacity:.4;cursor:default}
 .mm-eb.danger:hover:not(:disabled){background:rgb(var(--danger)/.1);color:rgb(var(--danger))}
 .mm-rename{position:fixed;z-index:9500;font:inherit;font-size:13px;padding:0 8px;border:1.5px solid rgb(var(--ivy));border-radius:8px;background:rgb(var(--surface));color:rgb(var(--ink));outline:none;box-shadow:var(--shadow-float)}
+/* 手机上的节点输入条：贴着软键盘上沿，不跟着节点跑出屏幕 */
+.mm-kp{
+  position:fixed;left:0;right:0;bottom:0;z-index:9600;
+  display:none;align-items:center;gap:7px;
+  padding:9px 10px calc(9px + env(safe-area-inset-bottom));
+  background:rgb(var(--surface));border-top:1px solid rgb(var(--line));
+  box-shadow:0 -8px 22px rgb(15 20 25 / .10);
+}
+.mm-kp.open{display:flex}
+.mm-kp-in{
+  flex:1 1 auto;min-width:0;height:40px;padding:0 11px;
+  border:1.5px solid rgb(var(--ivy));border-radius:10px;
+  background:rgb(var(--surface));color:rgb(var(--ink));
+  font-family:inherit;font-size:16px;   /* 小于 16px iOS 会自动把整页放大 */
+  outline:none;
+}
+.mm-kp-b{
+  flex:0 0 auto;height:40px;padding:0 11px;border-radius:10px;
+  font-size:13px;color:rgb(var(--ink-2));background:rgb(var(--sunken));white-space:nowrap;
+}
+.mm-kp-b:active{background:rgb(var(--hover))}
+.mm-kp-b.primary{background:rgb(var(--ivy));color:#fff}
 @media (max-width:760px), (max-height:520px){
+  /* 输入条顶上来时，底部那排 8 格先让位，别两排按钮叠在一起 */
+  .mm-ov.kp .mm-editbar{display:none}
+  /* 右下角缩放块跟着抬高，别被输入条压住半截 */
+  .mm-ov.kp .mm-zoom{bottom:calc(66px + env(safe-area-inset-bottom))}
   /* ---------- 手机端：整屏卡片，全部按安全区收边，任何按钮都不被裁掉 ---------- */
   .mm-ov{
     padding:0;overflow:hidden;
@@ -3122,7 +3148,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v214', at: '2026-11-19 00:35' };
+window.IVY_BUILD = { id: 'v215', at: '2026-11-19 06:50' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -15334,7 +15360,7 @@ $('#aiCfgOverlay').addEventListener('mousedown', e=>{ if(e.target.id === 'aiCfgO
    笔记本身仍然是纯 Markdown，导出、同步、导入全都不受影响。 */
 const MM = { noteId:null, root:null, lay:null, s:1, tx:0, ty:0, withList:true,
              ptrs:new Map(), pinch:0, moved:0, byId:new Map(), c:{}, bg:'#fff',
-             sel:0, seq:0, style:null, canEdit:false, undo:[], styleId:'', dir:'', uiTab:'dir' };
+             sel:0, seq:0, style:null, canEdit:false, undo:[], styleId:'', dir:'', uiTab:'dir', kpIdx:null };
 const MM_NH = 32, MM_VGAP = 12, MM_HGAP = 56, MM_PAD = 26;
 /* 节点文字：13px 一行高 18；一行最多 248px 就换行，超长的宁可把方框撑高，也不让字跑出框 */
 const MM_LH = 18, MM_TXT_MAX = 248, MM_NW_MAX = 274, MM_NW_MIN = 62;
@@ -16108,6 +16134,7 @@ function mmToggleStyle(force){
   const pop = document.getElementById('mmStylePop');
   if(!pop) return;
   const open = force == null ? pop.hidden : !!force;
+  if(open && MM.kpIdx != null) mmKpFinish();   // 输入条先收，别和贴底样式面板打架
   if(open) mmPaintStyleGrid();
   pop.hidden = !open;
   const btn = document.getElementById('mmStyleBtn');
@@ -16332,10 +16359,141 @@ function mmMove(idx, dir){
   arr.splice(j, 0, arr.splice(i, 1)[0]);
   mmCommit();
 }
+/* 节点跑到可视区外时先把图挪回来：新增节点 / 切选中后最容易出现，
+   不然输入框会贴在屏幕边上，甚至整个飘到屏幕外 */
+function mmRevealNode(idx, bottomBound){
+  const box = document.getElementById('mmCanvas');
+  if(!box || !MM.lay) return;
+  const g = box.querySelector('[data-mm="' + idx + '"]');
+  if(!g) return;
+  const br = box.getBoundingClientRect();
+  const r = g.getBoundingClientRect();
+  const m = 18;
+  const bottom = Math.min(br.bottom, bottomBound == null ? br.bottom : bottomBound) - m;
+  let dx = 0, dy = 0;
+  if(r.left < br.left + m) dx = br.left + m - r.left;
+  else if(r.right > br.right - m) dx = br.right - m - r.right;
+  if(r.top < br.top + m) dy = br.top + m - r.top;
+  else if(r.bottom > bottom) dy = bottom - r.bottom;
+  if(!dx && !dy) return;
+  MM.tx += dx; MM.ty += dy; mmApply();
+}
+/* ---------- 手机端节点输入条 ----------
+   小屏没有 Tab 键，浮在节点上的输入框还会被软键盘盖住、被挤到屏幕外。
+   改成贴底的一条：回车＝落定并接着写下一个同级，旁边按钮长同级 / 子级，
+   一路敲下去就行，跟桌面的 Enter / Tab 是一个意思。 */
+function mmKpEl(){ return document.getElementById('mmKp'); }
+function mmKpSync(){
+  const kp = mmKpEl();
+  if(!kp || !kp.classList.contains('open')) return;
+  const vv = window.visualViewport;
+  // 软键盘弹出后，把输入条顶到键盘上沿（iOS 的 fixed 不会自己往上让）
+  const gap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  kp.style.bottom = gap + 'px';
+  // 键盘把可视区压短了，正在编辑的节点可能被挡住：跟着把图往上挪一点
+  if(MM.kpIdx != null) mmRevealNode(MM.kpIdx, kp.getBoundingClientRect().top);
+}
+function mmKpBuild(){
+  const ov = document.getElementById('mmOv');
+  if(!ov) return null;
+  let kp = mmKpEl();
+  if(kp) return kp;
+  kp = document.createElement('div');
+  kp.className = 'mm-kp';
+  kp.id = 'mmKp';
+  kp.innerHTML = '<input id="mmKpIn" class="mm-kp-in" type="text" placeholder="节点文字" '
+    + 'enterkeyhint="next" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">'
+    + '<button class="mm-kp-b" id="mmKpSib" type="button" title="落定并新建同级">＋同级</button>'
+    + '<button class="mm-kp-b" id="mmKpChild" type="button" title="落定并新建子节点">＋下级</button>'
+    + '<button class="mm-kp-b primary" id="mmKpDone" type="button" title="收键盘">完成</button>';
+  ov.appendChild(kp);
+  const inp = kp.querySelector('#mmKpIn');
+  inp.addEventListener('keydown', e => {
+    // 中文输入法选词时的回车不能当成「下一行」，否则会把没上屏的字直接吞掉
+    if(e.isComposing || e.keyCode === 229) return;
+    if(e.key === 'Enter'){ e.preventDefault(); mmKpNext('sib'); }
+    else if(e.key === 'Tab'){ e.preventDefault(); mmKpNext('child'); }   // 接了外接键盘也能用
+    else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); mmKpFinish(); }
+  });
+  inp.addEventListener('blur', () => { mmKpSave(); });    // 先落定文字，收不收条由动作决定
+  kp.querySelector('#mmKpSib').addEventListener('click', () => mmKpNext('sib'));
+  kp.querySelector('#mmKpChild').addEventListener('click', () => mmKpNext('child'));
+  kp.querySelector('#mmKpDone').addEventListener('click', () => mmKpFinish());
+  if(!window._mmKpVp && window.visualViewport){
+    window._mmKpVp = true;
+    window.visualViewport.addEventListener('resize', mmKpSync);
+    window.visualViewport.addEventListener('scroll', mmKpSync);
+  }
+  return kp;
+}
+/* 把输入条里的文字写回节点（没改就不提交，免得白记一步撤销） */
+function mmKpSave(){
+  const idx = MM.kpIdx;
+  if(idx == null) return;
+  const inp = document.getElementById('mmKpIn');
+  if(!inp) return;
+  const n = MM.byId.get(idx);
+  if(!n) return;
+  const v = (inp.value || '').trim();
+  if(v && v !== n.label){ n.label = v; n.raw = v; mmCommit(); }
+}
+function mmKpNext(kind){
+  const idx = MM.kpIdx;
+  if(idx == null) return;
+  mmKpSave();
+  if(kind === 'child' || !mmFind(idx)) mmAddChild(idx);   // 根节点没有同级，退成长子节点
+  else mmAddSibling(idx);
+  // mmAddChild / mmAddSibling 会把选中指到新节点并调 mmStartRename，
+  // 手机上会重新打开这条输入条并把焦点放回来，可以接着敲
+}
+function mmKpFinish(){
+  mmKpSave();
+  mmKpClose();
+}
+function mmKpClose(){
+  MM.kpIdx = null;
+  const ov = document.getElementById('mmOv');
+  if(ov) ov.classList.remove('kp');
+  const kp = mmKpEl();
+  if(!kp) return;
+  kp.classList.remove('open');
+  const inp = kp.querySelector('#mmKpIn');
+  if(inp){ inp.value = ''; inp.blur(); }
+}
+function mmKpOpen(idx){
+  const n = MM.byId.get(idx);
+  if(!n) return;
+  const kp = mmKpBuild();
+  if(!kp) return;
+  if(MM.sel !== idx) mmSelect(idx);
+  MM.kpIdx = idx;
+  const ov = document.getElementById('mmOv');
+  if(ov) ov.classList.add('kp');
+  kp.classList.add('open');
+  const inp = kp.querySelector('#mmKpIn');
+  inp.value = n.label || '';
+  mmKpSync();
+  mmRevealNode(idx, kp.getBoundingClientRect().top);
+  requestAnimationFrame(() => {
+    try{ inp.focus({ preventScroll:true }); }catch(e){ try{ inp.focus(); }catch(e2){} }
+    inp.select();
+    mmKpSync();
+  });
+}
+/* 内联改名框可能因为关掉导图 / 又去点别的节点而留在页面上，统一收掉（先把字落定） */
+function mmInlineFinish(){
+  const el = document.querySelector('.mm-rename');
+  if(!el) return;
+  if(typeof el._mmFinish === 'function'){ try{ el._mmFinish(true); }catch(e){ el.remove(); } }
+  else el.remove();
+}
 function mmStartRename(idx){
   if(!mmGuardEdit()) return;
   const n = MM.byId.get(idx);
   if(!n) return;
+  if(mmIsPhone()){ mmKpOpen(idx); return; }   // 手机上走贴底输入条
+  mmInlineFinish();                           // 上一个还没落定的先收掉，别叠两个输入框
+  mmRevealNode(idx);
   const rect = document.querySelector('#mmCanvas [data-mm="' + idx + '"] rect');
   if(!rect) return;
   const r = rect.getBoundingClientRect();
@@ -16343,10 +16501,12 @@ function mmStartRename(idx){
   inp.className = 'mm-rename';
   inp.value = n.label;
   inp.setAttribute('spellcheck', 'false');
-  inp.style.left = r.left + 'px';
-  inp.style.top = r.top + 'px';
-  inp.style.width = Math.max(110, r.width) + 'px';
-  inp.style.height = Math.max(28, r.height) + 'px';
+  const w = Math.max(110, r.width), h = Math.max(28, r.height);
+  // 贴着节点放，但别越过窗口边界（节点靠右 / 靠下时会被挤到屏幕外）
+  inp.style.left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - w - 8)) + 'px';
+  inp.style.top = Math.min(Math.max(8, r.top), Math.max(8, window.innerHeight - h - 8)) + 'px';
+  inp.style.width = w + 'px';
+  inp.style.height = h + 'px';
   document.body.appendChild(inp);
   inp.focus();
   inp.select();
@@ -16358,6 +16518,7 @@ function mmStartRename(idx){
     inp.remove();
     if(ok && v && v !== n.label){ n.label = v; n.raw = v; mmCommit(); }
   };
+  inp._mmFinish = finish;
   inp.addEventListener('keydown', e => {
     e.stopPropagation();
     if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
@@ -16542,6 +16703,9 @@ function mmBind(){
   }, { passive:false });
   box.addEventListener('pointerdown', e => {
     if(!MM.lay) return;
+    // 输入条开着时先落定（点画布＝收工），但点的还是正在编辑的那个节点就别关
+    const tapped = e.target.closest ? e.target.closest('[data-mm]') : null;
+    if(MM.kpIdx != null && (!tapped || +tapped.dataset.mm !== MM.kpIdx)) mmKpFinish();
     MM.ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
     try{ box.setPointerCapture(e.pointerId); }catch(err){}
     MM.moved = 0;
@@ -16581,7 +16745,12 @@ function mmBind(){
     MM.downFold = null;
     if(cancelled || MM.moved > 8) return;        // 拖动 / 缩放，不算点击
     if(fold && node) mmSetCollapsed(+node.dataset.mm);
-    else if(node) mmSelect(+node.dataset.mm);
+    else if(node){
+      const idx = +node.dataset.mm;
+      // 手机上再点一次已选中的节点＝直接改字（不用先去够下面那排按钮）
+      if(mmIsPhone() && idx === MM.sel) mmStartRename(idx);
+      else mmSelect(idx);
+    }
     else if(MM.sel){ const prev = MM.sel; MM.sel = 0; mmPaintSel(prev); mmSyncBar(); }
   };
   box.addEventListener('pointerup', e => end(e, false));
@@ -16816,6 +16985,8 @@ function openMmExportMenu(anchor){
   ], { align:'right' });
 }
 function closeMindMap(){
+  mmInlineFinish();             // 关掉导图前把没落定的改名先收掉（文字照样写回）
+  mmKpFinish();                 // 手机输入条同理
   const ov = document.getElementById('mmOv');
   if(ov) ov.classList.remove('open');
 }
@@ -16956,7 +17127,7 @@ function openMindMap(){
     };
     mmBind();
   }
-  if(MM.noteId !== n.id){ MM.sel = 0; MM.undo.length = 0; }
+  if(MM.noteId !== n.id){ MM.sel = 0; MM.undo.length = 0; mmKpClose(); }
   MM.noteId = n.id;
   ov.classList.add('open');
   mmRefresh(true);

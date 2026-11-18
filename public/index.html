@@ -1665,9 +1665,12 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .doc.mode-split .prose::-webkit-scrollbar-thumb{background:rgb(var(--line));border-radius:8px}
 [data-theme=dark] .doc.mode-split .source{border-right-color:#2b3035}
 @media (max-width:900px){
+  /* 窄屏「双栏」改成上下堆叠：源码在上、预览在下。
+     原来只把 grid 改成单列，prose 还挂在 grid-column:2 上 → 被挤成一条 60 多像素宽，预览没法看 */
   .doc.mode-split .doc-body{grid-template-columns:1fr;height:auto}
-  .doc.mode-split .source{height:auto;max-height:none;border-right:0;padding-right:0;min-height:240px}
+  .doc.mode-split .source{grid-column:1;grid-row:1;height:auto;max-height:none;border-right:0;padding-right:0;min-height:240px;overflow:visible}
   .doc.mode-split .prose{
+    grid-column:1;grid-row:2;
     height:auto;max-height:none;padding-left:0;margin-top:14px;padding-top:14px;
     border-top:1px solid #edf0f2;
   }
@@ -2803,11 +2806,29 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .main-wrap{position:fixed;inset:0;z-index:60;padding:0;background:rgb(var(--canvas));display:none}
   body.m-read .main-wrap{display:flex}
   body.m-read .notelist{display:none!important}
+  /* 上面那行 .notelist{display:flex!important} 会把 renderList 加的 .hidden 顶掉，
+     切到待办 / 媒体库 / 关系图时列表页一直盖在上面。这里把 .hidden 提回来 */
+  .notelist.hidden{display:none!important}
   .main-wrap .paper{border:0;border-radius:0;box-shadow:none;width:100%;margin:0;padding-top:env(safe-area-inset-top)}
   body.m-read .m-back{display:inline-flex}
   #shelfOpen{display:none!important}
   .help-wrap{display:block}
   .help-ol{display:none!important}
+  /* 使用说明顶部这排栏目：原来 5 个挤成一行，每个字被迫竖排；改成横向可滑动 */
+  .help-tabs{padding:0 14px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .help-tabs::-webkit-scrollbar{display:none}
+  .help-tab{flex:0 0 auto;white-space:nowrap}
+  /* 手机上待办视图直接把列表画进主区（手机没有左侧栏） */
+  .todo-mobile{padding:6px 8px calc(24px + env(safe-area-inset-bottom))}
+  .todo-mobile .tsh-meta{padding:2px 6px 12px;font-size:12px}
+  .todo-mobile .tsg-h{padding:9px 8px;font-size:14.5px}
+  .todo-mobile .tsg-h .gchev{width:12px;height:12px}
+  .todo-mobile .tsi{padding:9px 10px 10px 8px;border-radius:10px;gap:9px}
+  .todo-mobile .tsi .t{font-size:14.5px;line-height:1.55}
+  .todo-mobile .tsi .src{font-size:11.5px}
+  .todo-mobile .tsi input{width:17px;height:17px;margin-top:1px}
+  .todo-mobile .tsi-bell{width:34px;height:34px}
+  .todo-mobile .tsh-sub{margin-top:14px}
 }
 /* iOS：手指点一下就放大，是因为被点的输入框字号小于 16px，或系统把连击当双击缩放。
    这里禁掉双击缩放（捏合仍可用），并把手机上的输入框统一抬到 16px。 */
@@ -3087,7 +3108,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v211', at: '2026-11-18 22:55' };
+window.IVY_BUILD = { id: 'v213', at: '2026-11-19 00:05' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3546,7 +3567,9 @@ function save(){
 S = load();
 loadVersions();
 
-/* 把「块级语法前的多余空行」收掉（不动代码块内部、不动普通段落之间） */
+/* 把连续多个空行收成一个（不动代码块内部）。
+   早先这里会把「块级语法前的空行」整行删掉，结果把「无序列表 + 空行 + 有序列表」
+   粘成一块，有序列表的序号直接丢了 —— 空行是列表的边界，不能删。 */
 function normalizeBlockSpacing(md){
   const lines = String(md||'').replace(/\r\n?/g,'\n').split('\n');
   const out = [];
@@ -3555,12 +3578,10 @@ function normalizeBlockSpacing(md){
     const ln = lines[i];
     if(/^\s*```/.test(ln)){ inFence = !inFence; out.push(ln); continue; }
     if(!inFence && !ln.trim()){
-      let j = i+1;
-      while(j < lines.length && !lines[j].trim()) j++;
-      const nxt = j < lines.length ? lines[j] : '';
-      const isSep = /^\s*\|?[\s:-]*-[-\s:|]*\|?\s*$/.test(nxt) && nxt.includes('-');
-      const startsBlock = /^(#{1,6}\s|>|```|\s*([-*+]|\d+\.)\s|\|)/.test(nxt) || isSep;
-      if(nxt && startsBlock) continue;   // 这些空行纯粹是块分隔，去掉不影响排版
+      // 一串空行只留一个：块与块之间的分隔还在，不会让相邻列表粘在一起
+      while(i+1 < lines.length && !lines[i+1].trim()) i++;
+      out.push('');
+      continue;
     }
     out.push(ln);
   }
@@ -3979,7 +4000,10 @@ function listSnippet(n){
   return String(n.body||'')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[\[([^\]]+)\]\]/g, '$1')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*([-*+]|\d+\.)\s+\[[ xX]\]\s+/gm, '')   // 待办的「- [ ]」别原样露在摘要里
+    .replace(/^\s*([-*+]|\d+\.)\s+/gm, '')               // 列表符号也去掉，只留文字
     .replace(/[*_`~>#|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -4351,16 +4375,27 @@ function bindShelf(){
     todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
   });
   /* ---- 日程侧栏 ---- */
-  shelfBody.querySelectorAll('[data-tsg]').forEach(b=>b.onclick=()=>{
+  bindTodoBlock(shelfBody);
+  const sw = document.getElementById('todoShowDone');
+  if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
+  const hsw = document.getElementById('headDoneSw');
+  if(hsw) hsw.onchange = ()=>{ S.todoShowDoneToday = hsw.checked; save(); renderShelf(); };
+}
+/* 待办列表的交互（勾选、分组折叠、铃铛、点条目跳转、日历订阅）：
+   左侧栏和手机主区共用一份，别写两套 */
+function bindTodoBlock(root, repaint){
+  if(!root) return;
+  const re = typeof repaint === 'function' ? repaint : ()=>renderShelf();
+  root.querySelectorAll('[data-tsg]').forEach(b=>b.onclick=()=>{
     const k = 's' + b.dataset.tsg;
-    S.todoFolded[k] = !S.todoFolded[k]; save(); renderShelf();
+    S.todoFolded[k] = !S.todoFolded[k]; save(); re();
   });
-  shelfBody.querySelectorAll('.tsi[data-tsi]').forEach(el=>{
+  root.querySelectorAll('.tsi[data-tsi]').forEach(el=>{
     let t; try{ t = JSON.parse(el.dataset.tsi); }catch(e){ return; }
     const cb = el.querySelector('[data-tsi-cb]');
     if(cb){
       cb.onclick = ev=>ev.stopPropagation();
-      cb.onchange = ()=>{ setTodoDone(t, cb.checked); renderShelf(); updateTodoBadge(); };
+      cb.onchange = ()=>{ setTodoDone(t, cb.checked); updateTodoBadge(); re(); };
     }
     const bell = el.querySelector('[data-tsi-bell]');
     if(bell) bell.onclick = (ev)=>{
@@ -4371,31 +4406,26 @@ function bindShelf(){
       if(ev.target === cb) return;
       if(ev.target.closest && ev.target.closest('[data-tsi-bell]')) return;
       jumpToTodo(t);
-      renderShelf();
+      if(window.innerWidth > 640) re();      // 手机上跳走会换成笔记页，别再把待办列表重画回来
     };
   });
-  const sw = document.getElementById('todoShowDone');
-  if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
-  const hsw = document.getElementById('headDoneSw');
-  if(hsw) hsw.onchange = ()=>{ S.todoShowDoneToday = hsw.checked; save(); renderShelf(); };
-  /* ---- 来自苹果日历（只读，不能勾） ---- */
-  shelfBody.querySelectorAll('[data-icsg]').forEach(b=>b.onclick=()=>{
-    S.icsFolded = !S.icsFolded; save(); renderShelf();
+  root.querySelectorAll('[data-icsg]').forEach(b=>b.onclick=()=>{
+    S.icsFolded = !S.icsFolded; save(); re();
   });
-  shelfBody.querySelectorAll('[data-icsev]').forEach(el=>{
-    const ev = icsAllEvents()[+el.dataset.icsev];
+  root.querySelectorAll('[data-icsev]').forEach(el=>{
+    const ices = icsAllEvents()[+el.dataset.icsev];
     const cb = el.querySelector('[data-icscb]');
     if(cb){
       cb.onclick = ev2=>ev2.stopPropagation();
-      cb.onchange = ()=>{ if(ev) setIcsDone(ev, cb.checked); };
+      cb.onchange = ()=>{ if(ices) setIcsDone(ices, cb.checked); };
     }
     el.onclick = (ev2)=>{
       if(ev2.target === cb) return;
-      if(ev) openIcsPop(el, ev);
+      if(ices) openIcsPop(el, ices);
     };
   });
-  const ics = document.getElementById('todoIcs');
-  if(ics) ics.onclick = ()=>openRemindCenter();
+  const icsBtn = root.querySelector('#todoIcs');
+  if(icsBtn) icsBtn.onclick = ()=>openRemindCenter();
 }
 /* ---- 把带日期的待办拼成一份 .ics：导出文件、日历订阅共用同一份内容 ---- */
 const ICS_RRULE = {
@@ -4774,7 +4804,15 @@ function jumpToTodo(t){
   trashView = false;
   S.active = n.id;
   if(!S.tabs.includes(n.id)) S.tabs.push(n.id);
-  if(S.view === 'todo'){
+  if(window.innerWidth <= 640){
+    // 手机上待办列表就在主区，点条目 = 打开这篇笔记（没有左右两栏可切）
+    S.view = 'notes';
+    S.todoNote = n.id;
+    S.todoSel = n.id + ':' + t.line;
+    renderAll();
+    document.body.classList.add('m-read');
+    M_READ_BACK = true;
+  } else if(S.view === 'todo'){
     S.todoNote = n.id;
     S.todoSel = n.id + ':' + t.line;
     // 窄屏书架是满屏的，点完待办得收起书架才看得到笔记
@@ -4878,6 +4916,12 @@ function renderTodoView(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
   scrollEl.style.display='';
+  // 手机没有左侧栏，待办列表就是这一页的主体；点条目直接打开那篇笔记
+  if(window.innerWidth <= 640){
+    scrollEl.innerHTML = `<div class="todo-mobile" id="todoMobile">${todoShelf()}</div>`;
+    bindTodoBlock(scrollEl.querySelector('#todoMobile'), ()=>{ renderTodoView(); renderShelf(); save(); });
+    return;
+  }
   scrollEl.innerHTML = `<div class="todo-blank">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
@@ -5815,7 +5859,18 @@ function renderDock(){
 /* ========== 标签栏 ========== */
 function renderTabs(){
   const bar = $('#tabbar');
-  if(S.view!=='notes'){ bar.innerHTML = ''; return; }
+  if(S.view!=='notes'){
+    // 手机上待办 / 媒体库 / 关系图是整屏页，没有底部导航也没有左侧栏，
+    // 这里给一枚「‹ 笔记」，否则进去就出不来
+    if(window.innerWidth <= 640 && S.view){
+      const nm = ({todo:'待办', media:'媒体库', graph:'关系图'})[S.view] || '';
+      bar.innerHTML = `<button class="m-back" id="mBackView" title="回到笔记" aria-label="回到笔记">`
+        + `<span class="mb-ar">‹</span><span class="mb-t">笔记</span><span class="mb-n">${nm}</span></button>`;
+      const bv = $('#mBackView');
+      if(bv) bv.onclick = ()=>switchView('notes');
+    }else bar.innerHTML = '';
+    return;
+  }
   const allN = (()=>{ try{ return liveNotes().length; }catch(e){ return (S.notes||[]).filter(n=>!n.trashed && !n.deleted).length; } })();
   // 返回键显示当前列表的名字：全部笔记 / 某个笔记本 / 某个标签，回来时对得上
   const backT = (()=>{ try{ return listScopeTitle(); }catch(e){ return '全部笔记'; } })();
@@ -6146,6 +6201,10 @@ function renderMain(){
   closeExportPanel();
   paperActions.innerHTML = '';
   if(S.view!=='notes'){
+    // 手机上 .fmt-bar 会被挪到 .paper 顶部常驻，切到待办 / 媒体库 / 关系图时得摘掉，
+    // 否则待办列表上面顶着一排 Markdown 按钮
+    const fb = document.getElementById('fmtBar');
+    if(fb && !(scrollEl && scrollEl.contains(fb))) fb.remove();
     outlineEl.classList.add('hidden');
     document.body.classList.remove('outline-pinned');
     document.body.classList.add('ol-hidden');
@@ -6153,7 +6212,8 @@ function renderMain(){
   }else document.body.classList.remove('ol-hidden');
   if(S.view==='media'){ renderMedia(); return; }
   if(S.view==='todo'){
-    const tn = S.todoNote ? noteById(S.todoNote) : null;
+    // 手机上不分左右两栏：待办视图永远是那张列表，点条目再去笔记页
+    const tn = (window.innerWidth > 640 && S.todoNote) ? noteById(S.todoNote) : null;
     if(tn){ S.active = tn.id; renderEditor(); }
     else renderTodoView();
     return;
@@ -6505,7 +6565,22 @@ function renderEditor(){
     const src = document.getElementById('source');
     if(src) src.style.height = '';     // 交给 CSS 的 100%，两栏等高
     wireSplitSync();
+    requestAnimationFrame(fitSplitSource);   // 窄屏上下堆叠时按内容长高
   }
+}
+/* 窄屏的双栏是「源码在上、预览在下」：让源码框按内容长高，
+   否则它只有 min-height 那么高，页面里再套一层内部滚动，手机上很难滚 */
+function fitSplitSource(){
+  const src = document.getElementById('source');
+  if(!src || !src.isConnected) return;
+  if(window.innerWidth > 900 || (S.mode||'live') !== 'split'){
+    src.style.height = '';
+    src.style.overflowY = '';
+    return;
+  }
+  src.style.overflowY = 'hidden';
+  src.style.height = 'auto';
+  src.style.height = (src.scrollHeight + 2) + 'px';
 }
 /* 窗口尺寸变了（横竖屏切换、拖窗口），标题高度要重算一次 */
 let titleFitTimer = 0;
@@ -6516,6 +6591,7 @@ window.addEventListener('resize', ()=>{
     if(!t || !t.isConnected) return;
     t.style.height = 'auto';
     t.style.height = t.scrollHeight + 'px';
+    try{ fitSplitSource(); }catch(e){}
   }, 120);
 });
 
@@ -6645,7 +6721,7 @@ function wireSplitSync(){
   // 光标动了（点一下某行、方向键、Home/End、选中文字）→ 右栏跟过去
   const kick = ()=>{ clearTimeout(SPLIT_CARET_T); SPLIT_CARET_T = setTimeout(syncPreviewToCaret, 60); };
   ['click','keyup','select'].forEach(ev=>src.addEventListener(ev, kick));
-  src.addEventListener('input', kick);
+  src.addEventListener('input', ()=>{ kick(); fitSplitSource(); });
 }
 window.addEventListener('resize', ()=>{ SPLIT_ANCH = null; SPLIT_LOCK_UNTIL = 0; }, { passive:true });
 
@@ -10025,6 +10101,7 @@ function setMode(m){
     renderProse(); renderOutline();
     SPLIT_ANCH = null;
     wireSplitSync();
+    requestAnimationFrame(fitSplitSource);
   }
   else if(m==='source'){
     if(src){
@@ -11506,10 +11583,25 @@ function renderGraph(){
 }
 
 /* ========== 视图切换 ========== */
+/* 手机上从笔记视图切到别的视图时，记住当时是不是在「笔记页」，
+   切回来按原样恢复，别把正在读的笔记换成列表 */
+let M_READ_BACK = false;
 function switchView(v){
   S.view = v; trashView=false; S.listQuery = '';
   if(v!=='notes') { /* 保留 tabs */ }
   hideSelBar();
+  if(window.innerWidth <= 640){
+    if(v === 'notes'){
+      document.body.classList.toggle('m-read', M_READ_BACK);
+      renderAll(); save();
+      return;
+    }
+    // 待办 / 媒体库 / 关系图在手机上也是整屏页：先开 m-read 再画，否则主区是 display:none
+    M_READ_BACK = document.body.classList.contains('m-read');
+    document.body.classList.add('m-read');
+    renderAll(); save();
+    return;
+  }
   renderAll(); save();
 }
 

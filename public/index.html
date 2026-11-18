@@ -43,7 +43,7 @@
 [data-theme=dark]{
   color-scheme:dark;
   --canvas:16 18 20; --surface:25 27 30; --sunken:34 37 41;
-  --ink:232 235 238; --ink-2:190 195 200; --muted:138 144 150; --faint:96 101 107;
+  --ink:232 235 238; --ink-2:190 195 200; --muted:142 148 154; --faint:114 120 126;
   --line:44 48 52; --hover:38 41 45;
   --ivy:86 180 130; --ivy-hover:110 196 150; --ivy-soft:28 50 39; --on-ivy:10 28 18; --ivy-ink:150 224 182;
   --warn:214 170 98; --warn-ink:232 205 158; --warn-soft:48 40 26;
@@ -590,6 +590,13 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tabbar{display:flex;align-items:center;gap:4px;height:50px;padding:0 88px 0 10px;flex:0 0 auto;overflow:hidden}
 .tabs{display:flex;flex:1 1 auto;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
+/* 右边还有标签没露出来时，右缘渐隐一下，别让文字被硬切；滚到中间时左边也渐隐 */
+.tabs.ovf{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
+.tabs.ovf-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 20px);
+  mask-image:linear-gradient(90deg,transparent,#000 20px)}
+.tabs.ovf.ovf-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 20px,#000 calc(100% - 20px),transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 20px,#000 calc(100% - 20px),transparent)}
 .tab{
   display:flex;flex:0 0 auto;align-items:center;gap:6px;max-width:180px;height:28px;padding:0 8px 0 10px;
   border-radius:7px;font-size:12.5px;color:rgb(var(--muted));white-space:nowrap;
@@ -1569,8 +1576,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 嵌套列表：缩进小一点、上下收紧，分支大纲插进正文后一眼能看出层级 */
 .prose li>ul,.prose li>ol{margin:.15em 0 .1em;padding-left:1.15em}
 .prose li>ul li,.prose li>ol li{margin:.18em 0}
-.prose li>ul li::marker{color:rgb(var(--faint)/.75)}
-.prose li::marker{color:rgb(var(--faint))}
+/* 列表标记别用最淡的那档灰：深色主题下序号（1. 2.）几乎看不见 */
+.prose li>ul li::marker,.prose li>ol li::marker{color:rgb(var(--muted)/.85)}
+.prose li::marker{color:rgb(var(--muted))}
 .prose blockquote{
   margin:1.2em 0;padding:2px 0 2px 16px;border-left:2px solid rgb(var(--ivy)/.35);
   color:rgb(var(--ink-2));
@@ -2829,6 +2837,12 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .todo-mobile .tsi input{width:17px;height:17px;margin-top:1px}
   .todo-mobile .tsi-bell{width:34px;height:34px}
   .todo-mobile .tsh-sub{margin-top:14px}
+  /* 手机没有 esc 键，命令面板不必提示 */
+  .esc-hint{display:none}
+  /* 新建笔记本：颜色点与快捷名称按手指尺寸放大 */
+  .nb-sw{gap:12px}
+  .nb-sw button{width:30px;height:30px}
+  .nb-quick button{height:32px}
 }
 /* iOS：手指点一下就放大，是因为被点的输入框字号小于 16px，或系统把连击当双击缩放。
    这里禁掉双击缩放（捏合仍可用），并把手机上的输入框统一抬到 16px。 */
@@ -2904,7 +2918,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="palette-in">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="paletteInput" placeholder="搜索笔记，或输入命令…" spellcheck="false" autocomplete="off" />
-      <span class="h" style="font-family:var(--font-mono);font-size:11px;color:var(--faint)">esc</span>
+      <span class="h esc-hint" style="font-family:var(--font-mono);font-size:11px;color:var(--faint)">esc</span>
     </div>
     <div class="palette-list" id="paletteList"></div>
   </div>
@@ -3108,7 +3122,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v213', at: '2026-11-19 00:05' };
+window.IVY_BUILD = { id: 'v214', at: '2026-11-19 00:35' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5886,7 +5900,27 @@ function renderTabs(){
       <span class="x" data-close="${id}">${ic('x')}</span>
     </button>`;
   }).join('') + `</div>
-    <button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>`;
+    ${trashView ? '' : `<button class="tab-new" id="tabNew" title="新建笔记标签页 (⌘N)">${ic('plus')}</button>`}`;
+  /* 标签一多，超出的部分会被横向裁掉：把当前这篇滚进视野，并在右侧加一层渐隐提示还能滚 */
+  requestAnimationFrame(()=>{
+    const tabsEl = bar.querySelector('.tabs');
+    if(!tabsEl) return;
+    const act = tabsEl.querySelector('.tab.active');
+    if(act){
+      const l = act.offsetLeft, r = l + act.offsetWidth;
+      if(l < tabsEl.scrollLeft) tabsEl.scrollLeft = Math.max(0, l - 6);
+      else if(r > tabsEl.scrollLeft + tabsEl.clientWidth) tabsEl.scrollLeft = r - tabsEl.clientWidth + 6;
+    }
+    const paintOvf = ()=>{
+      tabsEl.classList.toggle('ovf', tabsEl.scrollLeft + tabsEl.clientWidth < tabsEl.scrollWidth - 2);
+      tabsEl.classList.toggle('ovf-l', tabsEl.scrollLeft > 2);
+    };
+    paintOvf();
+    if(!tabsEl._ovfBound){
+      tabsEl._ovfBound = true;
+      tabsEl.addEventListener('scroll', paintOvf, { passive:true });
+    }
+  });
   bar.querySelectorAll('[data-tab]').forEach(b=>b.onclick=(e)=>{
     if(e.target.closest('[data-close]')) return;
     S.active = b.dataset.tab; renderAll(); save();
@@ -5894,7 +5928,7 @@ function renderTabs(){
   bar.querySelectorAll('[data-close]').forEach(x=>x.onclick=(e)=>{
     e.stopPropagation(); closeTab(x.dataset.close);
   });
-  $('#tabNew').onclick=()=>newNote();
+  const tnb = $('#tabNew'); if(tnb) tnb.onclick = ()=>newNote();
   const mb = $('#mBack');
   if(mb) mb.onclick = ()=>{
     document.body.classList.remove('m-read');

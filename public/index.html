@@ -2566,7 +2566,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v175', at: '2026-11-18 09:17' };
+window.IVY_BUILD = { id: 'v176', at: '2026-11-18 09:19' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6925,7 +6925,7 @@ function helpBodyHtml(tab){
         <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，次日恢复）；<b>登录后不限次数</b>。第三个填你自己的 OpenAI 兼容接口，同样不限次数。</p>
         <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
         <p class="help-p">自己填的密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
-        <p class="help-p">三个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>笔记菜单 ⋯ → AI 对话</b>，勾「参考当前笔记」让它读正文，回复可一键插入；<b>笔记菜单 ⋯ → AI 排版</b>，只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
+        <p class="help-p">两个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>⌘K 命令面板</b>里搜「AI 对话」或「AI 排版」：前者勾「参考当前笔记」让它读正文，回复可一键插入，后者只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
       <div class="help-sec"><h4>思维导图</h4>
         <p class="help-p">笔记菜单 ⋯ → <b>思维导图</b>（或输入 <code>/导图</code>）。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画成脑图：缩进一级就是子节点，同一缩进就是同级。<b>只读取、不改写</b>，笔记仍然保存为普通 Markdown，导出、同步、导入都不受影响。</p>
         <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是<b>整张导图</b>（不受屏幕大小与缩放影响，折叠起来的节点也会画进去），手机上会按屏幕上限自动挑一个合适的清晰度，保证内容不缺。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
@@ -10562,24 +10562,28 @@ function openNoteMenu(anchor){
   let pend = 0;
   try{ pend = n ? collectTodos().filter(t=>t.noteId===n.id && !t.done).length : 0; }catch(e){}
   popover(anchor, [
+    /* 一、显示方式 */
     ['预览', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
     ['Markdown', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
-    ['大纲', document.body.classList.contains('ol-open') ? '✓' : '', '', 'outline', ()=>toggleOutlinePanel()],
     '-',
+    /* 二、结构与视图 */
+    ['大纲', document.body.classList.contains('ol-open') ? '✓' : '', '', 'outline', ()=>toggleOutlinePanel()],
     ['思维导图', '', '', 'mind', ()=>openMindMap()],
+    '-',
+    /* 三、这篇笔记放哪、钉不钉 */
     [(n && n.pinned) ? '取消置顶' : '置顶', (n && n.pinned) ? '✓' : '', '', 'pin', ()=>togglePin(S.active)],
+    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(A())],
+    '-',
+    /* 四、内容与副本 */
     ['本篇待办', pend ? pend + ' 项未完成' : '', '', 'todo', ()=>openTodoPop(A())],
     ['复制/分享/导出', n && n.shareSlug ? '已分享' : '', '', 'share', ()=>openShareMenu(A())],
-    ['移动到笔记本', nb ? nb.name : '未归类', '', 'book', ()=>openMoveMenu(A())],
-    ['创建笔记副本', '', '', 'copy', ()=>duplicateNote()],
     ['上传图片/文件', '', '', 'paperclip', ()=>pickFiles()],
+    ['创建笔记副本', '', '', 'copy', ()=>duplicateNote()],
     ['历史版本', '', '', 'restore', ()=>openHistoryPanel()],
     ['笔记信息', '', '', 'info', ()=>openNoteInfo()],
     '-',
-    ['AI 排版', '', '', 'spark', ()=>openAI('format')],
-    ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
-    '-',
+    /* 五、危险操作 */
     ['移到回收站', '', 'danger', 'trash', ()=>toggleTrash(S.active)]
   ]);
 }

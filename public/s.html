@@ -111,16 +111,16 @@ h1.title{
 
 /* ===== 右侧悬浮大纲（与主应用同一套视觉：刻度 → 悬停滑出卡片） ===== */
 .ol-zone{
-  position:fixed;right:0;top:50%;margin-top:-66px;z-index:40;
-  width:26px;height:132px;display:none;
-  flex-direction:column;align-items:flex-end;justify-content:center;gap:10px;
-  padding:6px 9px 6px 0;cursor:pointer;
+  position:fixed;right:14px;top:50%;margin-top:-70px;z-index:40;
+  width:32px;height:140px;display:none;
+  flex-direction:column;align-items:flex-end;justify-content:center;gap:11px;
+  padding:6px 0;cursor:pointer;
 }
 body.has-ol .ol-zone{display:flex}
-.ol-zone i{display:block;width:15px;height:1.5px;border-radius:2px;background:rgb(var(--ink)/.2);transition:background .16s,width .16s}
-.ol-zone:hover i{width:18px;background:rgb(var(--ink)/.4)}
+.ol-zone i{display:block;width:18px;height:2px;border-radius:2px;background:rgb(var(--ink)/.26);transition:background .16s,width .16s}
+.ol-zone:hover i{width:24px;background:rgb(var(--ink)/.5)}
 .ol-card{
-  position:fixed;right:4px;top:66px;z-index:41;
+  position:fixed;right:16px;top:66px;z-index:41;
   width:210px;max-height:min(66vh,calc(100vh - 130px));
   display:flex;flex-direction:column;outline:none;
   padding:6px 8px 8px;border-radius:14px;

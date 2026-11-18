@@ -2751,6 +2751,10 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 .share-card .sc-copy:hover{filter:brightness(1.06)}
 .share-card .sc-unshare{background:rgb(var(--hover));color:rgb(var(--danger,var(--ink)))}
 .share-card .sc-unshare:hover{background:rgb(var(--danger)/.1)}
+.share-card .sc-refresh{background:rgb(var(--hover));color:rgb(var(--ink))}
+.share-card .sc-refresh:hover{background:rgb(var(--sunken))}
+.share-card .sc-refresh:disabled{opacity:.6;cursor:default}
+.share-card .sc-note{margin:10px 2px 0;font-size:11.5px;line-height:1.6;color:rgb(var(--faint))}
 
 /* ---- 手机：列表页 ↔ 笔记页 两级，侧栏仍是抽屉 ---- */
 .m-back{
@@ -3010,6 +3014,7 @@ const ICONS = {
   filter:'<path d="M4 5h16l-6.2 7.4V19l-3.6-2v-4.6z"/>',
   download:'<path d="M12 4v11M8 11.5l4 4 4-4"/><path d="M5 19h14"/>',
   upload:'<path d="M12 19V8M8 11.5l4-4 4 4"/><path d="M5 5h14"/>',
+  refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4.5V10h-5.5"/>',
   check:'<path d="m5 13 4.5 4.5L19 7"/>',
   plusCircle:'<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
   minusCircle:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/>',
@@ -3062,7 +3067,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v206', at: '2026-11-18 17:22' };
+window.IVY_BUILD = { id: 'v207', at: '2026-11-18 17:32' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11463,8 +11468,10 @@ function showShareCard(url){
       <div class="sc-url" id="scUrl">${esc(url)}</div>
       <div class="sc-btns">
         <button class="sc-copy" id="scCopy">复制链接</button>
+        ${n && n.shareSlug ? '<button class="sc-refresh" id="scRefresh">更新内容</button>' : ''}
         ${n && n.shareSlug ? '<button class="sc-unshare" id="scUnshare">取消分享</button>' : ''}
       </div>
+      ${n && n.shareSlug ? '<p class="sc-note">分享的是「快照」：改完笔记点一下「更新内容」，同一个链接才会变成最新版。</p>' : ''}
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>ov.classList.add('show'));
@@ -11479,12 +11486,37 @@ function showShareCard(url){
   };
   const us = ov.querySelector('#scUnshare');
   if(us) us.onclick = async ()=>{ close(); await unshareNote(); };
+  const rf = ov.querySelector('#scRefresh');
+  if(rf) rf.onclick = async ()=>{
+    rf.disabled = true; rf.textContent = '正在更新…';
+    try{
+      await pushShareSnapshot(noteById(S.active));
+      rf.textContent = '已更新';
+      setTimeout(()=>{ const b=document.getElementById('scRefresh'); if(b){ b.textContent='更新内容'; b.disabled=false; } }, 1600);
+    }catch(e){
+      rf.disabled = false; rf.textContent = '更新内容';
+      toast('更新失败：' + (e.message || '网络错误'));
+    }
+  };
+}
+/* 把当前笔记内容写回分享快照（同一个 slug，链接不变） */
+async function pushShareSnapshot(n){
+  if(!n){ throw new Error('笔记不见了'); }
+  const d = await apiCall('/api/share', {method:'POST', body:{noteId:n.id, title:n.title||'', body:n.body||''}});
+  if(d && d.slug){ n.shareSlug = d.slug; save(); }
+  return d;
 }
 async function shareNote(){
   const n = noteById(S.active); if(!n) return;
   if(!isConnected()){ toast('先连接账号，才能生成公开分享链接'); openSyncPanel(); return; }
-  // 已经分享过：直接弹卡片看二维码，链接地址不变
-  if(n.shareSlug){ showShareCard(location.origin + '/s/' + n.shareSlug); return; }
+  // 已经分享过：先把最新内容写回快照（否则链接里一直是第一次分享时的旧内容），链接地址不变
+  if(n.shareSlug){
+    toast('正在更新分享内容…');
+    try{ await pushShareSnapshot(n); toast('分享内容已更新'); }
+    catch(e){ toast('更新失败：' + (e.message || '网络错误')); }
+    showShareCard(location.origin + '/s/' + n.shareSlug);
+    return;
+  }
   toast('正在生成分享链接…');
   try{
     const d = await apiCall('/api/share', {method:'POST', body:{noteId:n.id, title:n.title||'', body:n.body||''}});
@@ -12164,6 +12196,7 @@ function openShareMenu(anchor){
     ['分享链接（公开只读）', '', '', 'link', shareNote],
     ...(n && n.shareSlug ? [
       ['复制分享链接', '', '', 'link', copyShareUrl],
+      ['更新分享内容（改完笔记点这个）', '', '', 'refresh', async ()=>{ try{ await pushShareSnapshot(noteById(S.active)); toast('分享内容已更新，链接不变'); }catch(e){ toast('更新失败：' + (e.message || '网络错误')); } }],
       ['取消分享链接', '', 'danger', 'trash', unshareNote]
     ] : [])
   ]);

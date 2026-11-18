@@ -293,6 +293,41 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-notes .note-item{padding:5px 8px;font-size:12.5px}
 .tag-empty{font-size:11.5px;color:rgb(var(--faint));padding:4px 8px 6px;line-height:1.6}
 
+/* 标签胶囊（苹果备忘录式）：侧栏最底部一排可换行的标签，点一下即筛选 */
+.tag-pills-sec{margin:16px 8px 4px;padding-top:13px;border-top:1px solid rgb(var(--line))}
+.tag-pills-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px}
+.tag-pills-title .tp-total{font-size:11px;font-variant-numeric:tabular-nums;padding-right:8px}
+.tag-pills{display:flex;flex-wrap:wrap;gap:6px}
+.tag-pill{
+  display:inline-flex;align-items:center;gap:4px;max-width:100%;height:26px;padding:0 9px;
+  border-radius:99px;background:rgb(var(--ink)/.055);color:rgb(var(--ink-2));
+  font-size:12.5px;line-height:1;white-space:nowrap;
+  transition:background .14s,color .14s,transform .1s;
+}
+.tag-pill:hover{background:rgb(var(--ink)/.1);color:rgb(var(--ink))}
+.tag-pill:active{transform:scale(.97)}
+.tag-pill .tp-h{font-size:12px;color:rgb(var(--faint));flex:0 0 auto}
+.tag-pill .tp-n{font-size:10.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;margin-left:1px}
+.tag-pill .tp-t{overflow:hidden;text-overflow:ellipsis}
+.tag-pill.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+.tag-pill.on .tp-h,.tag-pill.on .tp-n{color:inherit;opacity:.65}
+.tag-pill.more{color:rgb(var(--muted));background:transparent;box-shadow:inset 0 0 0 1px rgb(var(--line))}
+.tag-pill.more:hover{background:rgb(var(--ink)/.06)}
+/* 筛选态：顶部返回行 */
+.shelf-back{
+  display:flex;align-items:center;gap:5px;width:calc(100% - 16px);margin:2px 8px 8px;
+  font-size:12.5px;color:rgb(var(--muted));padding:4px 0;text-align:left;
+}
+.shelf-back:hover{color:rgb(var(--ink))}
+.shelf-back .arw{font-size:15px;line-height:1;color:rgb(var(--faint))}
+.shelf-filter-hd{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:0 8px 8px;padding-bottom:8px;border-bottom:1px solid rgb(var(--line));
+}
+.shelf-filter-hd .t{font-size:15px;font-weight:600;color:rgb(var(--ink));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shelf-filter-hd .c{font-size:11px;color:rgb(var(--faint));flex:0 0 auto}
+.shelf-empty{font-size:12px;color:rgb(var(--faint));padding:10px;line-height:1.7}
+
 /* 单篇笔记的标签选择器 */
 .tag-pick{width:238px;padding:6px}
 .tp-search{padding:0 2px 6px}
@@ -2398,7 +2433,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v169', at: '2026-11-18 03:00' };
+window.IVY_BUILD = { id: 'v170', at: '2026-11-18 08:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3006,6 +3041,87 @@ function tagNoteRow(n){
     <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
   </button>`;
 }
+/* ---------- 标签胶囊区（侧栏最底部，苹果备忘录式） ---------- */
+let tagFilter = null;                 // 当前按哪个标签筛选；null = 不筛选
+const TAG_PILLS_MAX = 8;              // 平铺上限，其余收进「+N」
+
+function tagPillKeys(notes){
+  const keys = usedTags(notes);
+  NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
+  return keys.sort((a,b)=>a.localeCompare(b, 'zh-CN'));
+}
+function tagPillsHtml(notes){
+  const keys = tagPillKeys(notes);
+  const untagged = notes.filter(n=>!tagOf(n).length).length;
+  if(!keys.length && !untagged) return '';
+  const shown = keys.slice(0, TAG_PILLS_MAX);
+  const rest = keys.length - shown.length;
+  const cnt = k => notes.filter(n=>tagOf(n).includes(k)).length;
+
+  let pills = `<button class="tag-pill${tagFilter?'':' on'}" data-tagall="1" title="查看全部标签">`
+    + `<span class="tp-t">所有标签</span><span class="tp-n">${keys.length}</span></button>`;
+  shown.forEach(k=>{
+    const c = cnt(k);
+    pills += `<button class="tag-pill${tagFilter===k?' on':''}" data-tagpill="${esc(k)}" title="#${esc(k)} · ${c} 篇">`
+      + `<span class="tp-h">#</span><span class="tp-t">${esc(k)}</span><span class="tp-n">${c}</span></button>`;
+  });
+  if(rest > 0) pills += `<button class="tag-pill more" data-tagall="1" title="还有 ${rest} 个标签">+${rest}</button>`;
+  if(untagged) pills += `<button class="tag-pill${tagFilter===NO_TAG?' on':''}" data-tagpill="${NO_TAG}" title="${NO_TAG_LABEL} · ${untagged} 篇">`
+      + `<span class="tp-h">#</span><span class="tp-t">${esc(NO_TAG_LABEL)}</span><span class="tp-n">${untagged}</span></button>`;
+
+  return `<div class="tag-pills-sec">
+    <div class="tag-pills-title"><span>标签</span><span class="tp-total">${keys.length}</span></div>
+    <div class="tag-pills">${pills}</div>
+  </div>`;
+}
+function setTagFilter(k){
+  tagFilter = (k && tagFilter !== k) ? k : null;
+  renderShelf();
+  shelfBody.scrollTop = 0;
+}
+function openAllTags(anchor){
+  const notes = liveNotes();
+  const keys = tagPillKeys(notes);
+  const items = [];
+  if(tagFilter) items.push(['‹ 清除筛选', '', '', null, ()=>setTagFilter(null)]);
+  keys.forEach(k=>{
+    const c = notes.filter(n=>tagOf(n).includes(k)).length;
+    items.push(['#' + k, String(c), tagFilter===k?'on':'', null, ()=>{ tagFilter=k; renderShelf(); shelfBody.scrollTop=0; }]);
+  });
+  const untagged = notes.filter(n=>!tagOf(n).length).length;
+  if(untagged) items.push([NO_TAG_LABEL, String(untagged), '', null, ()=>{ tagFilter=NO_TAG; renderShelf(); shelfBody.scrollTop=0; }]);
+  if(!keys.length && !untagged) items.push(['还没有用过标签', '', 'muted', null, null]);
+  popover(anchor, items, { align:'left' });
+}
+/* 单条笔记行：笔记本树、标签筛选视图共用 */
+function noteItemHtml(n){
+  const dots = tagOf(n).slice(0,3).map(t=>`<span class="dot-tag" style="background:${tagColor(t)}"></span>`).join('');
+  const pin = !!n.pinned;
+  return `<button class="note-item ${n.id===S.active?'active':''}${pin?' pinned':''}" data-open="${n.id}">
+    ${ic(pin ? 'pin' : 'file')}<span class="t">${esc(n.title||'无标题')}</span>
+    ${dots?`<span class="tags">${dots}</span>`:''}
+    <span class="note-move" data-move="${n.id}" role="button" aria-label="移动到笔记本" title="移动到笔记本">${ic('book')}</span>
+    <span class="note-pin${pin?' on':''}" data-pin="${n.id}" role="button" aria-label="${pin?'取消置顶':'置顶'}" title="${pin?'取消置顶':'置顶'}">${ic('pin')}</span>
+    <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
+  </button>`;
+}
+/* 标签筛选视图：不按笔记本分组，扁平列出命中笔记，底部仍留胶囊方便切换 */
+function tagFilterShelf(){
+  const notes = liveNotes();
+  const hit = notes.filter(n => tagFilter===NO_TAG ? !tagOf(n).length : tagOf(n).includes(tagFilter));
+  let html = `<button class="shelf-back" data-act="clear-tag"><span class="arw">‹</span>全部笔记</button>
+    <div class="shelf-filter-hd">
+      <span class="t">${tagFilter===NO_TAG ? esc(NO_TAG_LABEL) : '#'+esc(tagFilter)}</span>
+      <span class="c">${hit.length} 篇</span>
+    </div>`;
+  html += hit.length
+    ? `<div class="nb-notes">${hit.map(noteItemHtml).join('')}</div>`
+    : `<div class="shelf-empty">这个标签下还没有笔记<br>在编辑器里给笔记加上标签即可</div>`;
+  html += tagPillsHtml(notes);
+  shelfBody.innerHTML = html;
+  bindShelf();
+}
+
 function rememberTag(t){
   if(!t) return;
   if(!Array.isArray(S.tagLibrary)) S.tagLibrary = [];
@@ -3095,6 +3211,12 @@ function renderShelf(){
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
 
+  // 标签筛选态：整栏换成「该标签下的笔记」，底部胶囊仍在，方便横向切换
+  if(tagFilter){
+    if(tagFilter !== NO_TAG && !usedTags(liveNotes()).includes(tagFilter)) tagFilter = null;
+    else { tagFilterShelf(); return; }
+  }
+
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
   // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
@@ -3126,17 +3248,7 @@ function renderShelf(){
   notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
   const loose = notes.filter(n=>!n.notebookId);
 
-  function noteRow(n){
-    const dots = tagOf(n).slice(0,3).map(t=>`<span class="dot-tag" style="background:${tagColor(t)}"></span>`).join('');
-    const pin = !!n.pinned;
-    return `<button class="note-item ${n.id===S.active?'active':''}${pin?' pinned':''}" data-open="${n.id}">
-      ${ic(pin ? 'pin' : 'file')}<span class="t">${esc(n.title||'无标题')}</span>
-      ${dots?`<span class="tags">${dots}</span>`:''}
-      <span class="note-move" data-move="${n.id}" role="button" aria-label="移动到笔记本" title="移动到笔记本">${ic('book')}</span>
-      <span class="note-pin${pin?' on':''}" data-pin="${n.id}" role="button" aria-label="${pin?'取消置顶':'置顶'}" title="${pin?'取消置顶':'置顶'}">${ic('pin')}</span>
-      <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
-    </button>`;
-  }
+  const noteRow = noteItemHtml;   // 行模板提到顶层，标签筛选视图也用它
 
   function nbGroupHtml(nb, lv){
     const own = byNb[nb.id] || [];
@@ -3177,44 +3289,14 @@ function renderShelf(){
     </div>`;
   }
 
-  // 笔记本下面：标签分类（每个标签可展开，列出打了该标签的笔记）
-  const keys = usedTags(notes);
-  // 万一真有标签名叫「未加标签」，虚拟分组临时改名，避免左侧出现两行同名
-  NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
-  keys.sort((a,b)=> tagGroupName(a).localeCompare(tagGroupName(b), 'zh-CN'));
-  const tagTotal = keys.length;                        // 真实标签数（下面的「未加标签」是虚拟分组）
-  keys.push(NO_TAG);                                   // 固定分组，置底
-  const secOpen = !S.tagSectionClosed;
-  const tagTree = keys.map(k=>{
-    const list = tagGroupNotes(k, notes);
-    const open = isTagGroupOpen(k);
-    const virtual = k === NO_TAG;
-    return `<div class="tag-group">
-      <div class="tag-line${virtual ? ' no-menu' : ''}">
-        <button class="shelf-row tag-row ${open?'open':''}" data-tagfold="${esc(k)}">
-          <span class="tag-caret">&#9654;</span>
-          <span class="tag-hash" style="color:${virtual?'rgb(var(--faint))':tagColor(k)}">#</span>
-          <span class="t">${esc(tagGroupName(k))}</span><span class="meta">${list.length}</span>
-        </button>
-        ${virtual ? '' : `<button class="tag-more" data-tagmenu="${esc(k)}" title="标签操作">${ic('more')}</button>`}
-      </div>
-      ${open ? `<div class="tag-notes">${list.length
-        ? list.map(tagNoteRow).join('')
-        : `<div class="tag-empty">这个标签下还没有笔记</div>`}</div>` : ''}
-    </div>`;
-  }).join('');
   html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
 
-  // 标签和回收站不跟着「笔记」一起收，各自常驻在下面
-  html += `<div class="tag-sec">
-    <button class="tag-sec-head ${secOpen?'open':''}" data-act="toggle-tag-sec">
-      <span class="caret">&#9654;</span><span>标签</span><span class="count">${tagTotal}</span>
-    </button>
-    ${secOpen ? `<div class="tag-groups">${tagTree}</div>` : ''}
-  </div>`;
-
+  // 回收站不跟着「笔记」一起收，常驻在下面
   html += `<div style="height:6px"></div>
     <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
+
+  // 最底部：标签胶囊（横排换行，点一下筛出该标签下的笔记）
+  html += tagPillsHtml(notes);
   shelfBody.innerHTML = html;
   bindShelf();
 }
@@ -3242,17 +3324,15 @@ function bindShelf(){
     };
     b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
   });
-  shelfBody.querySelectorAll('[data-tagfold]').forEach(b=>{
-    b.onclick=()=>{
-      const k = b.dataset.tagfold;
-      if(!S.tagClosed || typeof S.tagClosed !== 'object') S.tagClosed = {};
-      if(S.tagClosed[k]) delete S.tagClosed[k]; else S.tagClosed[k] = true;
-      renderShelf(); save();
+  shelfBody.querySelectorAll('[data-tagpill]').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); setTagFilter(b.dataset.tagpill); };
+    b.oncontextmenu = e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(b.dataset.tagpill !== NO_TAG) openTagMenu(b, b.dataset.tagpill);
     };
-    b.oncontextmenu = e=>{ e.preventDefault(); openTagMenu(b, b.dataset.tagfold); };
   });
-  shelfBody.querySelectorAll('[data-tagmenu]').forEach(b=>{
-    b.onclick = e=>{ e.stopPropagation(); openTagMenu(b, b.dataset.tagmenu); };
+  shelfBody.querySelectorAll('[data-tagall]').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); openAllTags(b); };
   });
   shelfBody.querySelectorAll('[data-nb]').forEach(b=>{
     if(b.dataset.nb === '__loose'){                // 未归类笔记：虚拟分组，只记折叠状态
@@ -3280,6 +3360,7 @@ function bindShelf(){
       openTrashView();
     }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
+    if(a==='clear-tag'){ setTagFilter(null); }
     if(a==='toggle-notes-sec'){ S.notesClosed = !S.notesClosed; renderShelf(); save(); }
   });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderMain(); });
@@ -5020,7 +5101,7 @@ function toggleTrash(id){
   renderAll(); save(); toast(n.trashed?'已移到回收站':'已恢复');
 }
 let trashView = false;
-function openTrashView(){ trashView = true; S.view='notes'; S.active=null; S.tabs=[]; renderAll(); }
+function openTrashView(){ trashView = true; tagFilter = null; S.view='notes'; S.active=null; S.tabs=[]; renderAll(); }
 
 /* ========== 主区渲染 ========== */
 const scrollEl = $('#scroll');
@@ -5067,14 +5148,8 @@ function renderEditor(){
   const n = S.active ? noteById(S.active) : null;
 
   paperActions.innerHTML = `
-    <button class="pa-btn pa-ins" id="paInsert" title="插入内容（⌘/ 或 Ctrl+/）">${ic('slash')}</button>
-    <button class="pa-btn pa-ol" id="paOutline" title="大纲">${ic('outline')}</button>
-    <button class="pa-btn" id="paTheme" title="切换主题">${S.theme==='dark'?ic('moon'):ic('sun')}</button>
     <button class="pa-btn" id="paPomo" title="番茄钟：设置时长、开始 / 暂停">${ic('tomato')}</button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
-  $('#paInsert').onclick=(e)=>openInsertMenu(e.currentTarget);
-  $('#paOutline').onclick=()=>toggleOutlinePanel();
-  $('#paTheme').onclick=()=>toggleTheme();
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
   if(!n){
@@ -9215,7 +9290,7 @@ function renderGraph(){
 
 /* ========== 视图切换 ========== */
 function switchView(v){
-  S.view = v; trashView=false;
+  S.view = v; trashView=false; tagFilter = null;
   if(v!=='notes') { /* 保留 tabs */ }
   hideSelBar();
   renderAll(); save();
@@ -10186,8 +10261,9 @@ function openNoteMenu(anchor){
     ['预览', curMode()==='live' ? '✓' : '', '', 'eye', ()=>setMode('live')],
     ['Markdown', curMode()==='source' ? '✓' : '', '', 'code', ()=>setMode('source')],
     ['双栏', curMode()==='split' ? '✓' : '', '', 'columns', ()=>setMode('split')],
+    ['大纲', document.body.classList.contains('ol-open') ? '✓' : '', '', 'outline', ()=>toggleOutlinePanel()],
     '-',
-    ['思维导图', '大纲', '', 'mind', ()=>openMindMap()],
+    ['思维导图', '', '', 'mind', ()=>openMindMap()],
     [(n && n.pinned) ? '取消置顶' : '置顶', (n && n.pinned) ? '✓' : '', '', 'pin', ()=>togglePin(S.active)],
     ['本篇待办', pend ? pend + ' 项未完成' : '', '', 'todo', ()=>openTodoPop(A())],
     ['复制/分享/导出', n && n.shareSlug ? '已分享' : '', '', 'share', ()=>openShareMenu(A())],

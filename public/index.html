@@ -2909,7 +2909,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v195', at: '2026-11-18 15:26' };
+window.IVY_BUILD = { id: 'v196', at: '2026-11-18 15:36' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5589,6 +5589,7 @@ function newNote(notebookId){
   S.view = 'notes';
   renderAll(); save();
   if(window.innerWidth <= 640) document.body.classList.add('m-read');
+  shelfCloseIfDrawer();
   setTimeout(()=>{ const t=$('#docTitle'); if(t) t.focus(); }, 30);
   return n;
 }
@@ -5627,6 +5628,7 @@ function openNote(id){
   if(!S.tabs.includes(id)) S.tabs.push(id);
   renderAll(); save();
   if(window.innerWidth <= 640) document.body.classList.add('m-read');   // 手机：进到笔记页
+  shelfCloseIfDrawer();                                                 // 窄屏上进入笔记就把左侧笔记栏收起，正文拿到全宽
 }
 function closeTab(id){
   const i = S.tabs.indexOf(id); if(i<0) return;
@@ -11505,21 +11507,27 @@ function toggleShelf(){
   $('#shelfOpen').classList.toggle('show', !S.shelfOpen);
   save();
 }
-/* 手机上书架是盖在正文上的抽屉：手指一碰右边正文就收起来，不用再去找左边的开关。
-   抽屉是 position:fixed，收起不会让正文重排，所以这一下点击仍然落在原来的位置。 */
+/* 窄屏（手机 / 手机横屏 / 小平板）上，手指一碰笔记区就把左边的笔记栏收起来：
+   竖屏是盖在正文上的抽屉，收起不重排；横屏是并排的栏，收起等于把宽度还给正文。
+   桌面上保持常驻，不做这种自动收起。 */
 function shelfCloseIfDrawer(){
-  if(document.documentElement.clientWidth > 640) return false;   // 只有抽屉形态才自动收
+  if(document.documentElement.clientWidth > 900) return false;   // 桌面不收
   if(!S.shelfOpen) return false;
   S.shelfOpen = false;
   document.querySelector('.shelf').classList.add('collapsed');
-  $('#shelfOpen').classList.add('show');
+  document.body.classList.add('shelf-collapsed');
+  $('#shelfOpen').classList.add('show');                          // 收起后留一枚悬浮按钮可以再展开
   save();
   return true;
 }
-document.addEventListener('pointerdown', e=>{
+// 等这一下点击（放光标、点链接、勾待办）走完再收起，避免侧栏一收、布局一变把点击吃掉
+document.addEventListener('pointerup', e=>{
   const t = e.target;
-  if(!t || !t.closest || !t.closest('.main-wrap')) return;        // 只认正文区（含右边缘那截）
-  shelfCloseIfDrawer();
+  if(!t || !t.closest) return;
+  if(t.closest('.shelf')) return;                                 // 点抽屉自己不算
+  if(t.closest('#nlOpen, #shelfOpen, #btnShelf, .nl-open')) return;  // 这几个按钮自己管开合
+  if(!t.closest('.main-wrap, .notelist')) return;                  // 只认笔记区与笔记列表
+  setTimeout(()=>{ shelfCloseIfDrawer(); }, 0);
 }, true);
 document.addEventListener('keydown', e=>{
   const meta = e.metaKey || e.ctrlKey;

@@ -1679,15 +1679,15 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .ol-mini{position:absolute;right:12px;top:34px;width:16px;transition:opacity .18s}
 .ol-tick{
   position:absolute;right:0;height:1px;padding:0;border:0;border-radius:1px;
-  background:rgb(var(--ink)/.22);
+  background:rgb(var(--ink)/.28);
   transition:background .16s,height .16s,transform .16s;
 }
-[data-theme=dark] .ol-tick{background:rgb(255 255 255 / .22)}
-.ol-tick.on{background:rgb(var(--ivy));height:2px;transform:scaleX(1.3);transform-origin:right center}
+[data-theme=dark] .ol-tick{background:rgb(255 255 255 / .3)}
+.ol-tick.on{background:rgb(var(--ivy));height:2px;transform:scaleX(1.25);transform-origin:right center}
 /* 列表项（二级）的刻度：更短更淡，标题才是主角 */
-.ol-tick.li{background:rgb(var(--ink)/.13);height:1px}
-[data-theme=dark] .ol-tick.li{background:rgb(255 255 255/.15)}
-.ol-tick.li.on{background:rgb(var(--ivy)/.8);height:2px}
+.ol-tick.li{background:rgb(var(--ink)/.18);height:1px}
+[data-theme=dark] .ol-tick.li{background:rgb(255 255 255/.2)}
+.ol-tick.li.on{background:rgb(var(--ivy)/.85);height:2px}
 /* 卡片展开/固定时，刻度让位给卡片自己的短横线 */
 .outline-zone:hover .ol-mini,
 body.ol-peek .ol-mini,
@@ -3040,7 +3040,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v202', at: '2026-11-18 16:42' };
+window.IVY_BUILD = { id: 'v203', at: '2026-11-18 16:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -10087,39 +10087,96 @@ function renderMiniTicks(ticks, body){
   /* 刻度条的高度跟着「笔记有多长」走，标题/列表项多的时候也要全部摆得下：
      几百字就短短一截（两三根线），长文才铺得开，长文短文一眼能分出长短。 */
   const lenH = 46 + 314 * Math.pow(Math.min(1, total / 9000), 0.6);
-  const cntH = 12 + ticks.length * 8;
+  // 一根刻度≈一行：间距按展开后大纲那种「一条一条」的密度来排，看得清也点得准
+  const cntH = 16 + ticks.length * 14;
   const maxH = Math.min(560, Math.max(180, window.innerHeight - 150));
   const H = Math.round(Math.min(maxH, Math.max(46, Math.max(lenH, cntH))));
   mini.style.height = H + 'px';
-  // 刻度太密时自动收小间距，保证全部落在条子里，不堆成一坨
-  const gap = ticks.length > 1 ? Math.max(2, Math.min(6, Math.floor((H - 6) / (ticks.length - 1)))) : 6;
+  // 刻度太多时自动收小间距，保证全部落在条子里，不堆成一坨
+  const gap = ticks.length > 1 ? Math.max(3, Math.min(14, Math.floor((H - 6) / (ticks.length - 1)))) : 14;
   let last = -gap;
   mini.innerHTML = ticks.map(t=>{
     let y = Math.round((t.off != null ? t.off : 0) / total * (H - 4));
     y = Math.max(y, last + gap); last = y;        // 相邻刻度别叠在一起
     y = Math.min(y, H - 2);
     const li = t.kind === 'li';
-    const w = li ? 5 : (t.level === 1 ? 14 : t.level === 2 ? 10 : 7);
-    return `<button class="ol-tick${li?' li':''}" style="top:${y}px;width:${w}px" data-y="${y}" data-h="${t.id}" title=""></button>`;
+    // 长度跟展开大纲里那一列短横线一个量级（9px 起），不再细得看不见
+    const w = li ? 9 : (t.level === 1 ? 14 : t.level === 2 ? 11 : 9);
+    return `<button class="ol-tick${li?' li':''}" style="top:${y}px;width:${w}px" data-y="${y}" data-off="${t.off != null ? t.off : 0}" data-h="${t.id}" title=""></button>`;
   }).join('');
 }
 /* 当前读到哪个标题：取滚动容器里最后一个已经越过顶部的可见标题 */
 function currentHeadingId(){
   const sc = document.getElementById('scroll'); if(!sc) return null;
   const box = sc.getBoundingClientRect();
-  let cur = null;
+  let cur = null, first = null;
   sc.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]').forEach(el=>{
     if(!el.getClientRects().length) return;    // 过滤隐藏的预览副本
+    if(!first) first = el.id;
     if(el.getBoundingClientRect().top - box.top <= 72) cur = el.id;
   });
-  return cur;
+  // 文档刚打开、第一个标题还在 72px 线下面时，也得有一根亮着，不能一根都不亮
+  return cur || first;
+}
+/* 光标当前在正文的第几个字符：有光标就按光标定位刻度，没有才退回按滚动位置 */
+function caretOffsetForTicks(){
+  const m = S.mode || 'live';
+  const ae = document.activeElement;
+  if(m === 'source' || m === 'split'){
+    const src = document.getElementById('source');
+    if(src && ae === src && typeof src.selectionStart === 'number') return src.selectionStart;
+    return null;
+  }
+  if(m !== 'live') return null;
+  const rawAt = i =>{
+    let off = 0;
+    for(let k = 0; k < i; k++) off += ((LIVE.raws[k] || '').length + 1 + ((LIVE.gaps && LIVE.gaps[k + 1]) || 0));
+    return off;
+  };
+  if(ae && ae.classList && ae.classList.contains('blk-src') && typeof ae.selectionStart === 'number'){
+    const i = +ae.dataset.i || 0;
+    return rawAt(i) + Math.min(ae.selectionStart, (LIVE.raws[i] || '').length);
+  }
+  const r = liveSelRange();
+  if(r){
+    const p = blockPoint(r.startContainer, r.startOffset, false);
+    if(p) return rawAt(p.i) + Math.min(p.off || 0, (LIVE.raws[p.i] || '').length);
+  }
+  return null;
 }
 function updateOutlineActive(){
-  const cur = currentHeadingId();
-  outlineEl.querySelectorAll('.ol-item').forEach(b=>b.classList.toggle('on', b.dataset.h === cur));
   const mini = document.getElementById('olMini');
-  if(mini) mini.querySelectorAll('.ol-tick').forEach(t=>t.classList.toggle('on', t.dataset.h === cur));
+  const ticks = mini ? [...mini.querySelectorAll('.ol-tick')] : [];
+  // 光标刚动过就以光标为准；过几秒（或用户去滚页面）再回到按滚动位置算
+  const caret = (CARET_PRIORITY_UNTIL && Date.now() < CARET_PRIORITY_UNTIL) ? caretOffsetForTicks() : null;
+  let cur = null, hit = null;
+  if(caret != null && ticks.length){
+    // 取「位置在光标之前、且最靠后」的那根刻度 —— 光标走到哪，高亮就跟到哪
+    ticks.forEach(t=>{
+      const off = +t.dataset.off || 0;
+      if(off <= caret + 1) hit = t;
+    });
+    if(!hit) hit = ticks[0];
+    cur = hit.dataset.h;
+  }else{
+    cur = currentHeadingId();
+    hit = ticks.find(t=>t.dataset.h === cur) || null;
+  }
+  outlineEl.querySelectorAll('.ol-item').forEach(b=>{
+    b.classList.toggle('on', (b.dataset.h === cur) || (b.dataset.j === cur));
+  });
+  ticks.forEach(t=>t.classList.toggle('on', t === hit));
 }
+/* 光标一动（打字、方向键、点一下、改选区）就把刻度/大纲的高亮挪过去 */
+var CARET_RAF = 0;
+var CARET_PRIORITY_UNTIL = 0;
+function pingOutlineForCaret(){
+  CARET_PRIORITY_UNTIL = Date.now() + 3000;
+  if(CARET_RAF) return;
+  CARET_RAF = requestAnimationFrame(()=>{ CARET_RAF = 0; try{ updateOutlineActive(); }catch(e){} });
+}
+['keyup','click','input','focusin'].forEach(ev=>document.addEventListener(ev, pingOutlineForCaret, true));
+document.addEventListener('selectionchange', pingOutlineForCaret);
 /* 图钉 = 「大纲」菜单里那一项：同一个开关。
    开着时点它收起（面板连同固定一起撤掉），关着时点它打开。 */
 function toggleOutlinePin(){

@@ -3067,7 +3067,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v207', at: '2026-11-18 17:32' };
+window.IVY_BUILD = { id: 'v208', at: '2026-11-18 17:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11471,7 +11471,7 @@ function showShareCard(url){
         ${n && n.shareSlug ? '<button class="sc-refresh" id="scRefresh">更新内容</button>' : ''}
         ${n && n.shareSlug ? '<button class="sc-unshare" id="scUnshare">取消分享</button>' : ''}
       </div>
-      ${n && n.shareSlug ? '<p class="sc-note">分享的是「快照」：改完笔记点一下「更新内容」，同一个链接才会变成最新版。</p>' : ''}
+      ${n && n.shareSlug ? '<p class="sc-note">链接会跟着笔记自动更新（同步到云端后生效）；想马上生效可以点「更新内容」。</p>' : ''}
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>ov.classList.add('show'));
@@ -12196,7 +12196,7 @@ function openShareMenu(anchor){
     ['分享链接（公开只读）', '', '', 'link', shareNote],
     ...(n && n.shareSlug ? [
       ['复制分享链接', '', '', 'link', copyShareUrl],
-      ['更新分享内容（改完笔记点这个）', '', '', 'refresh', async ()=>{ try{ await pushShareSnapshot(noteById(S.active)); toast('分享内容已更新，链接不变'); }catch(e){ toast('更新失败：' + (e.message || '网络错误')); } }],
+      ['立即刷新分享内容', '', '', 'refresh', async ()=>{ try{ await pushShareSnapshot(noteById(S.active)); toast('分享内容已更新，链接不变'); }catch(e){ toast('更新失败：' + (e.message || '网络错误')); } }],
       ['取消分享链接', '', 'danger', 'trash', unshareNote]
     ] : [])
   ]);

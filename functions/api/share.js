@@ -18,10 +18,31 @@ export async function onRequest({ request, env }) {
     if (!slug) return json({ error: '缺少 slug' }, 400);
     try {
       const row = await env.DB
-        .prepare('SELECT title, body, created_at, updated_at FROM shares WHERE slug = ?1')
+        .prepare('SELECT note_id, user_id, title, body, created_at, updated_at FROM shares WHERE slug = ?1')
         .bind(slug)
         .first();
       if (!row) return json({ error: '分享不存在或已取消' }, 404);
+      // 分享跟着笔记走：笔记还在云端、也没进回收站，就直接给当前内容——
+      // 作者改完同步一下，链接就是最新的，不用再手动「更新分享」。
+      // 笔记被删 / 进回收站时退回创建分享时存的快照，链接不会突然变成 404。
+      if (row.note_id) {
+        try {
+          const live = await env.DB
+            .prepare('SELECT title, body, updated_at, trashed, deleted FROM notes WHERE user_id = ?1 AND id = ?2')
+            .bind(row.user_id, row.note_id)
+            .first();
+          if (live && !live.deleted && !live.trashed) {
+            return json({
+              slug,
+              title: live.title || '',
+              body: live.body || '',
+              createdAt: row.created_at || 0,
+              updatedAt: live.updated_at || row.updated_at || 0,
+              live: true
+            });
+          }
+        } catch (e) { /* 读不到就退回快照 */ }
+      }
       return json({
         slug,
         title: row.title || '',

@@ -561,6 +561,8 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tab:hover .x,.tab.active .x{opacity:.7}
 .tab .x:hover{background:rgb(var(--ink)/.08);opacity:1}
 .tab .x svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+/* 标签里的锁标记：没写宽高时 SVG 会撑到行高那么大，这里钉死成 12px，跟文字同高 */
+.tab .t svg{width:12px;height:12px;margin:0 4px 0 0;vertical-align:-2px;stroke-width:2;flex:0 0 auto}
 /* 正文顶部搜索框：搜全部笔记，输入即筛中栏 */
 .tb-search{
   margin-left:auto;margin-right:78px;flex:0 0 auto;display:flex;align-items:center;gap:6px;
@@ -2992,7 +2994,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v198', at: '2026-11-18 16:05' };
+window.IVY_BUILD = { id: 'v199', at: '2026-11-18 16:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

@@ -112,12 +112,12 @@ body.view-todo .head-actions .notes-only{display:none}
 .head-sw input:checked + i::after{transform:translateX(9px)}
 .head-sw span{white-space:nowrap}
 .icon-btn{
-  width:28px;height:28px;display:grid;place-items:center;border-radius:7px;
+  width:32px;height:32px;display:grid;place-items:center;border-radius:8px;
   color:rgb(var(--muted));transition:background .15s,color .15s;
 }
 .icon-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .icon-btn:active{transform:scale(.94)}
-.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 
 .shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 16px;scrollbar-gutter:stable}
 /* 当前选中的笔记本 / 分组：底色 + 更深文字，和中栏标题对应 */
@@ -133,11 +133,11 @@ body.view-todo .head-actions .notes-only{display:none}
 .notelist.hidden{display:none}
 .nl-hd{height:52px;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 10px 0 12px}
 .nl-new{
-  width:28px;height:28px;flex:0 0 auto;display:grid;place-items:center;border-radius:7px;
+  width:32px;height:32px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;
   color:rgb(var(--ink-2));transition:background .14s,color .14s;
 }
 .nl-new:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
-.nl-new svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nl-new svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .nl-hd b{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nl-hd em{font-style:normal;font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
 .nl-hd .nl-r{margin-left:auto;display:flex;gap:2px;flex:0 0 auto}
@@ -150,7 +150,8 @@ body.shelf-collapsed .nl-open{display:grid}
 }
 .nl-row:hover{background:rgb(var(--hover))}
 .nl-row.on{background:rgb(var(--surface));box-shadow:0 0 0 .5px rgb(var(--line)),0 1px 2px rgb(16 24 32/.04)}
-.nl-row .nl-t1{display:flex;align-items:baseline;gap:6px;padding-right:20px}
+.nl-row .nl-t1{display:flex;align-items:baseline;gap:6px;padding-right:22px}
+.nl-row:hover .nl-t1,body.ol-touch .nl-row .nl-t1{padding-right:58px}
 .nl-row .nl-t{font-size:13px;font-weight:500;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .nl-row .nl-d{font-size:11px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;transition:opacity .12s}
 .nl-row:hover .nl-d{opacity:0}
@@ -163,6 +164,15 @@ body.shelf-collapsed .nl-open{display:grid}
 .nl-row .nl-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
 .nl-row .nl-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 body.ol-touch .nl-row .nl-more{opacity:.4;pointer-events:auto}
+.nl-row .nl-del{
+  position:absolute;right:32px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
+  color:rgb(var(--muted));opacity:0;pointer-events:none;transition:opacity .12s,background .12s,color .12s;
+}
+.nl-row:hover .nl-del{opacity:1;pointer-events:auto}
+.nl-row .nl-del:hover{background:rgb(var(--danger)/.12);color:rgb(var(--danger))}
+.nl-row .nl-del svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body.ol-touch .nl-row .nl-del{opacity:.4;pointer-events:auto}
 .nl-row .nl-s{display:block;margin-top:3px;font-size:12px;color:rgb(var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nl-row .nl-pin{position:absolute;left:2px;top:13px;width:4px;height:4px;border-radius:50%;background:rgb(var(--ivy))}
 .nl-row .nl-t{white-space:nowrap}
@@ -415,12 +425,12 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tp-none{font-size:11.5px;color:rgb(var(--faint));padding:10px 8px;text-align:center}
 .chip{cursor:pointer}
 
-.shelf-foot{margin-top:auto;padding:10px 2px 52px}
+.shelf-foot{margin-top:auto;margin-left:-7px;padding:6px 2px 2px}
 /* 版本水印：平时是书架底部一行极淡小字，只有检测到线上版本落后才变色提示 */
 .build-tag{
   display:flex;align-items:center;gap:6px;
-  font-size:10px;line-height:1.4;letter-spacing:.02em;
-  color:rgb(var(--faint) / .5);cursor:pointer;user-select:none;
+  font-size:9.5px;line-height:1.35;letter-spacing:.02em;
+  color:rgb(var(--faint) / .34);cursor:pointer;user-select:none;
   transition:color .15s;
 }
 .build-tag:hover{color:rgb(var(--muted))}
@@ -526,11 +536,11 @@ body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
 .shelf-open.show ~ .paper .tabbar{padding-left:48px}
-.pa-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;color:rgb(var(--muted));transition:background .15s,color .15s}
+.pa-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:rgb(var(--muted));transition:background .15s,color .15s}
 .pa-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 /* 触屏（iPad/手机）没有 hover：按下的瞬间给同样的颜色反馈 */
 .pa-btn:active{background:rgb(var(--hover));color:rgb(var(--ink))}
-.pa-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pa-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pa-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 
 .content-row{flex:1;display:flex;min-height:0;position:relative}
@@ -1986,20 +1996,20 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
     position:fixed;left:12px;right:12px;margin:0;z-index:7;
     bottom:calc(10px + env(safe-area-inset-bottom));
   }
-  .set-body{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .set-body{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 }
 .set-top{
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;
-  padding:16px 12px 8px 14px;
+  padding:14px 10px 12px 14px;margin-bottom:4px;border-bottom:1px solid rgb(var(--line));
 }
 .set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em}
 .set-x{
   display:flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
-  height:28px;min-width:28px;padding:0 6px;border-radius:8px;color:rgb(var(--faint));
+  height:32px;min-width:32px;padding:0 7px;border-radius:8px;color:rgb(var(--muted));
   background:transparent;transition:background .13s,color .13s;
 }
 .set-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
-.set-x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+.set-x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 .set-x i{display:none;font-style:normal;font-size:12.5px}
 .set-nav{
   flex:1;min-height:0;padding:0 12px 16px;background:transparent;
@@ -2008,7 +2018,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-nav nav{display:flex;flex-direction:column;gap:2px}
 .set-pick{display:none}
 .set-nav button{
-  text-align:left;height:auto;min-height:36px;padding:7px 12px;border-radius:9px;font-size:13px;line-height:1.35;
+  text-align:left;height:auto;min-height:38px;padding:8px 12px;border-radius:9px;font-size:13.5px;line-height:1.35;
   color:rgb(var(--muted));transition:background .13s,color .13s;white-space:normal;
 }
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
@@ -2489,6 +2499,7 @@ const ICONS = {
   /* 底部导航专用：一页纸 + 一支笔（正文用的 notebook 仍是纯文档样子） */
   notePen:'<rect x="3.6" y="3.2" width="12.6" height="17.6" rx="2.6"/><path d="M6.8 8h6.2M6.8 11.4h3.8"/><path d="M13.4 18.3l5.9-5.9a1.4 1.4 0 0 1 2 2l-5.9 5.9-2.7.7z"/>',
   compose:'<path d="M11.5 4.6H6.4A2.4 2.4 0 0 0 4 7v10.6A2.4 2.4 0 0 0 6.4 20H17a2.4 2.4 0 0 0 2.4-2.4v-5.2"/><path d="M17.8 3.9a1.9 1.9 0 0 1 2.7 2.7l-7.6 7.6-3.5.8.8-3.5z"/>',
+  folderPlus:'<path d="M3.2 9.6A2.3 2.3 0 0 1 5.5 7.3h3.1l1.7 1.7h3.4A2.3 2.3 0 0 1 16 11.3v5.4A2.3 2.3 0 0 1 13.7 19H5.5A2.3 2.3 0 0 1 3.2 16.7z"/><circle cx="18.4" cy="5.9" r="4.1" fill="currentColor" stroke="none"/><path d="M18.4 4.2v3.4M16.7 5.9h3.4" style="stroke:rgb(var(--surface))" stroke-width="1.7"/>',
   folder:'<path d="M3.4 7.2a2 2 0 0 1 2-2h3.3l1.9 2.3h7.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
   todo:'<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="4.4"/><path d="m7.9 12.2 3.1 3.1 5.6-6.2"/>',
   arrUp:'<path d="M12 19V5"/><path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
@@ -2519,7 +2530,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v172', at: '2026-11-18 09:01' };
+window.IVY_BUILD = { id: 'v173', at: '2026-11-18 09:11' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2551,7 +2562,7 @@ function seed(){
     listSort: 'new',
     tagLibrary: [],
     tagSectionClosed: false,
-    tagPillsClosed: false,
+    tagPillsClosed: true,
     tagClosed: {},
     media: []
   };
@@ -2615,7 +2626,9 @@ function normalizeState(s){
     if(!['both','right','left','down','up'].includes(s.mmDir)) s.mmDir = 'right';
     if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
     if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
-    if(typeof s.tagPillsClosed !== 'boolean') s.tagPillsClosed = false;
+    if(typeof s.tagPillsClosed !== 'boolean') s.tagPillsClosed = true;
+    // 一次性迁移：标签区默认收起（老数据里存的「展开」也改过来，之后以用户自己的选择为准）
+    if(!s.tagPillsDefaultV2){ s.tagPillsClosed = true; s.tagPillsDefaultV2 = true; }
     if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
     // 老数据 / 云端数据可能没有 tags 字段，统一补成数组
     s.notes.forEach(n=>{
@@ -3070,7 +3083,7 @@ const brandName = $('#brandName');
 function paintRowIcons(){
   const nlNew = $('#nlNew'); if(nlNew) nlNew.innerHTML = ic('compose');
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
-  const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('notebook');
+  const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
   $('#btnShelf').innerHTML = ic('panelLeft');
   $('#btnTodoHelp').innerHTML = ic('info');
@@ -3346,10 +3359,11 @@ function listRowHtml(n){
     ${n.pinned?'<span class="nl-pin"></span>':''}
     <span class="nl-t1"><span class="nl-t">${esc(n.title||'无标题')}</span><span class="nl-d">${listWhen(n.updatedAt)}</span></span>
     <span class="nl-s">${snip ? esc(snip) : '&nbsp;'}</span>
+    <span class="nl-del" data-nldel="${n.id}" role="button" title="移到回收站">${ic('trash')}</span>
     <span class="nl-more" data-nlmenu="${n.id}" role="button" title="更多">${ic('more')}</span>
   </div>`;
 }
-function openListMenu(anchor, id){
+function openNoteRowMenu(anchor, id){
   const n = noteById(id); if(!n) return;
   popover(anchor, [
     [n.pinned ? '取消置顶' : '置顶', n.pinned ? '✓' : '', '', 'pin', ()=>{ S.active = id; togglePin(id); }],
@@ -3417,7 +3431,10 @@ function renderList(){
     el.oncontextmenu = (e)=>{ e.preventDefault(); openListMenu(el, el.dataset.open); };
   });
   rows.querySelectorAll('[data-nlmenu]').forEach(b=>{
-    b.onclick = (e)=>{ e.stopPropagation(); openListMenu(b, b.dataset.nlmenu); };
+    b.onclick = (e)=>{ e.stopPropagation(); openNoteRowMenu(b, b.dataset.nlmenu); };
+  });
+  rows.querySelectorAll('[data-nldel]').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); toggleTrash(b.dataset.nldel); };
   });
 }
 
@@ -11352,7 +11369,6 @@ function openSettings(tab){
           <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <aside class="set-nav"><nav id="setNav"></nav></aside>
-        <nav class="dock set-dock" id="dockSet2" aria-label="视图导航"></nav>
       </div>
       <section class="set-main">
         <div class="set-head"><h2 id="setHead">账户</h2></div>

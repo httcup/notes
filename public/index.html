@@ -425,7 +425,26 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tp-none{font-size:11.5px;color:rgb(var(--faint));padding:10px 8px;text-align:center}
 .chip{cursor:pointer}
 
-.shelf-foot{margin-top:auto;margin-left:-7px;padding:6px 2px 2px}
+.shelf-foot{margin-top:auto;margin-left:-7px;padding:6px 2px 2px;display:flex;align-items:center;gap:6px}
+/* 左下角同步指示：云 + 状态灯，纯展示不可点，悬停看最近一次同步时间 */
+.sync-pip{
+  display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;
+  color:rgb(var(--faint)/.55);cursor:default;user-select:none;
+  transition:color .15s;
+}
+.sync-pip svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sync-pip .sp-dot{
+  width:5px;height:5px;border-radius:50%;background:rgb(var(--faint)/.45);
+  transition:background .15s;
+}
+.sync-pip.ok{color:rgb(var(--ivy)/.85)}
+.sync-pip.ok .sp-dot{background:rgb(var(--ivy));box-shadow:0 0 0 2px rgb(var(--ivy)/.15)}
+.sync-pip.busy{color:rgb(var(--ivy)/.85)}
+.sync-pip.busy .sp-dot{background:rgb(var(--ivy));animation:spPulse 1.15s ease-in-out infinite}
+.sync-pip.error{color:rgb(var(--danger)/.85)}
+.sync-pip.error .sp-dot{background:rgb(var(--danger));box-shadow:0 0 0 2px rgb(var(--danger)/.14)}
+@keyframes spPulse{0%,100%{opacity:.22;transform:scale(.72)}50%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){ .sync-pip.busy .sp-dot{animation:none;opacity:.85} }
 /* 版本水印：平时是书架底部一行极淡小字，只有检测到线上版本落后才变色提示 */
 .build-tag{
   display:flex;align-items:center;gap:6px;
@@ -1350,7 +1369,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 
 .doc-body{position:relative}
 .prose{
-  font-family:var(--font-serif);font-size:17.5px;line-height:1.8;color:rgb(var(--ink));
+  font-family:var(--font-serif);font-size:var(--doc-fs,16px);line-height:1.8;color:rgb(var(--ink));
   word-break:break-word;
 }
 .prose>*:first-child{margin-top:0}
@@ -2020,6 +2039,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 /* 左栏：标题 + 关闭 + 分类。整块作为一列，手机上变成吸顶的一条 */
 .set-side{
   grid-column:1;grid-row:1;display:flex;flex-direction:column;min-height:0;
+  background:rgb(var(--sunken)/.75);border-right:.5px solid rgb(var(--line));
 }
 /* 设置页里也放一条底部导航：整屏浮层会把书架那条盖住，这里补一份，位置/样式跟书架里的一致 */
 .set-dock{
@@ -2036,7 +2056,7 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 }
 .set-top{
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;
-  padding:14px 10px 12px 14px;margin-bottom:4px;border-bottom:1px solid rgb(var(--line));
+  padding:16px 10px 8px 16px;
 }
 .set-title{font-family:var(--font-serif);font-size:20px;font-weight:700;letter-spacing:-.01em}
 .set-acts{display:flex;align-items:center;gap:2px;flex:0 0 auto}
@@ -2049,35 +2069,61 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 .set-x i{display:none;font-style:normal;font-size:12.5px}
 .set-nav{
-  flex:1;min-height:0;padding:0 12px 16px;background:transparent;
-  display:flex;flex-direction:column;gap:2px;overflow:auto;
+  flex:1;min-height:0;padding:0 8px 14px;background:transparent;
+  display:flex;flex-direction:column;gap:1px;overflow:auto;scrollbar-width:thin;
 }
-.set-nav nav{display:flex;flex-direction:column;gap:2px}
+.set-nav nav{display:flex;flex-direction:column;gap:1px}
 .set-pick{display:none}
-.set-nav button{
-  text-align:left;height:auto;min-height:38px;padding:8px 12px;border-radius:9px;font-size:13.5px;line-height:1.35;
-  color:rgb(var(--muted));transition:background .13s,color .13s;white-space:normal;
+.set-nav-grp{
+  padding:15px 9px 5px;font-size:11px;font-weight:600;letter-spacing:.05em;color:rgb(var(--faint));
 }
+.set-nav-grp:first-child{padding-top:4px}
+.set-nav button{
+  display:flex;align-items:center;gap:9px;
+  text-align:left;height:auto;min-height:33px;padding:5px 9px;border-radius:8px;font-size:13px;line-height:1.35;
+  color:rgb(var(--ink-2));transition:background .13s,color .13s;white-space:normal;
+}
+.set-nav button .sn-ico{
+  width:20px;height:20px;flex:0 0 auto;border-radius:5px;display:grid;place-items:center;
+  background:rgb(var(--surface));color:rgb(var(--muted));box-shadow:0 1px 2px rgb(16 24 32/.07);
+  transition:background .13s,color .13s;
+}
+.set-nav button .sn-ico svg{width:12.5px;height:12.5px}
+.set-nav button .sn-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
-.set-nav button.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 2px rgb(16 24 32/.06)}
+.set-nav button.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-weight:600}
+.set-nav button.on .sn-ico{background:rgb(255 255 255/.22);color:rgb(var(--on-ivy));box-shadow:none}
+[data-theme=dark] .set-nav button.on .sn-ico{background:rgb(0 0 0/.13);color:rgb(var(--on-ivy))}
 .set-main{
   grid-column:2;grid-row:1;min-width:0;min-height:0;display:flex;flex-direction:column;
-  margin:8px 12px 8px 0;background:rgb(var(--surface));border:1px solid #e9ecef;border-radius:14px;
+  margin:10px 12px 10px 0;background:rgb(var(--surface));border:.5px solid rgb(var(--line));border-radius:14px;
   box-shadow:var(--shadow-paper);overflow:hidden;
 }
 [data-theme=dark] .set-main{border-color:#2b3035}
-.set-head{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:16px 24px 8px}
-.set-head h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.set-head{flex:0 0 auto;padding:0 clamp(18px,3vw,40px)}
+.set-head-in{max-width:760px;margin:0 auto;padding:22px 0 2px}
+.set-head h2{font-size:23px;font-weight:700;letter-spacing:-.02em;color:rgb(var(--ink))}
 .set-body{
-  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 24px 26px;
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 clamp(18px,3vw,40px) 36px;
   overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
 }
-.set-sec{margin:18px 0 8px;font-size:11px;font-weight:600;letter-spacing:.04em;color:rgb(var(--faint))}
-.set-sec:first-child{margin-top:4px}
-.set-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid rgb(var(--line)/.7)}
-.set-row:last-child{border-bottom:0}
-.set-row .t{font-size:13px;color:rgb(var(--ink))}
-.set-row .d{font-size:11.5px;color:rgb(var(--faint));margin-top:3px;line-height:1.65}
+.set-inner{max-width:760px;margin:0 auto}
+.set-sec{margin:24px 0 8px;font-size:11.5px;font-weight:600;letter-spacing:.045em;color:rgb(var(--faint))}
+.set-sec:first-child{margin-top:12px}
+.set-sec-row{
+  display:flex;align-items:baseline;justify-content:flex-start;gap:9px;
+  margin:24px 0 8px;font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink));
+}
+.set-row{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 14px;border:0;border-radius:11px;background:rgb(var(--sunken));
+  margin:0 0 8px;transition:background .13s;
+}
+.set-row:hover{background:rgb(var(--hover))}
+.set-row:last-child{margin-bottom:0}
+.set-row>div{min-width:0}
+.set-row .t{font-size:13.5px;font-weight:500;color:rgb(var(--ink))}
+.set-row .d{font-size:12px;color:rgb(var(--faint));margin-top:3px;line-height:1.62}
 /* 帮助 / 下载 / 提醒这些本来是弹窗里的内容，铺进设置页时把内边距去掉，和别的设置项左对齐 */
 .set-body .help-tabs{padding:0 0 10px;flex-wrap:wrap}
 .set-body .help-body{padding:0 0 10px;overflow:visible}
@@ -2089,16 +2135,56 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
 .set-card{background:rgb(var(--sunken));border-radius:12px;padding:14px 16px;margin:10px 0}
 .set-card .field{margin-bottom:10px}
 .set-note{font-size:11.5px;line-height:1.75;color:rgb(var(--faint));margin:10px 0 0}
-.set-btn{height:32px;padding:0 14px;border-radius:8px;font-size:12.5px;background:rgb(var(--hover));color:rgb(var(--ink));flex:0 0 auto;transition:background .13s}
-.set-btn:hover{background:rgb(var(--line))}
+.set-btn{
+  height:30px;padding:0 13px;border-radius:8px;font-size:12.5px;flex:0 0 auto;
+  background:rgb(var(--surface));color:rgb(var(--ink));
+  border:.5px solid rgb(var(--line));box-shadow:0 1px 1px rgb(16 24 32/.04);
+  transition:background .13s,border-color .13s;
+}
+.set-btn:hover{background:rgb(var(--hover));border-color:rgb(var(--line))}
+[data-theme=dark] .set-btn{background:rgb(var(--hover))}
+[data-theme=dark] .set-btn:hover{background:rgb(var(--line))}
 .set-btn.primary{background:rgb(var(--ivy));color:#fff}
 .set-btn.primary:hover{filter:brightness(1.05)}
 .set-btn.danger{background:rgb(var(--warn)/.1);color:rgb(var(--warn))}
 .set-btn.danger:hover{background:rgb(var(--warn)/.16)}
-.set-chips{display:flex;gap:6px;flex-wrap:wrap}
-.set-chip{height:30px;padding:0 14px;border-radius:8px;font-size:12.5px;background:rgb(var(--hover));color:rgb(var(--muted));transition:background .13s,color .13s}
+.set-chips{
+  display:inline-flex;gap:2px;flex-wrap:wrap;padding:3px;border-radius:10px;
+  background:rgb(var(--sunken));max-width:100%;
+}
+.set-chip{
+  display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:8px;
+  font-size:12.5px;background:transparent;color:rgb(var(--muted));transition:background .13s,color .13s,box-shadow .13s;
+}
+.set-chip svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .set-chip:hover{color:rgb(var(--ink))}
-.set-chip.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:600}
+.set-chip.on{background:rgb(var(--surface));color:rgb(var(--ink));font-weight:600;box-shadow:0 1px 3px rgb(16 24 32/.15)}
+[data-theme=dark] .set-chip.on{background:rgb(var(--hover))}
+.set-sec-row .fs-val{font-size:12.5px;font-weight:600;color:rgb(var(--ivy-ink));font-variant-numeric:tabular-nums}
+.fs-slider{padding:2px 2px 0;max-width:460px}
+.fs-slider input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;
+  --p:25%;
+}
+.fs-slider input[type=range]::-webkit-slider-runnable-track{
+  height:4px;border-radius:99px;
+  background:linear-gradient(to right, rgb(var(--ivy)) 0 var(--p), rgb(var(--ink)/.10) var(--p) 100%);
+}
+.fs-slider input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:15px;height:15px;margin-top:-5.5px;border-radius:50%;
+  background:rgb(var(--ivy));border:2.5px solid rgb(var(--surface));
+  box-shadow:0 1px 4px rgb(16 24 32/.28);transition:transform .12s;
+}
+.fs-slider input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+.fs-slider input[type=range]::-moz-range-track{height:4px;border-radius:99px;background:rgb(var(--ink)/.10)}
+.fs-slider input[type=range]::-moz-range-progress{height:4px;border-radius:99px;background:rgb(var(--ivy))}
+.fs-slider input[type=range]::-moz-range-thumb{
+  width:15px;height:15px;border-radius:50%;background:rgb(var(--ivy));
+  border:2.5px solid rgb(var(--surface));box-shadow:0 1px 4px rgb(16 24 32/.28);
+}
+.fs-slider .fs-ends{display:flex;justify-content:space-between;font-size:10.5px;color:rgb(var(--faint));margin-top:-1px}
+.fs-slider input[type=range]:focus-visible{outline:none}
+.fs-slider input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgb(var(--ivy)/.18)}
 .set-empty{font-size:12px;color:rgb(var(--faint));padding:14px 0}
 @media (max-width:760px){
   /* 手机上让浮层自己整页滚（比「固定层里再套一个滚动容器」稳得多），
@@ -2139,10 +2225,11 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   .set-side.open .set-nav{display:flex}
   .set-nav nav{flex-direction:column;gap:2px}
   .set-nav button{
-    height:36px;padding:0 10px;background:transparent;flex:0 0 auto;
+    height:auto;min-height:36px;padding:6px 10px;background:transparent;flex:0 0 auto;
     font-size:13.5px;text-align:left;border-radius:8px;
   }
-  .set-nav button.on{background:rgb(var(--hover));box-shadow:none}
+  .set-nav-grp{padding:10px 10px 4px}
+  .set-nav button.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy))}
   .set-main{
     display:block;margin:0;border:0;border-radius:0;box-shadow:none;
     background:rgb(var(--surface));
@@ -2348,10 +2435,14 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 
 /* ---- 手机：列表页 ↔ 笔记页 两级，侧栏仍是抽屉 ---- */
 .m-back{
-  width:34px;height:34px;flex:0 0 auto;display:none;place-items:center;border-radius:8px;
-  color:rgb(var(--muted));font-size:22px;line-height:1;padding:0 0 2px;
+  display:none;align-items:center;gap:5px;flex:0 0 auto;
+  height:30px;padding:0 9px 0 4px;border-radius:8px;
+  color:rgb(var(--ink));font-size:13px;line-height:1;
 }
-.m-back:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.m-back:hover{background:rgb(var(--hover))}
+.m-back .mb-ar{font-size:19px;line-height:1;color:rgb(var(--muted));margin-top:-3px}
+.m-back .mb-t{font-weight:600;white-space:nowrap;letter-spacing:-.01em}
+.m-back .mb-n{font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
 @media (max-width:640px){
   .notelist{display:flex!important;flex:1 1 auto;width:auto;flex-basis:auto;border-left:0;background:rgb(var(--canvas))}
   .nl-hd{height:54px;padding:0 8px 0 6px;gap:6px}
@@ -2367,7 +2458,7 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   body.m-read .main-wrap{display:flex}
   body.m-read .notelist{display:none!important}
   .main-wrap .paper{border:0;border-radius:0;box-shadow:none;width:100%;margin:0;padding-top:env(safe-area-inset-top)}
-  body.m-read .m-back{display:grid}
+  body.m-read .m-back{display:inline-flex}
   #shelfOpen{display:none!important}
   .help-wrap{display:block}
   .help-ol{display:none!important}
@@ -2386,8 +2477,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <h1 class="brand-name" id="brandName">随手笔记</h1>
       </div>
       <div class="head-actions" id="headActions">
+        <button class="icon-btn" id="btnViewMenu" title="视图" aria-label="切换视图"></button>
         <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
-        <button class="icon-btn" id="btnViewMenu" title="视图 / 设置" aria-label="视图与设置"></button>
+        <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置"></button>
         <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
         <label class="head-sw todo-only" title="显示今天已完成">
           <input type="checkbox" id="headDoneSw"><i></i><span>显示今天已完成</span>
@@ -2395,7 +2487,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       </div>
     </header>
     <div class="shelf-body" id="shelfBody"></div>
-    <div class="shelf-foot"><div class="build-tag" id="buildTag" title="点击查看版本信息"></div></div>
+    <div class="shelf-foot">
+      <span class="sync-pip off" id="syncPip" role="img" aria-label="云同步状态"></span>
+      <div class="build-tag" id="buildTag" title="点击查看版本信息"></div>
+    </div>
     <nav class="dock" id="dock"></nav>
   </aside>
   <section class="notelist" id="noteList">
@@ -2527,6 +2622,7 @@ const ICONS = {
   paperclip:'<path d="M20 11.5 12.3 19a4.6 4.6 0 0 1-6.5-6.5l8-8a3.1 3.1 0 0 1 4.4 4.4l-7.9 7.9a1.6 1.6 0 0 1-2.2-2.2l7.2-7.2"/>',
   share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>',
+  monitor:'<rect x="3" y="4.6" width="18" height="12.4" rx="2.2"/><path d="M9 20.2h6M12 17v3.2"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5"/>',
   more:'<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
@@ -2593,7 +2689,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v177', at: '2026-11-18 09:23' };
+window.IVY_BUILD = { id: 'v178', at: '2026-11-18 09:36' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -2614,7 +2710,9 @@ function seed(){
     tabs: [],
     active: null,
     view: 'notes',
-    theme: 'light',
+    theme: 'light',          /* 实际生效的明暗，跟随系统时会自己变 */
+    themeMode: 'light',      /* 用户选择：auto 跟随系统 / light / dark */
+    fontSize: 16,            /* 正文字号，默认 16px */
     shelfOpen: true,
     outlineOpen: false,
     outlineMode: 'all',         /* 大纲层级：all 全部分支 / lv2 二级分支 / h1 一级标题，点图标循环 */
@@ -2684,6 +2782,12 @@ function normalizeState(s){
     if(typeof s.scope !== 'string' || !s.scope) s.scope = 'all';
     if(typeof s.listQuery !== 'string') s.listQuery = '';
     if(!['new','title'].includes(s.listSort)) s.listSort = 'new';
+    if(!['auto','light','dark'].includes(s.themeMode)){
+      // 老数据没有 themeMode：按当时存的明暗定下来，之后由用户自己选
+      s.themeMode = s.theme === 'dark' ? 'dark' : 'light';
+    }
+    const fs = +s.fontSize;
+    s.fontSize = (Number.isFinite(fs) && fs >= 14 && fs <= 22) ? Math.round(fs) : 16;
     // 思维导图外观：老数据默认经典绿
     if(!['classic','minimal','candy','card','org','neon'].includes(s.mmStyle)) s.mmStyle = 'classic';
     if(!['both','right','left','down','up'].includes(s.mmDir)) s.mmDir = 'right';
@@ -3133,8 +3237,31 @@ try{
 S.pendingDeletes = Array.isArray(S.pendingDeletes) ? S.pendingDeletes : [];
 
 /* ========== 主题 ========== */
+/* 跟随系统：media query 一变就重算；其余情况听用户的选择 */
+const mqDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function resolvedTheme(){
+  if(S.themeMode === 'auto') return (mqDark && mqDark.matches) ? 'dark' : 'light';
+  return S.themeMode === 'dark' ? 'dark' : 'light';
+}
+function applyDocFont(){
+  const fs = Math.min(22, Math.max(14, Math.round(+S.fontSize || 16)));
+  document.documentElement.style.setProperty('--doc-fs', fs + 'px');
+}
 function applyTheme(){
+  S.theme = resolvedTheme();
   document.documentElement.dataset.theme = S.theme;
+  applyDocFont();
+}
+if(mqDark){
+  const onSystemTheme = ()=>{
+    if(S.themeMode !== 'auto') return;
+    applyTheme();
+    try{ MB_CACHE.clear(); }catch(e){}
+    try{ if(window.mermaid && MB_INITED) window.mermaid.initialize(mbConfig()); }catch(e){}
+    try{ renderMain(); }catch(e){}
+  };
+  if(mqDark.addEventListener) mqDark.addEventListener('change', onSystemTheme);
+  else if(mqDark.addListener) mqDark.addListener(onSystemTheme);
 }
 applyTheme();
 
@@ -3148,6 +3275,7 @@ function paintRowIcons(){
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
+  const st = $('#btnSettings'); if(st) st.innerHTML = ic('gear');
   $('#btnShelf').innerHTML = ic('panelLeft');
   $('#shelfOpen').innerHTML = ic('panelLeft');
   const nlOpen = $('#nlOpen'); if(nlOpen) nlOpen.innerHTML = ic('panelLeft');
@@ -3455,9 +3583,7 @@ function openViewMenu(anchor, opts){
     ['笔记', S.view==='notes' ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
     ['待办', S.view==='todo' ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
-    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))],
-    '-',
-    ['设置', '', '', 'gear', go(()=>openSettings())]
+    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
   ], {align:'left'});
 }
 function renderList(){
@@ -5116,6 +5242,7 @@ const TAG_COLORS = ['#3f7a5b','#4f6a9a','#a0702c','#a65a7c','#7a62a8','#6f767d']
 
 /* ========== Dock ========== */
 function renderDock(){
+  paintSyncPip();
   const items = [
     {k:'notes', icon:'notePen', label:'笔记', href:'notes'},
     {k:'todo', icon:'todo', label:'待办'},
@@ -5147,7 +5274,10 @@ function renderDock(){
 function renderTabs(){
   const bar = $('#tabbar');
   if(S.view!=='notes'){ bar.innerHTML = ''; return; }
-  bar.innerHTML = `<button class="m-back" id="mBack" title="返回笔记列表" aria-label="返回笔记列表">‹</button><div class="tabs">` + S.tabs.map(id=>{
+  const allN = (()=>{ try{ return liveNotes().length; }catch(e){ return (S.notes||[]).filter(n=>!n.trashed && !n.deleted).length; } })();
+  bar.innerHTML = `<button class="m-back" id="mBack" title="返回全部笔记" aria-label="返回全部笔记">`
+    + `<span class="mb-ar">‹</span><span class="mb-t">全部笔记</span><span class="mb-n">${allN}</span></button>`
+    + `<div class="tabs">` + S.tabs.map(id=>{
     const n = noteById(id); if(!n) return '';
     return `<button class="tab ${id===S.active?'active':''}" data-tab="${id}">
       <span class="t">${esc(n.title||'无标题')}</span>
@@ -9635,7 +9765,8 @@ function switchView(v){
 
 /* ========== 主题 / 分享 / 导出 ========== */
 function toggleTheme(){
-  S.theme = S.theme==='dark' ? 'light' : 'dark';
+  S.themeMode = (S.theme === 'dark') ? 'light' : 'dark';   // 手动切过一次就不再跟随系统
+  S.theme = S.themeMode;
   // 图表是按主题画死的 SVG，换主题要清缓存重画（renderMain 里会重新渲染）
   MB_CACHE.clear();
   if(window.mermaid && MB_INITED){
@@ -9643,6 +9774,15 @@ function toggleTheme(){
   }
   applyTheme(); save(); renderMain();
   toast(S.theme==='dark'?'已切换到深色':'已切换到浅色');
+}
+/* 设置里选主题：auto / light / dark。切完把图表缓存清掉，正文重画一次 */
+function setThemeMode(mode){
+  S.themeMode = ['auto','light','dark'].includes(mode) ? mode : 'light';
+  applyTheme();
+  try{ MB_CACHE.clear(); }catch(e){}
+  try{ if(window.mermaid && MB_INITED) window.mermaid.initialize(mbConfig()); }catch(e){}
+  save();
+  try{ renderMain(); }catch(e){}
 }
 /* 分享二维码悬浮卡片：扫码打开 + 链接地址 + 复制 / 取消分享 */
 function showShareCard(url){
@@ -10288,6 +10428,14 @@ function poClose(po){
 }
 function popover(anchor, items, opts){
   const po = $('#popover');
+  /* 同一个按钮上再点一次就是「收起」：否则点 mousedown 关掉、click 又开一遍，看着像收不回去 */
+  if(anchor && po.classList.contains('open') && po._anchor === anchor && !(opts && opts.toggle === false)){
+    poClose(po);
+    anchor.classList.remove('on');
+    po._anchor = null;
+    if(po._off){ document.removeEventListener('mousedown', po._off); po._off = null; }
+    return;
+  }
   let r = null;
   if(anchor && anchor.isConnected) r = anchor.getBoundingClientRect();
   if(!r || (!r.width && !r.height)){
@@ -10327,7 +10475,10 @@ function popover(anchor, items, opts){
   // 二级菜单会在同一个 #popover 上重绘，先把上一次的外部点击监听摘掉，避免越积越多
   if(po._off) document.removeEventListener('mousedown', po._off);
   const off = (ev)=>{
-    if(!po.contains(ev.target)){
+    if(po.contains(ev.target)) return;
+    // 点在开菜单的那个按钮上：交给它自己的 click 去 toggle，别先关再开
+    if(po._anchor && po._anchor.contains(ev.target)) return;
+    {
       poClose(po);
       document.removeEventListener('mousedown', off);
       if(po._anchor){ po._anchor.classList.remove('on'); po._anchor = null; }
@@ -10795,6 +10946,7 @@ $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
 $('#btnNewNb').onclick=()=>newNotebook();
 $('#btnViewMenu').onclick=(e)=>openViewMenu(e.currentTarget);
+$('#btnSettings').onclick=()=>openSettings();
 $('#headDoneSw').onchange=(e)=>{ S.todoShowDoneToday = e.target.checked; save(); renderShelf(); };
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
@@ -11141,7 +11293,21 @@ async function insertFiles(files, target){
   if(S.view==='media') renderMedia();
 }
 
+function paintSyncPip(){
+  const el = document.getElementById('syncPip');
+  if(!el) return;
+  const on = isConnected();
+  const st = !on ? 'off'
+    : (SYNC.state === 'ok' ? 'ok' : SYNC.state === 'error' ? 'error' : 'busy');
+  el.className = 'sync-pip ' + st;
+  el.innerHTML = ic(st === 'off' ? 'cloud' : 'cloudCheck') + '<span class="sp-dot"></span>';
+  el.title = !on ? '未开启云同步 · 在「设置 → 账户 / 同步」里登录'
+    : st === 'error' ? '同步失败：' + (SYNC.error || '网络错误')
+    : st === 'busy' ? (SYNC.state === 'pending' ? '有改动，正在保存…' : '正在同步…')
+    : (SYNC.last ? '已同步 · ' + syncStamp(SYNC.last) : '已连接，等待首次同步');
+}
 function updateSyncBadge(){
+  paintSyncPip();
   const el = document.getElementById('metaSync');
   if(!el) return;
   el.style.display = '';
@@ -11399,18 +11565,19 @@ function openSyncPanel(){
 }
 function closeSyncPanel(){ $('#syncOverlay').classList.remove('open'); syncPanelOpen = false; }
 /* ---------- 设置（整页） ---------- */
+/* [id, 名称, 图标, 分组] —— 分组照系统设置的样子分三段 */
 const SET_TABS = [
-  ['account', '账户 / 同步'],
-  ['appearance', '外观'],
-  ['remind', '提醒与日历'],
-  ['mcp', 'API 令牌与 MCP'],
-  ['sync', '备份 / 导入 / 导出'],
-  ['share', '分享管理'],
-  ['data', '数据'],
-  ['help', '使用说明'],
-  ['client', '客户端下载'],
-  ['ai', 'AI 接口设置'],
-  ['about', '关于']
+  ['account', '账户 / 同步', 'cloud', ''],
+  ['appearance', '外观', 'sun', ''],
+  ['remind', '提醒与日历', 'bell', ''],
+  ['mcp', 'API 令牌与 MCP', 'code', '数据与共享'],
+  ['sync', '备份 / 导入 / 导出', 'download', '数据与共享'],
+  ['share', '分享管理', 'share', '数据与共享'],
+  ['data', '数据', 'folder', '数据与共享'],
+  ['help', '使用说明', 'help', '其他'],
+  ['client', '客户端下载', 'globe', '其他'],
+  ['ai', 'AI 接口设置', 'spark', '其他'],
+  ['about', '关于', 'info', '其他']
 ];
 let SET_TAB = 'account';
 let _setPaintedTab = null, setRemindReady = false, setAiReady = false;
@@ -11447,7 +11614,7 @@ function openSettings(tab){
         <aside class="set-nav"><nav id="setNav"></nav></aside>
       </div>
       <section class="set-main">
-        <div class="set-head"><h2 id="setHead">账户</h2></div>
+        <div class="set-head"><div class="set-head-in"><h2 id="setHead">账户</h2></div></div>
         <div class="set-body" id="setPane"></div>
       </section>
     </div>`;
@@ -11456,8 +11623,12 @@ function openSettings(tab){
     ov.querySelector('#setClose').onclick = closeSettings;
     const setMenuBtn = ov.querySelector('#setMenu');
     if(setMenuBtn) setMenuBtn.onclick = (e)=> openViewMenu(e.currentTarget, { after: closeSettings });
-    ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name]) =>
-      `<button type="button" data-st="${id}">${name}</button>`).join('');
+    let lastGroup = null;
+    ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name, icon, group])=>{
+      const grp = (group && group !== lastGroup) ? `<div class="set-nav-grp">${group}</div>` : '';
+      if(group) lastGroup = group;
+      return grp + `<button type="button" data-st="${id}"><span class="sn-ico">${ic(icon || 'gear')}</span><span class="sn-t">${name}</span></button>`;
+    }).join('');
     const side = ov.querySelector('.set-side');
     const pick = ov.querySelector('#setPick');
     if(pick) pick.onclick = (e)=>{
@@ -11489,7 +11660,7 @@ function paintSettings(keepScroll){
   const pickLabel = $('#setPickLabel'); if(pickLabel) pickLabel.textContent = setTabName(SET_TAB);
   const ovEl = $('#setOv');
   if(ovEl && prevTab !== SET_TAB) ovEl.scrollTop = 0;   // 手机上滚的是整个浮层
-  pane.innerHTML = setPaneHtml(SET_TAB);
+  pane.innerHTML = `<div class="set-inner">${setPaneHtml(SET_TAB)}</div>`;
   bindPane(SET_TAB);
   // 同一页里重绘（比如切了个开关）时保持滚动位置，别把人弹回顶部
   pane.scrollTop = (keepScroll || prevTab === SET_TAB) ? prevScroll : 0;
@@ -11787,13 +11958,23 @@ function paintWipeSheet(){
 
 /* ---- 外观 ---- */
 function setAppearanceHtml(){
-  const dark = S.theme === 'dark';
+  const tm = S.themeMode || (S.theme === 'dark' ? 'dark' : 'light');
   const mode = S.mode || 'live';
+  const fs = Math.min(22, Math.max(14, Math.round(+S.fontSize || 16)));
   return `<div class="set-sec">主题</div>
     <div class="set-chips">
-      <button type="button" class="set-chip${dark ? '' : ' on'}" data-theme="light">${ic('sun')} 浅色</button>
-      <button type="button" class="set-chip${dark ? ' on' : ''}" data-theme="dark">${ic('moon')} 深色</button>
+      <button type="button" class="set-chip${tm === 'auto' ? ' on' : ''}" data-theme="auto">${ic('monitor')} 跟随系统</button>
+      <button type="button" class="set-chip${tm === 'light' ? ' on' : ''}" data-theme="light">${ic('sun')} 浅色</button>
+      <button type="button" class="set-chip${tm === 'dark' ? ' on' : ''}" data-theme="dark">${ic('moon')} 深色</button>
     </div>
+    <p class="set-note">跟随系统时，换 Mac / iPhone 的深浅色会让这里自己变。</p>
+    <div class="set-sec set-sec-row"><span>正文字号</span><b class="fs-val" id="setFsVal">${fs}px</b></div>
+    <div class="fs-slider">
+      <input type="range" id="setFontSize" min="14" max="22" step="1" value="${fs}"
+             style="--p:${Math.round((fs - 14) / 8 * 100)}%" aria-label="正文字号" aria-valuemin="14" aria-valuemax="22" aria-valuenow="${fs}">
+      <div class="fs-ends"><span>小</span><span>大</span></div>
+    </div>
+    <p class="set-note">只影响正文的阅读字号，标题按比例跟着变；默认 16px，范围 14–22px。</p>
     <div class="set-sec">默认编辑模式</div>
     <div class="set-chips">
       <button type="button" class="set-chip${mode === 'live' ? ' on' : ''}" data-mode="live">实时预览</button>
@@ -11945,12 +12126,22 @@ function bindPane(tab){
 
   if(tab === 'appearance'){
     pane.querySelectorAll('[data-theme]').forEach(b=>{
-      b.onclick = ()=>{
-        const want = b.dataset.theme;
-        if((S.theme === 'dark') !== (want === 'dark')) toggleTheme();
-        paintSettings();
-      };
+      b.onclick = ()=>{ setThemeMode(b.dataset.theme); paintSettings(); };
     });
+    const fsInput = pane.querySelector('#setFontSize');
+    if(fsInput){
+      const sync = (commit)=>{
+        const v = Math.min(22, Math.max(14, Math.round(+fsInput.value || 16)));
+        S.fontSize = v;
+        fsInput.style.setProperty('--p', Math.round((v - 14) / 8 * 100) + '%');
+        fsInput.setAttribute('aria-valuenow', v);
+        const lab = pane.querySelector('#setFsVal'); if(lab) lab.textContent = v + 'px';
+        applyDocFont();
+        if(commit) save();
+      };
+      fsInput.oninput = ()=>sync(false);
+      fsInput.onchange = ()=>sync(true);
+    }
     pane.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick = ()=>{ setMode(b.dataset.mode); paintSettings(); };
     });

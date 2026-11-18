@@ -108,6 +108,9 @@ export async function onRequest({ request, env }) {
 
       for (const nb of notebooks) {
         if (!nb || typeof nb.id !== 'string' || !nb.id) continue;
+        // 小程序 / 旧版网页推笔记本时不带 lock 字段：那种情况下必须保留云端已有的锁，
+        // 否则一次同步就把密码锁悄悄抹掉了。要拆锁得显式传 lock:null。
+        const hasLock = Object.prototype.hasOwnProperty.call(nb, 'lock') ? 1 : 0;
         stmts.push(
           env.DB.prepare(
             `INSERT INTO notebooks (user_id, id, name, color, open, deleted, parent_id, sort_order, updated_at, lock)
@@ -120,7 +123,7 @@ export async function onRequest({ request, env }) {
                parent_id = excluded.parent_id,
                sort_order = excluded.sort_order,
                updated_at = excluded.updated_at,
-               lock = excluded.lock
+               lock = CASE WHEN ?11 = 1 THEN excluded.lock ELSE notebooks.lock END
              WHERE excluded.updated_at >= notebooks.updated_at`
           ).bind(
             uid,
@@ -132,7 +135,8 @@ export async function onRequest({ request, env }) {
             nb.parentId ? str(nb.parentId, 80) : null,
             Number(nb.order) || 0,
             Number(nb.updatedAt) || 0,
-            safeLock(nb.lock) ? JSON.stringify(safeLock(nb.lock)) : null
+            safeLock(nb.lock) ? JSON.stringify(safeLock(nb.lock)) : null,
+            hasLock
           )
         );
       }

@@ -4,6 +4,8 @@
 //   POST  { action:'delete', key:'当前口令', confirm:'DELETE' }
 //         key     服务端再验一次口令 —— 令牌可能是别人捡到的手机，不能只凭令牌就删号
 //         confirm 文本确认口令，挡住误触和脚本顺手调用
+//   POST  { action:'verify', key:'当前口令' }
+//         只回 ok / 403，不改任何数据。网页端「忘记笔记本密码 → 重置访问锁」用它验明身份。
 //
 // 删什么：该账号名下全部业务数据（9 张表）+ 上传的图片 + users 表里这一行。
 // 主人账号不能在这里注销：它的口令存在环境变量 IVY_KEY 里，数据库里没有可验的行。
@@ -48,7 +50,28 @@ export async function onRequest({ request, env }) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
     const body = await request.json().catch(() => ({}));
-    if (String(body.action || '') !== 'delete') return json({ error: '未知操作' }, 400);
+    const action = String(body.action || '');
+
+    // ── 验口令：只回答「对不对」，不做任何改动 ──
+    // 前端拿它给「忘记笔记本密码 → 重置访问锁」做身份确认。
+    // 只用令牌不够：令牌可能是别人捡到的设备，拆锁必须再验一次登录密码。
+    if (action === 'verify') {
+      const key = String(body.key || '');
+      if (key.length < 4) return json({ error: '请输入登录密码' }, 400);
+      if (isOwner) {
+        // 主人账号的口令在环境变量里，users 表没有可验的行
+        if (env.IVY_KEY && safeEqual(key, env.IVY_KEY)) return json({ ok: true, owner: true });
+        return json({ error: '登录密码不正确' }, 403);
+      }
+      const row = await env.DB.prepare('SELECT salt, hash FROM users WHERE id = ?1').bind(uid).first();
+      if (!row) return json({ error: '账号不存在或已注销' }, 404);
+      const h = await hashPassword(key, row.salt);
+      // 同上：用 403 不用 401，否则打错一次密码就被客户端当成登录过期踢出去
+      if (!safeEqual(h, row.hash)) return json({ error: '登录密码不正确' }, 403);
+      return json({ ok: true });
+    }
+
+    if (action !== 'delete') return json({ error: '未知操作' }, 400);
 
     if (isOwner) return json({ error: '主人账号不能在小程序内注销' }, 400);
 

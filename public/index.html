@@ -1684,6 +1684,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 [data-theme=dark] .ol-tick{background:rgb(255 255 255 / .22)}
 .ol-tick.on{background:rgb(var(--ivy));height:2px;transform:scaleX(1.3);transform-origin:right center}
+/* 列表项（二级）的刻度：更短更淡，标题才是主角 */
+.ol-tick.li{background:rgb(var(--ink)/.13);height:1px}
+[data-theme=dark] .ol-tick.li{background:rgb(255 255 255/.15)}
+.ol-tick.li.on{background:rgb(var(--ivy)/.8);height:2px}
 /* 卡片展开/固定时，刻度让位给卡片自己的短横线 */
 .outline-zone:hover .ol-mini,
 body.ol-peek .ol-mini,
@@ -1705,10 +1709,12 @@ body.ol-hidden .outline-zone{display:none}
   transition:transform .26s var(--spring),opacity .16s;
 }
 [data-theme=dark] .outline{box-shadow:0 10px 34px rgb(0 0 0/.5),0 2px 8px rgb(0 0 0/.35)}
-.outline-zone:hover ~ .outline,
+/* 靠边整条热区不再直接把卡片叫出来：只有鼠标真的移到那串刻度上（JS 打 ol-hover）才展开 */
 .outline:hover,
 .outline.pinned,
-body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
+body.ol-hover .outline,
+body.ol-flash .outline{transform:none;opacity:1;pointer-events:auto}
+body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .outline.hidden{display:none}
 /* Chrome 会把「可滚动/可聚焦」的浮层当成可聚焦控件，画一圈原生焦点环（黑框），Safari 不画。
    大纲是纯浮层，不需要这圈；键盘焦点改用下面的内描边，仍然可见。 */
@@ -3034,7 +3040,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v201', at: '2026-11-18 16:31' };
+window.IVY_BUILD = { id: 'v202', at: '2026-11-18 16:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -10023,19 +10029,78 @@ function headingOffsets(body){
   });
   return out;
 }
-function renderMiniTicks(heads, body){
+/* 标题 + 二级（列表项）在正文里的字符位置，按文档顺序排好；
+   代码块里的 # 和 - 不算，免得刻度被代码带偏 */
+function outlineTickMarks(body){
+  const marks = []; let ch = 0, fence = false;
+  String(body||'').split('\n').forEach(ln=>{
+    if(/^\s*```/.test(ln)){ fence = !fence; ch += ln.length + 1; return; }
+    if(!fence){
+      const mH = ln.match(/^(#{1,6})\s+/);
+      if(mH) marks.push({ kind:'h', level: mH[1].length, off: ch });
+      else{
+        const mL = ln.match(/^(\s*)([-*+]|\d+[.、)])\s+/);
+        if(mL) marks.push({ kind:'li', level: Math.min(3, 1 + Math.floor(mL[1].replace(/\t/g,'  ').length / 2)), off: ch });
+      }
+    }
+    ch += ln.length + 1;
+  });
+  return marks;
+}
+/* 把大纲条目（标题 / 列表项）对上正文字符位置，给刻度用。
+   条目和大纲是同一套过滤规则，所以条数一致时直接按顺序对齐最稳；
+   万一对不上（解析细节有出入）再按「同类找下一个」兜底。 */
+function outlineTickData(entries, body, mode){
+  let marks = outlineTickMarks(body);
+  if(mode === 'lv2') marks = marks.filter(m=>m.level <= 2);
+  else if(mode === 'h1'){
+    const hs = marks.filter(m=>m.kind === 'h');
+    if(!hs.length) return [];
+    const top = Math.min.apply(null, hs.map(m=>m.level || 1));
+    marks = hs.filter(m=>(m.level || 1) === top);
+  }
+  const list = entries || [];
+  const out = [];
+  if(marks.length === list.length){
+    list.forEach((e,i)=>{
+      const m = marks[i];
+      out.push({ id: e.id, level: e.level || m.level || 1, kind: m.kind, off: m.off });
+    });
+    return out;
+  }
+  let mi = 0;
+  list.forEach(e=>{
+    const kind = e.kind === 'li' ? 'li' : 'h';
+    while(mi < marks.length && marks[mi].kind !== kind) mi++;
+    const m = marks[mi];
+    if(!m) return;                       // 对不上的条目跳过，别画到错误位置
+    out.push({ id: e.id, level: e.level || m.level || 1, kind, off: m.off });
+    mi++;
+  });
+  return out;
+}
+function renderMiniTicks(ticks, body){
   const mini = document.getElementById('olMini'); if(!mini) return;
-  if(!heads.length){ mini.innerHTML = ''; mini.style.height = ''; return; }
-  const total = Math.max(1, String(body||'').length);
-  const H = Math.min(360, Math.max(64, heads.length * 14));
+  if(!ticks || !ticks.length){ mini.innerHTML = ''; mini.style.height = ''; return; }
+  const text = String(body||'');
+  const total = Math.max(1, text.length);
+  /* 刻度条的高度跟着「笔记有多长」走，标题/列表项多的时候也要全部摆得下：
+     几百字就短短一截（两三根线），长文才铺得开，长文短文一眼能分出长短。 */
+  const lenH = 46 + 314 * Math.pow(Math.min(1, total / 9000), 0.6);
+  const cntH = 12 + ticks.length * 8;
+  const maxH = Math.min(560, Math.max(180, window.innerHeight - 150));
+  const H = Math.round(Math.min(maxH, Math.max(46, Math.max(lenH, cntH))));
   mini.style.height = H + 'px';
-  let last = -6;
-  mini.innerHTML = heads.map(h=>{
-    let y = Math.round(h.off / total * (H - 4));
-    y = Math.max(y, last + 5); last = y;        // 相邻刻度别叠在一起
+  // 刻度太密时自动收小间距，保证全部落在条子里，不堆成一坨
+  const gap = ticks.length > 1 ? Math.max(2, Math.min(6, Math.floor((H - 6) / (ticks.length - 1)))) : 6;
+  let last = -gap;
+  mini.innerHTML = ticks.map(t=>{
+    let y = Math.round((t.off != null ? t.off : 0) / total * (H - 4));
+    y = Math.max(y, last + gap); last = y;        // 相邻刻度别叠在一起
     y = Math.min(y, H - 2);
-    const w = h.level === 1 ? 14 : h.level === 2 ? 10 : 7;
-    return `<button class="ol-tick" style="top:${y}px;width:${w}px" data-y="${y}" data-h="${h.id}" title="${esc(h.text)}"></button>`;
+    const li = t.kind === 'li';
+    const w = li ? 5 : (t.level === 1 ? 14 : t.level === 2 ? 10 : 7);
+    return `<button class="ol-tick${li?' li':''}" style="top:${y}px;width:${w}px" data-y="${y}" data-h="${t.id}" title=""></button>`;
   }).join('');
 }
 /* 当前读到哪个标题：取滚动容器里最后一个已经越过顶部的可见标题 */
@@ -10151,7 +10216,11 @@ async function aiOutline(force){
     renderOutline();
     return;
   }
-  if(!S.outlineOpen){ S.outlineOpen = true; save(); }   // 生成结果得看得见
+  /* 不再顺手把「固定大纲」点亮（图钉不该被 AI 联动）。
+     如果卡片本来没露出来（从菜单 / 命令面板触发的），就临时亮一下让人看到结果，几秒后自己收。 */
+  const needFlash = !S.outlineOpen && !document.body.classList.contains('ol-hover');
+  if(needFlash) document.body.classList.add('ol-flash');
+  const endFlash = ()=>{ if(needFlash) setTimeout(()=>document.body.classList.remove('ol-flash'), 6000); };
   AI_OL.id = n.id; AI_OL.snap = snap; AI_OL.entries = null;
   AI_OL.show = true; AI_OL.busy = true;
   renderOutline();
@@ -10162,9 +10231,11 @@ async function aiOutline(force){
     AI_OL.entries = entries;
     AI_OL.busy = false;
     renderOutline();
+    endFlash();
   }catch(e){
     AI_OL.busy = false; AI_OL.entries = null; AI_OL.show = false;
     renderOutline();
+    document.body.classList.remove('ol-flash');
     aiErrToast(e);
   }
 }
@@ -10305,7 +10376,11 @@ function renderOutline(){
               }).join('')
               : `<div class="ol-empty">标题、列表项会出现在这里</div>`)))
     + `</div>`;
-  renderMiniTicks(heads, n.body);
+  /* 刻度跟着「当前这档大纲」走：全部分支时标题和列表项都有刻度，一屏能看出文章结构 */
+  const tickData = aiOn
+    ? heads.map(h=>({ id:h.id, level:h.level || 1, kind:'h', off:h.off }))
+    : outlineTickData(entries, n.body, mode);
+  renderMiniTicks(tickData, n.body);
 
   const pin = outlineEl.querySelector('#olPin');
   if(pin) pin.onclick = toggleOutlinePin;
@@ -10409,7 +10484,16 @@ outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-
   document.addEventListener('touchend',   ()=>{ lastTouchAt = Date.now(); }, { passive:true, capture:true });
   document.addEventListener('mousemove', e=>{
     if(Date.now() - lastTouchAt < 600) return;
-    const near = e.clientX >= window.innerWidth - 34;      // 右边缘刻度区
+    const mini = document.getElementById('olMini');
+    const tickN = mini ? mini.querySelectorAll('.ol-tick').length : 0;
+    let near = false;
+    if(mini && tickN){
+      // 只认「刻度那一条」：鼠标真的移到刻度附近才展开卡片，靠边的空白处不再弹
+      const r = mini.getBoundingClientRect();
+      near = e.clientX >= r.left - 8 && e.clientY >= r.top - 12 && e.clientY <= r.bottom + 12;
+    }else{
+      near = e.clientX >= window.innerWidth - 34;   // 整篇没有标题时，靠边仍能把卡片叫出来
+    }
     const inCard = outlineEl.contains(e.target);           // 已在大纲卡片里
     const want = near || inCard;
     if(want !== olHover){ olHover = want; document.body.classList.toggle('ol-hover', want); }

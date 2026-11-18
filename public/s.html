@@ -157,6 +157,21 @@ body.has-ol .ol-zone{display:flex}
 .ol-item.li.on{color:rgb(var(--ink))}
 .ol-item.on{color:rgb(var(--ink));font-weight:600}
 .ol-item.on .dash{width:18px;height:1.5px;background:rgb(var(--ivy))}
+/* 点大纲跳过去时，目标位置短暂铺一层灰底（飞书那种），一眼看到落在了哪 */
+@keyframes jumpFlash{
+  0%{background-color:rgb(var(--ink)/ .13);box-shadow:0 0 0 7px rgb(var(--ink)/ .13)}
+  55%{background-color:rgb(var(--ink)/ .085);box-shadow:0 0 0 7px rgb(var(--ink)/ .085)}
+  100%{background-color:transparent;box-shadow:0 0 0 7px transparent}
+}
+@keyframes jumpFlashDark{
+  0%{background-color:rgb(255 255 255 / .12);box-shadow:0 0 0 7px rgb(255 255 255 / .12)}
+  55%{background-color:rgb(255 255 255 / .08);box-shadow:0 0 0 7px rgb(255 255 255 / .08)}
+  100%{background-color:transparent;box-shadow:0 0 0 7px transparent}
+}
+.jump-flash{animation:jumpFlash 1.6s ease-out forwards;border-radius:7px}
+@media (prefers-color-scheme: dark){
+  .jump-flash{animation-name:jumpFlashDark}
+}
 @media (max-width:900px){
   .ol-card{width:min(206px,62vw);right:8px;top:60px;max-height:min(64vh,calc(100vh - 140px))}
 }
@@ -437,8 +452,19 @@ window.addEventListener('resize', olRefreshSoon, { passive: true });
 window.addEventListener('load', olRefreshSoon);
 try { document.fonts.ready.then(olRefreshSoon); } catch (e) {}
 
+/* 跳过去之后闪一下目标：短暂灰底，和主应用一致 */
+function flashJump(el){
+  if (!el || !el.classList) return;
+  el.classList.remove('jump-flash');
+  void el.offsetWidth;                       // 强制重排，动画才会重放
+  el.classList.add('jump-flash');
+  clearTimeout(el._jfT);
+  el._jfT = setTimeout(() => el.classList.remove('jump-flash'), 1700);
+}
+
 function jumpTo(el){
   const y = Math.max(0, el.getBoundingClientRect().top + window.scrollY - 28);
+  flashJump(el);
   if (olTouch()) {
     // iOS Safari 在触摸事件里会静默丢弃 smooth，这里瞬时到位
     const de = document.documentElement;

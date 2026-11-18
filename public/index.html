@@ -545,6 +545,19 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 /* 从待办跳过去时，闪一下那一块 */
 @keyframes todoFlash{0%{background:rgb(var(--ivy)/.16)}100%{background:transparent}}
 .blk.todo-flash{animation:todoFlash 1.3s ease-out;border-radius:8px}
+/* 点大纲跳过去时，目标位置短暂铺一层灰底（飞书那种），一眼知道落在了哪 */
+@keyframes jumpFlash{
+  0%{background-color:rgb(var(--ink)/ .13);box-shadow:0 0 0 7px rgb(var(--ink)/ .13)}
+  55%{background-color:rgb(var(--ink)/ .085);box-shadow:0 0 0 7px rgb(var(--ink)/ .085)}
+  100%{background-color:transparent;box-shadow:0 0 0 7px transparent}
+}
+.jump-flash{animation:jumpFlash 1.6s ease-out forwards;border-radius:7px}
+[data-theme=dark] .jump-flash{animation-name:jumpFlashDark}
+@keyframes jumpFlashDark{
+  0%{background-color:rgb(255 255 255 / .12);box-shadow:0 0 0 7px rgb(255 255 255 / .12)}
+  55%{background-color:rgb(255 255 255 / .08);box-shadow:0 0 0 7px rgb(255 255 255 / .08)}
+  100%{background-color:transparent;box-shadow:0 0 0 7px transparent}
+}
 .avatar{
   width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
   font-family:var(--font-serif);font-size:13px;font-weight:700;
@@ -3040,7 +3053,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v204', at: '2026-11-18 17:02' };
+window.IVY_BUILD = { id: 'v205', at: '2026-11-18 17:08' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -10447,6 +10460,8 @@ function renderOutline(){
   if(modeBtn) modeBtn.onclick = ()=>{
     const i = OUTLINE_MODES.findIndex(m => m.id === mode);
     S.outlineMode = OUTLINE_MODES[(i + 1) % OUTLINE_MODES.length].id;
+    // 手动选档位就是要看原文大纲：AI 结果先让开，不用先点星星把它关掉
+    if(aiOn) AI_OL.show = false;
     renderOutline(); save();
   };
   const close = outlineEl.querySelector('#olClose');
@@ -10590,6 +10605,15 @@ function scrollableAncestor(el){
 }
 
 /* 点大纲跳转：页面里可能有多个同名 id（即时预览副本是隐藏的），要挑真正可见的那个 */
+/* 跳过去之后闪一下目标位置：短暂灰底，像飞书文档那样告诉你落在了哪 */
+function flashJump(el){
+  if(!el || !el.classList) return;
+  el.classList.remove('jump-flash');
+  void el.offsetWidth;                       // 强制重排，动画才会重放
+  el.classList.add('jump-flash');
+  clearTimeout(el._jfT);
+  el._jfT = setTimeout(()=>el.classList.remove('jump-flash'), 1700);
+}
 function jumpToHeading(id){
   if(S.mode === 'source'){
     // 源码模式没有标题元素，按行号估算位置（滚的是外层 #scroll，textarea 本身 overflow:hidden）
@@ -10610,6 +10634,7 @@ function jumpToHeading(id){
   const sc = scrollableAncestor(t);
   const top = t.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 28;
   setScrollTo(sc, top);
+  setTimeout(()=>flashJump(t), 40);
 }
 
 /* ---- 回收站 ---- */

@@ -997,6 +997,42 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .dl-tip{margin-top:16px;padding-top:14px;border-top:1px solid rgb(var(--line));font-size:12.5px;line-height:1.85;color:rgb(var(--muted))}
 .dl-tip b{color:rgb(var(--ink-2));font-weight:600}
 .dl-tip code{font-size:11.5px;background:rgb(var(--hover));padding:1px 5px;border-radius:5px}
+/* 设置页「使用说明」：正文按笔记排版（窄栏、衬线小标题），右侧一条悬浮大纲 */
+.help-wrap{display:flex;align-items:flex-start;gap:26px}
+.help-main{flex:1;min-width:0}
+.set-help-tabs{margin:4px 0 6px}
+.help-doc{max-width:760px;margin:0 auto;padding:2px 0 48px}
+.help-doc .help-sec{margin-top:32px}
+.help-doc .help-sec:first-child{margin-top:12px}
+.help-doc .help-sec>h4{
+  font-family:var(--font-serif);font-size:18px;font-weight:600;letter-spacing:-.01em;
+  color:rgb(var(--ink));margin:0 0 8px;
+}
+.help-doc .help-p{font-size:14.5px;line-height:1.85;color:rgb(var(--ink-2));padding:0 0 10px}
+.help-doc .help-p code{font-size:12px;padding:2px 6px;border-radius:5px}
+.help-doc .help-code{font-size:12.5px;line-height:1.9;border-radius:10px;margin-top:6px}
+.help-doc .help-row{font-size:14px;padding:9px 2px}
+.help-doc .help-table{margin-top:8px}
+.help-doc .help-hero{padding:10px 0 4px}
+.help-ol{
+  position:sticky;top:8px;flex:0 0 186px;width:186px;
+  padding:10px 8px;border-radius:12px;
+  background:rgb(var(--surface)/.72);border:.5px solid rgb(var(--line));
+  box-shadow:0 10px 24px -18px rgb(16 24 32/.35);
+  opacity:.6;transition:opacity .16s;
+  max-height:calc(100vh - 190px);overflow:auto;scrollbar-width:none;
+}
+.help-ol::-webkit-scrollbar{display:none}
+.help-ol:hover{opacity:1}
+.help-ol .ol-t{font-size:10.5px;font-weight:500;letter-spacing:.04em;color:rgb(var(--faint));padding:2px 7px 6px}
+.help-ol button{
+  display:block;width:100%;text-align:left;padding:5px 7px;border-radius:6px;
+  font-size:12px;line-height:1.45;color:rgb(var(--muted));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.help-ol button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.help-ol button.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+@media (max-width:1180px){ .help-ol{display:none!important} }
 .help-body{overflow:auto;padding:6px 22px 24px;overscroll-behavior:contain}
 .help-p{font-size:13px;line-height:1.9;color:rgb(var(--ink-2));padding:6px 2px 2px}
 .help-p code{font-family:var(--font-mono);font-size:11.5px;padding:1px 5px;border-radius:4px;background:rgb(var(--code-bg));color:rgb(var(--ivy-ink))}
@@ -2322,7 +2358,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <h1 class="brand-name" id="brandName">随手笔记</h1>
       </div>
       <div class="head-actions" id="headActions">
-        <button class="icon-btn todo-only" id="btnTodoHelp" title="待办使用说明" aria-label="待办使用说明"></button>
         <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
         <button class="icon-btn" id="btnViewMenu" title="视图 / 设置" aria-label="视图与设置"></button>
         <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
@@ -2530,7 +2565,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v173', at: '2026-11-18 09:11' };
+window.IVY_BUILD = { id: 'v174', at: '2026-11-18 09:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3086,7 +3121,6 @@ function paintRowIcons(){
   const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
   $('#btnShelf').innerHTML = ic('panelLeft');
-  $('#btnTodoHelp').innerHTML = ic('info');
   $('#shelfOpen').innerHTML = ic('panelLeft');
   const nlOpen = $('#nlOpen'); if(nlOpen) nlOpen.innerHTML = ic('panelLeft');
 }
@@ -10721,7 +10755,6 @@ $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
 $('#btnNewNb').onclick=()=>newNotebook();
 $('#btnViewMenu').onclick=(e)=>openViewMenu(e.currentTarget);
-$('#btnTodoHelp').onclick=()=>{ helpTab='todo'; openHelpPanel(); };
 $('#headDoneSw').onchange=(e)=>{ S.todoShowDoneToday = e.target.checked; save(); renderShelf(); };
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
@@ -11433,8 +11466,37 @@ function setPaneHtml(tab){
 
 /* ---- 使用说明（就是帮助弹窗里的内容，铺在这一页） ---- */
 function setHelpHtml(){
-  return `<div class="help-tabs set-help-tabs">${helpTabsHtml()}</div>
-    <div class="help-body" id="setHelpBody">${helpBodyHtml(helpTab)}</div>`;
+  return `<div class="help-wrap">
+    <div class="help-main">
+      <div class="help-tabs set-help-tabs">${helpTabsHtml()}</div>
+      <article class="help-doc" id="setHelpDoc">${helpBodyHtml(helpTab)}</article>
+    </div>
+    <aside class="help-ol" id="setHelpOl" aria-label="使用说明大纲"></aside>
+  </div>`;
+}
+/* 右侧悬浮大纲：按正文里的章节标题生成，滚动时高亮当前一节 */
+function renderHelpOutline(){
+  const pane = $('#setPane'), doc = $('#setHelpDoc'), ol = $('#setHelpOl');
+  if(!pane || !doc || !ol) return;
+  const heads = Array.from(doc.querySelectorAll('.help-sec > h4'));
+  if(heads.length < 2){ ol.style.display = 'none'; return; }
+  ol.style.display = '';
+  ol.innerHTML = `<div class="ol-t">大纲</div>` + heads.map((h, i)=>
+    `<button type="button" data-hi="${i}" title="${esc(h.textContent.trim())}">${esc(h.textContent.trim())}</button>`).join('');
+  const btns = Array.from(ol.querySelectorAll('[data-hi]'));
+  const go = (h)=>{
+    const top = pane.scrollTop + (h.getBoundingClientRect().top - pane.getBoundingClientRect().top) - 14;
+    pane.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  };
+  btns.forEach(b=>{ b.onclick = ()=>go(heads[+b.dataset.hi]); });
+  const mark = ()=>{
+    const base = pane.getBoundingClientRect().top + 46;
+    let cur = 0;
+    heads.forEach((h, i)=>{ if(h.getBoundingClientRect().top <= base) cur = i; });
+    btns.forEach((b, i)=>b.classList.toggle('on', i === cur));
+  };
+  pane.onscroll = mark;
+  mark();
 }
 
 /* ---- 客户端下载 ---- */
@@ -11903,8 +11965,14 @@ function bindPane(tab){
 
   if(tab === 'help'){
     pane.querySelectorAll('[data-htab]').forEach(b=>{
-      b.onclick = ()=>{ helpTab = b.dataset.htab; paintSettings(true); };
+      b.onclick = ()=>{
+        helpTab = b.dataset.htab;
+        paintSettings(true);
+        if(pane) pane.scrollTop = 0;
+        renderHelpOutline();
+      };
     });
+    renderHelpOutline();
   }
 
   if(tab === 'client'){

@@ -112,12 +112,12 @@ body.view-todo .head-actions .notes-only{display:none}
 .head-sw input:checked + i::after{transform:translateX(9px)}
 .head-sw span{white-space:nowrap}
 .icon-btn{
-  width:32px;height:32px;display:grid;place-items:center;border-radius:8px;
+  width:36px;height:36px;display:grid;place-items:center;border-radius:9px;
   color:rgb(var(--muted));transition:background .15s,color .15s;
 }
 .icon-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .icon-btn:active{transform:scale(.94)}
-.icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 
 .shelf-body{flex:1;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:0 6px 16px;scrollbar-gutter:stable}
 /* 当前选中的笔记本 / 分组：底色 + 更深文字，和中栏标题对应 */
@@ -150,29 +150,29 @@ body.shelf-collapsed .nl-open{display:grid}
 }
 .nl-row:hover{background:rgb(var(--hover))}
 .nl-row.on{background:rgb(var(--surface));box-shadow:0 0 0 .5px rgb(var(--line)),0 1px 2px rgb(16 24 32/.04)}
-.nl-row .nl-t1{display:flex;align-items:baseline;gap:6px;padding-right:22px}
-.nl-row:hover .nl-t1,body.ol-touch .nl-row .nl-t1{padding-right:58px}
+.nl-row .nl-t1{display:flex;align-items:baseline;gap:6px;padding-right:62px}
 .nl-row .nl-t{font-size:13px;font-weight:500;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
-.nl-row .nl-d{font-size:11px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;transition:opacity .12s}
-.nl-row:hover .nl-d{opacity:0}
-.nl-row .nl-more{
-  position:absolute;right:6px;top:50%;transform:translateY(-50%);
-  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
-  color:rgb(var(--muted));opacity:0;pointer-events:none;transition:opacity .12s,background .12s;
+/* 时间与「删除 / ⋯」同一行并排：时间在左，两个按钮依次靠右，一直可见不跳动 */
+.nl-row .nl-d{
+  font-size:11px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;
 }
-.nl-row:hover .nl-more{opacity:1;pointer-events:auto}
+.nl-row .nl-more{
+  position:absolute;right:6px;top:4px;
+  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
+  color:rgb(var(--muted));opacity:.38;transition:opacity .12s,background .12s;
+}
+.nl-row:hover .nl-more{opacity:1}
 .nl-row .nl-more:hover{background:rgb(var(--ink)/.08);color:rgb(var(--ink))}
 .nl-row .nl-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-body.ol-touch .nl-row .nl-more{opacity:.4;pointer-events:auto}
 .nl-row .nl-del{
-  position:absolute;right:32px;top:50%;transform:translateY(-50%);
+  position:absolute;right:32px;top:4px;
   width:22px;height:22px;display:grid;place-items:center;border-radius:6px;
-  color:rgb(var(--muted));opacity:0;pointer-events:none;transition:opacity .12s,background .12s,color .12s;
+  color:rgb(var(--muted));opacity:.38;transition:opacity .12s,background .12s,color .12s;
 }
-.nl-row:hover .nl-del{opacity:1;pointer-events:auto}
+.nl-row:hover .nl-del{opacity:1}
 .nl-row .nl-del:hover{background:rgb(var(--danger)/.12);color:rgb(var(--danger))}
 .nl-row .nl-del svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-body.ol-touch .nl-row .nl-del{opacity:.4;pointer-events:auto}
+body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .nl-row .nl-s{display:block;margin-top:3px;font-size:12px;color:rgb(var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nl-row .nl-pin{position:absolute;left:2px;top:13px;width:4px;height:4px;border-radius:50%;background:rgb(var(--ivy))}
 .nl-row .nl-t{white-space:nowrap}
@@ -538,12 +538,12 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tb-search kbd{font:500 10px/1 var(--font-mono);color:rgb(var(--faint));border:1px solid rgb(var(--line));border-radius:4px;padding:2px 4px;flex:0 0 auto}
 @media (max-width:1240px){ .tb-search{width:150px} .tb-search kbd{display:none} }
 @media (max-width:900px){ .tb-search{display:none} }
-.tab-new{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:rgb(var(--faint))}
+.tab-new{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:rgb(var(--faint))}
 .tab-new:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
-.tab-new svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+.tab-new svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
 
 /* 右上角操作图标与标题栏（标签 + 新建）同一行、垂直居中：44px 行高里对称留白 */
-.paper-actions{position:absolute;top:7px;right:12px;display:flex;align-items:center;gap:2px;z-index:6}
+.paper-actions{position:absolute;top:5px;right:12px;display:flex;align-items:center;gap:2px;z-index:6}
 /* 顶部「大纲」按钮：桌面 / 窄屏 / 触屏全部显示（.pa-btn 有 display:grid，用双类名保持一致权重） */
 .pa-btn.pa-ol{display:grid}
 body.ol-open .pa-ol{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
@@ -555,11 +555,11 @@ body.ol-touch .ol-close{display:grid}
 body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 书架收起时左上角有折叠按钮，标签栏让出它的位置，避免压住第一个标签 */
 .shelf-open.show ~ .paper .tabbar{padding-left:48px}
-.pa-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:rgb(var(--muted));transition:background .15s,color .15s}
+.pa-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:9px;color:rgb(var(--muted));transition:background .15s,color .15s}
 .pa-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 /* 触屏（iPad/手机）没有 hover：按下的瞬间给同样的颜色反馈 */
 .pa-btn:active{background:rgb(var(--hover));color:rgb(var(--ink))}
-.pa-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pa-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pa-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 
 .content-row{flex:1;display:flex;min-height:0;position:relative}
@@ -931,7 +931,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .selbar button{height:30px;min-width:30px;padding:0 9px;font-size:13px}
   .slash{width:min(258px,86vw)}
   /* 格式工具条收进 + 之后，手机上必须保留右上角这个插入入口 */
-  .paper .tabbar{padding-right:76px}
+  .paper .tabbar{padding-right:84px}
 }
 
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
@@ -1034,12 +1034,12 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .help-doc .help-table{margin-top:8px}
 .help-doc .help-hero{padding:10px 0 4px}
 .help-ol{
-  position:sticky;top:8px;flex:0 0 186px;width:186px;
-  padding:10px 8px;border-radius:12px;
+  position:sticky;top:6px;flex:0 0 212px;width:212px;
+  padding:10px 8px 12px;border-radius:12px;
   background:rgb(var(--surface)/.72);border:.5px solid rgb(var(--line));
   box-shadow:0 10px 24px -18px rgb(16 24 32/.35);
-  opacity:.6;transition:opacity .16s;
-  max-height:calc(100vh - 190px);overflow:auto;scrollbar-width:none;
+  opacity:.62;transition:opacity .16s;
+  max-height:calc(100vh - 128px);overflow:auto;scrollbar-width:none;
 }
 .help-ol::-webkit-scrollbar{display:none}
 .help-ol:hover{opacity:1}
@@ -1051,6 +1051,32 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .help-ol button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .help-ol button.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+/* 一级：栏目（手风琴） */
+.help-ol .ol-l1{
+  display:flex;align-items:center;gap:3px;font-size:12.5px;font-weight:600;
+  color:rgb(var(--ink));padding:6px 7px;
+}
+.help-ol .ol-l1 .ol-caret{
+  width:11px;flex:0 0 11px;font-style:normal;font-size:9px;line-height:1;
+  color:rgb(var(--faint));text-align:left;
+}
+.help-ol .ol-l1 span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.help-ol .ol-l1.on{color:rgb(var(--ivy-ink));background:rgb(var(--ivy-soft)/.55)}
+/* 二级：章节 */
+.help-ol .ol-l2{
+  padding-left:19px;font-size:11.5px;color:rgb(var(--ink-2));
+  border-left:1px solid rgb(var(--line));border-radius:0 6px 6px 0;margin-left:9px;
+}
+.help-ol .ol-l2.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:600;border-left-color:rgb(var(--ivy)/.5)}
+/* 三级：要点 */
+.help-ol .ol-l3{
+  position:relative;padding-left:30px;font-size:11.5px;color:rgb(var(--faint));
+  border-left:1px solid rgb(var(--line));border-radius:0 6px 6px 0;margin-left:19px;
+}
+.help-ol .ol-l3::before{
+  content:'';position:absolute;left:5px;top:50%;width:4px;height:1px;background:rgb(var(--faint)/.7);
+}
+.help-ol .ol-l3:hover{color:rgb(var(--ink-2))}
 @media (max-width:1180px){ .help-ol{display:none!important} }
 .help-body{overflow:auto;padding:6px 22px 24px;overscroll-behavior:contain}
 .help-p{font-size:13px;line-height:1.9;color:rgb(var(--ink-2));padding:6px 2px 2px}
@@ -2364,9 +2390,9 @@ body.ol-hover .outline{transform:none;opacity:1;pointer-events:auto}
   /* 右上角图标缩小一点，并给标签栏留出它的宽度，别互相压 */
   /* right 收到 2px：书架抽屉宽 330px，让番茄钟和「⋯」在抽屉打开时也点得到 */
   .paper-actions{top:8px;right:2px;gap:0}
-  .pa-btn{width:28px;height:28px}
-  /* 右上角只剩番茄钟与「⋯」两个图标，标签栏留出这段就够（原来是 6 个图标时的 180px） */
-  .tabbar{padding-right:76px}
+  .pa-btn{width:34px;height:34px}
+  /* 右上角只剩番茄钟与「⋯」两个图标（34px 各一枚），标签栏留出这段就够 */
+  .tabbar{padding-right:84px}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
@@ -2451,6 +2477,7 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .nl-new{width:34px;height:34px}
   .nl-rows{padding:2px 8px 28px}
   .nl-row{padding:11px 10px 12px;border-radius:10px}
+  .nl-row .nl-more,.nl-row .nl-del{top:9px}
   .nl-row .nl-t{font-size:14.5px}
   .nl-row .nl-s{font-size:12.5px;margin-top:4px}
   .nl-row .nl-d{font-size:11.5px}
@@ -2689,7 +2716,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v179', at: '2026-11-18 09:38' };
+window.IVY_BUILD = { id: 'v180', at: '2026-11-18 09:46' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6952,7 +6979,7 @@ const HELP_KEYS_MM = [
   ['展开 / 收起分支', '点节点右侧圆点'],
   ['收起样式面板 / 关闭导图', 'Esc']
 ];
-let helpTab = 'md';
+let helpTab = 'io';
 function openHelpPanel(){
   let ov = $('#helpOv');
   if(!ov){
@@ -7097,11 +7124,13 @@ function helpBodyHtml(tab){
       <div class="help-sec"><h4>关于这个应用</h4>
         <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
   } else if(tab === 'md'){
-    return `<div class="help-hero">` + HELP_HERO.map(c=>`
+    return `<div class="help-sec"><h4>常用语法</h4>
+      <div class="help-hero">` + HELP_HERO.map(c=>`
         <div class="hh${c.hl ? ' hl' : ''}">
           <div class="hh-t">${c.sym ? `<i>${esc(c.sym)}</i>` : ''}${esc(c.t)}</div>
           <div class="hh-p">${esc(c.d)}</div>
-        </div>`).join('') + `</div>
+        </div>`).join('') + `</div></div>
+      <div class="help-sec"><h4>完整对照表</h4>
       <table class="help-table">
         <thead><tr><th>格式</th><th>直接输入</th><th>快捷键</th><th>效果</th></tr></thead>
         <tbody>${HELP_TABLE.map(([n, syn, k, eff])=>`<tr>
@@ -7110,7 +7139,7 @@ function helpBodyHtml(tab){
           <td class="ht-k">${k ? k.split(' / ').map(x=>`<span>${esc(x)}</span>`).join(' ') : ''}</td>
           <td class="ht-eff">${eff}</td>
         </tr>`).join('')}</tbody>
-      </table>`;
+      </table></div>`;
   } else if(tab === 'todo'){
     return `
       <div class="help-sec"><h4>添加日期</h4>
@@ -7135,7 +7164,7 @@ function helpBodyHtml(tab){
 - [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08</pre></div>`;
   } else {
     const row = ([n,k])=>`<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`;
-    return `<div class="help-sec">` + HELP_KEYS.map(row).join('') + `</div>`
+    return `<div class="help-sec"><h4>编辑与视图</h4>` + HELP_KEYS.map(row).join('') + `</div>`
       + `<div class="help-sec"><h4>思维导图</h4>` + HELP_KEYS_MM.map(row).join('') + `</div>`;
   }
 }
@@ -11684,32 +11713,88 @@ function setPaneHtml(tab){
 function setHelpHtml(){
   return `<div class="help-wrap">
     <div class="help-main">
-      <div class="help-tabs set-help-tabs">${helpTabsHtml()}</div>
       <article class="help-doc" id="setHelpDoc">${helpBodyHtml(helpTab)}</article>
     </div>
     <aside class="help-ol" id="setHelpOl" aria-label="使用说明大纲"></aside>
   </div>`;
 }
-/* 右侧悬浮大纲：按正文里的章节标题生成，滚动时高亮当前一节 */
+/* 右侧目录：一级 = 栏目（手风琴，当前栏目展开），二级 = 章节，三级 = 章节里的要点。
+   原来那排「导入/导出、Markdown 写法…」按钮已收进这里，正文只剩文章本身。 */
 function renderHelpOutline(){
   const pane = $('#setPane'), doc = $('#setHelpDoc'), ol = $('#setHelpOl');
   if(!pane || !doc || !ol) return;
-  const heads = Array.from(doc.querySelectorAll('.help-sec > h4'));
-  if(heads.length < 2){ ol.style.display = 'none'; return; }
+  const TABS = [['io','导入 / 导出'],['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']];
+  const secs = Array.from(doc.querySelectorAll('.help-sec'));
+
+  // 四个栏目始终排在目录最上面，当前栏目下面再展开它的章节
+  let html = `<div class="ol-t">栏目</div>`;
+  TABS.forEach(([id, name])=>{
+    const on = helpTab === id;
+    html += `<button type="button" class="ol-l1${on ? ' on' : ''}" data-htab2="${id}" title="${esc(name)}">`
+      + `<i class="ol-caret">${on ? '▾' : '▸'}</i><span>${esc(name)}</span></button>`;
+  });
+  html += `<div class="ol-t">本节</div>`;
+  const seenSub = new Set();
+  secs.forEach((sec, si)=>{
+    const h = sec.querySelector('h4');
+    if(!h) return;
+    const full = h.textContent.trim();
+    const short = full.split('·')[0].trim() || full;          // 目录里只留短名，正文里还是完整标题
+    const label = short.length > 18 ? short.slice(0, 18) + '…' : short;
+    html += `<button type="button" class="ol-l2" data-hi="${si}" title="${esc(full)}">${esc(label)}</button>`;
+    // 三级：本节里挑一条最短也最有指向性的 <b> 短语，全局不重复，多了反而看不清层级
+    let pick = null;
+    sec.querySelectorAll('.help-p').forEach((p, pi)=>{
+      if(pick) return;
+      const b = p.querySelector('b');
+      if(!b) return;
+      const t = b.textContent.trim().replace(/[，。；：、,.;:]+$/, '');
+      if(!t || t.length < 4 || t.length > 10 || seenSub.has(t)) return;
+      pick = [pi, t];
+    });
+    if(pick){
+      seenSub.add(pick[1]);
+      html += `<button type="button" class="ol-l3" data-hj="${si}:${pick[0]}" title="${esc(pick[1])}">${esc(pick[1])}</button>`;
+    }
+  });
+  ol.innerHTML = html;
   ol.style.display = '';
-  ol.innerHTML = `<div class="ol-t">大纲</div>` + heads.map((h, i)=>
-    `<button type="button" data-hi="${i}" title="${esc(h.textContent.trim())}">${esc(h.textContent.trim())}</button>`).join('');
-  const btns = Array.from(ol.querySelectorAll('[data-hi]'));
-  const go = (h)=>{
-    const top = pane.scrollTop + (h.getBoundingClientRect().top - pane.getBoundingClientRect().top) - 14;
+
+  const toTop = (el, pad)=>{
+    const top = pane.scrollTop + (el.getBoundingClientRect().top - pane.getBoundingClientRect().top) - pad;
     pane.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
-  btns.forEach(b=>{ b.onclick = ()=>go(heads[+b.dataset.hi]); });
+  ol.querySelectorAll('[data-htab2]').forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.dataset.htab2;
+      if(helpTab === id) return;
+      helpTab = id;
+      paintSettings(true);
+      pane.scrollTop = 0;
+      renderHelpOutline();
+    };
+  });
+  ol.querySelectorAll('.ol-l2').forEach(b=>{
+    b.onclick = ()=>{ const h = secs[+b.dataset.hi]?.querySelector('h4'); if(h) toTop(h, 14); };
+  });
+  ol.querySelectorAll('.ol-l3').forEach(b=>{
+    b.onclick = ()=>{
+      const [si, pi] = b.dataset.hj.split(':').map(Number);
+      const p = secs[si]?.querySelectorAll('.help-p')[pi];
+      if(p) toTop(p, 14);
+    };
+  });
+
+  const l2btns = Array.from(ol.querySelectorAll('.ol-l2'));
   const mark = ()=>{
+    if(!l2btns.length){ l2btns.forEach(b=>b.classList.remove('on')); return; }
     const base = pane.getBoundingClientRect().top + 46;
     let cur = 0;
-    heads.forEach((h, i)=>{ if(h.getBoundingClientRect().top <= base) cur = i; });
-    btns.forEach((b, i)=>b.classList.toggle('on', i === cur));
+    secs.forEach((sec, i)=>{
+      const h = sec.querySelector('h4');
+      if(h && h.getBoundingClientRect().top <= base) cur = i;
+    });
+    l2btns.forEach(b=>b.classList.toggle('on', +b.dataset.hi === cur));
   };
   pane.onscroll = mark;
   mark();
@@ -12200,15 +12285,7 @@ function bindPane(tab){
   }
 
   if(tab === 'help'){
-    pane.querySelectorAll('[data-htab]').forEach(b=>{
-      b.onclick = ()=>{
-        helpTab = b.dataset.htab;
-        paintSettings(true);
-        if(pane) pane.scrollTop = 0;
-        renderHelpOutline();
-      };
-    });
-    renderHelpOutline();
+    renderHelpOutline();     // 栏目切换的绑定在 renderHelpOutline 里（右侧目录）
   }
 
   if(tab === 'client'){

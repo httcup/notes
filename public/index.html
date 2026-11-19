@@ -3316,7 +3316,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v237', at: '2026-11-19 16:24' };
+window.IVY_BUILD = { id: 'v238', at: '2026-11-19 16:32' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -9543,6 +9543,9 @@ function inRealEditor(){
   if(!ae) return false;
   if(ae.isContentEditable) return true;
   if(ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT'){
+    // 预览块里的输入框即使没有选中文字（光标停在空块里）也是在编辑，
+    // 旧逻辑把它当成「不在编辑器」，于是 ⌘V 被全局捕获、粘到最后一节去了
+    if(ae.classList && ae.classList.contains('blk-src')) return true;
     try{ return typeof ae.selectionStart === 'number' && ae.selectionStart !== ae.selectionEnd; }catch(e){ return true; }
   }
   return false;
@@ -9571,21 +9574,20 @@ document.addEventListener('copy', e=>{
   const blocks = host ? [...host.querySelectorAll('.blk')] : [];
   const a = blocks.findIndex(b=>b.contains(r.startContainer));
   const b = blocks.findIndex(b=>b.contains(r.endContainer));
-  const txt = (a >= 0 && b >= 0 && a !== b)
-    ? blocksSelText(blocks, r, a, b)
-    : (window.getSelection().toString() || liveSelText());
-  if(!txt) return;
+  const p = copyPayload(r);
+  if(!p) return;
   let done = false;
   try{
     if(e.clipboardData){
-      e.clipboardData.setData('text/plain', txt);
-      const md = liveSelMd(r);
-      if(md) e.clipboardData.setData('text/x-ivy-md', md);
+      e.clipboardData.setData('text/plain', p.plain);
+      if(p.html) e.clipboardData.setData('text/html', p.html);
+      e.clipboardData.setData('text/x-ivy-md', p.md);
+      LAST_COPY = p;
       done = true;
     }
   }catch(err){}
   if(done) e.preventDefault();
-  else writeClip(txt);       // 极少数浏览器没有 clipboardData：退回 execCommand
+  else writeClipRich(p.plain, p.md, p.html);
 });
 document.addEventListener('cut', e=>{
   const r = liveSelRange();
@@ -9616,7 +9618,10 @@ document.addEventListener('paste', e=>{
     const text = (cd && (cd.getData('text/x-ivy-md') || cd.getData('text/plain'))) || '';
     endPasteCatcher();
     if(files.length){ insertFiles(files, null).then(insertToast); return; }
-    if(text) pasteIntoLive(text, at || null);
+    if(text){
+      const md = (LAST_COPY && text === LAST_COPY.plain) ? LAST_COPY.md : text;
+      pasteIntoLive(md, at || null);
+    }
     else toast('剪贴板里没有文字');
     return;
   }
@@ -9726,6 +9731,33 @@ function writeClip(text){
   }
   return Promise.resolve(fallback());
 }
+/* 最近一次复制的三种格式。自定义 MIME 在很多浏览器写不进系统剪贴板，
+   但同一页内粘贴可以靠它把 Markdown 源找回来，不至于掉格式。 */
+let LAST_COPY = null;
+async function writeClipRich(plain, md, html){
+  LAST_COPY = { plain: plain, md: md || plain, html: html || '' };
+  if(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem){
+    const base = { 'text/plain': new Blob([plain], { type:'text/plain' }) };
+    if(html) base['text/html'] = new Blob([html], { type:'text/html' });
+    try{
+      const all = Object.assign({}, base, { 'text/x-ivy-md': new Blob([LAST_COPY.md], { type:'text/x-ivy-md' }) });
+      await navigator.clipboard.write([new ClipboardItem(all)]);
+      return true;
+    }catch(e){}
+    try{
+      await navigator.clipboard.write([new ClipboardItem(base)]);
+      return true;
+    }catch(e){}
+  }
+  return writeClip(plain);
+}
+function copyPayload(r){
+  const plain = liveSelText() || window.getSelection().toString();
+  if(!plain) return null;
+  const md = (r && liveSelMd(r)) || plain;
+  const html = r ? liveSelHtml(r) : '';
+  return { plain, md, html };
+}
 function clipCopySel(){
   const text = selPlainText();
   if(!text) return toast('先选中要复制的内容');
@@ -9829,10 +9861,10 @@ document.addEventListener('keydown', e=>{
   const sel = liveSelRange();
   // ⌘C：只读预览里浏览器不一定把选区写进剪贴板，自己写一份（含跨块换行）
   if(k === 'c'){
-    const txt = liveSelText() || window.getSelection().toString();
-    if(!txt) return;
+    const p = copyPayload(sel);
+    if(!p) return;
     e.preventDefault();
-    writeClip(txt);
+    writeClipRich(p.plain, p.md, p.html);
     return;
   }
   if(k === 'x'){
@@ -9868,7 +9900,8 @@ async function tryClipboardPaste(at){
     if(!txt || !PASTE_CATCH) return;          // 原生 paste 已经处理掉了
     const keep = PASTE_CATCH.at || at || null;
     endPasteCatcher();
-    pasteIntoLive(txt, keep);
+    const md = (LAST_COPY && txt === LAST_COPY.plain) ? LAST_COPY.md : txt;
+    pasteIntoLive(md, keep);
   }catch(e){ /* 权限被拒就交给原来的隐形框 / 粘贴弹窗兜底 */ }
 }
 function liveSelStart(r){
@@ -9882,13 +9915,34 @@ function liveSelStart(r){
 }
 
 /* 选区跨块时给出 markdown 源，粘回编辑器不丢加粗/链接 */
+/* 选中区对应的 Markdown 源码（同一个块里也要按可见文字偏移切出来，
+   不能只在跨块时才给源，否则复制加粗/链接再粘贴就掉格式） */
 function liveSelMd(r){
   const host = liveHost(); if(!host) return '';
   const blocks = [...host.querySelectorAll('.blk')];
-  const a = blocks.findIndex(b=>b.contains(r.startContainer));
-  const b = blocks.findIndex(b=>b.contains(r.endContainer));
-  if(a < 0 || b < 0 || a === b) return '';
-  return LIVE.raws.slice(a, b + 1).join('\n');
+  const p1 = blockPoint(r.startContainer, r.startOffset, false);
+  const p2 = blockPoint(r.endContainer, r.endOffset, true);
+  if(!p1 || !p2) return '';
+  const raw1 = String(LIVE.raws[p1.i] || ''), raw2 = String(LIVE.raws[p2.i] || '');
+  const v1 = blocks[p1.i] && blocks[p1.i].querySelector('.blk-view');
+  const v2 = blocks[p2.i] && blocks[p2.i].querySelector('.blk-view');
+  // 用统一的「可见偏移 → Markdown 偏移」映射：cutBefore/cutAfter 依赖整段纯文本
+  // 能在 raw 里原样找到，一旦有 ** 加粗、链接、标题前缀就找不到，会把选区截成空。
+  const pos1 = visToRaw(raw1, p1.off);
+  const pos2 = visToRaw(raw2, p2.off);
+  if(p1.i === p2.i) return healInline(raw1.slice(pos1, Math.max(pos1, pos2)));
+  const mid = LIVE.raws.slice(p1.i + 1, p2.i);
+  return healInline([raw1.slice(pos1), ...mid, raw2.slice(0, pos2)].join('\n'));
+}
+/* 选区的富文本 HTML：贴到微信 / 备忘录 / Word 时保留加粗、标题、列表样式 */
+function liveSelHtml(r){
+  try{
+    const frag = r.cloneContents();
+    const div = document.createElement('div');
+    div.appendChild(frag);
+    div.removeAttribute('id');
+    return div.innerHTML;
+  }catch(e){ return ''; }
 }
 function pasteIntoLive(text, at0){
   let at = at0 || null;
@@ -10067,6 +10121,12 @@ function paintLive(){
 }
 
 function rebuild(focusIdx, caret){
+  // 重建会替换掉旧 textarea；它随后触发的 blur 如果还认为自己在编辑，
+  // 会把过期的值 commit 回新的 LIVE.raws，典型症状：删回车产生的空行时，
+  // 空行没删掉、反而把下一段清空了。这里先撤掉旧块的编辑态。
+  const host0 = liveHost();
+  if(host0) host0.querySelectorAll('.blk.editing').forEach(b=>b.classList.remove('editing'));
+  LIVE.editing = -1; LIVE.ta = null;
   paintLive();
   syncBody();
   if(focusIdx!=null && focusIdx>=0) focusBlock(focusIdx, caret);
@@ -10500,11 +10560,26 @@ function toggleTask(i, cb){
 }
 
 function onBlockPaste(e){
-  const files = [...((e.clipboardData && e.clipboardData.items)||[])]
+  const cd = e.clipboardData;
+  const files = [...((cd && cd.items)||[])]
     .filter(x=>x.kind==='file').map(x=>x.getAsFile()).filter(Boolean);
-  if(!files.length) return;      // 纯文本粘贴走浏览器默认
+  if(files.length){
+    e.preventDefault();
+    insertFiles(files, e.currentTarget).then(insertToast);
+    return;
+  }
+  // 从预览区复制来的内容：粘进块编辑框时也走 Markdown 源，别掉格式
+  if(!cd || !document.body.contains(e.currentTarget)) return;
+  let md = '';
+  try{ md = cd.getData('text/x-ivy-md') || ''; }catch(err){}
+  const plain = (()=>{ try{ return cd.getData('text/plain') || ''; }catch(err){ return ''; } })();
+  if(!md && LAST_COPY && plain && plain === LAST_COPY.plain) md = LAST_COPY.md;
+  if(!md) return;                       // 外部复制的普通文字走浏览器默认
   e.preventDefault();
-  insertFiles(files, e.currentTarget).then(insertToast);
+  const ta = e.currentTarget, i = +ta.dataset.i;
+  const s = ta.selectionStart, en = ta.selectionEnd;
+  ta.setRangeText(md, s, en, 'end');
+  LIVE.raws[i] = ta.value; growTa(ta); syncBody();
 }
 
 /* ---- 光标定位：点哪儿就从哪儿开始改 ---- */

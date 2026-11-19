@@ -1193,6 +1193,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .help-tabs{display:flex;gap:4px;padding:0 18px 10px;border-bottom:1px solid rgb(var(--line))}
 .help-tab{padding:6px 11px;border-radius:8px;font-size:13px;color:rgb(var(--muted))}
 .help-tab.on{background:rgb(var(--hover));color:rgb(var(--ink));font-weight:500}
+.help-hd .jump-key{margin-left:auto;margin-right:8px;white-space:nowrap;background:rgb(var(--hover));color:rgb(var(--ink))}
 
 /* ---- 客户端下载 ---- */
 .dl-body{padding:8px 22px 22px;overflow:auto}
@@ -3316,7 +3317,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v238', at: '2026-11-19 16:32' };
+window.IVY_BUILD = { id: 'v239', at: '2026-11-19 16:53' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8378,6 +8379,22 @@ const HELP_KEYS = [
   ['新建下级条目', '⌘Enter / Ctrl+Enter'], ['删除空块', 'Backspace'],
   ['缩进 / 反缩进', 'Tab / ⇧Tab'], ['块首尾跳转', '↑ / ↓']
 ];
+/* Markdown 格式快捷键：与全局 keydown 里真正注册的保持一致 */
+const HELP_KEYS_MD = [
+  ['一级 / 二级 / 三级标题', '⌥⌘1 / ⌥⌘2 / ⌥⌘3'],
+  ['加粗', '⌘B'], ['斜体', '⌘I'],
+  ['删除线', '⌘⇧X'], ['高亮', '⌘⇧H'],
+  ['待办', '⌘⇧9'], ['无序 / 有序列表', '⌘⇧8 / ⌘⇧7'],
+  ['链接到笔记', '⌘⇧K'], ['插入菜单', '⌘/'],
+  ['源码 / 即时渲染切换', '⌘⇧E']
+];
+const HELP_KEYS_CLIP = [
+  ['选中文字后复制（保留 Markdown 格式）', '⌘C / Ctrl+C'],
+  ['剪切选中文字', '⌘X / Ctrl+X'],
+  ['粘贴（保留 Markdown 格式）', '⌘V / Ctrl+V'],
+  ['删除空块', 'Backspace'], ['块内换行', '⇧Enter'],
+  ['缩进 / 反缩进', 'Tab / ⇧Tab']
+];
 const HELP_KEYS_MM = [
   ['新建子节点（往里一层）', 'Tab'],
   ['新建同级节点', 'Enter'],
@@ -8394,6 +8411,7 @@ function openHelpPanel(){
     ov.innerHTML = `<div class="help-card" role="dialog" aria-label="使用说明">
         <div class="help-hd">
           <div><h3>使用说明</h3><p>导入导出、Markdown 写法、快捷键与日程</p></div>
+          <button class="help-tab jump-key" id="helpKeyJump" title="查看全部快捷键">⌨ 快捷键</button>
           <button class="help-x" id="helpClose" title="关闭">${ic('x')}</button>
         </div>
         <div class="help-tabs">
@@ -8409,6 +8427,8 @@ function openHelpPanel(){
     document.body.appendChild(ov);
     ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeHelpPanel(); });
     $('#helpClose').onclick = closeHelpPanel;
+    const kj = $('#helpKeyJump');
+    if(kj) kj.onclick = ()=>{ helpTab = 'key'; paintHelp(); };
     ov.querySelectorAll('[data-htab]').forEach(b=>b.onclick=()=>{ helpTab = b.dataset.htab; paintHelp(); });
   }
   paintHelp();
@@ -8638,6 +8658,9 @@ function helpBodyHtml(tab){
   } else {
     const row = ([n,k])=>`<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`;
     return `<div class="help-sec"><h4>编辑与视图</h4>` + HELP_KEYS.map(row).join('') + `</div>`
+      + `<div class="help-sec"><h4>Markdown 格式</h4>` + HELP_KEYS_MD.map(row).join('') + `</div>`
+      + `<div class="help-sec"><h4>复制 / 粘贴 / 缩进</h4>` + HELP_KEYS_CLIP.map(row).join('')
+      + `<p class="help-p">复制会同时带上 Markdown 源和富文本：贴回笔记保留 <code>**</code>、标题、列表，贴到微信 / 备忘录也保留加粗样式。</p></div>`
       + `<div class="help-sec"><h4>思维导图</h4>` + HELP_KEYS_MM.map(row).join('') + `</div>`;
   }
 }

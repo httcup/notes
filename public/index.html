@@ -254,14 +254,43 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .sec-body.hidden{display:none}
 /* 侧栏各分区之间的细线 */
 .shelf-sep{height:1px;background:rgb(var(--line));margin:12px 8px 10px}
-/* 侧栏「日程」分区：沿用笔记标题那套（.sec-label/.sec-fold），只在外面加一条分隔线 */
-.sched-sec{margin:14px 0 2px;padding-top:12px;border-top:1px solid rgb(var(--line))}
-.sched-sec .sec-label{margin:0 0 6px;padding-right:40px}
-.sched-sec.closed .sec-label{margin-bottom:0}
-.sched-sec .sched-body{position:relative}
-.sched-sec .todo-shelf{min-height:0;padding:0 0 2px}
-.sched-sec .tsh-meta{padding:0 6px 8px}
-.sched-sec .tsh-sub{margin-bottom:2px}
+/* ===== 侧栏四个一级标题：全部笔记 / 日程 / 标签 / 回收站 =====
+   以前各写各的（14.5 / 11.5 / 13 三种字号），现在共用一套：字号、字重、颜色、缩进、数字位置全对齐 */
+.side-hd{
+  display:flex;align-items:center;gap:6px;width:100%;position:relative;text-align:left;
+  padding:7px 40px 7px 8px;border-radius:7px;
+  font-size:14.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));
+  transition:background .14s,color .14s;
+}
+.side-hd:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.side-hd .lb{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.side-hd .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.side-hd .ico{width:15px;height:15px;flex:0 0 auto;display:grid;place-items:center;color:rgb(var(--faint))}
+.side-hd .ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* 小三角：和图标同宽（15px），四种标题的文字起点因此完全对齐；
+   上下各撑 6px 热区（配合负 margin，行高不受影响） */
+.side-hd .caret{
+  width:15px;height:15px;line-height:15px;text-align:center;
+  font-size:8px;font-style:normal;color:rgb(var(--faint));
+  display:inline-block;flex:0 0 auto;transform:rotate(90deg);border-radius:5px;
+  padding:6px 0;margin:-6px 0;
+  transition:transform .18s var(--spring),background .14s,color .14s;
+}
+.side-hd .caret:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.side-hd.closed .caret{transform:rotate(0)}
+.side-hd .n{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:11px;font-weight:500;color:rgb(var(--faint));font-variant-numeric:tabular-nums;
+}
+.side-hd.on{color:rgb(var(--ink));background:rgb(var(--ink)/.055)}
+.side-hd.on .n{color:rgb(var(--ink-2))}
+@media (max-width:900px){ .side-hd{padding-top:9px;padding-bottom:9px} }
+/* 侧栏「日程」入口：四个标题里它单独一条分隔线 */
+.sched-nav .t{flex:1}
+/* 四个一级标题之间的分隔线：日程 / 标签 / 回收站各来一条，视觉上是同一套 */
+.side-hd.sep{margin-top:8px;padding-top:13px;border-top:1px solid rgb(var(--line));border-radius:7px}
+/* 平板竖屏：日程列表就地铺在侧栏里 */
+.sec-body.sched-inline{padding:2px 0 0}
 .shelf-row{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
   padding:6px 8px;border-radius:7px;color:rgb(var(--ink-2));
@@ -431,19 +460,13 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .tag-empty{font-size:11.5px;color:rgb(var(--faint));padding:4px 8px 6px;line-height:1.6}
 
 /* 标签胶囊（苹果备忘录式）：侧栏最底部一排可换行的标签，点一下即筛选 */
-.tag-pills-sec{margin:16px 8px 4px;padding-top:13px;border-top:1px solid rgb(var(--line))}
+.tag-pills-sec{margin:12px 0 2px;padding-top:12px;border-top:1px solid rgb(var(--line))}
 .tag-pills-sec.closed{margin-bottom:0}
-.tag-pills-title{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
-  text-align:left;font-size:11.5px;font-weight:500;color:rgb(var(--faint));margin:0 0 8px;padding:0 30px 0 0;
-}
+/* 标题（「标签」）走 .side-hd 那一套，这里只留标签区自己的间距 */
+.tag-pills-title{margin:0 0 8px;padding-right:40px}
 .tag-pills-sec.closed .tag-pills-title{margin-bottom:0}
-.tag-pills-title:hover{color:rgb(var(--ink-2))}
-.tag-pills-title .tp-lb{display:flex;align-items:center;gap:5px}
-.tag-pills-title .caret{width:9px;font-size:8px;line-height:1;text-align:center;color:rgb(var(--faint));transition:transform .18s}
-.tag-pills-title.open .caret{transform:rotate(90deg)}
-.tag-pills-title .tp-total{font-size:11px;font-variant-numeric:tabular-nums;padding-right:8px}
-.tag-pills{display:flex;flex-wrap:wrap;gap:6px}
+.tag-pills-title .tp-total{display:none}
+.tag-pills{display:flex;flex-wrap:wrap;gap:6px;padding:0 8px}
 .tag-pill{
   display:inline-flex;align-items:center;gap:4px;max-width:100%;height:26px;padding:0 9px;
   border-radius:99px;background:rgb(var(--ink)/.055);color:rgb(var(--ink-2));
@@ -1367,6 +1390,71 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .todo-blank{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;color:rgb(var(--faint))}
 .todo-blank svg{width:40px;height:40px;opacity:.5}
 .todo-blank p{font-size:13px}
+
+/* ---- 中栏：日程列表 ----
+   日程和笔记共用同一根中栏：分组标题 + 每条一行，行距 / 圆角 / 选中底色都跟着笔记列表走，
+   只是每行前面多一个勾选框，右边是时间（和「提醒」按钮） */
+.notelist.nl-todo .nl-new,.notelist.nl-todo .nl-r{display:none}
+.nl-rows .todo-shelf{display:block;min-height:0;padding:0}
+.nl-rows .tsh-meta{padding:2px 8px 9px}
+.nl-rows .tsh-sw{margin:0 8px 10px;font-size:11.5px}
+.nl-rows .tsg-h{padding:10px 8px 6px;font-size:12px;color:rgb(var(--faint))}
+.nl-rows .tsg-h:hover{color:rgb(var(--ink-2))}
+.nl-rows .tsg-h .n{font-size:11px}
+.nl-rows .tsi{padding:8px 8px 9px 6px;gap:9px;border-radius:9px;align-items:flex-start}
+.nl-rows .tsi .t{font-size:13px;line-height:1.45;color:rgb(var(--ink))}
+.nl-rows .tsi .src{font-size:11px;margin-top:2px}
+.nl-rows .tsi .tm{font-size:11px;margin-top:2px}
+.nl-rows .tsi input{width:14px;height:14px;margin-top:3px}
+.nl-rows .tsi-bell{width:22px;height:22px;margin-top:0;opacity:.45;flex:0 0 auto}
+.nl-rows .tsi.sel{background:rgb(var(--surface));box-shadow:0 0 0 .5px rgb(var(--line)),0 1px 2px rgb(16 24 32/.04)}
+.nl-rows .tsi.sel .t{color:rgb(var(--ink))}
+.nl-rows .tsh-empty{padding:40px 12px}
+@media (max-width:640px){
+  .nl-rows .tsg-h{font-size:13px;padding:12px 8px 7px}
+  .nl-rows .tsi{padding:10px 8px 11px 6px}
+  .nl-rows .tsi .t{font-size:14.5px}
+  .nl-rows .tsi .src,.nl-rows .tsi .tm{font-size:11.5px}
+  .nl-rows .tsi-bell{opacity:.55}
+}
+
+/* ---- 中栏：标签列表（点「标签」进这一页，再点某个标签看它的笔记） ---- */
+.nl-row .nl-t .h{color:rgb(var(--faint));font-weight:500;margin-right:2px}
+.nl-row .nl-c{font-size:11px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
+.nl-row.tg-row{padding-top:9px;padding-bottom:10px}
+.nl-row.tg-row .nl-t1{padding-right:34px}
+.nl-rows .nl-cap{padding:10px 8px 6px;font-size:11.5px;color:rgb(var(--faint))}
+.nl-rows .nl-cap-btn{
+  display:flex;align-items:center;gap:7px;width:100%;margin:4px 0 10px;padding:8px;
+  border-radius:9px;font-size:12.5px;color:rgb(var(--danger));text-align:left;
+}
+.nl-rows .nl-cap-btn:hover{background:rgb(var(--danger)/.08)}
+.nl-rows .nl-cap-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;flex:0 0 auto}
+
+/* ---- 中栏：回收站列表 ---- */
+.nl-row.td-row .nl-t{color:rgb(var(--ink-2))}
+
+/* ---- 右栏：回收站里那篇笔记的预览 ---- */
+.view-pad .trash-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+.trash-flag{
+  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:99px;
+  background:rgb(var(--ink)/.055);font-size:12px;color:rgb(var(--muted));
+}
+.trash-flag svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.trash-bar .meta-btn{
+  height:26px;padding:0 12px;border-radius:8px;font-size:12.5px;
+  background:rgb(var(--ink)/.055);color:rgb(var(--ink-2));
+}
+.trash-bar .meta-btn:hover{background:rgb(var(--ink)/.1);color:rgb(var(--ink))}
+.trash-bar .meta-btn[data-purge]{color:rgb(var(--danger));background:rgb(var(--danger)/.09)}
+.trash-bar .meta-btn[data-purge]:hover{background:rgb(var(--danger)/.16)}
+.trash-pane .trash-title{font-family:var(--font-serif);font-size:26px;line-height:1.35;letter-spacing:-.01em;margin:0}
+.trash-pane .trash-meta{font-size:12px;color:rgb(var(--faint));margin-top:9px}
+.trash-pane .prose{margin-top:22px;max-width:74ch}
+@media (max-width:640px){
+  .trash-pane .trash-title{font-size:21px}
+  .view-pad .trash-bar .meta-btn{margin-left:0}
+}
 
 /* ---- 历史版本 ---- */
 .hist-ov{
@@ -3164,7 +3252,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v217', at: '2026-11-19 09:20' };
+window.IVY_BUILD = { id: 'v219', at: '2026-11-19 09:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3255,6 +3343,8 @@ function normalizeState(s){
     if(!['live','preview','source','split'].includes(s.mode)) s.mode = 'live';
     if(typeof s.tagFilter !== 'string') s.tagFilter = '';
     if(!['notes','todo','media','graph'].includes(s.view)) s.view = 'notes';
+    // v218：日程不再是独立视图，改成「笔记视图 + 中栏待办列表」，老状态顺手迁过来
+    if(s.view === 'todo'){ s.view = 'notes'; if(!s.scope || s.scope === 'all') s.scope = 'todo'; }
     if(typeof s.scope !== 'string' || !s.scope) s.scope = 'all';
     if(typeof s.listQuery !== 'string') s.listQuery = '';
     if(!['new','title'].includes(s.listSort)) s.listSort = 'new';
@@ -3852,48 +3942,27 @@ function tagPillKeys(notes){
   NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   return keys.sort((a,b)=>a.localeCompare(b, 'zh-CN'));
 }
-/* 侧栏的「待办日程」分区：原来是一个独立视图（整条侧栏被它占掉），
-   现在收进笔记侧栏、放在笔记本列表下面，和标签区一样能折叠 */
-function schedSectionHtml(){
+/* 侧栏的「日程」入口：和「全部笔记 / 标签 / 回收站」同一套标题行。
+   点它不再就地展开，而是把待办列表画到中栏（和笔记列表同一个位置），
+   点其中一条 → 右边打开那篇笔记并滚到那一行。 */
+function schedNavHtml(){
   const c = todoCounts();
-  const open = !S.todoSecClosed;
-  const n = c.open || 0;
-  return `<div class="sched-sec${open ? '' : ' closed'}">
-    <button class="sec-label sec-fold${open ? '' : ' closed'}" data-act="toggle-sched"
-      title="${open ? '收起待办日程' : '展开待办日程'}" aria-expanded="${open ? 'true' : 'false'}">
-      <span class="lb"><i class="caret">&#9654;</i>待办日程</span>
-      <span class="count">${n}</span>
-    </button>
-    ${open ? `<div class="sched-body">${todoShelf()}</div>` : ''}
-  </div>`;
+  const on = (S.scope || 'all') === 'todo';
+  return `<button class="side-hd sep sched-nav${on ? ' on' : ''}" data-act="goto-todo"
+      title="查看全部待办">
+      <span class="lb"><span class="ico">${ic('todo')}</span><span class="t">日程</span></span>
+      <span class="n">${c.open || 0}</span>
+    </button>`;
 }
-function tagPillsHtml(notes){
+/* 「标签」入口：和「全部笔记 / 日程 / 回收站」同一套标题行。
+   点它 → 中栏变成标签列表（和笔记列表同一个位置），再点某个标签才筛笔记 */
+function tagNavHtml(notes){
   const keys = tagPillKeys(notes);
   const untagged = notes.filter(n=>!tagOf(n).length).length;
-  if(!keys.length && !untagged) return '';
-  const shown = keys.slice(0, TAG_PILLS_MAX);
-  const rest = keys.length - shown.length;
-  const cnt = k => notes.filter(n=>tagOf(n).includes(k)).length;
-
-  let pills = `<button class="tag-pill${(S.scope && S.scope.indexOf('tag:')===0) ? '' : ' on'}" data-tagall="1" title="查看全部标签">`
-    + `<span class="tp-t">所有标签</span><span class="tp-n">${keys.length}</span></button>`;
-  shown.forEach(k=>{
-    const c = cnt(k);
-    pills += `<button class="tag-pill${S.scope==='tag:'+k?' on':''}" data-tagpill="${esc(k)}" title="#${esc(k)} · ${c} 篇">`
-      + `<span class="tp-h">#</span><span class="tp-t">${esc(k)}</span><span class="tp-n">${c}</span></button>`;
-  });
-  if(rest > 0) pills += `<button class="tag-pill more" data-tagall="1" title="还有 ${rest} 个标签">+${rest}</button>`;
-  if(untagged) pills += `<button class="tag-pill${S.scope==='tag:'+NO_TAG?' on':''}" data-tagpill="${NO_TAG}" title="${NO_TAG_LABEL} · ${untagged} 篇">`
-      + `<span class="tp-h">#</span><span class="tp-t">${esc(NO_TAG_LABEL)}</span><span class="tp-n">${untagged}</span></button>`;
-
-  const tagOpen = !S.tagPillsClosed;
-  return `<div class="tag-pills-sec${tagOpen?'':' closed'}">
-    <button class="tag-pills-title${tagOpen?' open':''}" data-act="toggle-tag-pills"
-        title="${tagOpen?'收起标签':'展开标签'}" aria-expanded="${tagOpen?'true':'false'}">
-      <span class="tp-lb"><i class="caret">&#9654;</i>标签</span><span class="tp-total">${keys.length}</span>
-    </button>
-    ${tagOpen ? `<div class="tag-pills">${pills}</div>` : ''}
-  </div>`;
+  const on = (S.scope || '') === 'tags' || (S.scope || '').indexOf('tag:') === 0;
+  return `<button class="side-hd sep${on ? ' on' : ''}" data-act="goto-tags" title="查看全部标签">
+      <span class="ico">${ic('tag')}</span><span class="t">标签</span><span class="n">${keys.length + (untagged ? 1 : 0)}</span>
+    </button>`;
 }
 function setTagFilter(k){
   // 兼容旧调用：标签筛选现在走中间列表的 scope
@@ -4016,6 +4085,7 @@ function setScope(sc){
   S.listQuery = '';
   trashView = false;                       // 从回收站回到正常浏览
   S.view = 'notes';
+  dropTrashedActive();
   if(window.innerWidth <= 640) shelfCloseIfDrawer();
   renderAll(); save();
 }
@@ -4026,6 +4096,7 @@ function goAllNotes(){
   S.listQuery = '';
   trashView = false;
   S.view = 'notes';
+  dropTrashedActive();
   if(window.innerWidth <= 640){
     document.body.classList.remove('m-read');    // 手机：从笔记页回到列表页
     shelfCloseIfDrawer();
@@ -4033,9 +4104,52 @@ function goAllNotes(){
   renderAll(); save();
   const rows = $('#nlRows'); if(rows) rows.scrollTop = 0;
 }
+/* 打开「标签」：中栏列出所有标签（和笔记本 / 日程同一个位置），点某个标签才筛笔记 */
+function openTagList(){
+  S.scope = 'tags';
+  S.listQuery = '';
+  trashView = false;
+  S.view = 'notes';
+  dropTrashedActive();
+  if(window.innerWidth <= 640){
+    document.body.classList.remove('m-read');
+    shelfCloseIfDrawer();
+  } else if(document.documentElement.clientWidth <= 900 && !S.shelfOpen){
+    S.shelfOpen = true;
+  }
+  renderAll(); save();
+  const rows = $('#nlRows'); if(rows) rows.scrollTop = 0;
+}
+/* 选中的那篇刚好在回收站里（预览过它）→ 回普通浏览时把它放掉，别让右栏顶着一篇已删的笔记 */
+function dropTrashedActive(){
+  const n = S.active ? noteById(S.active) : null;
+  if(n && n.trashed) S.active = S.tabs.map(noteById).find(x=>x && !x.trashed)?.id || null;
+}
+/* 打开「日程」：不再是整屏的独立视图，而是把中栏换成待办列表（和笔记本 / 标签同一个位置），
+   点其中一条才在右边打开那篇笔记。scope='todo' 就是「中栏正在显示日程」这个状态。 */
+function openTodoList(){
+  S.scope = 'todo';
+  S.listQuery = '';
+  trashView = false;
+  S.view = 'notes';
+  dropTrashedActive();
+  if(window.innerWidth <= 640){
+    document.body.classList.remove('m-read');
+    shelfCloseIfDrawer();
+  } else if(document.documentElement.clientWidth <= 900 && !S.shelfOpen){
+    S.shelfOpen = true;      // 平板竖屏没有中栏，列表就画在侧栏里：别把侧栏收掉
+  }
+  renderAll(); save();
+  const rows = $('#nlRows'); if(rows) rows.scrollTop = 0;
+}
 function listScopeNotes(){
   const notes = liveNotes();
   const sc = S.scope || 'all';
+  if(sc === 'todo'){
+    // 日程列表里其实只关心「有未完成待办的那几篇」，这里给返回键 / 计数一个口径
+    const ids = new Set(collectTodos().map(t=>t.noteId));
+    return notes.filter(n=>ids.has(n.id));
+  }
   if(sc === 'loose') return notes.filter(n=>!n.notebookId);
   if(sc.indexOf('tag:') === 0){
     const k = sc.slice(4);
@@ -4050,6 +4164,7 @@ function listScopeNotes(){
 }
 function listScopeTitle(){
   const sc = S.scope || 'all';
+  if(sc === 'todo') return '日程';
   if(sc === 'loose') return '未归类笔记';
   if(sc.indexOf('tag:') === 0){
     const k = sc.slice(4);
@@ -4139,17 +4254,24 @@ function openViewMenu(anchor, opts){
   const after = opts && opts.after;
   const go = fn => ()=>{ if(after) after(); fn(); };
   popover(anchor, [
-    ['笔记', S.view==='notes' ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
-    ['待办', S.view==='todo' ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
+    ['笔记', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
+    ['日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
     ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
   ], {align:'left'});
 }
 function renderList(){
   const host = $('#noteList'); if(!host) return;
-  const hide = S.view !== 'notes' || trashView;
+  const sc = S.scope || 'all';
+  const inTodo = sc === 'todo';
+  const inTags = sc === 'tags';
+  host.classList.toggle('nl-todo', inTodo || inTags || trashView);
+  const hide = S.view !== 'notes';
   host.classList.toggle('hidden', hide);
   if(hide) return;
+  if(trashView){ renderTrashList(); return; }
+  if(inTodo){ renderTodoList(); return; }
+  if(inTags){ renderTagList(); return; }
   const rows = $('#nlRows');
   const raw = String(S.listQuery||'').trim();
   const q = raw.toLowerCase();
@@ -4174,7 +4296,8 @@ function renderList(){
   if(bkEl){
     const offAll = !!((S.scope && S.scope !== 'all') || raw);
     bkEl.classList.toggle('show', offAll);
-    bkEl.onclick = ()=>goAllNotes();
+    // 从某个标签的笔记返回 → 回到标签列表；其它情况回「全部笔记」
+    bkEl.onclick = ()=>{ if((S.scope || '').indexOf('tag:') === 0) setScope('tags'); else goAllNotes(); };
   }
   const lockedId = scopeLockedNb();
   if(lockedId){
@@ -4234,6 +4357,138 @@ function renderList(){
   });
 }
 
+/* 中栏的日程列表：和笔记列表同一个位置、同一套行距。
+   点一行 → 右边打开那篇笔记并滚到那一条（jumpToTodo） */
+function renderTodoList(){
+  const rows = $('#nlRows'); if(!rows) return;
+  const c = todoCounts();
+  const tEl = $('#nlTitle'), cEl = $('#nlCount');
+  if(tEl) tEl.textContent = '日程';
+  if(cEl) cEl.textContent = String(c.open || 0);
+  // 不在「全部笔记」里，中栏左上角给一枚「‹ 全部」，手机上一点就回去
+  const bkEl = $('#nlBack');
+  if(bkEl){ bkEl.classList.add('show'); bkEl.onclick = ()=>goAllNotes(); }
+  const keepTop = rows.scrollTop;
+  rows.innerHTML = todoShelf();
+  rows.scrollTop = keepTop;
+  bindTodoBlock(rows, ()=>{ renderList(); renderShelf(); });
+}
+
+/* ---------- 中栏：标签列表 ----------
+   「标签」和「全部笔记 / 日程 / 回收站」一样，点开先在中栏列出来，再点某个标签才筛笔记 */
+function tagsListHtml(){
+  const notes = liveNotes();
+  const keys = tagPillKeys(notes);
+  const untagged = notes.filter(n=>!tagOf(n).length).length;
+  if(!keys.length && !untagged){
+    return `<div class="nl-empty nl-empty-first">
+      <div class="ne-ico">${ic('tag')}</div>
+      <div class="ne-t">还没有标签</div>
+      <div class="ne-d">在笔记上点「+ 标签」，这里就会出现。</div>
+    </div>`;
+  }
+  const row = (k, name, c, on)=>`<div class="nl-row tg-row${on ? ' on' : ''}" data-tagrow="${esc(k)}" role="button" tabindex="0">
+      <span class="nl-t1"><span class="nl-t">${name}</span><span class="nl-c">${c}</span></span>
+    </div>`;
+  let html = keys.map(k=>{
+    const c = notes.filter(n=>tagOf(n).includes(k)).length;
+    return row(k, `<span class="h">#</span>${esc(k)}`, c, S.scope === 'tag:' + k);
+  }).join('');
+  if(untagged) html += row(NO_TAG, `<span style="color:rgb(var(--muted))">${esc(NO_TAG_LABEL)}</span>`, untagged, S.scope === 'tag:' + NO_TAG);
+  return html;
+}
+function bindTagRows(root){
+  root.querySelectorAll('[data-tagrow]').forEach(el=>{
+    el.onclick = ()=>setScope('tag:' + el.dataset.tagrow);
+  });
+}
+function renderTagList(){
+  const rows = $('#nlRows'); if(!rows) return;
+  const notes = liveNotes();
+  const keys = tagPillKeys(notes);
+  const untagged = notes.filter(n=>!tagOf(n).length).length;
+  const tEl = $('#nlTitle'), cEl = $('#nlCount');
+  if(tEl) tEl.textContent = '标签';
+  if(cEl) cEl.textContent = String(keys.length + (untagged ? 1 : 0));
+  const bkEl = $('#nlBack');
+  if(bkEl){ bkEl.classList.add('show'); bkEl.onclick = ()=>goAllNotes(); }
+  const keepTop = rows.scrollTop;
+  rows.innerHTML = tagsListHtml();
+  rows.scrollTop = keepTop;
+  bindTagRows(rows);
+}
+
+/* ---------- 中栏：回收站列表 ----------
+   回收站也是「先在中栏列出来」，点一篇 → 右边只读预览，可恢复 / 彻底删除 */
+function trashListHtml(){
+  const list = S.notes.filter(n=>n.trashed);
+  if(!list.length){
+    return `<div class="nl-empty nl-empty-first">
+      <div class="ne-ico">${ic('trash')}</div>
+      <div class="ne-t">回收站是空的</div>
+      <div class="ne-d">删掉的笔记会先放在这里，可以随时恢复。</div>
+    </div>`;
+  }
+  const rows = list.map(n=>`<div class="nl-row td-row${n.id === S.active ? ' on' : ''}" data-trashopen="${n.id}" role="button" tabindex="0">
+      <span class="nl-t1"><span class="nl-t">${esc(n.title || '无标题')}</span><span class="nl-d">${listWhen(n.updatedAt)}</span></span>
+      <span class="nl-s">${esc(listSnippet(n)) || '&nbsp;'}</span>
+      <span class="nl-more" data-restore="${n.id}" role="button" title="恢复这篇">${ic('restore')}</span>
+    </div>`).join('');
+  return `<div class="nl-cap">${list.length} 篇 · 点一篇看内容，还能恢复</div>${rows}
+    <button class="nl-cap-btn" data-trashclear="1">${ic('trash')}<span>清空回收站</span></button>`;
+}
+function bindTrashRows(root){
+  root.querySelectorAll('[data-trashopen]').forEach(el=>{
+    el.onclick = (e)=>{
+      if(e.target.closest('[data-restore]')) return;
+      openTrashNote(el.dataset.trashopen);
+    };
+    el.oncontextmenu = (e)=>{ e.preventDefault(); openTrashRowMenu(el, el.dataset.trashopen); };
+  });
+  root.querySelectorAll('[data-restore]').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); S.active = null; toggleTrash(b.dataset.restore); };
+  });
+  const clr = root.querySelector('[data-trashclear]');
+  if(clr) clr.onclick = ()=>emptyTrash();
+}
+function openTrashRowMenu(anchor, id){
+  popover(anchor, [
+    ['恢复这篇', '', '', 'restore', ()=>{ S.active = null; toggleTrash(id); }],
+    '-',
+    ['彻底删除', '', 'danger', 'trash', ()=>{ purgeNote(id); }]
+  ]);
+}
+function emptyTrash(){
+  const ids = S.notes.filter(n=>n.trashed).map(n=>n.id);
+  if(!ids.length) return;
+  if(!confirm('清空回收站？这 ' + ids.length + ' 篇笔记将被彻底删除，不可恢复。')) return;
+  S.active = null;
+  ids.forEach(id=>purgeNote(id, true));
+  renderAll(); save(); toast('回收站已清空');
+  kickSync();                      // 清空是不可逆操作：立刻把墓碑送上去，别等 800ms 节流
+}
+function renderTrashList(){
+  const rows = $('#nlRows'); if(!rows) return;
+  const list = S.notes.filter(n=>n.trashed);
+  const tEl = $('#nlTitle'), cEl = $('#nlCount');
+  if(tEl) tEl.textContent = '回收站';
+  if(cEl) cEl.textContent = String(list.length);
+  const bkEl = $('#nlBack');
+  if(bkEl){ bkEl.classList.add('show'); bkEl.onclick = ()=>goAllNotes(); }
+  const keepTop = rows.scrollTop;
+  rows.innerHTML = trashListHtml();
+  rows.scrollTop = keepTop;
+  bindTrashRows(rows);
+}
+/* 回收站里点开一篇：右边只读预览（要改就恢复回去改） */
+function openTrashNote(id){
+  const n = noteById(id); if(!n) return;
+  S.active = id;
+  S.view = 'notes';
+  renderAll(); save();
+  if(window.innerWidth <= 640) document.body.classList.add('m-read');
+}
+
 function renderShelf(){
   // 日程已经并进笔记侧栏，牌子就还挂着「随手笔记」（媒体库/关系图仍是自己的侧栏）
   brandName.textContent = ({media:'媒体库', graph:'关系图'})[S.view] || '随手笔记';
@@ -4245,13 +4500,13 @@ function renderShelf(){
   const inlineNotes = window.innerWidth > 640 && window.innerWidth <= 900;   // 平板竖屏：侧栏内联列笔记；手机走列表页
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
-  // 「笔记」这个标题也能点：只收笔记本这一块，标签和回收站各占一行、不受影响
+  // 「全部笔记」这个标题也能点：只收笔记本这一块，标签和日程各占一行、不受影响
   const nClosed = !!S.notesClosed;
-  let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(S.scope||'all')==='all' ? ' on' : ''}" data-act="scope-all"
+  let html = `<button class="side-hd${nClosed ? ' closed' : ''}${((S.scope||'all')==='all' && !trashView) ? ' on' : ''}" data-act="scope-all"
       title="回到全部笔记">
       <span class="lb"><i class="caret" data-fold-notes aria-expanded="${nClosed ? 'false' : 'true'}"
-        title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">&#9654;</i>全部笔记</span>
-      <span class="count">${notes.length}</span>
+        title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">&#9654;</i><span class="t">全部笔记</span></span>
+      <span class="n">${notes.length}</span>
     </button>`;
   let body = '';
   // 置顶笔记单独列在书架最上面（只在小屏内联模式下需要；桌面在中栏里置顶优先）
@@ -4324,17 +4579,26 @@ function renderShelf(){
     </div>`;
   }
 
-  html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
+  // 平板竖屏没有中栏（641–900 时 .notelist 是隐藏的）：日程 / 标签 / 回收站这几张
+  // 「二级页面」改成就地铺在侧栏里；桌面和手机都是「中栏列表 + 右边正文」
+  const scNow = S.scope || 'all';
+  const inlineMode = !inlineNotes ? '' : (trashView ? 'trash' : (scNow === 'todo' ? 'todo' : (scNow === 'tags' ? 'tags' : '')));
+  const inlineBody = h => `<div class="sec-body sched-inline">${h}</div>`;
 
-  // 日程（原「待办」独立视图）：挪到笔记本列表下面，自己一块、可折叠
-  html += schedSectionHtml();
+  // 进二级列表时，笔记本那棵树让位，免得两块挤在一起
+  if(!inlineMode) html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
 
-  // 最底部：标签胶囊（横排换行，点一下筛出该标签下的笔记）
-  html += tagPillsHtml(notes);
+  // 日程：一条导航行，点开中栏换成待办列表（不再就地铺一整列）
+  html += schedNavHtml();
+  if(inlineMode === 'todo') html += inlineBody(todoShelf());
 
-  // 回收站放最下面（不跟着「笔记」一起收），和标签之间用一条分隔线断开
-  html += `<div class="shelf-sep"></div>
-    <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
+  // 标签：点开在中栏列出所有标签
+  html += tagNavHtml(notes);
+  if(inlineMode === 'tags') html += inlineBody(tagsListHtml());
+
+  // 回收站：点开在中栏列出被删的笔记
+  html += `<button class="side-hd sep${trashView ? ' on' : ''}" data-act="trash"><span class="ico">${ic('trash')}</span><span class="t">回收站</span><span class="n">${trash.length}</span></button>`;
+  if(inlineMode === 'trash') html += inlineBody(trashListHtml());
   shelfBody.innerHTML = html;
   bindShelf();
 }
@@ -4426,13 +4690,10 @@ function bindShelf(){
   shelfBody.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
     const a = b.dataset.act;
     if(a==='new-nb') newNotebook();
-    if(a==='trash'){
-      // 手机 / iPad 竖屏书架是满屏抽屉，不收起就把回收站整个挡住了（连「清空」都点不到）
-      if(document.documentElement.clientWidth <= 900 && S.shelfOpen){ S.shelfOpen = false; save(); }
-      openTrashView();
-    }
+    if(a==='trash'){ openTrashView(); }
+    if(a==='goto-tags'){ openTagList(); }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
-    if(a==='toggle-sched'){ S.todoSecClosed = !S.todoSecClosed; renderShelf(); save(); }
+    if(a==='goto-todo'){ openTodoList(); }
     if(a==='clear-tag'){ setScope('all'); }
     if(a==='toggle-tag-pills'){ S.tagPillsClosed = !S.tagPillsClosed; renderShelf(); save(); }
     if(a==='scope-all'){
@@ -4452,6 +4713,15 @@ function bindShelf(){
       S.notesClosed = !S.notesClosed; renderShelf(); save();
     };
   });
+  /* 平板竖屏（641–900）没有中栏：日程 / 标签 / 回收站列表就画在侧栏里，交互和桌面中栏那份一致 */
+  const tInline = shelfBody.querySelector('.sched-inline');
+  if(tInline){
+    const sc = S.scope || 'all';
+    const mode = trashView ? 'trash' : (sc === 'todo' ? 'todo' : (sc === 'tags' ? 'tags' : ''));
+    if(mode === 'todo') bindTodoBlock(tInline, ()=>{ renderShelf(); });
+    else if(mode === 'tags') bindTagRows(tInline);
+    else if(mode === 'trash') bindTrashRows(tInline);
+  }
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderShelf(); renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
     todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
@@ -4884,23 +5154,19 @@ function jumpToTodo(t){
   if(n.trashed){ toast('该笔记在回收站里'); return; }
   trashView = false;
   S.active = n.id;
+  S.todoSel = n.id + ':' + t.line;          // 中栏日程列表里把这一条标成选中
   if(!S.tabs.includes(n.id)) S.tabs.push(n.id);
   if(window.innerWidth <= 640){
-    // 手机上待办列表就在主区，点条目 = 打开这篇笔记（没有左右两栏可切）
+    // 手机：中栏是整页列表，点条目 = 进到笔记页；返回键回到的仍是日程列表
     S.view = 'notes';
     S.todoNote = n.id;
-    S.todoSel = n.id + ':' + t.line;
     renderAll();
     document.body.classList.add('m-read');
     M_READ_BACK = true;
-  } else if(S.view === 'todo'){
-    S.todoNote = n.id;
-    S.todoSel = n.id + ':' + t.line;
-    // 窄屏书架是满屏的，点完待办得收起书架才看得到笔记
-    if(document.documentElement.clientWidth <= 900 && S.shelfOpen) S.shelfOpen = false;
-    renderAll();
   } else {
     S.view = 'notes';
+    // 窄屏书架是满屏的，点完待办得收起书架才看得到笔记
+    if(document.documentElement.clientWidth <= 900 && S.shelfOpen) S.shelfOpen = false;
     renderAll();
   }
   save();
@@ -4972,7 +5238,7 @@ function todoShelf(){
     const [y,m] = k.split('-');
     body += group('m'+k, y + '年' + (+m) + '月', g.byMonth[k]);
   });
-  body += group('none', '没有日期', g.none);
+  body += group('none', '待办', g.none);
   body += icsShelfHtml();
 
   return `<div class="todo-shelf">
@@ -4993,24 +5259,10 @@ function dayTitleShort(idx, baseTs){
   return md + ' ' + wd;
 }
 
-/* 待办视图：右侧只显示「选择左侧待办」的空状态；选了待办就打开那篇笔记 */
-function renderTodoView(){
-  outlineEl.classList.add('hidden');
-  paperActions.innerHTML = '';
-  scrollEl.style.display='';
-  // 手机没有左侧栏，待办列表就是这一页的主体；点条目直接打开那篇笔记
-  if(window.innerWidth <= 640){
-    scrollEl.innerHTML = `<div class="todo-mobile" id="todoMobile">${todoShelf()}</div>`;
-    bindTodoBlock(scrollEl.querySelector('#todoMobile'), ()=>{ renderTodoView(); renderShelf(); save(); });
-    return;
-  }
-  scrollEl.innerHTML = `<div class="todo-blank">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
-        <path d="m8.5 14.5 1.8 1.8L13.6 13"/>
-      </svg>
-      <p>选择左侧的待办查看所在笔记</p>
-    </div>`;
+/* 待办相关的数据变了（勾选 / 改提醒 / 日历同步）：侧栏数字和中栏日程列表一起刷新 */
+function paintTodoSurfaces(){
+  try{ renderShelf(); }catch(e){}
+  try{ if((S.scope || 'all') === 'todo') renderList(); }catch(e){}
 }
 function monthTitle(k){
   const [y,m] = String(k).split('-');
@@ -5075,7 +5327,7 @@ function pickCustomDue(t){
       if(!isNaN(ts)) setTodoDue(t, ts);
     }
     inp.onchange = null;
-    renderShelf(); renderTodoView();
+    paintTodoSurfaces();
   };
   inp.onchange = finish;
   try{ inp.showPicker ? inp.showPicker() : inp.click(); }catch(e){ inp.click(); }
@@ -5104,8 +5356,7 @@ function openTodoPop(anchor){
     cb.onchange = ()=>{
       const t = list[+cb.dataset.tp];
       setTodoDone(t, cb.checked);
-      updateTodoBadge(); renderShelf && S.view==='todo' && renderShelf();
-      if(S.view === 'todo') renderTodoView();
+      updateTodoBadge(); paintTodoSurfaces();
       setTimeout(()=>{ if(po.classList.contains('open')) openTodoPop(anchor); }, 30);
     };
   });
@@ -5177,7 +5428,7 @@ function setIcsDone(ev, on){
   else delete ICS_DONE[k];
   saveIcsDone();
   icsPushDone(k, on);
-  if(S.view === 'todo') renderShelf();
+  paintTodoSurfaces();
 }
 async function icsPushDone(key, on){
   if(!isConnected()) return;
@@ -5203,7 +5454,7 @@ async function icsPullDone(){
     // 本地有、服务端没有的，顺手推上去（第一次开这个功能时的迁移）
     const push = Object.keys(ICS_DONE).filter(k=> !(k in remote)).slice(0, 200);
     if(push.length){ changed = true; push.forEach(k=> icsPushDone(k, true)); }
-    if(changed){ saveIcsDone(); if(S.view === 'todo') renderShelf(); }
+    if(changed){ saveIcsDone(); paintTodoSurfaces(); }
   }catch(e){}
 }
 function icsAllEvents(){
@@ -5286,7 +5537,7 @@ async function icsPullSources(force){
       applyIcsList(items);
     }
     icsPulledAt = Date.now();
-    if(S.view === 'todo') renderShelf();
+    paintTodoSurfaces();
   }catch(e){}
   finally{ icsPulling = false; }
 }
@@ -5471,7 +5722,7 @@ async function icsSync(force){
       }catch(e){ s.error = e.message || '拉取失败'; }
     }
   }finally{ icsBusy = false; }
-  if(S.view === 'todo'){ renderShelf(); }
+  paintTodoSurfaces();
 }
 /* 侧栏里的「来自苹果日历」分组：只读，点开看详情 */
 function icsShelfHtml(){
@@ -5811,7 +6062,7 @@ function bindRemindBody(root, repaint){
     paintRemindCenter();
     if(now.error) toast('同步失败：' + now.error);
     else toast('已同步 ' + (now.count || 0) + ' 条日程，看左侧「日程」最下面');
-    if(S.view === 'todo') renderShelf();
+    paintTodoSurfaces();
   };
   root.querySelectorAll('[data-ics-sync]').forEach(b=>{
     b.onclick = async ()=>{
@@ -5819,7 +6070,7 @@ function bindRemindBody(root, repaint){
       await icsSync(true);
       const s = icsSources().find(x=>x.id === b.dataset.icsSync) || {};
       paintRemindCenter();
-      if(S.view === 'todo') renderShelf();
+      paintTodoSurfaces();
       toast(s.error ? ('同步失败：' + s.error) : ('已同步 ' + (s.count || 0) + ' 条日程'));
     };
   });
@@ -5828,7 +6079,7 @@ function bindRemindBody(root, repaint){
       if(!confirm('删除这个日历订阅？左侧「日程」里来自它的条目会消失，日历本身不受影响。')) return;
       removeIcsSource(b.dataset.icsDel);
       paintRemindCenter();
-      if(S.view === 'todo') renderShelf();
+      paintTodoSurfaces();
       toast('已删除这个日历订阅');
     };
   });
@@ -5920,7 +6171,7 @@ function renderDock(){
   // 云同步入口已挪到「设置 → 账户」，底部只留 5 个常用视图 + 设置
   // 设置页是整屏浮层，底部导航会被盖住，所以它自己也放一份（#dockSet2），两边一起画
   const html = items.map(it=>`
-    <button class="dock-item ${S.view===it.k?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
+    <button class="dock-item ${(S.view===it.k || (it.k==='todo' && S.scope==='todo'))?'active':''}" data-view="${it.k}" title="${it.label}" aria-label="${it.label}">
       ${ic(it.icon)}
     </button>`).join('') +
     `<button class="dock-item" data-dock-set title="设置" aria-label="设置">${ic('gear')}</button>`;
@@ -5941,15 +6192,23 @@ function renderDock(){
 /* ========== 标签栏 ========== */
 function renderTabs(){
   const bar = $('#tabbar');
-  if(S.view!=='notes'){
-    // 手机上待办 / 媒体库 / 关系图是整屏页，没有底部导航也没有左侧栏，
-    // 这里给一枚「‹ 笔记」，否则进去就出不来
-    if(window.innerWidth <= 640 && S.view){
-      const nm = ({todo:'待办', media:'媒体库', graph:'关系图'})[S.view] || '';
-      bar.innerHTML = `<button class="m-back" id="mBackView" title="回到笔记" aria-label="回到笔记">`
-        + `<span class="mb-ar">‹</span><span class="mb-t">笔记</span><span class="mb-n">${nm}</span></button>`;
-      const bv = $('#mBackView');
-      if(bv) bv.onclick = ()=>switchView('notes');
+  // 回收站里标签栏没有意义（点开会换掉正在预览的那篇），只留手机上的返回
+  if(S.view!=='notes' || trashView){
+    if(window.innerWidth <= 640){
+      if(trashView){
+        // 回收站预览页：返回回到回收站列表，不退出回收站
+        const n = S.notes.filter(x=>x.trashed).length;
+        bar.innerHTML = `<button class="m-back" id="mBack" title="回到回收站" aria-label="回到回收站">`
+          + `<span class="mb-ar">‹</span><span class="mb-t">回收站</span><span class="mb-n">${n}</span></button>`;
+        const b = $('#mBack');
+        if(b) b.onclick = ()=>{ document.body.classList.remove('m-read'); renderAll(); };
+      }else{
+        const nm = ({todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '';
+        bar.innerHTML = `<button class="m-back" id="mBackView" title="回到笔记" aria-label="回到笔记">`
+          + `<span class="mb-ar">‹</span><span class="mb-t">笔记</span><span class="mb-n">${nm}</span></button>`;
+        const bv = $('#mBackView');
+        if(bv) bv.onclick = ()=>switchView('notes');
+      }
     }else bar.innerHTML = '';
     return;
   }
@@ -6000,8 +6259,8 @@ function renderTabs(){
   const mb = $('#mBack');
   if(mb) mb.onclick = ()=>{
     document.body.classList.remove('m-read');
-    // 从回收站出来时把视图一起切回去，否则列表会一直是「回收站隐藏行」的空态
-    if(typeof trashView !== 'undefined' && trashView){ trashView = false; renderAll(); }
+    // 回收站里那篇的预览：返回只回到「回收站列表」，不退出回收站
+    if(typeof trashView !== 'undefined' && trashView) renderAll();
   };
 }
 
@@ -6275,11 +6534,17 @@ function toggleTrash(id){
 }
 let trashView = false;
 function openTrashView(){
-  trashView = true; S.listQuery = ''; S.view='notes'; S.active=null; S.tabs=[];
-  // 手机上主区平时是 display:none，只有 body.m-read 才显示（列表页 ↔ 笔记页）。
-  // 回收站画在正文区里，所以这里必须把 m-read 打开，否则点完是一片空白
-  if(window.innerWidth <= 640) document.body.classList.add('m-read');
-  renderAll();
+  // 回收站现在和「全部笔记」一样：中栏列出被删的笔记，右边预览。
+  // 所以不再需要把主区顶到前面（m-read），只要把中栏切成回收站列表
+  trashView = true; S.listQuery = ''; S.view = 'notes'; S.active = null; S.scope = 'all';
+  if(window.innerWidth <= 640){
+    document.body.classList.remove('m-read');
+    shelfCloseIfDrawer();
+  } else if(document.documentElement.clientWidth <= 900 && !S.shelfOpen){
+    S.shelfOpen = true;      // 平板竖屏没有中栏，列表画在侧栏里
+  }
+  renderAll(); save();
+  const rows = $('#nlRows'); if(rows) rows.scrollTop = 0;
 }
 
 /* ========== 主区渲染 ========== */
@@ -6313,13 +6578,6 @@ function renderMain(){
     setOutlinePanel(false);
   }else document.body.classList.remove('ol-hidden');
   if(S.view==='media'){ renderMedia(); return; }
-  if(S.view==='todo'){
-    // 手机上不分左右两栏：待办视图永远是那张列表，点条目再去笔记页
-    const tn = (window.innerWidth > 640 && S.todoNote) ? noteById(S.todoNote) : null;
-    if(tn){ S.active = tn.id; renderEditor(); }
-    else renderTodoView();
-    return;
-  }
   if(S.view==='graph'){ renderGraph(); return; }
   renderEditor();
 }
@@ -6591,7 +6849,7 @@ function lockScreenHtml(nbName, hint){
 
 function renderEditor(){
   if(trashView){
-    renderTrash(); outlineEl.classList.add('hidden');
+    renderTrashPane(); outlineEl.classList.add('hidden');
     document.body.classList.remove('outline-pinned');
     document.body.classList.add('ol-hidden');
     return;
@@ -7406,12 +7664,10 @@ function openSelHeadingMenu(anchor){
     ['正文','去标题','','',()=>applySelFormat('p')]
   ], { align:'left' });
 }
-/* 正文是否正显示在右边：笔记视图，以及「日程」视图里点了待办打开笔记时 */
+/* 正文是否正显示在右边：笔记视图（日程列表也在笔记视图里，右边照常是笔记） */
 function editorOnScreen(){
   if(trashView) return false;
-  if(S.view === 'notes') return true;
-  if(S.view === 'todo') return !!(S.todoNote && noteById(S.todoNote));
-  return false;
+  return S.view === 'notes';
 }
 function selBarPlace(c){
   const bar = selBarEl(); if(!bar) return;
@@ -10993,35 +11249,40 @@ function purgeNote(id, quiet){
   if(!quiet){ renderAll(); save(); toast('已彻底删除'); kickSync(); }
 }
 
-function renderTrash(){
-  const list = S.notes.filter(n=>n.trashed);
+/* 回收站右侧：只读预览 + 恢复 / 彻底删除。真要看列表，在中栏（renderTrashList） */
+function renderTrashPane(){
+  paperActions.innerHTML = '';
   // 手机上 Markdown 工具条被 dock 到 .paper 顶部（不在 #scroll 里），
-  // 重画回收站时它不会被清掉，会一直挂在「回收站」标题上面 —— 这里先摘掉
+  // 重画时它不会被清掉，会一直挂在预览上面 —— 这里先摘掉
   const dockedBar = document.getElementById('fmtBar');
   if(dockedBar && !scrollEl.contains(dockedBar)) dockedBar.remove();
-  scrollEl.innerHTML = `<div class="view-pad">
-    <h2 style="font-family:var(--font-serif);font-size:22px;margin:0 0 4px">回收站</h2>
-    <div class="trash-head">
-      <p class="trash-hint">删除的笔记会留在这里，可以随时恢复。</p>
-      ${list.length ? `<button class="meta-btn" id="trashEmpty" style="color:rgb(var(--danger))">清空回收站</button>` : ''}
+  const n = S.active ? noteById(S.active) : null;
+  if(!n || !n.trashed){
+    scrollEl.style.display = 'flex';
+    scrollEl.innerHTML = `<div class="blank">
+      <p>选择左侧的笔记看看</p>
+      <p>回收站里的笔记可以随时恢复</p>
+    </div>`;
+    return;
+  }
+  scrollEl.style.display = '';
+  const nb = n.notebookId ? nbById(n.notebookId) : null;
+  const out = mdToHtml(n.body || '');
+  scrollEl.innerHTML = `<div class="view-pad trash-pane">
+    <div class="trash-bar">
+      <span class="trash-flag">${ic('trash')}在回收站里</span>
+      <button class="meta-btn" data-restore="${n.id}">恢复</button>
+      <button class="meta-btn" data-purge="${n.id}">彻底删除</button>
     </div>
-    ${list.length ? list.map(n=>`<div class="note-item" style="cursor:default">
-        ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
-        <button class="meta-btn" data-restore="${n.id}">恢复</button>
-        <button class="meta-btn" data-purge="${n.id}" style="color:rgb(var(--danger))">彻底删除</button>
-      </div>`).join('') : `<div style="color:var(--faint);font-size:13.5px">回收站是空的。</div>`}
+    <h1 class="trash-title">${esc(n.title || '无标题')}</h1>
+    <div class="trash-meta">删除于 ${esc(listWhen(n.updatedAt))} · 原位置：${esc(nb ? nb.name : '未归类')}</div>
+    <div class="prose">${out.html || '<p style="color:rgb(var(--faint))">（这篇还没有正文）</p>'}</div>
   </div>`;
-  scrollEl.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{ toggleTrash(b.dataset.restore); });
-  scrollEl.querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>purgeNote(b.dataset.purge));
-  const all = scrollEl.querySelector('#trashEmpty');
-  if(all) all.onclick = ()=>{
-    const ids = S.notes.filter(n=>n.trashed).map(n=>n.id);
-    if(!ids.length) return;
-    if(!confirm('清空回收站？这 '+ids.length+' 篇笔记将被彻底删除，不可恢复。')) return;
-    ids.forEach(id=>purgeNote(id, true));
-    renderAll(); save(); toast('回收站已清空');
-    kickSync();                      // 清空是不可逆操作：立刻把墓碑送上去，别等 800ms 节流
-  };
+  const rb = scrollEl.querySelector('[data-restore]');
+  if(rb) rb.onclick = ()=>{ S.active = null; toggleTrash(n.id); };
+  const pb = scrollEl.querySelector('[data-purge]');
+  if(pb) pb.onclick = ()=>{ S.active = null; purgeNote(n.id); };
+  try{ renderMermaidBlocks(scrollEl); }catch(e){}
 }
 
 /* ========== Markdown ========== */
@@ -11689,10 +11950,11 @@ function renderGraph(){
    切回来按原样恢复，别把正在读的笔记换成列表 */
 let M_READ_BACK = false;
 function switchView(v){
+  // 日程不再是独立视图：它就是「中栏显示待办列表」的笔记视图
+  if(v === 'todo'){ openTodoList(); return; }
+  if(v === 'notes' && ['todo','tags'].includes(S.scope || 'all')) S.scope = 'all';   // 从日程 / 标签列表切回笔记
+  if(trashView) dropTrashedActive();
   S.view = v; trashView=false; S.listQuery = '';
-  if(v !== 'notes') { /* 保留 tabs */ }
-  // 进日程就把侧栏那块展开，别让人对着一个收起的标题找待办
-  if(v === 'todo') S.todoSecClosed = false;
   hideSelBar();
   if(window.innerWidth <= 640){
     if(v === 'notes'){

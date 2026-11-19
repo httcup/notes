@@ -3317,7 +3317,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v242', at: '2026-11-19 17:26' };
+window.IVY_BUILD = { id: 'v243', at: '2026-11-19 17:34' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7401,8 +7401,7 @@ function openAiToolMenu(anchor){
       openAI('rewrite', { ctx:c, text:c.text });
     }],
     ['AI 总结全部', '整篇要点', '', 'spark', ()=>openAiSummary()],
-    ['AI 总结成大纲', '显示在大纲', '', 'spark', ()=>aiOutline(true)],
-    ['AI 大纲插入文末', '按分支缩进', '', 'spark', ()=>aiOutlineToEnd()],
+    ['AI 大纲', '生成后可复制或插入', '', 'spark', ()=>openAiOutline()],
     ['AI 对话', '', '', 'spark', ()=>openAI('chat')],
     ['AI 排版', '整理格式', '', 'spark', ()=>openAI('format')]
   ], { align:'left' });
@@ -7513,8 +7512,7 @@ const INSERT_ITEMS = [
   {name:'AI 对话', keys:['ai','dh','对话','chat'], icon:'spark', desc:'和 AI 聊几句，可参考当前笔记', run:()=>openAI('chat')},
   {name:'AI 排版', keys:['ai','pb','排版','format'], icon:'spark', desc:'只整理标题、列表、空行与中英文间距', run:()=>openAI('format')},
   {name:'AI 总结全部', keys:['ai','zj','总结','summary'], icon:'spark', desc:'整篇笔记提炼成几条要点，可复制或插入文末', run:()=>openAiSummary()},
-  {name:'AI 总结成大纲', keys:['ai','dg','大纲','outline'], icon:'spark', desc:'整篇压成层级大纲，直接显示在右侧大纲里', run:()=>aiOutline(true)},
-  {name:'AI 大纲插入文末', keys:['ai','dg','大纲','outline','插入'], icon:'spark', desc:'生成层级大纲，按分支缩进插到笔记末尾', run:()=>aiOutlineToEnd()},
+  {name:'AI 大纲', keys:['ai','dg','大纲','outline','dl'], icon:'spark', desc:'生成层级大纲，可复制或插入文末', run:()=>openAiOutline()},
   {name:'思维导图', keys:['mind','siwei','daotu','naotu','导图','脑图'], icon:'mind', desc:'把标题与缩进列表排成脑图，可导出图片', run:()=>openMindMap()}
 ]
 function insertFilter(q){
@@ -11124,7 +11122,7 @@ function insertOutlineAtEnd(entries){
   if(!n){ toast('先打开一篇笔记'); return false; }
   if(!md){ toast('这次没生成出可用的条目'); return false; }
   // 格式：分割线 → 一级标题 → 层级大纲原文（不用引用块）
-  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\n# AI 生成大纲\n' + md + '\n';
+  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\n# AI 大纲\n' + md + '\n';
   n.updatedAt = Date.now();
   save(); renderAll(); kickSync();
   toast('AI 大纲已插到文末');
@@ -11258,6 +11256,70 @@ function openAiSummary(){
     cur.updatedAt = Date.now();
     save(); renderAll();
     toast('已插入到文末');
+    close();
+  };
+  run();
+}
+
+/* AI 大纲弹窗：和「AI 总结」一个流程 —— 先给结果，让用户决定复制还是插入。
+   这里完全不碰 AI_OL / 悬浮大纲：右侧那个 AI 大纲是另一条独立入口。 */
+function openAiOutline(){
+  const n = noteById(S.active);
+  if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
+  if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
+  const ov = aiOverlayEl(); if(!ov) return;
+  const title = n.title ? n.title : '无标题';
+  ov.classList.add('open');
+  ov.innerHTML = `<div class="sheet sum-sheet" role="dialog" aria-label="AI 大纲">
+    <div class="ai-head">
+      <div class="ai-title">${ic('spark')}<span>AI 大纲</span></div>
+      <div class="ai-head-btns"><button class="pa-btn" id="olAiClose" title="关闭">${ic('x')}</button></div>
+    </div>
+    <div class="sum-meta">${esc(title)} · ${countWords(n.body)} 字</div>
+    <div class="sum-body prose" id="olAiBody"><div class="ol-ai-load"><i></i>正在通读全文，整理层级大纲…</div></div>
+    <div class="sum-foot">
+      <button class="btn-ghost" id="olAiRetry">重新生成</button>
+      <button class="btn-ghost" id="olAiCopy">复制</button>
+      <button class="btn-primary" id="olAiInsert">插入文末</button>
+    </div>
+  </div>`;
+  const body = $('#olAiBody');
+  let entries = [], busy = false, dead = false;
+  const close = ()=>{ dead = true; ov.classList.remove('open'); ov.innerHTML = ''; };
+  ov.onclick = e=>{ if(e.target === ov) close(); };
+  $('#olAiClose').onclick = close;
+  const md = ()=>outlineToMarkdown(entries);
+  const paint = ()=>{
+    if(dead) return;
+    body.innerHTML = entries.length ? mdToHtml(md()).html
+      : '<div class="ol-ai-load"><i></i>正在通读全文，整理层级大纲…</div>';
+  };
+  const enable = on=>{ $('#olAiCopy').disabled = !on; $('#olAiInsert').disabled = !on; };
+  const run = async ()=>{
+    if(busy) return;
+    busy = true; entries = []; enable(false);
+    body.innerHTML = '<div class="ol-ai-load"><i></i>正在通读全文，整理层级大纲…</div>';
+    try{
+      const text = await aiRunOnce({ task:'outline', text:String(n.body || '') });
+      entries = parseAiOutline(text);
+      paint();
+      if(!entries.length) toast('模型没有给出可用的大纲');
+      else enable(true);
+    }catch(e){
+      if(dead) return;
+      body.innerHTML = '<div class="ol-ai-load">没能生成，再试一次吧</div>';
+      aiErrToast(e);
+    }finally{ busy = false; }
+  };
+  enable(false);
+  $('#olAiRetry').onclick = run;
+  $('#olAiCopy').onclick = ()=>{
+    const t = md(); if(!t) return;
+    navigator.clipboard.writeText(t).then(()=>toast('已复制'), ()=>toast('复制失败'));
+  };
+  $('#olAiInsert').onclick = ()=>{
+    if(!entries.length) return;
+    insertOutlineAtEnd(entries);
     close();
   };
   run();

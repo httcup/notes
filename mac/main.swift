@@ -110,6 +110,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         buildMenu()
+        if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" {
+            let items = NSApp.mainMenu?.item(withTitle: "编辑")?.submenu?.items ?? []
+            let desc = items.compactMap { i -> String? in
+                guard let a = i.action else { return nil }
+                return NSStringFromSelector(a) + ":" + (i.target == nil ? "responder" : "app")
+            }.joined(separator: ", ")
+            try? ("MENU: " + desc + "\n").write(to: URL(fileURLWithPath: "/tmp/ivy-menu-test.txt"),
+                                                 atomically: true, encoding: .utf8)
+        }
 
         // 内置网页：从 App Resources/web 起一个只监听 127.0.0.1 的小服务
         let webRoot = Bundle.main.resourceURL!.appendingPathComponent("web", isDirectory: true)
@@ -677,10 +686,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func makeMenu(_ title: String, _ items: [(String, Selector?, String)]) -> NSMenuItem {
         let root = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         let menu = NSMenu(title: title)
+        // 撤销/重做/剪切/复制/粘贴/全选/查找是「响应者链」动作：必须让 target = nil，
+        // 由系统交给第一响应者（这里的 WKWebView）。之前一律 target = self，导致
+        // ⌘C/⌘V/⌘X 命中菜单后发给了 AppDelegate（没实现这些方法），编辑区彻底收不到。
+        let responderActions: Set<String> = [
+            "undo:", "redo:", "cut:", "copy:", "paste:", "selectAll:", "performFindPanelAction:"
+        ]
         for (t, sel, key) in items {
             if t == "-" { menu.addItem(.separator()); continue }
             let it = NSMenuItem(title: t, action: sel, keyEquivalent: key)
-            it.target = self
+            if let sel = sel, responderActions.contains(NSStringFromSelector(sel)) {
+                it.target = nil
+            } else {
+                it.target = self
+            }
             menu.addItem(it)
         }
         root.submenu = menu

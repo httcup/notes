@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v235', at: '2026-11-19 16:02' };
+window.IVY_BUILD = { id: 'v236', at: '2026-11-19 16:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -9551,6 +9551,33 @@ function focusedVisibleField(){
   const r = ae.getBoundingClientRect();
   return r.width > 4 && r.height > 4;
 }
+/* 预览态的块是只读 div：以前只有 cut/paste 的接管，漏了 copy。
+   浏览器对非可编辑元素里的选区不保证写进剪贴板，于是「复制后粘贴为空」。
+   这里和剪切用同一套取文本逻辑，只写剪贴板、不动正文。 */
+document.addEventListener('copy', e=>{
+  if((S.mode || 'live') !== 'live') return;
+  const r = liveSelRange();
+  if(!r || inRealEditor()) return;
+  const host = liveHost();
+  const blocks = host ? [...host.querySelectorAll('.blk')] : [];
+  const a = blocks.findIndex(b=>b.contains(r.startContainer));
+  const b = blocks.findIndex(b=>b.contains(r.endContainer));
+  const txt = (a >= 0 && b >= 0 && a !== b)
+    ? blocksSelText(blocks, r, a, b)
+    : (window.getSelection().toString() || liveSelText());
+  if(!txt) return;
+  let done = false;
+  try{
+    if(e.clipboardData){
+      e.clipboardData.setData('text/plain', txt);
+      const md = liveSelMd(r);
+      if(md) e.clipboardData.setData('text/x-ivy-md', md);
+      done = true;
+    }
+  }catch(err){}
+  if(done) e.preventDefault();
+  else writeClip(txt);       // 极少数浏览器没有 clipboardData：退回 execCommand
+});
 document.addEventListener('cut', e=>{
   const r = liveSelRange();
   if(!r || inRealEditor()) return;
@@ -9787,10 +9814,18 @@ function clipPasteSel(){
 document.addEventListener('keydown', e=>{
   if(!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.isComposing) return;
   const k = String(e.key || '').toLowerCase();
-  if(k !== 'x' && k !== 'v') return;
+  if(k !== 'c' && k !== 'x' && k !== 'v') return;
   if((S.mode || 'live') !== 'live' || (inRealEditor() && focusedVisibleField())) return;
   if(!S.active) return;
   const sel = liveSelRange();
+  // ⌘C：只读预览里浏览器不一定把选区写进剪贴板，自己写一份（含跨块换行）
+  if(k === 'c'){
+    const txt = liveSelText() || window.getSelection().toString();
+    if(!txt) return;
+    e.preventDefault();
+    writeClip(txt);
+    return;
+  }
   if(k === 'x'){
     if(!sel) return;
     e.preventDefault();
@@ -9809,7 +9844,24 @@ document.addEventListener('keydown', e=>{
   /* 这里千万不能 preventDefault：要放行原生粘贴，让它落进刚聚焦的隐形框。
      （之前靠 navigator.clipboard.readText()，权限一被拒就什么都不粘，看起来就是"粘贴为空"）*/
   startPasteCatcher(at);
+  tryClipboardPaste(at);
 }, true);
+/* 有的浏览器（尤其 PWA / WKWebView）不给隐藏捕获框派发 paste 事件，
+   光标停在只读 div 上就什么都粘不进去。再开一路：直接读剪贴板。
+   两条路谁先拿到谁生效，另一条通过 PASTE_CATCH 是否还在来判断。 */
+async function tryClipboardPaste(at){
+  if(!navigator.clipboard || !navigator.clipboard.readText) return;
+  try{
+    const txt = await Promise.race([
+      navigator.clipboard.readText(),
+      new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 800))
+    ]);
+    if(!txt || !PASTE_CATCH) return;          // 原生 paste 已经处理掉了
+    const keep = PASTE_CATCH.at || at || null;
+    endPasteCatcher();
+    pasteIntoLive(txt, keep);
+  }catch(e){ /* 权限被拒就交给原来的隐形框 / 粘贴弹窗兜底 */ }
+}
 function liveSelStart(r){
   const host = liveHost();
   if(!host || !r) return null;

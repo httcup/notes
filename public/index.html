@@ -3252,7 +3252,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v220', at: '2026-11-19 10:06' };
+window.IVY_BUILD = { id: 'v221', at: '2026-11-19 09:47' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3949,8 +3949,8 @@ function schedNavHtml(){
   const c = todoCounts();
   const on = (S.scope || 'all') === 'todo';
   return `<button class="side-hd sep sched-nav${on ? ' on' : ''}" data-act="goto-todo"
-      title="查看全部待办">
-      <span class="lb"><span class="ico">${ic('todo')}</span><span class="t">日程</span></span>
+      title="查看全部待办日程">
+      <span class="lb"><span class="ico">${ic('todo')}</span><span class="t">待办日程</span></span>
       <span class="n">${c.open || 0}</span>
     </button>`;
 }
@@ -4164,7 +4164,7 @@ function listScopeNotes(){
 }
 function listScopeTitle(){
   const sc = S.scope || 'all';
-  if(sc === 'todo') return '日程';
+  if(sc === 'todo') return '待办日程';
   if(sc === 'loose') return '未归类笔记';
   if(sc.indexOf('tag:') === 0){
     const k = sc.slice(4);
@@ -4255,7 +4255,7 @@ function openViewMenu(anchor, opts){
   const go = fn => ()=>{ if(after) after(); fn(); };
   popover(anchor, [
     ['笔记', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
-    ['日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
+    ['待办日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
     ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
   ], {align:'left'});
@@ -4363,7 +4363,7 @@ function renderTodoList(){
   const rows = $('#nlRows'); if(!rows) return;
   const c = todoCounts();
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
-  if(tEl) tEl.textContent = '日程';
+  if(tEl) tEl.textContent = '待办日程';
   if(cEl) cEl.textContent = String(c.open || 0);
   // 不在「全部笔记」里，中栏左上角给一枚「‹ 全部」，手机上一点就回去
   const bkEl = $('#nlBack');
@@ -6164,7 +6164,7 @@ function renderDock(){
   paintSyncPip();
   const items = [
     {k:'notes', icon:'notePen', label:'笔记', href:'notes'},
-    {k:'todo', icon:'todo', label:'日程'},
+    {k:'todo', icon:'todo', label:'待办日程'},
     {k:'media', icon:'folder', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];
@@ -6203,7 +6203,7 @@ function renderTabs(){
         const b = $('#mBack');
         if(b) b.onclick = ()=>{ document.body.classList.remove('m-read'); renderAll(); };
       }else{
-        const nm = ({todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '';
+        const nm = ({todo:'待办日程', media:'媒体库', graph:'关系图'})[S.view] || '';
         bar.innerHTML = `<button class="m-back" id="mBackView" title="回到笔记" aria-label="回到笔记">`
           + `<span class="mb-ar">‹</span><span class="mb-t">笔记</span><span class="mb-n">${nm}</span></button>`;
         const bv = $('#mBackView');

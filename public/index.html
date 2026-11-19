@@ -3317,7 +3317,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v240', at: '2026-11-19 17:00' };
+window.IVY_BUILD = { id: 'v241', at: '2026-11-19 17:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11123,8 +11123,9 @@ function insertOutlineAtEnd(entries){
   const md = outlineToMarkdown(entries);
   if(!n){ toast('先打开一篇笔记'); return false; }
   if(!md){ toast('这次没生成出可用的条目'); return false; }
-  // 和 AI 总结一样：先一条分割线，再标一句这是机器生成的
-  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 生成大纲\n' + md + '\n';
+  // 格式：分割线 → 一行标题 → 引用块里的层级大纲
+  const quoted = md.split('\n').map(l => '> ' + l).join('\n');
+  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 生成大纲\n' + quoted + '\n';
   n.updatedAt = Date.now();
   save(); renderAll(); kickSync();
   toast('AI 大纲已插到文末');
@@ -11136,18 +11137,14 @@ async function aiOutlineToEnd(){
   if(noteLocked(n)){ toast('先解锁这个笔记本'); return; }
   if(!n || !String(n.body || '').trim()){ toast('这篇还没内容'); return; }
   const snap = String(n.body || '');
-  AI_OL.id = n.id; AI_OL.snap = snap; AI_OL.entries = null; AI_OL.busy = true; AI_OL.show = true;
-  renderOutline();
+  // 「插入文末」是一次独立生成：只把结果写进正文，
+  // 不碰 AI_OL / 悬浮大纲，免得右侧大纲面板跟着一起变成 AI 大纲。
   try{
     const text = await aiRunOnce({ task:'outline', text:snap });
     const entries = parseAiOutline(text);
     if(!entries.length) throw new Error('模型没给出可用的大纲，再试一次');
-    AI_OL.entries = entries; AI_OL.busy = false;
-    renderOutline();
     insertOutlineAtEnd(entries);
   }catch(e){
-    AI_OL.busy = false; AI_OL.entries = null; AI_OL.show = false;
-    renderOutline();
     aiErrToast(e);
   }
 }

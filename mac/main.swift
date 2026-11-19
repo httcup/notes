@@ -280,6 +280,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
           nativeFlag: window.__IVY_NATIVE_APP === true,
           notifPerm: (typeof Notification !== 'undefined' && Notification.permission) || '',
           dock: document.querySelectorAll('#dock .dock-item').length,
+          olTouch: (typeof OL_TOUCH !== 'undefined') ? OL_TOUCH : 'n/a',
+          olHoverMedia: matchMedia('(hover:none)').matches,
+          olOpenClass: document.body.classList.contains('ol-open'),
+          olHoverClass: document.body.classList.contains('ol-hover'),
+          olOutlineOpen: (typeof S!=='undefined') ? !!S.outlineOpen : 'n/a',
+          olOpacity: document.getElementById('outline') ? getComputedStyle(document.getElementById('outline')).opacity : 'none',
           helpPanel: typeof openHelpPanel === 'function',
           helpTabs: document.querySelectorAll('[data-htab]').length
         })

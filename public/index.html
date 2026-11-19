@@ -1885,6 +1885,11 @@ body.ol-hidden .outline-zone{display:none}
 .outline.pinned,
 body.ol-hover .outline,
 body.ol-flash .outline{transform:none;opacity:1;pointer-events:auto}
+/* 点了 × 之后强制收起：鼠标还压在卡片上时 :hover 会继续把它点亮，必须压过那条规则 */
+body.ol-force-close .outline,
+body.ol-force-close .outline:hover,
+body.ol-force-close .outline.pinned{transform:translateX(10px);opacity:0;pointer-events:none}
+body.ol-force-close .ol-mini{opacity:1;pointer-events:auto}
 body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .outline.hidden{display:none}
 /* Chrome 会把「可滚动/可聚焦」的浮层当成可聚焦控件，画一圈原生焦点环（黑框），Safari 不画。
@@ -2891,6 +2896,10 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   .shelf.collapsed{margin-left:calc(var(--shelf-w-drawer) * -1)}
 }
 .ol-close{display:none;margin-right:auto}
+/* 桌面端也给出关闭按钮：靠边缘滑出的悬停态也能一键收起，不必先把鼠标挪远 */
+body.ol-hover .ol-close,
+body.ol-open .ol-close,
+.outline:hover .ol-close{display:grid}
 /* 触屏设备：没有稳定 hover，改用显式展开状态，并放大刻度点击热区 */
 @media (hover:none){
   .outline-zone{width:30px}
@@ -3307,7 +3316,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v236', at: '2026-11-19 16:16' };
+window.IVY_BUILD = { id: 'v237', at: '2026-11-19 16:24' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11248,6 +11257,7 @@ function renderOutline(){
 /* 手机 / iPad：点右上角「大纲」按钮或右边缘空白处展开、收起浮层 */
 function setOutlinePanel(on){
   on = !!on;
+  if(on) document.body.classList.remove('ol-force-close');
   document.body.classList.toggle('ol-open', on);
   S.outlineOpen = on;                       // 图钉亮不亮跟着走，两处永远一致
   outlineEl.classList.toggle('pinned', on);
@@ -11260,10 +11270,23 @@ function setOutlinePanel(on){
   if(on){ renderOutline(); updateOutlineActive(); }
 }
 function toggleOutlinePanel(){ setOutlinePanel(!document.body.classList.contains('ol-open')); }
-/* × 和图钉一样，只是「关掉」，不保留任何固定态 */
+/* × 和图钉一样，只是「关掉」，不保留任何固定态。
+   桌面端大纲还会被「鼠标靠右边缘」点亮，光关固定态没用 —— 这里顺手压掉悬停态，
+   直到鼠标真正离开右边区域才重新允许滑出，否则点了 × 卡片还赖在眼前。 */
+let olHoverSuppressed = false;
 function closeOutlinePanel(){
   setOutlinePanel(false);
+  olHoverSuppressed = true;
+  document.body.classList.add('ol-force-close');
+  document.body.classList.remove('ol-hover');
+  try{ if(typeof olHover !== 'undefined') olHover = false; }catch(e){}
 }
+/* 点正文也算关掉悬停出来的大纲 */
+document.addEventListener('pointerdown', e=>{
+  if(!document.body.classList.contains('ol-hover')) return;
+  if(e.target.closest && (e.target.closest('#outline') || e.target.closest('#outlineZone'))) return;
+  closeOutlinePanel();
+}, true);
 
 /* 右边缘刻度：桌面点某根跳标题、点空白处固定；触屏（含 iPad）点边缘一律弹出/收起大纲，
    不做刻度跳转——触摸很难精确落在某根刻度上，点了没反应像「坏了」 */
@@ -11306,6 +11329,13 @@ outlineEl.addEventListener('mouseleave', ()=>document.body.classList.remove('ol-
   document.addEventListener('touchend',   ()=>{ lastTouchAt = Date.now(); }, { passive:true, capture:true });
   document.addEventListener('mousemove', e=>{
     if(Date.now() - lastTouchAt < 600) return;
+    // 刚点过 ×：在鼠标离开右侧区域之前不再自动滑出
+    if(olHoverSuppressed){
+      if(e.clientX > window.innerWidth - 120) return;
+      olHoverSuppressed = false;
+      olHover = false;
+      document.body.classList.remove('ol-hover', 'ol-force-close');
+    }
     const mini = document.getElementById('olMini');
     const tickN = mini ? mini.querySelectorAll('.ol-tick').length : 0;
     let near = false;

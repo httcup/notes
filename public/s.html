@@ -236,6 +236,24 @@ body.mode-src .ol-zone,body.mode-src .ol-card{display:none}
   .brand{font-size:12px}
   .modes button{width:28px;height:25px}
 }
+
+/* 长图预览浮层 */
+.lp-ov{position:fixed;inset:0;z-index:142;background:rgb(16 24 32 / .48);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .18s ease}
+.lp-ov.open{opacity:1;pointer-events:auto}
+.lp-card{width:min(560px,100%);max-height:88vh;display:flex;flex-direction:column;background:rgb(var(--surface));border-radius:16px;box-shadow:var(--shadow-paper);overflow:hidden;transform:translateY(8px);transition:transform .2s ease}
+.lp-ov.open .lp-card{transform:none}
+.lp-hd{display:flex;align-items:flex-start;gap:12px;padding:16px 16px 12px;border-bottom:1px solid rgb(var(--line))}
+.lp-hd-t{flex:1;min-width:0}
+.lp-hd h3{font-size:14.5px;font-weight:600;color:rgb(var(--ink));margin:0}
+.lp-hd p{font-size:11.5px;color:rgb(var(--faint));margin:4px 0 0;line-height:1.6}
+.lp-hd .help-x{width:26px;height:26px;border:0;border-radius:8px;background:rgb(var(--hover));color:rgb(var(--ink));font-size:16px;line-height:1;cursor:pointer;font-family:inherit}
+.lp-body{flex:1;min-height:0;overflow:auto;background:rgb(var(--sunken));padding:14px;display:flex;flex-direction:column;align-items:center;gap:12px;overscroll-behavior:contain}
+.lp-body img{max-width:100%;border-radius:10px;box-shadow:0 2px 12px rgb(16 24 32 / .14);display:block}
+.lp-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid rgb(var(--line))}
+.lp-btn{height:33px;padding:0 15px;border-radius:9px;border:0;cursor:pointer;background:rgb(var(--hover));font-size:12.5px;color:rgb(var(--ink-2));font-family:inherit}
+.lp-btn.primary{background:rgb(var(--ivy));color:#fff}
+.lp-btn:disabled{opacity:.6;cursor:default}
+
 </style>
 </head>
 <body>
@@ -796,6 +814,599 @@ try {
   });
 } catch (e) {}
 
+/* ===== 长图导出（与主站同一套 canvas 排版，分享页自带依赖 shim） ===== */
+function resolvedTheme(){ try{ return document.documentElement.dataset.theme === 'dark' || matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }catch(e){ return 'light'; } }
+function dateStamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+function countWords(md){
+  const t = String(md || '')
+    .replace(/!\[[^\]]*\]\(data:[^)]*\)/g, '')
+    .replace(/```[\s\S]*?```/g,'').replace(/[#>*_`\-\|\[\]()!]/g,'').replace(/\s+/g,'');
+  return t.length;
+}
+function toast(msg){
+  let el=document.getElementById('lpToast');
+  if(!el){ el=document.createElement('div'); el.id='lpToast';
+    el.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:200;padding:9px 16px;border-radius:20px;background:rgb(var(--ink)/.88);color:rgb(var(--surface));font:12px var(--font-sans);pointer-events:none;opacity:0;transition:opacity .18s';
+    document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.opacity='0'; },2200);
+}
+/* ========== 导出为长图（PNG） ==========
+   不用截图库：自己拿 canvas 2D 排一遍版，iOS Safari 也能出图、不会被跨域图片污染。
+   支持：标题 1–6、段落、有序 / 无序 / 嵌套列表、勾选框、引用、代码块、表格、分割线、
+   本站上传的图片（data: 内嵌）；行内加粗 / 斜体 / 代码 / 高亮 / 链接 / 删除线 / 待办时间胶囊。
+   太长的笔记自动按段落边界切成几张，文件名带 -1 / -2。 */
+const LP_W = 750, LP_PAD = 52, LP_MAX_H = 9000, LP_MAX_AREA = 16.7e6;
+const LP_SERIF = '"Iowan Old Style",Charter,"Source Serif 4","Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif';
+const LP_MONO = '"SF Mono","JetBrains Mono",Menlo,Consolas,"PingFang SC",monospace';
+const LP_CV = document.createElement('canvas');
+const LP_C = LP_CV.getContext('2d');
+
+function lpPal(){
+  return resolvedTheme() === 'dark'
+    ? { bg:'#191b1e', ink:'#e8ebee', ink2:'#c3c8cd', muted:'#98a0a6', faint:'#70767c',
+        line:'#2e3338', code:'#23272b', codeInk:'#dfe3e7', ivy:'#56b482', chip:'#22382c', quote:'#3b444b' }
+    : { bg:'#ffffff', ink:'#1c1f22', ink2:'#3f444a', muted:'#6b7177', faint:'#9aa0a6',
+        line:'#e6e9ec', code:'#f4f6f8', codeInk:'#33383d', ivy:'#287a52', chip:'#eef4f0', quote:'#cbd8d1' };
+}
+function lpFont(size, bold, mono, italic){
+  return (italic ? 'italic ' : '') + (bold ? 700 : 400) + ' ' + size + 'px ' + (mono ? LP_MONO : LP_SERIF);
+}
+function lpRR(c, x, y, w, h, r){
+  const rr = Math.min(r, w/2, h/2);
+  c.beginPath();
+  c.moveTo(x+rr, y);
+  c.arcTo(x+w, y, x+w, y+h, rr);
+  c.arcTo(x+w, y+h, x, y+h, rr);
+  c.arcTo(x, y+h, x, y, rr);
+  c.arcTo(x, y, x+w, y, rr);
+  c.closePath();
+}
+/* DOM → 行内片段（加粗 / 代码 / 高亮 / 链接 / 时间胶囊…） */
+function lpRuns(node){
+  const out = [];
+  (function walk(el, st){
+    el.childNodes.forEach(k=>{
+      if(k.nodeType === 3){
+        const t = k.nodeValue.replace(/\u00a0/g, ' ');
+        if(t) out.push(Object.assign({}, st, {text:t}));
+        return;
+      }
+      if(k.nodeType !== 1) return;
+      const tag = k.tagName.toLowerCase();
+      if(tag === 'svg' || tag === 'input' || tag === 'button' || tag === 'img') return;
+      if(tag === 'br'){ out.push(Object.assign({}, st, {text:'\n'})); return; }
+      if(k.classList && k.classList.contains('due-chip')){
+        const label = (k.textContent || '').replace(/\s+/g, ' ').trim();
+        if(label) out.push(Object.assign({}, st, {chip:true, text:label}));
+        return;
+      }
+      const ns = Object.assign({}, st);
+      if(tag === 'b' || tag === 'strong') ns.bold = true;
+      if(tag === 'i' || tag === 'em') ns.italic = true;
+      if(tag === 'del' || tag === 's') ns.strike = true;
+      if(tag === 'code') ns.code = true;
+      if(tag === 'a') ns.link = true;
+      if(tag === 'mark') ns.mark = (k.className || '').replace('hl-', '') || 'green';
+      walk(k, ns);
+    });
+  })(node, {});
+  return out;
+}
+/* 断行用的最小单位：拉丁词整块、中文按字、空格可吞 */
+function lpTokens(runs){
+  const out = [];
+  runs.forEach(r=>{
+    if(r.chip){ out.push(Object.assign({}, r)); return; }
+    if(r.text === '\n'){ out.push(Object.assign({}, r, {br:true, text:''})); return; }
+    String(r.text).split(/(\s+)/).forEach(part=>{
+      if(!part) return;
+      if(/^\s+$/.test(part)){ out.push(Object.assign({}, r, {text:' ', space:true})); return; }
+      (part.match(/[A-Za-z0-9@#_.\/%:+\-]+|[\s\S]/g) || []).forEach(s=>{
+        out.push(Object.assign({}, r, {text:s}));
+      });
+    });
+  });
+  return out;
+}
+function lpW(tok, size){
+  if(tok.chip){
+    LP_C.font = '500 12.5px ' + LP_SERIF;
+    return LP_C.measureText(tok.text).width + 16;
+  }
+  const s = tok.code ? size * 0.9 : size;
+  LP_C.font = lpFont(s, tok.bold, tok.code, tok.italic);
+  return LP_C.measureText(tok.text).width;
+}
+function lpWrap(toks, maxW, size){
+  const lines = [];
+  let cur = {items:[], w:0};
+  toks.forEach(t=>{
+    if(t.br){ if(cur.items.length) lines.push(cur); cur = {items:[], w:0}; return; }
+    if(t.space && !cur.items.length) return;
+    const w = lpW(t, size);
+    if(cur.w + w > maxW && cur.items.length){
+      lines.push(cur); cur = {items:[], w:0};
+      if(t.space) return;
+    }
+    cur.items.push({tok:t, w:w});
+    cur.w += w;
+  });
+  if(cur.items.length) lines.push(cur);
+  return lines;
+}
+function lpPalMark(kind, pal){
+  if(kind === 'yellow') return ['#fdf0c5', '#7a580c'];
+  if(kind === 'pink')   return ['#fce2e5', '#9a2c3c'];
+  if(kind === 'blue')   return ['#dbeafa', '#1c4e84'];
+  if(kind === 'purple') return ['#ebe2f8', '#5e3a94'];
+  if(kind === 'gray')   return ['#e9ecef', '#474e55'];
+  if(kind === 'none')   return [null, pal.ink];
+  return [pal.ivySoft, pal.ivy];
+}
+function lpDrawLine(c, line, x, baseline, size, pal, color, strikeAll){
+  let cx = x;
+  line.items.forEach(it=>{
+    const t = it.tok;
+    if(t.chip){
+      const h = 21;
+      c.fillStyle = pal.chip;
+      lpRR(c, cx, baseline - 15.5, it.w, h, 10.5); c.fill();
+      c.font = '500 12.5px ' + LP_SERIF;
+      c.fillStyle = pal.ivy;
+      c.textBaseline = 'alphabetic';
+      c.fillText(t.text, cx + 8, baseline - 1.5);
+      cx += it.w;
+      return;
+    }
+    const s = t.code ? size * 0.9 : size;
+    c.font = lpFont(s, t.bold, t.code, t.italic);
+    if(t.mark){
+      const mc = lpPalMark(t.mark, pal);
+      if(mc[0]){ c.fillStyle = mc[0]; lpRR(c, cx - 2, baseline - size * 0.95, it.w + 4, size * 1.28, 3); c.fill(); }
+    } else if(t.code){
+      c.fillStyle = pal.code;
+      lpRR(c, cx - 3, baseline - size * 0.92, it.w + 6, size * 1.26, 4); c.fill();
+    }
+    let col = pal.ink;
+    if(t.link) col = pal.ivy;
+    else if(t.code) col = pal.codeInk;
+    else if(t.mark){ const mc = lpPalMark(t.mark, pal); if(mc[1]) col = mc[1]; }
+    if(color) col = color;
+    c.fillStyle = col;
+    c.fillText(t.text, cx, baseline);
+    if(t.link){
+      c.strokeStyle = col; c.globalAlpha = .5; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(cx, baseline + 2.5); c.lineTo(cx + it.w, baseline + 2.5); c.stroke();
+      c.globalAlpha = 1;
+    }
+    if(t.strike || strikeAll){
+      c.strokeStyle = col; c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(cx, baseline - size * 0.3); c.lineTo(cx + it.w, baseline - size * 0.3); c.stroke();
+    }
+    cx += it.w;
+  });
+}
+/* 预加载内嵌图片：只有 data: 的才画，远程图会污染 canvas 导致导出失败 */
+function lpPreload(host){
+  const list = [...host.querySelectorAll('img')];
+  return Promise.all(list.map(im=>new Promise(res=>{
+    const src = im.getAttribute('src') || '';
+    const out = {src:src, img:null};
+    if(!/^data:image\//i.test(src)){ res(out); return; }
+    const el = new Image();
+    el.onload = ()=>{ out.img = el; res(out); };
+    el.onerror = ()=>res(out);
+    el.src = src;
+  }))).then(arr=>{
+    const map = new Map();
+    arr.forEach(o=>map.set(o.src, o.img));
+    return map;
+  });
+}
+/* 排版：算出每个绘制块的位置，返回 ops（带 y）+ 总高 + 段落断点 */
+function lpLayout(host, note, imgMap){
+  const pal = lpPal();
+  const W = LP_W, PAD = LP_PAD, innerW = W - PAD * 2;
+  const ops = [], marks = [];
+  let y = PAD;
+  // 注意：绘制闭包会在排版全部算完之后才执行，所以每个闭包里只能用 const 捕获的坐标，
+  // 不能直接引用会继续变化的 y（否则会画到最后一行去）
+  const push = (fn, at)=>ops.push({y:at, fn:fn});
+
+  // ---- 标题 ----
+  {
+    const size = 31;
+    const lines = lpWrap(lpTokens([{text:note.title || '无标题', bold:true}]), innerW, size);
+    lines.forEach(ln=>{
+      const top = y, base = top + size;
+      push(c=>{
+        c.textBaseline = 'alphabetic';
+        lpDrawLine(c, ln, PAD, base, size, pal, pal.ink);
+      }, top);
+      y += size * 1.4;
+    });
+  }
+  // ---- 日期 / 字数 ----
+  {
+    const d = new Date(note.updatedAt || note.createdAt || Date.now());
+    const stamp = d.getFullYear() + ' 年 ' + (d.getMonth()+1) + ' 月 ' + d.getDate() + ' 日';
+    const meta = stamp + '　·　' + countWords(note.body || '') + ' 字';
+    const top = y + 6, base = top + 15;
+    push(c=>{
+      c.font = lpFont(13.5, false); c.fillStyle = pal.faint; c.textBaseline = 'alphabetic';
+      c.fillText(meta, PAD, base);
+    }, top);
+    y = top + 22;
+  }
+  // ---- 分隔线 ----
+  {
+    const top = y;
+    push(c=>{
+      c.strokeStyle = pal.line; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(PAD, top + 0.5); c.lineTo(W - PAD, top + 0.5); c.stroke();
+    }, top);
+    y += 30;
+  }
+
+  const flowText = (runs, opt)=>{
+    const size = opt.size || 17;
+    const lh = (opt.lh || 1.82) * size;
+    const maxW = innerW - (opt.indent || 0);
+    const x = PAD + (opt.indent || 0);
+    if(opt.mt) y += opt.mt;
+    if(opt.bold) runs = runs.map(r=>Object.assign({}, r, {bold:true}));
+    const lines = lpWrap(lpTokens(runs), maxW, size);
+    if(!lines.length){ y += lh * 0.4 + (opt.mb || 0); return; }
+    marks.push(y);
+    lines.forEach(ln=>{
+      const top = y, base = top + size * 1.12;
+      push(c=>{
+        c.textBaseline = 'alphabetic';
+        lpDrawLine(c, ln, x, base, size, pal, opt.color);
+      }, top);
+      y += lh;
+    });
+    if(opt.mb) y += opt.mb;
+  };
+
+  const addList = (listEl, depth)=>{
+    const ordered = listEl.tagName.toLowerCase() === 'ol';
+    let idx = 0;
+    [...listEl.children].forEach(li=>{
+      if(li.tagName.toLowerCase() !== 'li') return;
+      idx++;
+      const isTask = li.classList.contains('task');
+      const box = isTask ? li.querySelector('input[type=checkbox]') : null;
+      const done = !!(box && box.checked);
+      const indent = 24 + depth * 26;
+      const markW = isTask ? 26 : 24;
+      const clone = li.cloneNode(true);
+      clone.querySelectorAll('ul,ol').forEach(x=>x.remove());
+      const runs = lpRuns(clone);
+      const size = 17, lh = size * 1.78;
+      const firstTop = y;
+      y += 3;
+      const baseY = y + 24;              // 首行基线
+      // 勾选框 / 列表符号
+      if(isTask){
+        const bx = PAD + depth * 26, by = y + 5;
+        push(c=>{
+          if(done){
+            c.fillStyle = pal.ivy; lpRR(c, bx, by, 15, 15, 4.5); c.fill();
+            c.strokeStyle = (resolvedTheme() === 'dark' ? '#0f1a13' : '#ffffff');
+            c.lineWidth = 2; c.lineJoin = 'round'; c.lineCap = 'round';
+            c.beginPath();
+            c.moveTo(bx + 3.9, by + 7.9); c.lineTo(bx + 6.5, by + 10.5); c.lineTo(bx + 11.1, by + 5);
+            c.stroke();
+          }else{
+            c.strokeStyle = pal.faint; c.lineWidth = 1.5;
+            lpRR(c, bx + .75, by + .75, 13.5, 13.5, 4); c.stroke();
+          }
+        }, y);
+      }else if((clone.textContent || '').trim()){
+        const lx = PAD + depth * 26;
+        const label = ordered ? (idx + '.') : '•';
+        push(c=>{
+          c.textBaseline = 'alphabetic';
+          if(ordered){
+            c.font = lpFont(15, false); c.fillStyle = pal.faint; c.textAlign = 'right';
+            c.fillText(label, lx + 18, baseY);
+            c.textAlign = 'left';
+          }else{
+            c.font = lpFont(17, false); c.fillStyle = pal.faint;
+            c.fillText(label, lx + 5, baseY);
+          }
+        }, y);
+      }
+      const lines = lpWrap(lpTokens(runs), innerW - indent - markW, size);
+      lines.forEach(ln=>{
+        const base = y + 24;
+        push(c=>{
+          c.textBaseline = 'alphabetic';
+          lpDrawLine(c, ln, PAD + indent + markW, base, size, pal, done ? pal.muted : pal.ink, done);
+        }, y);
+        y += lh;
+      });
+      y += 5;
+      [...li.children].forEach(sub=>{
+        const t = sub.tagName.toLowerCase();
+        if(t === 'ul' || t === 'ol') addList(sub, depth + 1);
+      });
+      marks.push(firstTop);
+    });
+    y += 8;
+  };
+
+  const addTable = (tbl)=>{
+    const rows = [...tbl.querySelectorAll('tr')];
+    if(!rows.length) return;
+    const ncol = Math.max(1, ...rows.map(r=>r.children.length));
+    const colW = innerW / ncol, cs = 14.5, lh = cs * 1.58, cpad = 10;
+    const grid = rows.map(r=>[...r.children].map(td=>{
+      const bold = td.tagName.toLowerCase() === 'th';
+      return {bold:bold, lines:lpWrap(lpTokens(lpRuns(td)), colW - cpad * 2, cs)};
+    }));
+    marks.push(y);
+    y += 8;
+    const top = y;
+    const boxes = [];
+    grid.forEach((row, ri)=>{
+      const nlines = Math.max(1, ...row.map(c=>c.lines.length));
+      const h = nlines * lh + cpad * 2;
+      const rowTop = y;
+      if(ri === 0){
+        push(c=>{ c.fillStyle = pal.code; c.fillRect(PAD, rowTop, innerW, h); }, rowTop);
+      }
+      row.forEach((cell, ci)=>{
+        const cx = PAD + ci * colW;
+        cell.lines.forEach((ln, li)=>{
+          const base = rowTop + cpad + lh * 0.78 + li * lh;
+          push(c=>{
+            c.textBaseline = 'alphabetic';
+            lpDrawLine(c, ln, cx + cpad, base, cs, pal, cell.bold ? pal.ink : pal.ink2);
+          }, rowTop);
+        });
+      });
+      boxes.push([rowTop, h]);
+      y += h;
+    });
+    // 最后统一画格线，避免压在文字上（bottom 必须固定下来，闭包执行时 y 已经跑到页脚了）
+    const bottom = y;
+    push(c=>{
+      c.strokeStyle = pal.line; c.lineWidth = 1;
+      for(let ci = 0; ci <= ncol; ci++){
+        const cx = PAD + ci * colW;
+        c.beginPath(); c.moveTo(cx + .5, top); c.lineTo(cx + .5, bottom); c.stroke();
+      }
+      boxes.forEach(([rt, h])=>{
+        c.beginPath(); c.moveTo(PAD, rt + .5); c.lineTo(PAD + innerW, rt + .5); c.stroke();
+        c.beginPath(); c.moveTo(PAD, rt + h - .5); c.lineTo(PAD + innerW, rt + h - .5); c.stroke();
+      });
+    }, top);
+    y += 18;
+  };
+
+  const addImage = (im)=>{
+    const src = im.getAttribute('src') || '';
+    const el = imgMap.get(src);
+    marks.push(y);
+    y += 8;
+    const top = y;
+    if(el && el.naturalWidth){
+      const w = Math.min(innerW, el.naturalWidth);
+      const h = el.naturalHeight * (w / el.naturalWidth);
+      push(c=>{
+        c.save(); lpRR(c, PAD, top, w, h, 10); c.clip();
+        c.drawImage(el, PAD, top, w, h); c.restore();
+      }, top);
+      y += h + 16;
+    }else{
+      push(c=>{
+        c.fillStyle = pal.code; lpRR(c, PAD, top, innerW, 56, 10); c.fill();
+        c.font = '400 13px ' + LP_MONO; c.fillStyle = pal.faint; c.textBaseline = 'alphabetic';
+        c.fillText('图片（长图里省略）', PAD + 18, top + 33);
+      }, top);
+      y += 56 + 16;
+    }
+  };
+
+  [...host.children].forEach(el=>{
+    const tag = el.tagName.toLowerCase();
+    if(el.classList.contains('md-blank')) return;
+    if(/^h[1-6]$/.test(tag)){
+      const lv = +tag[1];
+      const size = lv === 1 ? 27 : lv === 2 ? 22 : lv === 3 ? 19 : 17;
+      flowText(lpRuns(el), {size:size, lh:lv <= 2 ? 1.45 : 1.5, mt:lv === 1 ? 26 : 20, mb:8, color:pal.ink, bold:true});
+      return;
+    }
+    if(tag === 'p'){
+      const only = el.querySelector('img');
+      if(only && !(el.textContent || '').trim()){ addImage(only); return; }
+      flowText(lpRuns(el), {size:17, lh:1.86, mb:14});
+      return;
+    }
+    if(tag === 'ul' || tag === 'ol'){ addList(el, 0); return; }
+    if(tag === 'blockquote'){
+      const top = y;
+      y += 12;
+      const inner = [...el.children].find(x=>x.tagName.toLowerCase() === 'p') || el;
+      const lines = lpWrap(lpTokens(lpRuns(inner)), innerW - 36, 16.5);
+      const bodyTop = y;
+      lines.forEach(ln=>{
+        const base = y + 22;
+        push(c=>{ c.textBaseline = 'alphabetic'; lpDrawLine(c, ln, PAD + 20, base, 16.5, pal, pal.muted); }, y);
+        y += 16.5 * 1.8;
+      });
+      const barH = Math.max(18, y - bodyTop - 2);
+      push(c=>{
+        c.fillStyle = pal.quote; lpRR(c, PAD + 3, bodyTop - 4, 3, barH, 2); c.fill();
+      }, top);
+      y += 16;
+      return;
+    }
+    if(tag === 'pre'){
+      const code = el.querySelector('code') || el;
+      const text = (code.textContent || '').replace(/\t/g, '  ').replace(/\s+$/, '');
+      const cs = 13.5, lh = cs * 1.68, cpad = 15;
+      const lines = [];
+      LP_C.font = '400 ' + cs + 'px ' + LP_MONO;
+      text.split('\n').forEach(raw=>{
+        if(!raw){ lines.push(''); return; }
+        let rest = raw;
+        while(rest.length){
+          let cut = rest.length;
+          while(cut > 1 && LP_C.measureText(rest.slice(0, cut)).width > innerW - cpad * 2) cut--;
+          lines.push(rest.slice(0, cut));
+          rest = rest.slice(cut);
+        }
+      });
+      const h = Math.max(1, lines.length) * lh + cpad * 2;
+      marks.push(y);
+      y += 12;
+      const top = y;
+      push(c=>{ c.fillStyle = pal.code; lpRR(c, PAD, top, innerW, h, 10); c.fill(); }, top);
+      lines.forEach((ln, i)=>{
+        const base = top + cpad + lh * 0.78 + i * lh;
+        push(c=>{
+          c.font = '400 ' + cs + 'px ' + LP_MONO; c.fillStyle = pal.codeInk; c.textBaseline = 'alphabetic';
+          c.fillText(ln, PAD + cpad, base);
+        }, top);
+      });
+      y += h + 18;
+      return;
+    }
+    if(tag === 'table'){ addTable(el); return; }
+    if(tag === 'hr'){
+      const top = y;
+      marks.push(y);
+      push(c=>{
+        c.strokeStyle = pal.line; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(PAD + 1, top + 12.5); c.lineTo(PAD + innerW - 1, top + 12.5); c.stroke();
+      }, top);
+      y += 26;
+      return;
+    }
+    if(tag === 'img'){ addImage(el); return; }
+    flowText(lpRuns(el), {size:17, lh:1.86, mb:14});
+  });
+
+  // ---- 页脚 ----
+  y += 18;
+  const footTop = y;
+  push(c=>{
+    c.strokeStyle = pal.line; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(PAD, footTop + 0.5); c.lineTo(W - PAD, footTop + 0.5); c.stroke();
+    c.font = lpFont(12, false); c.fillStyle = pal.faint; c.textBaseline = 'alphabetic';
+    const label = '随手笔记 · n.139t.cn';
+    c.fillText(label, W - PAD - c.measureText(label).width, footTop + 30);
+  }, footTop);
+  y = footTop + 46 + PAD;
+
+  return {ops:ops, height:y, marks:marks, pal:pal};
+}
+
+/* 按段落断点切片，太长的笔记分成几张，避免撞到浏览器的 canvas 上限 */
+function lpSlices(height, marks){
+  if(height <= LP_MAX_H) return [[0, height]];
+  const cuts = marks.filter(v=>v > 0).sort((a,b)=>a-b);
+  const out = [];
+  let s = 0;
+  while(s < height){
+    let e = Math.min(height, s + LP_MAX_H);
+    if(e < height){
+      const cand = cuts.filter(v=>v > s + 300 && v <= e);
+      if(cand.length) e = cand[cand.length-1];
+    }
+    out.push([s, e]);
+    s = e;
+  }
+  return out;
+}
+function lpBuildCanvas(L, a, b, scale){
+  const w = LP_W, h = b - a;
+  if(!scale){
+    scale = Math.min(2, Math.sqrt(LP_MAX_AREA / (w * h)), 16000 / h);
+    scale = Math.max(1, Math.min(2, scale));
+  }
+  const topPad = a > 0 ? 26 : 0;      // 切片时给下一张留点顶部呼吸位，别顶着边开始
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * scale);
+  cv.height = Math.round((h + topPad) * scale);
+  const c = cv.getContext('2d');
+  c.scale(scale, scale);
+  c.fillStyle = L.pal.bg;
+  c.fillRect(0, 0, w, h + topPad);
+  c.translate(0, -a + topPad);
+  L.ops.forEach(op=>{ if(op.y >= a - 4 && op.y <= b + 4) op.fn(c); });
+  return cv;
+}
+async function lpRender(note){
+  const host = document.createElement('div');
+  const _md = mdToHtml(note.body || '');
+  host.innerHTML = typeof _md === 'string' ? _md : ((_md && _md.html) || '');
+  const imgMap = await lpPreload(host);
+  const L = lpLayout(host, note, imgMap);
+  const slices = lpSlices(L.height, L.marks);
+  // 多张时统一用同一个缩放，几张拼起来宽度才一致
+  const maxH = Math.max(...slices.map(s=>s[1] - s[0]));
+  let scale = Math.min(2, Math.sqrt(LP_MAX_AREA / (LP_W * maxH)), 16000 / maxH);
+  scale = Math.max(1, Math.min(2, scale));
+  const canvases = slices.map(s=>lpBuildCanvas(L, s[0], s[1], scale));
+  return {canvases:canvases, title:note.title || '无标题'};
+}
+function lpSave(res){
+  const base = (res.title || '无标题').replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim() || '无标题';
+  const multi = res.canvases.length > 1;
+  res.canvases.forEach((cv, i)=>{
+    cv.toBlob(b=>{
+      if(!b){ toast('图片生成失败，换浏览器再试'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = base + ' ' + dateStamp() + (multi ? '-' + (i+1) : '') + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 10000);
+    }, 'image/png');
+  });
+  toast(multi ? ('已保存 ' + res.canvases.length + ' 张长图') : '长图已保存');
+}
+function lpShow(res){
+  let ov = document.getElementById('lpOv');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'lpOv'; ov.className = 'lp-ov';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div class="lp-card" role="dialog" aria-label="导出长图">
+      <div class="lp-hd">
+        <div class="lp-hd-t">
+          <h3>长图预览${res.canvases.length > 1 ? '（' + res.canvases.length + ' 张）' : ''}</h3>
+          <p>手机上长按图片可以存到相册</p>
+        </div>
+        <button class="help-x" id="lpClose" title="关闭">×</button>
+      </div>
+      <div class="lp-body" id="lpBody"></div>
+      <div class="lp-foot">
+        <button class="lp-btn" id="lpCancel">关闭</button>
+        <button class="lp-btn primary" id="lpSave">保存图片</button>
+      </div>
+    </div>`;
+  const body = ov.querySelector('#lpBody');
+  body.innerHTML = '';
+  res.canvases.forEach(cv=>{
+    const im = document.createElement('img');
+    im.src = cv.toDataURL('image/png');
+    im.alt = '长图';
+    body.appendChild(im);
+  });
+  ov.classList.add('open');
+  const close = ()=>ov.classList.remove('open');
+  ov.querySelector('#lpClose').onclick = close;
+  ov.querySelector('#lpCancel').onclick = close;
+  ov.querySelector('#lpSave').onclick = ()=>{ lpSave(res); };
+  ov.onclick = e=>{ if(e.target === ov) close(); };
+}
+
 async function boot(){
   const slug = getSlug();
   if (!slug) return fail('链接不完整');
@@ -839,10 +1450,23 @@ async function boot(){
         <div class="mm-tip">由标题与缩进列表自动生成 · 只读视图</div>
       </div>
       <div class="foot">
-        <span>由「随手笔记」分享</span>
+        <button class="copy" id="imgBtn">保存长图</button>
         <button class="copy" id="copyBtn">复制链接</button>
       </div>`;
     document.body.dataset.mode = 'preview';
+    const imgBtn = document.getElementById('imgBtn');
+    imgBtn.onclick = async () => {
+      imgBtn.disabled = true; imgBtn.textContent = '生成中…';
+      try {
+        const res = await lpRender({ title: TITLE, body: BODY });
+        lpShow(res);
+      } catch (e) {
+        console.error(e);
+        toast('生成长图失败：' + ((e && e.message) || '未知错误'));
+      } finally {
+        imgBtn.disabled = false; imgBtn.textContent = '保存长图';
+      }
+    };
     const btn = document.getElementById('copyBtn');
     btn.onclick = async () => {
       try { await navigator.clipboard.writeText(location.href); btn.textContent = '已复制'; }

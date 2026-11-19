@@ -114,6 +114,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         // 内置网页：从 App Resources/web 起一个只监听 127.0.0.1 的小服务
         let webRoot = Bundle.main.resourceURL!.appendingPathComponent("web", isDirectory: true)
         server = IvyLocalServer(root: webRoot)
+        server.onFailure = { [weak self] err in
+            // 端口被占通常意味着旧版客户端还开着。此时新版会连到旧版的本地服务，
+            // 看到的是旧页面，必须明确告诉用户，不能静默继续。
+            if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" {
+                self?.appendTest("SERVER_FAIL: \(err.localizedDescription)\n")
+                return
+            }
+            DispatchQueue.main.async {
+                let a = NSAlert()
+                a.messageText = "已有旧版「随手笔记」在运行"
+                a.informativeText = "请先完全退出旧版客户端（菜单「随手笔记 → 退出」），再打开这个版本。否则新版会显示旧版页面。"
+                a.addButton(withTitle: "好")
+                a.runModal()
+                NSApp.terminate(nil)
+            }
+        }
         server.start()
 
         UNUserNotificationCenter.current().delegate = self
@@ -290,6 +306,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 }
             }
 
+            // 回收站删除自检：走真实 UI 的「彻底删除」按钮，验证 confirm 已被原生接住
+            let trashJS = """
+            (function(){
+              var id='trash-selftest';
+              try{
+                S.notes=S.notes.filter(function(n){return n.id!==id;});
+                S.notes.unshift({id:id,title:'回收站自检',body:'x',notebookId:null,tags:[],
+                                 trashed:true,createdAt:Date.now(),updatedAt:Date.now()});
+                save();
+                if(typeof openTrashView==='function') openTrashView();
+                if(typeof openTrashNote==='function') openTrashNote(id);
+                var b=document.querySelector('[data-purge]');
+                if(!b) return 'no-purge-button';
+                b.click();                      // 这里会触发 window.confirm
+                return S.notes.some(function(n){return n.id===id;}) ? 'still-there' : 'purged';
+              }catch(e){ return 'err:'+e.message; }
+              finally{
+                S.notes=S.notes.filter(function(n){return n.id!==id;});
+              }
+            })()
+            """
+            self.web.evaluateJavaScript(trashJS) { r, _ in
+                let line = "TRASH_PURGE: \(String(describing: r))\n"
+                if let h = FileHandle(forWritingAtPath: "/tmp/ivy-selftest.txt") {
+                    h.seekToEndOfFile(); h.write(line.data(using: .utf8)!); h.closeFile()
+                }
+            }
+
             // 读一下 WebKit 给本站的存储配额
             self.web.evaluateJavaScript(
                 "try{ navigator.storage.estimate().then(function(e){ window.__QUOTA = e; }); }catch(e){}");
@@ -383,6 +427,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             }
         }
         return nil
+    }
+
+    // MARK: - JS 弹窗
+    // WKWebView 默认不实现 alert/confirm/prompt：网页里 confirm() 会直接返回 false，
+    // 于是「彻底删除」「清空回收站」这类带确认的操作全部被当成用户点了取消。
+    // 这里接成原生 NSAlert，自检模式下自动确认并记到日志，方便自动化验证。
+    func webView(_ webView: WKWebView,
+                 runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping () -> Void) {
+        if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" {
+            appendTest("JS_ALERT: \(message)\n"); completionHandler(); return
+        }
+        let a = NSAlert()
+        a.messageText = APP_NAME
+        a.informativeText = message
+        a.addButton(withTitle: "好")
+        a.runModal()
+        completionHandler()
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (Bool) -> Void) {
+        if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" {
+            appendTest("JS_CONFIRM: \(message)\n"); completionHandler(true); return
+        }
+        let a = NSAlert()
+        a.messageText = "请确认"
+        a.informativeText = message
+        a.addButton(withTitle: "确定")
+        a.addButton(withTitle: "取消")
+        let r = a.runModal()
+        completionHandler(r == .alertFirstButtonReturn)
+    }
+
+    func webView(_ webView: WKWebView,
+                 runJavaScriptTextInputPanelWithPrompt prompt: String,
+                 defaultText: String?,
+                 initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (String?) -> Void) {
+        if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" {
+            appendTest("JS_PROMPT: \(prompt)\n"); completionHandler(defaultText); return
+        }
+        let a = NSAlert()
+        a.messageText = prompt
+        a.informativeText = " "
+        a.addButton(withTitle: "确定")
+        a.addButton(withTitle: "取消")
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        input.stringValue = defaultText ?? ""
+        a.accessoryView = input
+        let r = a.runModal()
+        completionHandler(r == .alertFirstButtonReturn ? input.stringValue : nil)
     }
 
     // MARK: - 通知

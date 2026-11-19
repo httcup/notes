@@ -20,6 +20,7 @@ private struct IvyRequest {
 final class IvyLocalServer {
     let root: URL
     let port: UInt16 = 47821
+    var onFailure: ((Error) -> Void)?
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "cn.139t.noteapp.localserver", attributes: .concurrent)
 
@@ -31,8 +32,11 @@ final class IvyLocalServer {
         do {
             let l = try NWListener(using: .tcp, on: NWEndpoint.Port(integerLiteral: port))
             l.newConnectionHandler = { [weak self] conn in self?.handle(conn) }
-            l.stateUpdateHandler = { state in
-                if case .failed(let err) = state { NSLog("IvyLocalServer failed: \(err)") }
+            l.stateUpdateHandler = { [weak self] state in
+                if case .failed(let err) = state {
+                    NSLog("IvyLocalServer failed: \(err)")
+                    DispatchQueue.main.async { self?.onFailure?(err) }
+                }
             }
             l.start(queue: queue)
             listener = l

@@ -252,6 +252,8 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
   .sec-fold .caret:active{background:rgb(var(--hover))}
 }
 .sec-body.hidden{display:none}
+/* 侧栏各分区之间的细线 */
+.shelf-sep{height:1px;background:rgb(var(--line));margin:12px 8px 10px}
 /* 侧栏「日程」分区：沿用笔记标题那套（.sec-label/.sec-fold），只在外面加一条分隔线 */
 .sched-sec{margin:14px 0 2px;padding-top:12px;border-top:1px solid rgb(var(--line))}
 .sched-sec .sec-label{margin:0 0 6px;padding-right:40px}
@@ -3162,7 +3164,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v216', at: '2026-11-19 09:10' };
+window.IVY_BUILD = { id: 'v217', at: '2026-11-19 09:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3850,7 +3852,7 @@ function tagPillKeys(notes){
   NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   return keys.sort((a,b)=>a.localeCompare(b, 'zh-CN'));
 }
-/* 侧栏的「日程」分区：原来是一个独立视图（整条侧栏被它占掉），
+/* 侧栏的「待办日程」分区：原来是一个独立视图（整条侧栏被它占掉），
    现在收进笔记侧栏、放在笔记本列表下面，和标签区一样能折叠 */
 function schedSectionHtml(){
   const c = todoCounts();
@@ -3858,8 +3860,8 @@ function schedSectionHtml(){
   const n = c.open || 0;
   return `<div class="sched-sec${open ? '' : ' closed'}">
     <button class="sec-label sec-fold${open ? '' : ' closed'}" data-act="toggle-sched"
-      title="${open ? '收起日程' : '展开日程'}" aria-expanded="${open ? 'true' : 'false'}">
-      <span class="lb"><i class="caret">&#9654;</i>日程</span>
+      title="${open ? '收起待办日程' : '展开待办日程'}" aria-expanded="${open ? 'true' : 'false'}">
+      <span class="lb"><i class="caret">&#9654;</i>待办日程</span>
       <span class="count">${n}</span>
     </button>
     ${open ? `<div class="sched-body">${todoShelf()}</div>` : ''}
@@ -4327,12 +4329,12 @@ function renderShelf(){
   // 日程（原「待办」独立视图）：挪到笔记本列表下面，自己一块、可折叠
   html += schedSectionHtml();
 
-  // 回收站不跟着「笔记」一起收，常驻在下面
-  html += `<div style="height:6px"></div>
-    <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
-
   // 最底部：标签胶囊（横排换行，点一下筛出该标签下的笔记）
   html += tagPillsHtml(notes);
+
+  // 回收站放最下面（不跟着「笔记」一起收），和标签之间用一条分隔线断开
+  html += `<div class="shelf-sep"></div>
+    <button class="shelf-row" data-act="trash">${ic('trash')}<span class="t">回收站</span><span class="meta">${trash.length}</span></button>`;
   shelfBody.innerHTML = html;
   bindShelf();
 }
@@ -4500,8 +4502,6 @@ function bindTodoBlock(root, repaint){
       if(ices) openIcsPop(el, ices);
     };
   });
-  const icsBtn = root.querySelector('[data-icsbtn]');
-  if(icsBtn) icsBtn.onclick = ()=>openRemindCenter();
   const dsw = root.querySelector('[data-tododone]');
   if(dsw){
     dsw.onclick = ev=>ev.stopPropagation();
@@ -4981,8 +4981,6 @@ function todoShelf(){
       <input type="checkbox" data-tododone="1" ${S.todoShowDoneToday?'checked':''}><i></i><span>显示今天已完成</span>
     </label>
     <div class="tsg-list">${body || `<div class="tsh-empty">还没有待办。<br>在笔记里写「- [ ] 事项」试试。</div>`}</div>
-    <button class="tsh-sub" data-icsbtn="1" title="提醒与日历：在这台设备上弹通知，或订阅到手机日历">
-      ${ic('bell')}<span>提醒与日历</span></button>
   </div>`;
 }
 /* 侧边栏用的短标题：今天 · 11月10日 周二 */

@@ -3291,7 +3291,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v223', at: '2026-11-19 10:35' };
+window.IVY_BUILD = { id: 'v224', at: '2026-11-19 10:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13802,18 +13802,23 @@ function toggleShelf(){
   $('#shelfOpen').classList.toggle('show', !S.shelfOpen);
   save();
 }
-/* 窄屏（手机 / 手机横屏 / 小平板）上，手指一碰笔记区就把左边的笔记栏收起来：
-   竖屏是盖在正文上的抽屉，收起不重排；横屏是并排的栏，收起等于把宽度还给正文。
-   桌面上保持常驻，不做这种自动收起。 */
-function shelfCloseIfDrawer(){
-  if(document.documentElement.clientWidth > 900) return false;   // 桌面不收
+/* 直接把左边的书架收起来（不看屏幕宽度），手机抽屉和桌面并排都走这一条 */
+function closeShelfNow(){
   if(!S.shelfOpen) return false;
   S.shelfOpen = false;
-  document.querySelector('.shelf').classList.add('collapsed');
+  const sh = document.querySelector('.shelf');
+  if(sh) sh.classList.add('collapsed');
   document.body.classList.add('shelf-collapsed');
-  $('#shelfOpen').classList.add('show');                          // 收起后留一枚悬浮按钮可以再展开
+  const btn = $('#shelfOpen'); if(btn) btn.classList.add('show');
   save();
   return true;
+}
+/* 窄屏（手机 / 手机横屏 / 小平板）上，手指一碰笔记区就把左边的笔记栏收起来：
+   竖屏是盖在正文上的抽屉，收起不重排；横屏是并排的栏，收起等于把宽度还给正文。
+   桌面上这一条不生效，桌面改由「点正文区」收起（见下面的 pointerup）。 */
+function shelfCloseIfDrawer(){
+  if(document.documentElement.clientWidth > 900) return false;   // 桌面不收
+  return closeShelfNow();
 }
 // 等这一下点击（放光标、点链接、勾待办）走完再收起，避免侧栏一收、布局一变把点击吃掉
 document.addEventListener('pointerup', e=>{
@@ -13821,8 +13826,18 @@ document.addEventListener('pointerup', e=>{
   if(!t || !t.closest) return;
   if(t.closest('.shelf')) return;                                 // 点抽屉自己不算
   if(t.closest('#nlOpen, #shelfOpen, #btnShelf, .nl-open')) return;  // 这几个按钮自己管开合
-  if(!t.closest('.main-wrap, .notelist')) return;                  // 只认笔记区与笔记列表
-  setTimeout(()=>{ shelfCloseIfDrawer(); }, 0);
+  if(!t.closest('.main-wrap, .notelist')) return;                 // 只认笔记区与笔记列表
+  setTimeout(()=>{
+    if(shelfCloseIfDrawer()) return;
+    // 桌面：只有点在右边正文区才收起左边菜单（点中栏列表不动）。
+    // 顶部标签栏和右上角那排按钮不算：它们会弹浮层，浮层定位在按钮上，
+    // 收侧栏会让按钮位移、浮层飘到别处。正在拖选文字时也不动，免得选区被重排打散。
+    if(!t.closest('.paper')) return;
+    if(t.closest('.paper-actions')) return;                       // 右上那排按钮会弹浮层，别让浮层跟着漂
+    if(t.closest('.tabbar') && t.closest('button')) return;       // 页签 / 新建 / 更多都不算「点正文」
+    try{ if(String(window.getSelection() || '')) return; }catch(err){}
+    closeShelfNow();
+  }, 0);
 }, true);
 document.addEventListener('keydown', e=>{
   const meta = e.metaKey || e.ctrlKey;

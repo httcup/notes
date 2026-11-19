@@ -1958,8 +1958,16 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 
 /* ============ media ============ */
 .view-pad{padding:44px 32px 40px}
+.media-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.media-danger{
+  height:32px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:500;font-family:inherit;
+  border:.5px solid rgb(var(--danger)/.38);background:transparent;color:rgb(var(--danger));
+  transition:background .14s,border-color .14s;
+}
+.media-danger:hover{background:rgb(var(--danger)/.08);border-color:rgb(var(--danger)/.55)}
+.media-danger:disabled{opacity:.55;cursor:default;background:transparent}
 .media-search{
-  display:flex;align-items:center;gap:8px;max-width:320px;height:32px;padding:0 10px;
+  display:flex;align-items:center;gap:8px;max-width:320px;flex:1 1 200px;height:32px;padding:0 10px;
   border-radius:8px;background:rgb(var(--sunken));color:rgb(var(--muted));
 }
 .media-search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
@@ -3299,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v225', at: '2026-11-19 11:12' };
+window.IVY_BUILD = { id: 'v226', at: '2026-11-19 11:24' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11698,6 +11706,7 @@ function refreshMermaid(){
 
 /* ========== 媒体库 ========== */
 let mediaCat = 'all';
+let mediaList = [];          // 当前这屏渲染出来的媒体（搜索框还会再过滤一层）
 const CATS = [
   {k:'all', label:'全部'}, {k:'pic', label:'图床图片'}, {k:'image', label:'图片'}, {k:'video', label:'视频'},
   {k:'audio', label:'音频'}, {k:'file', label:'文件'}, {k:'unused', label:'未引用'}, {k:'trash', label:'回收站'}
@@ -11753,9 +11762,14 @@ function renderMedia(){
     return kindOf(m)===mediaCat;
   });
   scrollEl.style.display='';
+  mediaList = list;
   scrollEl.innerHTML = `<div class="view-pad" style="position:relative;height:100%">
-      <div class="media-search">${ic('search')}
-        <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
+      <div class="media-bar">
+        <div class="media-search">${ic('search')}
+          <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
+        ${list.length ? `<button class="media-danger" data-mdall${mediaCat==='unused' ? ' title="把所有没被笔记引用的图片一次删掉"' : ''}>${
+          mediaCat==='unused' ? '删除全部未引用' : '全部删除'}（${list.length}）</button>` : ''}
+      </div>
       ${list.length? `<div class="media-grid" id="mediaGrid">${list.map((m,i)=>`
         <div class="media-card" data-name="${esc(m.name.toLowerCase())}" data-mi="${i}">
           <div class="media-thumb">${m.type.startsWith('image')?`<img src="${m.url}" alt="" loading="lazy">`:kindOf(m).toUpperCase()}</div>
@@ -11767,7 +11781,9 @@ function renderMedia(){
             ? (CLOUD_UPLOAD === false
                 ? '当前账号未开通云图床，粘贴的图片只存在本机笔记里。'
                 : (isConnected() ? '图床里还没有图片。在笔记里粘贴或拖入图片就会传到这里。' : '登录后粘贴或拖入的图片才会传到图床。'))
-            : '还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。'}</span>
+            : (mediaCat==='unused'
+                ? '没有未被引用的图片：现在图库里的图片都还被笔记用着。'
+                : '还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。')}</span>
         </div>`}
     </div>`;
   const ms = $('#mediaSearch');
@@ -11777,6 +11793,8 @@ function renderMedia(){
       c.style.display = !q || c.dataset.name.includes(q) ? '' : 'none';
     });
   };
+  const delAll = scrollEl.querySelector('[data-mdall]');
+  if(delAll) delAll.onclick = ()=>deleteMediaBatch();
   scrollEl.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat=b.dataset.mediaCat; renderShelf(); renderMain(); });
   scrollEl.querySelectorAll('[data-mdel]').forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); deleteMedia(list[+b.dataset.mdel]); };
@@ -11809,50 +11827,74 @@ async function deleteMedia(m){
     msg += '\n\n没有笔记在用它，删了就没了，不能恢复。';
   }
   if(!confirm(msg)) return;
+  if(m.pic && !isConnected()){ toast('没连上云端，删不了图床文件'); return; }
+  if(m.remote && !isConnected()){ toast('没连上云端，删不了云端文件'); return; }
 
-  if(m.pic){
-    if(!isConnected()){ toast('没连上云端，删不了图床文件'); return; }
-    try{
+  const ok = await deleteMediaOne(m);
+  if(!ok){ toast('删除失败：网络错误或服务端拒绝'); return; }
+  await refreshMediaLists();
+  toast('已删除「' + m.name + '」');
+}
+
+/* 真正干活的那一层：本地 blob、云端文件、图床图片各走各的，不弹确认、不重画 */
+async function deleteMediaOne(m){
+  if(!m) return false;
+  try{
+    if(m.pic){
+      if(!isConnected()) return false;
       const r = await fetch('/api/pic?key=' + encodeURIComponent(m.key), { method:'DELETE', headers: authHeaders(false) });
-      if(!r.ok){
-        const d = await r.json().catch(()=>({}));
-        throw new Error(d.error || ('HTTP ' + r.status));
-      }
-    }catch(e){
-      toast('删除失败：' + (e.message || '网络错误'));
-      return;
+      return !!r.ok;
     }
-    picMedia = null;
-    await loadPicMedia(true);
-    toast('已删除「' + m.name + '」');
-    if(S.view === 'media'){ renderShelf(); renderMedia(); }
-    return;
-  }
-
-  if(m.remote){
-    if(!isConnected()){ toast('没连上云端，删不了云端文件'); return; }
-    try{
+    if(m.remote){
+      if(!isConnected()) return false;
       const r = await fetch(m.url, { method:'DELETE', headers: authHeaders(false) });
-      if(!r.ok){
-        const d = await r.json().catch(()=>({}));
-        throw new Error(d.error || ('HTTP ' + r.status));
-      }
-    }catch(e){
-      toast('删除失败：' + (e.message || '网络错误'));
-      return;
+      return !!r.ok;
     }
-    remoteMedia = null;
-    await loadRemoteMedia(true);
-  } else {
     const i = (S.media || []).findIndex(x=>x.id === m.id || x.url === m.url);
     if(i >= 0){
       try{ URL.revokeObjectURL(S.media[i].url); }catch(e){}
       S.media.splice(i, 1);
     }
-    save();
-  }
-  toast('已删除「' + m.name + '」');
+    return true;
+  }catch(e){ return false; }
+}
+
+/* 删完把云端两份列表重新拉一遍再重画：图床（pic）+ 旧媒体库（KV） */
+async function refreshMediaLists(){
+  picMedia = null; remoteMedia = null;
+  if(isConnected()) await Promise.all([loadPicMedia(true), loadRemoteMedia(true)]);
+  save();
   if(S.view === 'media'){ renderShelf(); renderMedia(); }
+}
+
+/* 批量删除：删的是「当前分类 + 当前搜索词」下看到的这些，逐张来，失败了也继续 */
+async function deleteMediaBatch(){
+  const box = $('#mediaSearch');
+  const q = (box && box.value ? box.value : '').trim().toLowerCase();
+  const items = mediaList.filter(m=>!q || String(m.name || '').toLowerCase().includes(q));
+  if(!items.length){ toast('当前列表里没有可删除的文件'); return; }
+
+  const isUnused = mediaCat === 'unused';
+  const refs = isUnused ? 0 : items.filter(m=>mediaRefs(m).length).length;
+  let msg = isUnused
+    ? '删除这 ' + items.length + ' 张没有被任何笔记引用的图片？\n\n删掉就没了，不能恢复。'
+    : '删除当前列表里的 ' + items.length + ' 张图片？'
+      + (refs ? '\n\n其中 ' + refs + ' 张还被笔记引用，删掉之后那些位置会变成裂图。' : '')
+      + '\n\n删掉就没了，不能恢复。';
+  if(!confirm(msg)) return;
+  // 不是「未引用」的批量操作风险更高，数量多时再问一次
+  if(!isUnused && items.length >= 5 && !confirm('再确认一次：这 ' + items.length + ' 张要一次性删掉？')) return;
+
+  const btn = scrollEl.querySelector('[data-mdall]');
+  if(btn){ btn.disabled = true; btn.textContent = '删除中 0/' + items.length; }
+  let ok = 0, fail = 0;
+  for(let i = 0; i < items.length; i++){
+    const done = await deleteMediaOne(items[i]);
+    if(done) ok++; else fail++;
+    if(btn && btn.isConnected) btn.textContent = '删除中 ' + (i + 1) + '/' + items.length;
+  }
+  await refreshMediaLists();
+  toast(fail ? ('删除了 ' + ok + ' 个，' + fail + ' 个失败') : ('已删除 ' + ok + ' 个文件'));
 }
 function pickFiles(){
   const inp = document.createElement('input');
@@ -13848,6 +13890,8 @@ document.addEventListener('pointerup', e=>{
     // 顶部标签栏和右上角那排按钮不算：它们会弹浮层，浮层定位在按钮上，
     // 收侧栏会让按钮位移、浮层飘到别处。正在拖选文字时也不动，免得选区被重排打散。
     if(!t.closest('.paper')) return;
+    // 只在笔记页生效：媒体库、关系图的左栏是导航（分类 / 筛选），点图就把它收掉会卡在那儿出不来
+    if((S.view || 'notes') !== 'notes') return;
     if(t.closest('.paper-actions')) return;                       // 右上那排按钮会弹浮层，别让浮层跟着漂
     if(t.closest('.tabbar') && t.closest('button')) return;       // 页签 / 新建 / 更多都不算「点正文」
     try{ if(String(window.getSelection() || '')) return; }catch(err){}
@@ -14226,8 +14270,8 @@ async function loadRemoteMedia(force){
     if(r.ok){
       const d = await r.json();
       remoteMedia = (d.items||[]).map(it=>Object.assign({remote:true}, it));
-    } else if(r.status===401){
-      remoteMedia = remoteMedia || [];
+    } else {
+      remoteMedia = remoteMedia || [];   // 同上：失败也别留 null，不然会无限重拉
     }
   }catch(e){ remoteMedia = remoteMedia || []; }
   mediaLoading = false;
@@ -14248,6 +14292,10 @@ async function loadPicMedia(force){
       CLOUD_UPLOAD = false;          // 该账号不在白名单里
     } else if(r.status===503 || r.status===404){
       picMedia = [];                 // 图床没配，别每回都试
+    } else {
+      // 其它错误（502 上游挂了、429 限流…）也要落一个值：
+      // 留着 null 的话 renderMedia 每次尾部都会再拉一次、再重画一次，就成了死循环，页面直接卡住
+      picMedia = picMedia || [];
     }
   }catch(e){ picMedia = picMedia || []; }
   picLoading = false;

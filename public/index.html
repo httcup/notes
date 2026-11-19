@@ -3252,7 +3252,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v219', at: '2026-11-19 09:58' };
+window.IVY_BUILD = { id: 'v220', at: '2026-11-19 10:06' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6164,7 +6164,7 @@ function renderDock(){
   paintSyncPip();
   const items = [
     {k:'notes', icon:'notePen', label:'笔记', href:'notes'},
-    {k:'todo', icon:'todo', label:'待办'},
+    {k:'todo', icon:'todo', label:'日程'},
     {k:'media', icon:'folder', label:'媒体库'},
     {k:'graph', icon:'graph', label:'关系图'}
   ];

@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v230', at: '2026-11-19 15:12' };
+window.IVY_BUILD = { id: 'v231', at: '2026-11-19 15:20' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8443,7 +8443,7 @@ function openClientPanel(){
     ov.id = 'dlOv'; ov.className = 'help-ov';
     ov.innerHTML = `<div class="help-card" role="dialog" aria-label="客户端下载" style="width:min(560px,100%)">
         <div class="help-hd">
-          <div><h3>客户端下载</h3><p>装成电脑上的独立应用，不用每次开浏览器</p></div>
+          <div><h3>客户端下载</h3><p>独立应用，断网也能继续写笔记</p></div>
           <button class="help-x" id="dlClose" title="关闭">${ic('x')}</button>
         </div>
         <div class="dl-body">${dlBodyHtml()}</div>
@@ -8460,7 +8460,7 @@ function dlBodyHtml(){
   return `
           <div class="dl-row">
             <div class="dl-ic">${ic('localSave')}</div>
-            <div class="dl-info"><b>macOS 版</b><span>原生应用 · 约 0.4 MB · 通用版（M 系列 / Intel）</span></div>
+            <div class="dl-info"><b>macOS 版</b><span>离线版 · 约 1.5 MB · 内置网页，断网可用 · 通用版（M 系列 / Intel）</span></div>
             <a class="dl-btn" href="/dl/note-MacOS.zip" download>下载</a>
           </div>
           <div class="dl-row">
@@ -8476,14 +8476,14 @@ function dlBodyHtml(){
           </div>
           <div class="dl-row">
             <div class="dl-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="6.2" y="2.2" width="11.6" height="19.6" rx="3"/><path d="M10.2 4.7h3.6" stroke-linecap="round"/><path d="M12 18.6h.01" stroke-linecap="round"/></svg></div>
-            <div class="dl-info"><b>iPhone / iPad 版</b><span>免安装 · 用 Safari 打开本站，加到主屏幕就有独立图标，全屏无地址栏，随网页自动更新</span></div>
+            <div class="dl-info"><b>iPhone / iPad 版</b><span>免安装 · Safari 加到主屏幕，全屏无地址栏；先联网打开一次后，断网也能继续写，随网页自动更新</span></div>
             <button class="dl-btn" id="dlIos">添加到主屏幕</button>
           </div>
           <div class="dl-tip">
-            <b>macOS</b>：解压后把「随手笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手笔记.app</code>。<br>
+            <b>macOS</b>：解压后把「随手笔记」拖进「应用程序」。首次打开若提示无法验证开发者，<b>右键图标 → 打开</b> 就行，或在终端执行 <code>sudo xattr -dr com.apple.quarantine /Applications/随手笔记.app</code>。<b>离线版</b>首次联网启动会自动把网页版笔记搬进来；断网也能编辑、搜索、导出，联网后自动同步。数据没带过来时可用菜单「帮助 → 从网页版重新导入数据」。<br>
             <b>Windows</b>：解压后双击 <code>随手笔记.exe</code>，会用系统自带 Edge 打开一个没有地址栏的独立窗口；右键任务栏图标可以固定住。<br>
             <b>Android</b>：点<b>「下载 APK」</b> 装应用版（支持系统通知、导出存到「下载」文件夹）；手机会提示「未知来源」，允许一次即可。不想装包就点<b>「免安装」</b>，用浏览器菜单里的「添加到主屏幕」装成网页应用，随网页自动更新。<br>
-            <b>iPhone / iPad</b>：不用下载任何东西。用 <b>Safari</b> 打开本站（微信、小红书里的浏览器不行），点底部中间的<b>分享按钮</b> → 往下滑点<b>「添加到主屏幕」</b> → 右上角「添加」。之后从桌面图标打开就是全屏应用。
+            <b>iPhone / iPad</b>：不用下载任何东西。用 <b>Safari</b> 打开本站（微信、小红书里的浏览器不行），点底部中间的<b>分享按钮</b> → 往下滑点<b>「添加到主屏幕」</b> → 右上角「添加」。之后从桌面图标打开就是全屏应用。<b>先联网打开一次</b>，页面存到本机后断网也能用；笔记存在 IndexedDB 里，不受 5 MB 限制。
           </div>`;
 }
 function bindDlBody(root){
@@ -15047,7 +15047,7 @@ function renderHelpOutline(){
 
 /* ---- 客户端下载 ---- */
 function setClientHtml(){
-  return `<p class="set-note" style="margin:2px 0 14px">装成独立应用，有自己的图标，不用每次开浏览器。</p>
+  return `<p class="set-note" style="margin:2px 0 14px">装成独立应用，有自己的图标；电脑版和加到主屏幕的手机版都能断网继续写。</p>
     <div class="dl-body">${dlBodyHtml()}</div>`;
 }
 

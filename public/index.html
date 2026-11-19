@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v232', at: '2026-11-19 15:32' };
+window.IVY_BUILD = { id: 'v233', at: '2026-11-19 15:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4360,7 +4360,13 @@ function renderList(){
     title = '搜索「' + raw + '」';
   }
   if(S.listSort === 'title'){
-    notes = notes.slice().sort((a,b)=>String(a.title||'无标题').localeCompare(String(b.title||'无标题'), 'zh-CN'));
+    // 按标题排也要置顶优先：先分组，再在「置顶组 / 普通组」内部按标题排。
+    // 之前这里直接按标题重排，把 liveNotes() 做好的置顶顺序冲掉了。
+    notes = notes.slice().sort((a,b)=>{
+      if(!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      if(a.pinned && b.pinned) return (b.pinnedAt||0)-(a.pinnedAt||0);
+      return String(a.title||'无标题').localeCompare(String(b.title||'无标题'), 'zh-CN');
+    });
   }
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = title;
@@ -6598,7 +6604,7 @@ function togglePin(id){
   n.pinned = !n.pinned;
   n.pinnedAt = n.pinned ? Date.now() : 0;
   renderAll(); save();
-  toast(n.pinned ? '已置顶，在左侧最上面能直接看到' : '已取消置顶');
+  toast(n.pinned ? '已置顶，会出现在笔记列表最上面' : '已取消置顶');
 }
 function toggleTrash(id){
   const n = noteById(id); if(!n) return;

@@ -1,12 +1,14 @@
 // 随手笔记 · macOS 客户端
-// 原生 WKWebView 壳：加载 n.139t.cn，补充原生通知、Mac 菜单与外链跳转。
+// 原生 WKWebView 壳：页面从 App 内置的本地服务加载（断网也能用），
+// 只有 /api/* 在联网时代理到 n.139t.cn；另外补上原生通知、Mac 菜单与外链跳转。
 import Cocoa
 import WebKit
 import UserNotifications
 
-let HOME_URL = URL(string: "https://n.139t.cn/")!
+let HOME_URL = URL(string: "https://n.139t.cn/")!          // 网页版（仅迁移数据 / 菜单里打开用）
 let ALLOWED_HOSTS: Set<String> = ["n.139t.cn", "139t.cn"]
 let APP_NAME = "随手笔记"
+let MIGRATION_KEY = "ivy.webMigrationAttempts"
 
 // 可点击的毛玻璃视图（通知横幅用）
 final class ClickEffectView: NSVisualEffectView {
@@ -22,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var zoom: CGFloat = 1.0
     var systemNotifyOK = false          // 系统通知中心是否可用（本地未签名 App 常被拒）
     var banners: [NSPanel] = []
+    var server: IvyLocalServer!
+    var probeWeb: WKWebView?            // 一次性迁移：从网页版的 origin 读旧 localStorage
+    var pendingMigration: [[String]]?
 
     // MARK: - 注入脚本
     // 网页里 fireNotify() 先试 Service Worker，失败后退回 new Notification()。
@@ -106,6 +111,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         NSApp.setActivationPolicy(.regular)
         buildMenu()
 
+        // 内置网页：从 App Resources/web 起一个只监听 127.0.0.1 的小服务
+        let webRoot = Bundle.main.resourceURL!.appendingPathComponent("web", isDirectory: true)
+        server = IvyLocalServer(root: webRoot)
+        server.start()
+
         UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().getNotificationSettings { s in
             DispatchQueue.main.async { self.systemNotifyOK = (s.authorizationStatus == .authorized) }
@@ -152,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             self.window.title = t.isEmpty ? APP_NAME : "\(t) — \(APP_NAME)"
         }
 
-        loadHome()
+        beginStartup()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -162,10 +172,75 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         return true
     }
 
-    // MARK: - 加载
-    func loadHome() { web.load(URLRequest(url: HOME_URL)) }
+    // MARK: - 加载 / 一次性数据迁移
+
+    func loadHome() { web.load(URLRequest(url: server.homeURL)) }
+
+    /// 老版本客户端把笔记存在 https://n.139t.cn 这个 origin 下；本地服务的 origin 是
+    /// http://127.0.0.1:47821，两者不互通。首次联网启动时用一个隐藏 WebView 去旧 origin
+    /// 把 localStorage 整包读过来，写进本地 origin。失败不阻塞使用，下次启动再试（最多 3 次）。
+    func beginStartup() {
+        let attempts = UserDefaults.standard.integer(forKey: MIGRATION_KEY)
+        guard attempts < 3 else { loadHome(); return }
+        UserDefaults.standard.set(attempts + 1, forKey: MIGRATION_KEY)
+
+        let cfg = WKWebViewConfiguration()
+        cfg.websiteDataStore = .default()          // 与主 WebView 共用存储，才读得到旧数据
+        let probe = WKWebView(frame: .zero, configuration: cfg)
+        probe.navigationDelegate = self
+        probeWeb = probe
+        probe.load(URLRequest(url: HOME_URL))
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+            guard let self = self, self.probeWeb != nil else { return }
+            self.finishMigration(nil)
+        }
+    }
+
+    func finishMigration(_ pairs: [[String]]?) {
+        probeWeb?.navigationDelegate = nil
+        probeWeb?.stopLoading()
+        probeWeb = nil
+        if let pairs = pairs, pairs.contains(where: { $0.first == "ivynote.replica.v1" }) {
+            pendingMigration = pairs
+        }
+        loadHome()
+    }
+
+    static func jsLiteral(_ s: String) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: s, options: [.fragmentsAllowed]),
+              let out = String(data: data, encoding: .utf8) else { return "''" }
+        return out
+    }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView === probeWeb {
+            let js = "JSON.stringify(Object.keys(localStorage).map(function(k){return [k,String(localStorage.getItem(k)||'')];}))"
+            webView.evaluateJavaScript(js) { [weak self] result, _ in
+                var pairs: [[String]]?
+                if let s = result as? String, let data = s.data(using: .utf8),
+                   let arr = try? JSONSerialization.jsonObject(with: data, options: []) as? [[String]] {
+                    pairs = arr
+                }
+                DispatchQueue.main.async { self?.finishMigration(pairs) }
+            }
+            return
+        }
+        guard webView === web else { return }
+
+        if let pairs = pendingMigration {
+            pendingMigration = nil
+            let script = pairs.map { p -> String in
+                guard p.count == 2 else { return "" }
+                return "try{localStorage.setItem(\(Self.jsLiteral(p[0])),\(Self.jsLiteral(p[1])));}catch(e){}"
+            }.joined(separator: "\n")
+            web.evaluateJavaScript(script) { [weak self] _, _ in
+                UserDefaults.standard.set(3, forKey: MIGRATION_KEY)
+                DispatchQueue.main.async { self?.web.reload() }
+            }
+            return
+        }
+
         if ProcessInfo.processInfo.environment["IVY_SELFTEST"] == "1" { runSelfTest() }
     }
 
@@ -174,7 +249,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         let js = """
         JSON.stringify({
           build: (window.IVY_BUILD || {}).id || '',
+          origin: location.origin,
           notes: (typeof S !== 'undefined' && S.notes) ? S.notes.length : -1,
+          title: (typeof S !== 'undefined' && S.notes && S.notes[0]) ? S.notes[0].title : '',
           nativeFlag: window.__IVY_NATIVE_APP === true,
           notifPerm: (typeof Notification !== 'undefined' && Notification.permission) || '',
           dock: document.querySelectorAll('#dock .dock-item').length,
@@ -187,6 +264,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             if let s = result as? String { text = "RESULT:" + s }
             else { text = "ERROR:" + (error?.localizedDescription ?? "unknown") }
             try? text.write(to: URL(fileURLWithPath: "/tmp/ivy-selftest.txt"), atomically: true, encoding: .utf8)
+
+            // 离线写入自检：往 localStorage 写一条再删掉，证明断网时编辑能落盘
+            let writeJS = """
+            (function(){
+              try{
+                var key='ivynote.replica.v1';
+                var data=JSON.parse(localStorage.getItem(key)||'{}');
+                if(!Array.isArray(data.notes)) return 'no-notes-array';
+                var id='selftest-'+Date.now();
+                data.notes.push({id:id,title:'临时',body:'离线写入',notebookId:null,tags:[],
+                                 trashed:false,createdAt:Date.now(),updatedAt:Date.now()});
+                localStorage.setItem(key, JSON.stringify(data));
+                var ok=JSON.parse(localStorage.getItem(key)).notes.some(function(n){return n.id===id;});
+                data.notes=data.notes.filter(function(n){return n.id!==id;});
+                localStorage.setItem(key, JSON.stringify(data));
+                return ok?'ok':'write-failed';
+              }catch(e){ return 'err:'+e.message; }
+            })()
+            """
+            self.web.evaluateJavaScript(writeJS) { r, _ in
+                let line = "OFFLINE_EDIT: \(String(describing: r))\n"
+                if let h = FileHandle(forWritingAtPath: "/tmp/ivy-selftest.txt") {
+                    h.seekToEndOfFile(); h.write(line.data(using: .utf8)!); h.closeFile()
+                }
+            }
+
             // 读一下 WebKit 给本站的存储配额
             self.web.evaluateJavaScript(
                 "try{ navigator.storage.estimate().then(function(e){ window.__QUOTA = e; }); }catch(e){}");
@@ -213,10 +316,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if webView === probeWeb { finishMigration(nil); return }
         showErrorPage(error)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if webView === probeWeb { finishMigration(nil); return }
         // 用户主动取消（比如跳转被拦）不算错误
         let ns = error as NSError
         if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return }
@@ -255,7 +360,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         }
         if url.scheme == "http" || url.scheme == "https" {
             let host = (url.host ?? "").lowercased()
-            if ALLOWED_HOSTS.contains(host) || host.hasSuffix(".139t.cn") {
+            // 本地内置服务必须放行，否则 WKWebView 连首页都打不开
+            if host == "127.0.0.1" || host == "localhost"
+                || ALLOWED_HOSTS.contains(host) || host.hasSuffix(".139t.cn") {
                 return decisionHandler(.allow)
             }
             NSWorkspace.shared.open(url)
@@ -458,6 +565,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     @objc func zoomReset(_ s: Any?) { zoom = 1.0; web.pageZoom = 1.0 }
     @objc func openWebVersion(_ s: Any?) { NSWorkspace.shared.open(HOME_URL) }
     @objc func openAdmin(_ s: Any?) { NSWorkspace.shared.open(URL(string: "https://n.139t.cn/admin/")!) }
+    @objc func reimportFromWeb(_ s: Any?) {
+        // 手动重跑一次性迁移：网页版必须能联网打开，且那边要有笔记数据
+        UserDefaults.standard.set(0, forKey: MIGRATION_KEY)
+        beginStartup()
+    }
     @objc func showHelp(_ s: Any?) {
         web.evaluateJavaScript("try{ if(typeof openHelpPanel==='function'){ helpTab='io'; openHelpPanel(); } }catch(e){}",
                                completionHandler: nil)
@@ -532,6 +644,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         // 帮助
         main.addItem(makeMenu("帮助", [
             ("使用说明（导入 / 导出）", #selector(showHelp(_:)), ""),
+            ("从网页版重新导入数据（需联网）", #selector(reimportFromWeb(_:)), ""),
             ("打开网页版", #selector(openWebVersion(_:)), ""),
             ("打开管理后台", #selector(openAdmin(_:)), "")
         ]))

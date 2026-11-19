@@ -3317,7 +3317,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v241', at: '2026-11-19 17:20' };
+window.IVY_BUILD = { id: 'v242', at: '2026-11-19 17:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11123,9 +11123,8 @@ function insertOutlineAtEnd(entries){
   const md = outlineToMarkdown(entries);
   if(!n){ toast('先打开一篇笔记'); return false; }
   if(!md){ toast('这次没生成出可用的条目'); return false; }
-  // 格式：分割线 → 一行标题 → 引用块里的层级大纲
-  const quoted = md.split('\n').map(l => '> ' + l).join('\n');
-  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 生成大纲\n' + quoted + '\n';
+  // 格式：分割线 → 一级标题 → 层级大纲原文（不用引用块）
+  n.body = String(n.body || '').replace(/\s+$/, '') + '\n\n---\n\n# AI 生成大纲\n' + md + '\n';
   n.updatedAt = Date.now();
   save(); renderAll(); kickSync();
   toast('AI 大纲已插到文末');
@@ -11253,9 +11252,9 @@ function openAiSummary(){
   $('#sumInsert').onclick = ()=>{
     if(!text.trim()) return;
     const cur = noteById(S.active); if(!cur) return;
-    // 落成「AI 总结：」+ 引用块：和正文分开，读完就知道这段是机器提炼的，以后想删也好找
+    // 一级标题 + 引用块：和正文分开，读完就知道这段是机器提炼的，以后想删也好找
     // 前面先一条分割线，跟正文明确隔开
-    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\n---\n\nAI 总结：\n' + summaryQuote(text) + '\n';
+    cur.body = String(cur.body || '').replace(/\s+$/, '') + '\n\n---\n\n# AI 总结\n' + summaryQuote(text) + '\n';
     cur.updatedAt = Date.now();
     save(); renderAll();
     toast('已插入到文末');

@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v231', at: '2026-11-19 15:20' };
+window.IVY_BUILD = { id: 'v232', at: '2026-11-19 15:32' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -15403,6 +15403,33 @@ function setImportHtml(){
 }
 
 /* ---- 数据 ---- */
+/* 把本机存储的真实状态摆在设置里：到底是 IDB 在存、存了多少、镜像有没有写满 */
+async function paintStoreInfo(){
+  const el = $('#setStoreInfo'); if(!el) return;
+  try{
+    const st = await idbGet('state');
+    const notes = (st && Array.isArray(st.notes)) ? st.notes.length : (S.notes || []).length;
+    let bytes = 0;
+    try{ bytes = new Blob([JSON.stringify(st || {})]).size; }
+    catch(e){ bytes = JSON.stringify(st || {}).length; }
+    let quota = '';
+    try{
+      if(navigator.storage && navigator.storage.estimate){
+        const est = await navigator.storage.estimate();
+        quota = ' · 浏览器已用 ' + fmtSize(est.usage || 0) + ' / 配额 ' + fmtSize(est.quota || 0);
+      }
+    }catch(e){}
+    let mirror = '正常';
+    try{
+      localStorage.setItem('__ivy_mirror_probe__', '1');
+      localStorage.removeItem('__ivy_mirror_probe__');
+    }catch(e){ mirror = '写满或被禁用（不影响笔记：IndexedDB 才是主存储）'; }
+    el.innerHTML = 'IndexedDB · 已存 ' + notes + ' 篇 · 约 ' + fmtSize(bytes) + quota
+      + '<br>localStorage 镜像：' + mirror;
+  }catch(e){
+    el.textContent = '读取失败：' + ((e && e.message) || '未知错误');
+  }
+}
 function setDataHtml(){
   const live = (S.notes || []).filter(n=>!n.trashed && !n.deleted).length;
   const trash = (S.notes || []).filter(n=>n.trashed).length;
@@ -15411,6 +15438,9 @@ function setDataHtml(){
       <div class="set-row"><div><div class="t">本机数据</div>
         <div class="d">${live} 篇笔记 · ${nb} 个笔记本 · 回收站 ${trash} 篇</div></div>
         <button class="set-btn" id="setTrash">回收站</button></div>
+      <div class="set-row"><div><div class="t">本机存储</div>
+        <div class="d" id="setStoreInfo">正在读取…</div></div>
+        <button class="set-btn" id="setStoreRefresh">刷新</button></div>
     </div>
     <div class="set-sec">清理</div>
     <div class="set-row"><div><div class="t">清空本机全部数据（笔记本 + 笔记）</div>
@@ -15625,6 +15655,8 @@ function bindPane(tab){
     const a = $('#setTrash'); if(a) a.onclick = ()=>{ closeSettings(); if(typeof openTrashView === 'function') openTrashView(); };
     const b = $('#setGoBackup'); if(b) b.onclick = ()=>{ SET_TAB = 'sync'; paintSettings(); };
     const w = $('#setWipeLocal'); if(w) w.onclick = () => openWipeSheet();
+    const rf = $('#setStoreRefresh'); if(rf) rf.onclick = paintStoreInfo;
+    paintStoreInfo();
   }
 
   if(tab === 'help'){

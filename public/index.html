@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v226', at: '2026-11-19 11:24' };
+window.IVY_BUILD = { id: 'v227', at: '2026-11-19 11:34' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3402,6 +3402,9 @@ function normalizeState(s){
     if(!['notes','todo','media','graph'].includes(s.view)) s.view = 'notes';
     // v218：日程不再是独立视图，改成「笔记视图 + 中栏待办列表」，老状态顺手迁过来
     if(s.view === 'todo'){ s.view = 'notes'; if(!s.scope || s.scope === 'all') s.scope = 'todo'; }
+    // 之前「点正文收左栏」可能在媒体库把自己关进去（左栏收起 + 只剩一屏图）。
+    // 老数据里存着 shelfOpen:false 的话，这次进来就给它打开，否则连返回笔记的入口都没有
+    if((s.view === 'media' || s.view === 'graph') && s.shelfOpen === false && window.innerWidth > 640) s.shelfOpen = true;
     if(typeof s.scope !== 'string' || !s.scope) s.scope = 'all';
     if(typeof s.listQuery !== 'string') s.listQuery = '';
     if(!['new','title'].includes(s.listSort)) s.listSort = 'new';
@@ -4676,6 +4679,9 @@ function renderShelf(){
 
 function bindShelf(){
   const inlineNotes = window.innerWidth > 640 && window.innerWidth <= 900;   // 与 renderShelf 保持同一判定
+  shelfBody.querySelectorAll('[data-back-notes]').forEach(b=>{
+    b.onclick = ()=>{ if(typeof closeSettings === 'function') closeSettings(); switchView('notes'); };
+  });
   shelfBody.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openNote(b.dataset.open));
   shelfBody.querySelectorAll('[data-move]').forEach(b=>{
     b.onclick = e=>{
@@ -11736,7 +11742,8 @@ function mediaShelf(){
     trash: 0
   };
   const countOf = k => (k in fixed) ? fixed[k] : all.filter(m=>kindOf(m)===k).length;
-  let h = ``;
+  let h = `<button class="shelf-row" data-back-notes style="margin-bottom:6px">
+      <span class="t" style="color:rgb(var(--ink-2));font-size:13px">‹ 返回笔记</span></button>`;
   h += CATS.map(c=>`<button class="shelf-row" data-media-cat="${c.k}" style="${mediaCat===c.k?'background:rgb(var(--hover));color:rgb(var(--ink))':''}">
       <span class="t" style="font-weight:${mediaCat===c.k?500:400}">${c.label}</span>
       <span class="meta">${countOf(c.k)}</span></button>`).join('');
@@ -11933,7 +11940,8 @@ function graphShelf(){
   S.notes.filter(n=>!n.trashed).forEach(n=>{
     (n.body.match(/\[\[([^\]|]+)/g)||[]).forEach(x=>links.push(x));
   });
-  return `<div style="font-size:12px;color:rgb(var(--muted));padding:2px 8px 14px">${S.notes.filter(n=>!n.trashed).length} 篇笔记 · ${links.length} 条链接</div>
+  return `<button class="shelf-row" data-back-notes style="margin-bottom:6px"><span class="t" style="color:rgb(var(--ink-2));font-size:13px">‹ 返回笔记</span></button>
+    <div style="font-size:12px;color:rgb(var(--muted));padding:2px 8px 14px">${S.notes.filter(n=>!n.trashed).length} 篇笔记 · ${links.length} 条链接</div>
     <div class="media-search" style="margin:0 8px 14px;max-width:none">${ic('search')}
       <input id="graphFilter" placeholder="筛选" spellcheck="false"></div>
     <div class="legend"><span class="sq"></span>目录层级</div>
@@ -12101,6 +12109,9 @@ function switchView(v){
   if(v === 'notes' && ['todo','tags'].includes(S.scope || 'all')) S.scope = 'all';   // 从日程 / 标签列表切回笔记
   if(trashView) dropTrashedActive();
   S.view = v; trashView=false; S.listQuery = '';
+  // 媒体库 / 关系图的左栏就是它们的导航（分类、筛选）。之前左栏要是被收起来了，
+  // 进去就只剩一屏缩略图、连返回笔记的入口都没有 —— 这里强制展开
+  if((v === 'media' || v === 'graph') && window.innerWidth > 640) S.shelfOpen = true;
   hideSelBar();
   if(window.innerWidth <= 640){
     if(v === 'notes'){

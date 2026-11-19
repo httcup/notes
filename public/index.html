@@ -695,7 +695,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
      - 1500px 上限：超宽屏（2K/4K）挡住行长，否则一行会拉到 80+ 字难以阅读 */
   max-width:min(1500px, max(93%, 840px));
   margin:0 auto;
-  padding:52px clamp(16px, 2.4vw, 40px) 140px;
+  /* 上下留白由「设置 → 外观」里的两个滑块控制：
+     --doc-pad-t 顶部（正文离窗口顶端多远）、--doc-pad-b 底部（写到最后还能继续下滑的空白）。
+     底部这段空白很关键：没有它，#scroll 到底就滑不动了，光标只能贴着窗口下沿打字 */
+  padding:var(--doc-pad-t, 52px) clamp(16px, 2.4vw, 40px) var(--doc-pad-b, 30vh);
 }
 /* 宽屏：右侧常驻一条 250px 的「大纲通道」，正文宽度固定不变。
    卡片展开时正好落在这条空位里 —— 既压不到字，也不会让正文突然变窄 */
@@ -1765,6 +1768,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 }
 .doc.mode-split .source{
   display:block;grid-column:1;grid-row:1;padding-right:28px;
+  /* 双栏是两栏各自内部滚动。左边是 textarea，它的内边距会吃掉可见行数，
+     所以只留一小截尾巴（约三分之一），写到末尾还能再往下滑一点；
+     右边是普通块级容器，底部内边距不占可见高度，可以留足 */
+  padding-bottom:min(140px, calc(var(--doc-pad-b, 30vh) * .45));
   border-right:1px solid #edf0f2;
   font-family:var(--font-mono);font-size:13.5px;line-height:1.8;
   height:100%;min-height:0;overflow-y:auto;
@@ -1772,6 +1779,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .doc.mode-split #live{display:none}
 .doc.mode-split .prose{
   grid-column:2;grid-row:1;padding-left:28px;
+  padding-bottom:calc(var(--doc-pad-b, 30vh) * .9);
   height:100%;min-height:0;max-height:none;overflow-y:auto;position:static;
 }
 .doc.mode-split .source::-webkit-scrollbar,
@@ -1783,7 +1791,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   /* 窄屏「双栏」改成上下堆叠：源码在上、预览在下。
      原来只把 grid 改成单列，prose 还挂在 grid-column:2 上 → 被挤成一条 60 多像素宽，预览没法看 */
   .doc.mode-split .doc-body{grid-template-columns:1fr;height:auto}
-  .doc.mode-split .source{grid-column:1;grid-row:1;height:auto;max-height:none;border-right:0;padding-right:0;min-height:240px;overflow:visible}
+  /* 堆叠时不再有「两栏内部滚动」，整页交给 #scroll，底部留空得还给页面 */
+  .doc.mode-split{padding-bottom:var(--doc-pad-b, 30vh)}
+  .doc.mode-split .source{grid-column:1;grid-row:1;height:auto;max-height:none;border-right:0;padding-right:0;padding-bottom:0;min-height:240px;overflow:visible}
   .doc.mode-split .prose{
     grid-column:1;grid-row:2;
     height:auto;max-height:none;padding-left:0;margin-top:14px;padding-top:14px;
@@ -2831,7 +2841,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 /* 窄屏（含 iPad 竖屏、手机）不再隐藏大纲：卡片改成可读的浮层，点大纲按钮或右边缘刻度展开 */
 @media (max-width:900px){
   /* 窄屏（iPad 竖屏 / 手机）维持铺满，不要两侧 44px 的空隙 */
-  .doc{max-width:none;padding:40px 20px 120px}
+  .doc{max-width:none;padding:var(--doc-pad-t, 40px) 20px var(--doc-pad-b, 30vh)}
   /* 浮层盖在正文上，手机上看不清透明底，这里给一层毛玻璃底（仍无边框）；
      v35: 手机上卡片收窄（64vw、右缘 8px），条目文字离右侧短横线不再空一大片 */
   .outline{
@@ -3281,7 +3291,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v222', at: '2026-11-19 10:02' };
+window.IVY_BUILD = { id: 'v223', at: '2026-11-19 10:35' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3305,6 +3315,8 @@ function seed(){
     theme: 'light',          /* 实际生效的明暗，跟随系统时会自己变 */
     themeMode: 'light',      /* 用户选择：auto 跟随系统 / light / dark */
     fontSize: 16,            /* 正文字号，默认 16px */
+    padTop: 52,              /* 编辑区顶部留白（px） */
+    padBottom: 30,           /* 编辑区底部留空（vh），决定还能往下滑多远 */
     shelfOpen: true,
     outlineOpen: false,
     outlineMode: 'all',         /* 大纲层级：all 全部分支 / lv2 二级分支 / h1 一级标题，点图标循环 */
@@ -3383,6 +3395,10 @@ function normalizeState(s){
     }
     const fs = +s.fontSize;
     s.fontSize = (Number.isFinite(fs) && fs >= 14 && fs <= 22) ? Math.round(fs) : 16;
+    // 编辑区上下留白（老数据没有这两个字段，给默认值）
+    const pt = +s.padTop, pb = +s.padBottom;
+    s.padTop = (Number.isFinite(pt) && pt >= 0 && pt <= 240) ? Math.round(pt) : 52;
+    s.padBottom = (Number.isFinite(pb) && pb >= 0 && pb <= 90) ? Math.round(pb) : 30;
     // 思维导图外观：老数据默认经典绿
     if(!['classic','minimal','candy','card','org','neon'].includes(s.mmStyle)) s.mmStyle = 'classic';
     if(!['both','right','left','down','up'].includes(s.mmDir)) s.mmDir = 'right';
@@ -3867,10 +3883,20 @@ function applyDocFont(){
   const fs = Math.min(22, Math.max(14, Math.round(+S.fontSize || 16)));
   document.documentElement.style.setProperty('--doc-fs', fs + 'px');
 }
+/* 编辑区上下留白：顶部按 px（正文离窗口顶端多远），底部按 vh（写到最后还能继续下滑多少）。
+   底部这段空白就是「能不能自由往下滑」的关键——没有它，短笔记一屏就到底了，滚轮怎么划都不动 */
+function docPadTop(){ const v = Math.round(+S.padTop); return Number.isFinite(v) ? Math.min(240, Math.max(0, v)) : 52; }
+function docPadBottom(){ const v = Math.round(+S.padBottom); return Number.isFinite(v) ? Math.min(90, Math.max(0, v)) : 30; }
+function applyDocPad(){
+  const rt = document.documentElement.style;
+  rt.setProperty('--doc-pad-t', docPadTop() + 'px');
+  rt.setProperty('--doc-pad-b', docPadBottom() + 'vh');
+}
 function applyTheme(){
   S.theme = resolvedTheme();
   document.documentElement.dataset.theme = S.theme;
   applyDocFont();
+  applyDocPad();
 }
 if(mqDark){
   const onSystemTheme = ()=>{
@@ -10512,6 +10538,38 @@ function toggleMode(){
   setMode(m==='live' ? 'split' : (m==='split' ? 'source' : 'live'));
 }
 
+/* 源码模式写到底部时，别让光标死死贴着窗口下沿：再往下推一点，
+   按「底部留空」的比例留出手感合适的余量（双栏时推的是左栏自己的滚动）。
+   用户往上翻着看的时候光标在屏幕上方，这里不会插手抢滚动。 */
+function easeCaretBottom(){
+  const mode = curMode();
+  if(mode !== 'source' && mode !== 'split') return;
+  const src = document.getElementById('source');
+  if(!src || !src.isConnected) return;
+  // 超大文档不做镜像测量，别拖慢输入（那点舒适度不值得每敲一个字排一次版）
+  if((src.value || '').length > 80000) return;
+  const pos = src.selectionStart;
+  if(typeof pos !== 'number') return;
+
+  const split = mode === 'split';
+  const sc = split ? src : document.getElementById('scroll');   // 真正的滚动容器
+  const max = sc.scrollHeight - sc.clientHeight;
+  if(max <= 0 || max - sc.scrollTop < 2) return;
+
+  let c;
+  try{ c = caretXY(src, pos); }catch(e){ return; }
+  const bottom = split ? src.getBoundingClientRect().bottom : window.innerHeight;
+  const pct = docPadBottom();
+  const comfort = window.innerHeight * pct / 100 * (split ? 0.4 : 0.8);
+  const room = split ? Math.min(96, Math.max(40, comfort)) : Math.min(320, Math.max(60, comfort));
+  const gap = bottom - c.y;
+  if(gap >= room) return;
+  const prev = sc.style.scrollBehavior;
+  sc.style.scrollBehavior = 'auto';
+  sc.scrollTop = Math.min(max, sc.scrollTop + (room - gap));
+  sc.style.scrollBehavior = prev;
+}
+
 function wireEditor(n){
   const title = $('#docTitle');
   const src = $('#source');
@@ -10555,6 +10613,8 @@ function wireEditor(n){
   src.addEventListener('input', ()=>{
     n.body = src.value; n.updatedAt = Date.now();
     grow(src); renderMeta(); save(); syncListRow(n);
+    // 排版落定后再把「贴底的光标」往下推一点，写完最后一行也不至于卡在窗口边缘
+    requestAnimationFrame(()=>{ try{ easeCaretBottom(); }catch(e){} });
     histTouch();
     if(curMode()==='split'){ livePreviewSoon(); }
     slashMaybe(src); dueMaybe(src);
@@ -15149,6 +15209,8 @@ function setAppearanceHtml(){
   const tm = S.themeMode || (S.theme === 'dark' ? 'dark' : 'light');
   const mode = S.mode || 'live';
   const fs = Math.min(22, Math.max(14, Math.round(+S.fontSize || 16)));
+  const padT = docPadTop();
+  const padB = docPadBottom();
   return `<div class="set-sec">主题</div>
     <div class="set-chips">
       <button type="button" class="set-chip${tm === 'auto' ? ' on' : ''}" data-theme="auto">${ic('monitor')} 跟随系统</button>
@@ -15163,6 +15225,19 @@ function setAppearanceHtml(){
       <div class="fs-ends"><span>小</span><span>大</span></div>
     </div>
     <p class="set-note">只影响正文的阅读字号，标题按比例跟着变；默认 16px，范围 14–22px。</p>
+    <div class="set-sec set-sec-row"><span>顶部留白</span><b class="fs-val" id="setPadTVal">${padT}px</b></div>
+    <div class="fs-slider">
+      <input type="range" id="setPadTop" min="0" max="200" step="4" value="${padT}"
+             style="--p:${Math.round(padT / 200 * 100)}%" aria-label="顶部留白" aria-valuemin="0" aria-valuemax="200" aria-valuenow="${padT}">
+      <div class="fs-ends"><span>贴顶</span><span>宽松</span></div>
+    </div>
+    <div class="set-sec set-sec-row"><span>底部留空</span><b class="fs-val" id="setPadBVal">${padB}%</b></div>
+    <div class="fs-slider">
+      <input type="range" id="setPadB" min="0" max="80" step="2" value="${padB}"
+             style="--p:${Math.round(padB / 80 * 100)}%" aria-label="底部留空" aria-valuemin="0" aria-valuemax="80" aria-valuenow="${padB}">
+      <div class="fs-ends"><span>少</span><span>多</span></div>
+    </div>
+    <p class="set-note">顶部留白让正文离窗口顶端远一些；底部留空就是写到最后还能继续往下滑的那段空白——调大一点，光标就不会贴着窗口下沿写字。0 表示不留。</p>
     <div class="set-sec">默认编辑模式</div>
     <div class="set-chips">
       <button type="button" class="set-chip${mode === 'live' ? ' on' : ''}" data-mode="live">实时预览</button>
@@ -15375,6 +15450,33 @@ function bindPane(tab){
       };
       fsInput.oninput = ()=>sync(false);
       fsInput.onchange = ()=>sync(true);
+    }
+    // 顶部留白：px，直接量；底部留空：vh，跟着窗口高度走
+    const padTInput = pane.querySelector('#setPadTop');
+    if(padTInput){
+      const syncPad = (commit)=>{
+        S.padTop = Math.min(240, Math.max(0, Math.round(+padTInput.value || 0)));
+        padTInput.style.setProperty('--p', Math.round(S.padTop / 200 * 100) + '%');
+        padTInput.setAttribute('aria-valuenow', S.padTop);
+        const lab = pane.querySelector('#setPadTVal'); if(lab) lab.textContent = S.padTop + 'px';
+        applyDocPad();
+        if(commit) save();
+      };
+      padTInput.oninput = ()=>syncPad(false);
+      padTInput.onchange = ()=>syncPad(true);
+    }
+    const padBInput = pane.querySelector('#setPadB');
+    if(padBInput){
+      const syncPad = (commit)=>{
+        S.padBottom = Math.min(90, Math.max(0, Math.round(+padBInput.value || 0)));
+        padBInput.style.setProperty('--p', Math.round(S.padBottom / 80 * 100) + '%');
+        padBInput.setAttribute('aria-valuenow', S.padBottom);
+        const lab = pane.querySelector('#setPadBVal'); if(lab) lab.textContent = S.padBottom + '%';
+        applyDocPad();
+        if(commit) save();
+      };
+      padBInput.oninput = ()=>syncPad(false);
+      padBInput.onchange = ()=>syncPad(true);
     }
     pane.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick = ()=>{ setMode(b.dataset.mode); paintSettings(); };

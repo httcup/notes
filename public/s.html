@@ -993,8 +993,10 @@ function lpPreload(host){
   return Promise.all(list.map(im=>new Promise(res=>{
     const src = im.getAttribute('src') || '';
     const out = {src:src, img:null};
-    if(!/^data:image\//i.test(src)){ res(out); return; }
+    // 图床图片也要画进长图：data: 直接读，http(s) 走 CORS（R2 桶已放行本站域名）
+    if(!/^(data:image\/|https?:\/\/)/i.test(src)){ res(out); return; }
     const el = new Image();
+    if(!/^data:/i.test(src)) el.crossOrigin = 'anonymous';
     el.onload = ()=>{ out.img = el; res(out); };
     el.onerror = ()=>res(out);
     el.src = src;
@@ -1291,17 +1293,8 @@ function lpLayout(host, note, imgMap){
     flowText(lpRuns(el), {size:17, lh:1.86, mb:14});
   });
 
-  // ---- 页脚 ----
-  y += 18;
-  const footTop = y;
-  push(c=>{
-    c.strokeStyle = pal.line; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(PAD, footTop + 0.5); c.lineTo(W - PAD, footTop + 0.5); c.stroke();
-    c.font = lpFont(12, false); c.fillStyle = pal.faint; c.textBaseline = 'alphabetic';
-    const label = '随手笔记 · n.139t.cn';
-    c.fillText(label, W - PAD - c.measureText(label).width, footTop + 30);
-  }, footTop);
-  y = footTop + 46 + PAD;
+  // 页脚（品牌水印）已去掉：长图里只保留笔记正文
+  y += PAD;
 
   return {ops:ops, height:y, marks:marks, pal:pal};
 }

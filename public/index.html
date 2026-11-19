@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v234', at: '2026-11-19 15:42' };
+window.IVY_BUILD = { id: 'v235', at: '2026-11-19 16:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4005,7 +4005,7 @@ function isTagGroupOpen(k){
 function tagNoteRow(n){
   return `<button class="note-item ${n.id===S.active?'active':''}" data-open="${n.id}">
     ${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
-    <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
+    <span class="note-del" data-del="${n.id}" role="button" aria-label="双击删除" title="双击删除">${ic('trash')}</span>
   </button>`;
 }
 /* ---------- 标签胶囊区（侧栏最底部，苹果备忘录式） ---------- */
@@ -4066,7 +4066,7 @@ function noteItemHtml(n){
     ${dots?`<span class="tags">${dots}</span>`:''}
     <span class="note-move" data-move="${n.id}" role="button" aria-label="移动到笔记本" title="移动到笔记本">${ic('book')}</span>
     <span class="note-pin${pin?' on':''}" data-pin="${n.id}" role="button" aria-label="${pin?'取消置顶':'置顶'}" title="${pin?'取消置顶':'置顶'}">${ic('pin')}</span>
-    <span class="note-del" data-del="${n.id}" role="button" aria-label="移到回收站" title="移到回收站">${ic('trash')}</span>
+    <span class="note-del" data-del="${n.id}" role="button" aria-label="双击删除" title="双击删除">${ic('trash')}</span>
   </button>`;
 }
 function rememberTag(t){
@@ -4271,13 +4271,26 @@ function listSnippet(n){
     .trim()
     .slice(0, 90);
 }
+/* 删除按钮：桌面上双击才删，避免误点；触屏没有双击，保留单击 */
+function bindDeleteButton(b, id){
+  if(!b) return;
+  const run = e=>{ e.stopPropagation(); e.preventDefault(); toggleTrash(id); };
+  const touchOnly = (window.matchMedia && window.matchMedia('(hover: none)').matches);
+  if(touchOnly){
+    b.onclick = run;
+  }else{
+    b.onclick = e=>{ e.stopPropagation(); e.preventDefault(); };
+    b.ondblclick = run;
+  }
+  b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
+}
 function listRowHtml(n){
   const snip = listSnippet(n);
   return `<div class="nl-row${n.id===S.active?' on':''}" data-open="${n.id}" role="button" tabindex="0">
     ${n.pinned?'<span class="nl-pin"></span>':''}
     <span class="nl-t1"><span class="nl-t">${esc(n.title||'无标题')}</span><span class="nl-d">${listWhen(n.updatedAt)}</span></span>
     <span class="nl-s">${snip ? esc(snip) : '&nbsp;'}</span>
-    <span class="nl-del" data-nldel="${n.id}" role="button" title="移到回收站">${ic('trash')}</span>
+    <span class="nl-del" data-nldel="${n.id}" role="button" title="双击删除">${ic('trash')}</span>
     <span class="nl-more" data-nlmenu="${n.id}" role="button" title="更多">${ic('more')}</span>
   </div>`;
 }
@@ -4432,9 +4445,7 @@ function renderList(){
   rows.querySelectorAll('[data-nlmenu]').forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); openNoteRowMenu(b, b.dataset.nlmenu); };
   });
-  rows.querySelectorAll('[data-nldel]').forEach(b=>{
-    b.onclick = (e)=>{ e.stopPropagation(); toggleTrash(b.dataset.nldel); };
-  });
+  rows.querySelectorAll('[data-nldel]').forEach(b=>bindDeleteButton(b, b.dataset.nldel));
 }
 
 /* 中栏的日程列表：和笔记列表同一个位置、同一套行距。
@@ -4703,13 +4714,7 @@ function bindShelf(){
     };
     b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
   });
-  shelfBody.querySelectorAll('[data-del]').forEach(b=>{
-    b.onclick = e=>{
-      e.stopPropagation(); e.preventDefault();
-      toggleTrash(b.dataset.del);
-    };
-    b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
-  });
+  shelfBody.querySelectorAll('[data-del]').forEach(b=>bindDeleteButton(b, b.dataset.del));
   shelfBody.querySelectorAll('[data-tagpill]').forEach(b=>{
     b.onclick = e=>{
       e.stopPropagation();
@@ -4855,11 +4860,6 @@ function bindTodoBlock(root, repaint){
       if(ices) openIcsPop(el, ices);
     };
   });
-  const dsw = root.querySelector('[data-tododone]');
-  if(dsw){
-    dsw.onclick = ev=>ev.stopPropagation();
-    dsw.onchange = ()=>{ S.todoShowDoneToday = dsw.checked; save(); re(); };
-  }
 }
 /* ---- 把带日期的待办拼成一份 .ics：导出文件、日历订阅共用同一份内容 ---- */
 const ICS_RRULE = {
@@ -5296,13 +5296,8 @@ function todoShelf(){
       ${t.due?`<span class="tm${t.due < Date.now() && !t.done?' late':''}">${timeOf(t.due)}</span>`:''}
       <button class="tsi-bell${t.due?' on':''}" data-tsi-bell="1" title="${t.due?'修改提醒时间':'设置提醒'}">${ic(t.due?'clock':'bell')}</button>
     </div>`;
-  const group = (key, title, arr, withDone)=>{
-    let rows = arr.slice();
-    if(withDone){
-      // 今天分组可以额外显示今天已完成的
-      const doneToday = g.done.filter(t=>t.doneDate && new Date(t.doneDate).toDateString() === new Date().toDateString());
-      if(S.todoShowDoneToday) rows = rows.concat(doneToday);
-    }
+  const group = (key, title, arr)=>{
+    const rows = arr.slice();
     if(!rows.length) return '';
     const folded = !!S.todoFolded['s' + key];
     return `<div class="tsg">
@@ -5315,20 +5310,20 @@ function todoShelf(){
   let body = group('late', '已逾期', g.late);
   for(let i=0;i<7;i++){
     const k = String(i);
-    body += group('d'+i, dayTitleShort(i, g.startToday), g.byDay[k] || [], i === 0);
+    body += group('d'+i, dayTitleShort(i, g.startToday), g.byDay[k] || []);
   }
   Object.keys(g.byMonth).sort().forEach(k=>{
     const [y,m] = k.split('-');
     body += group('m'+k, y + '年' + (+m) + '月', g.byMonth[k]);
   });
   body += group('none', '待办', g.none);
+  // 已完成单独成组，常驻显示：不再依赖「显示今天已完成」开关，也不限今天。
+  // 这里只来自笔记里的 `- [x]`，苹果日历事件走下面的 icsShelfHtml()，不会混进来。
+  body += group('done', '已完成待办', g.done);
   body += icsShelfHtml();
 
   return `<div class="todo-shelf">
     <div class="tsh-meta">${c.open} 项待办 · 今天 ${c.today} 项 · 逾期 ${c.late} 项</div>
-    <label class="tsh-sw" title="把今天已经勾掉的也列出来">
-      <input type="checkbox" data-tododone="1" ${S.todoShowDoneToday?'checked':''}><i></i><span>显示今天已完成</span>
-    </label>
     <div class="tsg-list">${body || `<div class="tsh-empty">还没有待办。<br>在笔记里写「- [ ] 事项」试试。</div>`}</div>
   </div>`;
 }
@@ -12514,8 +12509,10 @@ function lpPreload(host){
   return Promise.all(list.map(im=>new Promise(res=>{
     const src = im.getAttribute('src') || '';
     const out = {src:src, img:null};
-    if(!/^data:image\//i.test(src)){ res(out); return; }
+    // 图床图片也要画进长图：data: 直接读，http(s) 走 CORS（R2 桶已放行本站域名）
+    if(!/^(data:image\/|https?:\/\/)/i.test(src)){ res(out); return; }
     const el = new Image();
+    if(!/^data:/i.test(src)) el.crossOrigin = 'anonymous';
     el.onload = ()=>{ out.img = el; res(out); };
     el.onerror = ()=>res(out);
     el.src = src;
@@ -12812,17 +12809,8 @@ function lpLayout(host, note, imgMap){
     flowText(lpRuns(el), {size:17, lh:1.86, mb:14});
   });
 
-  // ---- 页脚 ----
-  y += 18;
-  const footTop = y;
-  push(c=>{
-    c.strokeStyle = pal.line; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(PAD, footTop + 0.5); c.lineTo(W - PAD, footTop + 0.5); c.stroke();
-    c.font = lpFont(12, false); c.fillStyle = pal.faint; c.textBaseline = 'alphabetic';
-    const label = '随手笔记 · n.139t.cn';
-    c.fillText(label, W - PAD - c.measureText(label).width, footTop + 30);
-  }, footTop);
-  y = footTop + 46 + PAD;
+  // 页脚（品牌水印）已去掉：长图里只保留笔记正文
+  y += PAD;
 
   return {ops:ops, height:y, marks:marks, pal:pal};
 }

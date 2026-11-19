@@ -16,10 +16,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -swift-version 5 -target arm64-apple-macos13 \
   -framework Cocoa -framework WebKit -framework UserNotifications \
-  -o "$BUILD_DIR/IvyNote-arm64" main.swift local_server.swift
+  -o "$BUILD_DIR/IvyNote-arm64" main.swift local_server.swift web_updater.swift
 swiftc -O -swift-version 5 -target x86_64-apple-macos13 \
   -framework Cocoa -framework WebKit -framework UserNotifications \
-  -o "$BUILD_DIR/IvyNote-x86_64" main.swift local_server.swift
+  -o "$BUILD_DIR/IvyNote-x86_64" main.swift local_server.swift web_updater.swift
 lipo -create "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64" -output "$APP/Contents/MacOS/IvyNote"
 rm -f "$BUILD_DIR/IvyNote-arm64" "$BUILD_DIR/IvyNote-x86_64"
 lipo -info "$APP/Contents/MacOS/IvyNote"

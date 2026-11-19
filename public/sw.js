@@ -15,7 +15,6 @@ const CACHE = 'ivy-shell-' + BUILD;
 const NAV_TIMEOUT = 3500;          // 联网时最多等这么久，超时就用缓存（地铁、弱网场景）
 
 const SHELL = [
-  '/',
   '/index.html',
   '/manifest.webmanifest',
   '/version.js',
@@ -53,9 +52,14 @@ self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     // 逐个下，单个资源 404 不至于让整次安装失败
-    await Promise.all(SHELL.map((url) =>
-      cache.add(new Request(url, { cache: 'reload' })).catch(() => {})
-    ));
+    await Promise.all(SHELL.map(async (url) => {
+      try {
+        const res = await fetch(new Request(url, { cache: 'reload' }));
+        if (!res || !res.ok) return;
+        if (url === '/index.html') { await putShell(cache, res); return; }
+        await cache.put(url, await withoutRedirect(res)).catch(() => {});
+      } catch (err) {}
+    }));
     await self.skipWaiting();
   })());
 });
@@ -81,20 +85,39 @@ function withTimeout(promise, ms) {
 
 const isShellPath = (pathname) => pathname === '/' || pathname === '/index.html';
 
+/* Safari 不允许 Service Worker 把「带重定向」的响应交给导航请求：
+   直接 fetch('/') 会被 Cloudflare 308 到 /index.html，拿到的响应 redirected=true，
+   缓存在离线时返回就会报 "Response served by service worker has redirections"。
+   这里统一重包一次，清掉 redirected 标记，再缓存 / 返回。 */
+async function withoutRedirect(res) {
+  if (!res || !res.redirected) return res;
+  try {
+    const body = await res.blob();
+    return new Response(body, { status: 200, statusText: 'OK', headers: res.headers });
+  } catch (err) {
+    return new Response('', { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+}
+async function putShell(cache, res) {
+  const clean = await withoutRedirect(res);
+  await Promise.all([
+    cache.put('/index.html', clean.clone()).catch(() => {}),
+    cache.put('/', clean.clone()).catch(() => {})
+  ]);
+  return clean;
+}
+
 /* 首页：先网络（带超时），失败回落缓存 */
 async function navigationResponse(req) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await withTimeout(fetch(req), NAV_TIMEOUT);
-    if (res && res.ok) {
-      cache.put('/index.html', res.clone()).catch(() => {});
-      cache.put('/', res.clone()).catch(() => {});
-      return res;
-    }
+    // 不直接 fetch(req)：打开 / 时会被 308 到 /index.html，响应带 redirected，Safari 拒收
+    const res = await withTimeout(fetch(new Request('/index.html', { cache: 'no-cache' })), NAV_TIMEOUT);
+    if (res && res.ok) return await putShell(cache, res);
     throw new Error('bad status ' + (res && res.status));
   } catch (err) {
-    const cached = (await cache.match('/index.html')) || (await cache.match('/'));
-    if (cached) return cached;
+    let cached = (await cache.match('/index.html')) || (await cache.match('/'));
+    if (cached) return await withoutRedirect(cached);
     return new Response(OFFLINE_HTML, {
       status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }

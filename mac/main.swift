@@ -25,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     var systemNotifyOK = false          // 系统通知中心是否可用（本地未签名 App 常被拒）
     var banners: [NSPanel] = []
     var server: IvyLocalServer!
+    var webUpdater: IvyWebUpdater?
+    let launchedAt = Date()
     var probeWeb: WKWebView?            // 一次性迁移：从网页版的 origin 读旧 localStorage
     var pendingMigration: [[String]]?
 
@@ -123,6 +125,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         // 内置网页：从 App Resources/web 起一个只监听 127.0.0.1 的小服务
         let webRoot = Bundle.main.resourceURL!.appendingPathComponent("web", isDirectory: true)
         server = IvyLocalServer(root: webRoot)
+        // 网页资源自动更新：有缓存先用缓存，后台比对 version.js，下载完下次启动生效
+        let updater = IvyWebUpdater()
+        webUpdater = updater
+        server.cacheRoot = updater.cachedRoot()
+        updater.onReady = { [weak self] dir in
+            self?.server.cacheRoot = dir
+            // 刚启动就下完（还没开始写东西）就直接刷一次，省得用户再退一次 App
+            guard let self, Date().timeIntervalSince(self.launchedAt) < 8 else { return }
+            self.web.reload()
+        }
         server.onFailure = { [weak self] err in
             // 端口被占通常意味着旧版客户端还开着。此时新版会连到旧版的本地服务，
             // 看到的是旧页面，必须明确告诉用户，不能静默继续。
@@ -140,6 +152,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             }
         }
         server.start()
+        if ProcessInfo.processInfo.environment["IVY_SELFTEST"] != "1" {
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.2) {
+                updater.checkAndUpdate()
+            }
+        }
 
         UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().getNotificationSettings { s in

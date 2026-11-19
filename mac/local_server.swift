@@ -21,6 +21,8 @@ final class IvyLocalServer {
     let root: URL
     let port: UInt16 = 47821
     var onFailure: ((Error) -> Void)?
+    /// 线上网页缓存目录：存在就优先用它，文件缺失再回落到 App 内置资源
+    var cacheRoot: URL?
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "cn.139t.noteapp.localserver", attributes: .concurrent)
 
@@ -111,17 +113,20 @@ final class IvyLocalServer {
         path = path.removingPercentEncoding ?? path
         if path == "/" { path = "/index.html" }
         let rel = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let file = root.appendingPathComponent(rel, isDirectory: false).standardizedFileURL
-
-        // 防目录穿越：解析后的路径必须仍在 web 目录里
-        guard file.path.hasPrefix(root.path + "/"),
-              let data = try? Data(contentsOf: file) else {
-            send(conn, status: 404, contentType: "text/plain; charset=utf-8",
-                 body: Data("404 Not Found".utf8))
+        // 先查线上更新缓存，再退回 App 内置资源；两边都要防目录穿越
+        var bases: [URL] = []
+        if let c = cacheRoot?.standardizedFileURL { bases.append(c) }
+        bases.append(root)
+        for base in bases {
+            let f = base.appendingPathComponent(rel, isDirectory: false).standardizedFileURL
+            guard f.path.hasPrefix(base.path + "/"),
+                  let data = try? Data(contentsOf: f) else { continue }
+            send(conn, status: 200, contentType: Self.mime(f.pathExtension.lowercased()),
+                 body: req.method == "HEAD" ? Data() : data)
             return
         }
-        send(conn, status: 200, contentType: Self.mime(file.pathExtension.lowercased()),
-             body: req.method == "HEAD" ? Data() : data)
+        send(conn, status: 404, contentType: "text/plain; charset=utf-8",
+             body: Data("404 Not Found".utf8))
     }
 
     private func proxy(_ conn: NWConnection, req: IvyRequest, body: Data) {

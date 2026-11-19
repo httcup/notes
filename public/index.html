@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v227', at: '2026-11-19 11:34' };
+window.IVY_BUILD = { id: 'v228', at: '2026-11-19 14:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -12115,6 +12115,9 @@ function switchView(v){
   hideSelBar();
   if(window.innerWidth <= 640){
     if(v === 'notes'){
+      // 从媒体库 / 关系图点「‹ 返回笔记」时，抽屉可能还开着（刚在里面切过分类）：
+      // 不收起的话回来看到的是一层菜单盖在笔记上，还得再点一下才能看正文
+      shelfCloseIfDrawer();
       document.body.classList.toggle('m-read', M_READ_BACK);
       renderAll(); save();
       return;

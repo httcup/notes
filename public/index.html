@@ -3317,7 +3317,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v239', at: '2026-11-19 16:53' };
+window.IVY_BUILD = { id: 'v240', at: '2026-11-19 17:00' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8386,7 +8386,8 @@ const HELP_KEYS_MD = [
   ['删除线', '⌘⇧X'], ['高亮', '⌘⇧H'],
   ['待办', '⌘⇧9'], ['无序 / 有序列表', '⌘⇧8 / ⌘⇧7'],
   ['链接到笔记', '⌘⇧K'], ['插入菜单', '⌘/'],
-  ['源码 / 即时渲染切换', '⌘⇧E']
+  ['源码 / 即时渲染切换', '⌘⇧E'],
+  ['新建同级列表项（源码区）', '⌘⇧Enter']
 ];
 const HELP_KEYS_CLIP = [
   ['选中文字后复制（保留 Markdown 格式）', '⌘C / Ctrl+C'],
@@ -10500,6 +10501,25 @@ function insertSubItem(ta){
   return true;
 }
 
+/* 源码区：⌘⇧Enter 在当前行下面插入同级列表项（编号自动 +1，待办继承 [ ]） */
+function insertSiblingItem(ta){
+  const v = ta.value, s = ta.selectionStart;
+  let le = v.indexOf('\n', s); if(le < 0) le = v.length;
+  const line = v.slice(v.lastIndexOf('\n', s - 1) + 1, le);
+  const m = line.match(/^(\s*)([-*+]|\d+\.)(\s+)(\[[ xX]\]\s+)?/);
+  let ins;
+  if(m){
+    const marker = /^\d+\.$/.test(m[2]) ? (parseInt(m[2], 10) + 1) + '.' : m[2];
+    ins = '\n' + m[1] + marker + ' ' + (m[4] ? '[ ] ' : '');
+  }else{
+    ins = '\n- ';
+  }
+  ta.setRangeText(ins, le, le, 'end');
+  const pos = le + ins.length;
+  try{ ta.setSelectionRange(pos, pos); }catch(err){}
+  return true;
+}
+
 function handleEnter(i, ta){
   const v = ta.value, s = ta.selectionStart, en = ta.selectionEnd;
   const before = v.slice(0, s), after = v.slice(en);
@@ -10810,6 +10830,9 @@ function wireEditor(n){
   });
   src.addEventListener('keydown', e=>{
     if(slashKey(e, src)) return;
+    if(e.key==='Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey){
+      e.preventDefault(); insertSiblingItem(src); n.body = src.value; save(); grow(src); return;
+    }
     if(e.key==='Enter' && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey){
       e.preventDefault(); insertSubItem(src); n.body = src.value; save(); grow(src); return;
     }

@@ -1766,34 +1766,42 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;
   align-items:stretch;height:max(360px, calc(100vh - 232px));min-height:360px;
 }
-.doc.mode-split .source{
-  display:block;grid-column:1;grid-row:1;padding-right:28px;
-  /* 双栏是两栏各自内部滚动。左边是 textarea，它的内边距会吃掉可见行数，
-     所以只留一小截尾巴（约三分之一），写到末尾还能再往下滑一点；
-     右边是普通块级容器，底部内边距不占可见高度，可以留足 */
-  padding-bottom:min(140px, calc(var(--doc-pad-b, 30vh) * .45));
+/* 双栏左栏外面套一层 .src-wrap 当滚动容器，textarea 只按内容撑高。
+   底部留白必须加在这层上：直接给 textarea 加 padding 会挤掉它的内容盒
+   （border-box 下 padding 一大，能显示的行数就没了），而块级容器的底部内边距
+   只是滚动区最后的一段空白，留多大都不影响正文可见区域 */
+.doc.mode-split .src-wrap{
+  grid-column:1;grid-row:1;height:100%;min-height:0;
+  overflow-y:auto;padding-right:28px;
+  /* 关掉滚动锚定：textarea 按内容长高时，Chrome 会「为了保持锚点不动」自己改 scrollTop，
+     打字打到一半页面往上跳就是这么来的 */
+  overflow-anchor:none;
+  padding-bottom:var(--doc-pad-b, 30vh);
   border-right:1px solid #edf0f2;
+}
+.doc.mode-split .source{
+  display:block;width:100%;padding:0;border:0;height:auto;min-height:0;overflow:hidden;
   font-family:var(--font-mono);font-size:13.5px;line-height:1.8;
-  height:100%;min-height:0;overflow-y:auto;
 }
 .doc.mode-split #live{display:none}
 .doc.mode-split .prose{
   grid-column:2;grid-row:1;padding-left:28px;
-  padding-bottom:calc(var(--doc-pad-b, 30vh) * .9);
+  padding-bottom:var(--doc-pad-b, 30vh);
   height:100%;min-height:0;max-height:none;overflow-y:auto;position:static;
 }
-.doc.mode-split .source::-webkit-scrollbar,
+.doc.mode-split .src-wrap::-webkit-scrollbar,
 .doc.mode-split .prose::-webkit-scrollbar{width:8px}
-.doc.mode-split .source::-webkit-scrollbar-thumb,
+.doc.mode-split .src-wrap::-webkit-scrollbar-thumb,
 .doc.mode-split .prose::-webkit-scrollbar-thumb{background:rgb(var(--line));border-radius:8px}
-[data-theme=dark] .doc.mode-split .source{border-right-color:#2b3035}
+[data-theme=dark] .doc.mode-split .src-wrap{border-right-color:#2b3035}
 @media (max-width:900px){
   /* 窄屏「双栏」改成上下堆叠：源码在上、预览在下。
      原来只把 grid 改成单列，prose 还挂在 grid-column:2 上 → 被挤成一条 60 多像素宽，预览没法看 */
   .doc.mode-split .doc-body{grid-template-columns:1fr;height:auto}
   /* 堆叠时不再有「两栏内部滚动」，整页交给 #scroll，底部留空得还给页面 */
   .doc.mode-split{padding-bottom:var(--doc-pad-b, 30vh)}
-  .doc.mode-split .source{grid-column:1;grid-row:1;height:auto;max-height:none;border-right:0;padding-right:0;padding-bottom:0;min-height:240px;overflow:visible}
+  .doc.mode-split .src-wrap{grid-column:1;grid-row:1;height:auto;overflow:visible;border-right:0;padding-right:0;padding-bottom:0}
+  .doc.mode-split .source{min-height:240px;overflow:visible}
   .doc.mode-split .prose{
     grid-column:1;grid-row:2;
     height:auto;max-height:none;padding-left:0;margin-top:14px;padding-top:14px;
@@ -3291,7 +3299,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v224', at: '2026-11-19 10:52' };
+window.IVY_BUILD = { id: 'v225', at: '2026-11-19 11:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6954,7 +6962,7 @@ function renderEditor(){
       <div class="doc-body">
         <div class="prose" id="prose"></div>
         <div class="live prose" id="live"></div>
-        <textarea class="source" id="source" placeholder="开始书写，支持 Markdown…" spellcheck="false"></textarea>
+        <div class="src-wrap" id="srcWrap"><textarea class="source" id="source" placeholder="开始书写，支持 Markdown…" spellcheck="false"></textarea></div>
       </div>
     </div>`;
 
@@ -6983,19 +6991,15 @@ function renderEditor(){
     requestAnimationFrame(fitSplitSource);   // 窄屏上下堆叠时按内容长高
   }
 }
-/* 窄屏的双栏是「源码在上、预览在下」：让源码框按内容长高，
-   否则它只有 min-height 那么高，页面里再套一层内部滚动，手机上很难滚 */
+/* 双栏：源码框按内容撑高（宽屏由 .src-wrap 滚、窄屏堆叠时由整页滚），
+   它自己不再是滚动容器 —— 这样底部留白才能完整给到。
+   这里同样只长不塌：塌一下重量会把滚动位置带偏（进双栏那一下由 setMode 负责完整量） */
 function fitSplitSource(){
   const src = document.getElementById('source');
   if(!src || !src.isConnected) return;
-  if(window.innerWidth > 900 || (S.mode||'live') !== 'split'){
-    src.style.height = '';
-    src.style.overflowY = '';
-    return;
-  }
-  src.style.overflowY = 'hidden';
-  src.style.height = 'auto';
-  src.style.height = (src.scrollHeight + 2) + 'px';
+  if((S.mode||'live') !== 'split') return;         // 其它模式由 grow() 管
+  const need = src.scrollHeight;
+  if(need > src.offsetHeight + 1) src.style.height = need + 'px';
 }
 /* 窗口尺寸变了（横竖屏切换、拖窗口），标题高度要重算一次 */
 let titleFitTimer = 0;
@@ -7102,10 +7106,12 @@ function syncPreviewToCaret(){
   const maxTo = Math.max(1, prose.scrollHeight - prose.clientHeight);
   const anchorTop = splitFracToTop(lf, SPLIT_ANCH, maxTo);
   const h = prose.clientHeight, cur = prose.scrollTop;
-  // 对应位置已经露在右栏中间这一屏里就不动，免得每按一下方向键都抖一下
-  if(anchorTop >= cur + h * 0.12 && anchorTop <= cur + h * 0.88) return;
+  // 对应位置已经落在右栏这一屏里就不动。判据放宽到「一整屏」：
+  // 左边按行数估出来的位置本来就只是近似（长代码块、超长 base64 行会更偏），
+  // 收紧一点的话，每敲一个字右栏就跟着抖一下，反而更难读。
+  if(anchorTop >= cur - h * 0.1 && anchorTop <= cur + h * 0.9) return;
   const top = Math.max(0, Math.min(maxTo, anchorTop - h * 0.28));
-  if(Math.abs(top - cur) < h * 0.16) return;
+  if(Math.abs(top - cur) < h * 0.5) return;
   const now = (window.performance || Date).now();
   SPLIT_LOCK_UNTIL = now + 520;                     // 平滑滚动会连着发事件，挡久一点
   try{ prose.scrollTo({ top, behavior:'smooth' }); }catch(e){ prose.scrollTop = top; }
@@ -7116,6 +7122,8 @@ function wireSplitSync(){
   if(!src || !prose) return;
   if(src._splitWired === prose) return;      // 同一对元素只绑一次
   src._splitWired = prose;
+  // 左栏真正滚动的是外面那层 .src-wrap（textarea 只负责撑高）
+  const srcSc = document.getElementById('srcWrap') || src;
   const bind = (a, b, reverse)=>{
     a.addEventListener('scroll', ()=>{
       const now = (window.performance || Date).now();
@@ -7131,8 +7139,8 @@ function wireSplitSync(){
     // 双栏各自滚动时同步大纲高亮 / 右缘刻度（#scroll 本身不动，监听不到）
     a.addEventListener('scroll', ()=>updateOutlineActive(), { passive:true });
   };
-  bind(src, prose, false);
-  bind(prose, src, true);
+  bind(srcSc, prose, false);
+  bind(prose, srcSc, true);
   // 光标动了（点一下某行、方向键、Home/End、选中文字）→ 右栏跟过去
   const kick = ()=>{ clearTimeout(SPLIT_CARET_T); SPLIT_CARET_T = setTimeout(syncPreviewToCaret, 60); };
   ['click','keyup','select'].forEach(ev=>src.addEventListener(ev, kick));
@@ -10510,7 +10518,7 @@ function setMode(m){
   if(m==='preview'){ renderProse(); renderOutline(); keepScroll(); }
   else if(m==='live'){ renderLive(); }
   else if(m==='split'){
-    if(src) src.style.height = '';      // 两栏等高，交给 CSS
+    if(src){ src.style.height='auto'; src.style.height = src.scrollHeight + 'px'; }   // 左栏按内容撑高，滚动交给 .src-wrap
     renderProse(); renderOutline();
     SPLIT_ANCH = null;
     wireSplitSync();
@@ -10552,13 +10560,13 @@ function easeCaretBottom(){
   if(typeof pos !== 'number') return;
 
   const split = mode === 'split';
-  const sc = split ? src : document.getElementById('scroll');   // 真正的滚动容器
+  const sc = split ? (document.getElementById('srcWrap') || src) : document.getElementById('scroll');   // 真正的滚动容器
   const max = sc.scrollHeight - sc.clientHeight;
   if(max <= 0 || max - sc.scrollTop < 2) return;
 
   let c;
   try{ c = caretXY(src, pos); }catch(e){ return; }
-  const bottom = split ? src.getBoundingClientRect().bottom : window.innerHeight;
+  const bottom = split ? sc.getBoundingClientRect().bottom : window.innerHeight;
   const pct = docPadBottom();
   const comfort = window.innerHeight * pct / 100 * (split ? 0.4 : 0.8);
   const room = split ? Math.min(96, Math.max(40, comfort)) : Math.min(320, Math.max(60, comfort));
@@ -10577,12 +10585,19 @@ function wireEditor(n){
   src.value = n.body;
 
   const grow = (el)=>{
-    // 双栏下源码栏是固定高度、内部滚动（和右侧联动），别再按内容撑高
-    if(el && el.id === 'source' && curMode() === 'split') return;
-    // 源码框是「按内容撑高、由外层 #scroll 滚动」的。先把 height 设回 auto 量高度的那一瞬，
-    // 页面高度会塌下来，浏览器会把 #scroll 的 scrollTop 夹到 0，光标一打字就弹回顶部。
-    // 所以量之前记下位置、量完立刻还回去。
+    // 源码框一律按内容撑高：源码模式和双栏共用一条路。
+    // 双栏时滚动交给外层 .src-wrap（它才有底部留白），textarea 自己不再滚。
+    // 先把 height 设回 auto 量高度的那一瞬，滚动容器的高度会塌下来，
+    // 浏览器会把 scrollTop 夹到 0，光标一打字就弹回顶部。所以量之前记下位置、量完立刻还回去。
     if(el && el.id === 'source'){
+      // 双栏：只往上加高、绝不塌一下重量。塌那一下左边滚动位置会被夹到 0，
+      // 浏览器接着又会按错乱的行位置去「让光标可见」，整页乱跳（源码模式没这问题，见下）
+      if(curMode() === 'split'){
+        const need = el.scrollHeight;
+        if(need > el.offsetHeight + 1) el.style.height = need + 'px';
+        return;
+      }
+      // 谁在滚就保谁的位置：源码模式滚 #scroll
       const sc = document.getElementById('scroll');
       const keep = sc ? sc.scrollTop : 0;
       // #scroll 带 scroll-behavior:smooth，写 scrollTop 会变成一段动画；量高度时先关掉，

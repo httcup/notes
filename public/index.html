@@ -110,10 +110,8 @@ a{color:inherit;text-decoration:none}
   margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .head-actions{display:flex;align-items:center;gap:0;flex:0 0 auto}
-/* 日程视图：不要「新建笔记」，换成使用说明与「显示今天已完成」 */
-.head-actions .todo-only{display:none}
-body.view-todo .head-actions .todo-only{display:flex}
-body.view-todo .head-actions .notes-only{display:none}
+/* 日程已并进笔记侧栏，「显示今天已完成」这个开关挪到日程分区里了（见 .tsh-sw），
+   顶栏不再按视图换按钮，品牌名也就不会被挤成「随…」 */
 .head-sw{align-items:center;gap:5px;margin-left:6px;font-size:10.5px;color:rgb(var(--faint));cursor:pointer;user-select:none}
 .head-sw input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
 .head-sw i{width:22px;height:13px;border-radius:8px;background:rgb(var(--line));position:relative;transition:background .18s;flex:0 0 auto}
@@ -242,15 +240,26 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 .sec-fold .caret{
   width:15px;text-align:center;
   font-size:8px;font-style:normal;color:rgb(var(--faint));display:inline-block;
-  transform:rotate(90deg);transition:transform .18s var(--spring);
+  transform:rotate(90deg);transition:transform .18s var(--spring),background .14s,color .14s;
+  /* 热区撑到约 25×20：padding 与负 margin 相互抵消，排版位置不变，纯放大可点区域 */
+  padding:6px 5px;margin:-6px -5px;border-radius:6px;
 }
+.sec-fold .caret:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .sec-fold.closed .caret{transform:rotate(0)}
-/* 窄屏：标题=回全部笔记，小三角=折叠。手指点得到才算数，把三角的热区撑大 */
+/* 窄屏：手指点得到才算数，再放大一档 */
 @media (max-width:900px){
-  .sec-fold .caret{padding:8px 7px;margin:-8px -5px -8px -7px;border-radius:6px}
+  .sec-fold .caret{padding:8px 7px;margin:-8px -5px -8px -7px}
   .sec-fold .caret:active{background:rgb(var(--hover))}
 }
 .sec-body.hidden{display:none}
+/* 侧栏「日程」分区：沿用笔记标题那套（.sec-label/.sec-fold），只在外面加一条分隔线 */
+.sched-sec{margin:14px 0 2px;padding-top:12px;border-top:1px solid rgb(var(--line))}
+.sched-sec .sec-label{margin:0 0 6px;padding-right:40px}
+.sched-sec.closed .sec-label{margin-bottom:0}
+.sched-sec .sched-body{position:relative}
+.sched-sec .todo-shelf{min-height:0;padding:0 0 2px}
+.sched-sec .tsh-meta{padding:0 6px 8px}
+.sched-sec .tsh-sub{margin-bottom:2px}
 .shelf-row{
   display:flex;align-items:center;gap:8px;width:100%;text-align:left;
   padding:6px 8px;border-radius:7px;color:rgb(var(--ink-2));
@@ -1307,6 +1316,14 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsh-t{font-size:13.5px;font-weight:600;letter-spacing:0;color:rgb(var(--ink-2));padding:2px 0;border-radius:6px}
 .tsh-t.on{color:rgb(var(--ivy))}
 .tsh-meta{padding:2px 6px 10px;font-size:11px;color:rgb(var(--faint))}
+/* 「显示今天已完成」：原来在顶栏，窄侧栏里会把品牌名挤掉，挪到日程分区自己这儿 */
+.tsh-sw{display:flex;align-items:center;gap:7px;margin:-2px 6px 8px;font-size:11px;color:rgb(var(--faint));cursor:pointer;user-select:none}
+.tsh-sw input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.tsh-sw i{width:24px;height:14px;border-radius:8px;background:rgb(var(--line));position:relative;transition:background .18s;flex:0 0 auto}
+.tsh-sw i::after{content:'';position:absolute;left:2px;top:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgb(0 0 0 / .2)}
+.tsh-sw input:checked + i{background:rgb(var(--ivy))}
+.tsh-sw input:checked + i::after{transform:translateX(10px)}
+.tsh-sw:hover{color:rgb(var(--ink-2))}
 .tsg{position:relative}
 .tsg-h{display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;border-radius:7px;font-size:13.5px;color:rgb(var(--ink-2));font-weight:600;letter-spacing:0}
 .tsg-h:hover{background:rgb(var(--hover))}
@@ -2898,9 +2915,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
         <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置"></button>
         <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
-        <label class="head-sw todo-only" title="显示今天已完成">
-          <input type="checkbox" id="headDoneSw"><i></i><span>显示今天已完成</span>
-        </label>
       </div>
     </header>
     <div class="shelf-body" id="shelfBody"></div>
@@ -3148,7 +3162,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v215', at: '2026-11-19 06:50' };
+window.IVY_BUILD = { id: 'v216', at: '2026-11-19 09:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3183,6 +3197,7 @@ function seed(){
     tagLibrary: [],
     tagSectionClosed: false,
     tagPillsClosed: true,
+    todoSecClosed: false,
     tagClosed: {},
     media: []
   };
@@ -3253,6 +3268,7 @@ function normalizeState(s){
     if(!Array.isArray(s.tagLibrary)) s.tagLibrary = [];
     if(typeof s.tagSectionClosed !== 'boolean') s.tagSectionClosed = false;
     if(typeof s.tagPillsClosed !== 'boolean') s.tagPillsClosed = true;
+    if(typeof s.todoSecClosed !== 'boolean') s.todoSecClosed = false;
     // 一次性迁移：标签区默认收起（老数据里存的「展开」也改过来，之后以用户自己的选择为准）
     if(!s.tagPillsDefaultV2){ s.tagPillsClosed = true; s.tagPillsDefaultV2 = true; }
     if(!s.tagClosed || typeof s.tagClosed !== 'object' || Array.isArray(s.tagClosed)) s.tagClosed = {};
@@ -3834,6 +3850,21 @@ function tagPillKeys(notes){
   NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   return keys.sort((a,b)=>a.localeCompare(b, 'zh-CN'));
 }
+/* 侧栏的「日程」分区：原来是一个独立视图（整条侧栏被它占掉），
+   现在收进笔记侧栏、放在笔记本列表下面，和标签区一样能折叠 */
+function schedSectionHtml(){
+  const c = todoCounts();
+  const open = !S.todoSecClosed;
+  const n = c.open || 0;
+  return `<div class="sched-sec${open ? '' : ' closed'}">
+    <button class="sec-label sec-fold${open ? '' : ' closed'}" data-act="toggle-sched"
+      title="${open ? '收起日程' : '展开日程'}" aria-expanded="${open ? 'true' : 'false'}">
+      <span class="lb"><i class="caret">&#9654;</i>日程</span>
+      <span class="count">${n}</span>
+    </button>
+    ${open ? `<div class="sched-body">${todoShelf()}</div>` : ''}
+  </div>`;
+}
 function tagPillsHtml(notes){
   const keys = tagPillKeys(notes);
   const untagged = notes.filter(n=>!tagOf(n).length).length;
@@ -4202,12 +4233,10 @@ function renderList(){
 }
 
 function renderShelf(){
-  brandName.textContent = ({notes:'随手笔记', todo:'日程', media:'媒体库', graph:'关系图'})[S.view] || '随手笔记';
-  document.body.classList.toggle('view-todo', S.view === 'todo');
-  const hds = document.getElementById('headDoneSw');
-  if(hds) hds.checked = !!S.todoShowDoneToday;
+  // 日程已经并进笔记侧栏，牌子就还挂着「随手笔记」（媒体库/关系图仍是自己的侧栏）
+  brandName.textContent = ({media:'媒体库', graph:'关系图'})[S.view] || '随手笔记';
+  document.body.classList.remove('view-todo');
 
-  if(S.view==='todo'){ shelfBody.innerHTML = todoShelf(); bindShelf(); return; }
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
 
@@ -4218,7 +4247,8 @@ function renderShelf(){
   const nClosed = !!S.notesClosed;
   let html = `<button class="sec-label sec-fold${nClosed ? ' closed' : ''}${(S.scope||'all')==='all' ? ' on' : ''}" data-act="scope-all"
       title="回到全部笔记">
-      <span class="lb"><i class="caret" data-fold-notes>&#9654;</i>全部笔记</span>
+      <span class="lb"><i class="caret" data-fold-notes aria-expanded="${nClosed ? 'false' : 'true'}"
+        title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">&#9654;</i>全部笔记</span>
       <span class="count">${notes.length}</span>
     </button>`;
   let body = '';
@@ -4293,6 +4323,9 @@ function renderShelf(){
   }
 
   html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
+
+  // 日程（原「待办」独立视图）：挪到笔记本列表下面，自己一块、可折叠
+  html += schedSectionHtml();
 
   // 回收站不跟着「笔记」一起收，常驻在下面
   html += `<div style="height:6px"></div>
@@ -4397,29 +4430,32 @@ function bindShelf(){
       openTrashView();
     }
     if(a==='toggle-tag-sec'){ S.tagSectionClosed = !S.tagSectionClosed; renderShelf(); save(); }
+    if(a==='toggle-sched'){ S.todoSecClosed = !S.todoSecClosed; renderShelf(); save(); }
     if(a==='clear-tag'){ setScope('all'); }
     if(a==='toggle-tag-pills'){ S.tagPillsClosed = !S.tagPillsClosed; renderShelf(); save(); }
-    if(a==='scope-all'){ goAllNotes(); }                     // 任何宽度：点标题 = 看全部笔记
-  });
-  /* 小三角单独管折叠：手机上笔记本列表可以收起来，但标题本身已经用来切「全部笔记」了 */
-  if(window.innerWidth <= 900){
-    shelfBody.querySelectorAll('[data-fold-notes]').forEach(c=>{
-      c.onclick = e=>{
-        e.stopPropagation(); e.preventDefault();
+    if(a==='scope-all'){
+      // 已经在「全部笔记」里时，点标题本来什么都不会变（等于死点），
+      // 这里就顺势当成折叠开关；窄屏还是老实回全部笔记，别打乱手机的返回路径
+      const already = (S.scope||'all')==='all' && !S.listQuery && !trashView && S.view==='notes';
+      if(already && window.innerWidth > 900){
         S.notesClosed = !S.notesClosed; renderShelf(); save();
-      };
-    });
-  }
+      } else goAllNotes();                                   // 任何宽度：点标题 = 看全部笔记
+    }
+  });
+  /* 小三角单独管折叠：标题本身用来切「全部笔记」，所以折叠只能落在三角上。
+     桌面/窄屏都要绑，否则桌面上点三角只会冒泡到标题，看着像「按钮坏了」 */
+  shelfBody.querySelectorAll('[data-fold-notes]').forEach(c=>{
+    c.onclick = e=>{
+      e.stopPropagation(); e.preventDefault();
+      S.notesClosed = !S.notesClosed; renderShelf(); save();
+    };
+  });
   shelfBody.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat = b.dataset.mediaCat; renderShelf(); renderMain(); });
   shelfBody.querySelectorAll('[data-todo-filter]').forEach(b=>b.onclick=()=>{
     todoFilter = b.dataset.todoFilter; renderShelf(); renderMain();
   });
   /* ---- 日程侧栏 ---- */
   bindTodoBlock(shelfBody);
-  const sw = document.getElementById('todoShowDone');
-  if(sw) sw.onchange = ()=>{ S.todoShowDoneToday = sw.checked; save(); renderShelf(); };
-  const hsw = document.getElementById('headDoneSw');
-  if(hsw) hsw.onchange = ()=>{ S.todoShowDoneToday = hsw.checked; save(); renderShelf(); };
 }
 /* 待办列表的交互（勾选、分组折叠、铃铛、点条目跳转、日历订阅）：
    左侧栏和手机主区共用一份，别写两套 */
@@ -4464,8 +4500,13 @@ function bindTodoBlock(root, repaint){
       if(ices) openIcsPop(el, ices);
     };
   });
-  const icsBtn = root.querySelector('#todoIcs');
+  const icsBtn = root.querySelector('[data-icsbtn]');
   if(icsBtn) icsBtn.onclick = ()=>openRemindCenter();
+  const dsw = root.querySelector('[data-tododone]');
+  if(dsw){
+    dsw.onclick = ev=>ev.stopPropagation();
+    dsw.onchange = ()=>{ S.todoShowDoneToday = dsw.checked; save(); re(); };
+  }
 }
 /* ---- 把带日期的待办拼成一份 .ics：导出文件、日历订阅共用同一份内容 ---- */
 const ICS_RRULE = {
@@ -4936,8 +4977,11 @@ function todoShelf(){
 
   return `<div class="todo-shelf">
     <div class="tsh-meta">${c.open} 项待办 · 今天 ${c.today} 项 · 逾期 ${c.late} 项</div>
+    <label class="tsh-sw" title="把今天已经勾掉的也列出来">
+      <input type="checkbox" data-tododone="1" ${S.todoShowDoneToday?'checked':''}><i></i><span>显示今天已完成</span>
+    </label>
     <div class="tsg-list">${body || `<div class="tsh-empty">还没有待办。<br>在笔记里写「- [ ] 事项」试试。</div>`}</div>
-    <button class="tsh-sub" id="todoIcs" title="提醒与日历：在这台设备上弹通知，或订阅到手机日历">
+    <button class="tsh-sub" data-icsbtn="1" title="提醒与日历：在这台设备上弹通知，或订阅到手机日历">
       ${ic('bell')}<span>提醒与日历</span></button>
   </div>`;
 }
@@ -11648,7 +11692,9 @@ function renderGraph(){
 let M_READ_BACK = false;
 function switchView(v){
   S.view = v; trashView=false; S.listQuery = '';
-  if(v!=='notes') { /* 保留 tabs */ }
+  if(v !== 'notes') { /* 保留 tabs */ }
+  // 进日程就把侧栏那块展开，别让人对着一个收起的标题找待办
+  if(v === 'todo') S.todoSecClosed = false;
   hideSelBar();
   if(window.innerWidth <= 640){
     if(v === 'notes'){
@@ -12884,7 +12930,6 @@ $('#btnShelf').onclick=()=>toggleShelf();
 $('#btnNewNb').onclick=()=>newNotebook();
 $('#btnViewMenu').onclick=(e)=>openViewMenu(e.currentTarget);
 $('#btnSettings').onclick=()=>openSettings();
-$('#headDoneSw').onchange=(e)=>{ S.todoShowDoneToday = e.target.checked; save(); renderShelf(); };
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
 $('#nlOpen').onclick=()=>toggleShelf();

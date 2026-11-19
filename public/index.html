@@ -3307,7 +3307,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v233', at: '2026-11-19 15:40' };
+window.IVY_BUILD = { id: 'v234', at: '2026-11-19 15:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8466,7 +8466,7 @@ function dlBodyHtml(){
   return `
           <div class="dl-row">
             <div class="dl-ic">${ic('localSave')}</div>
-            <div class="dl-info"><b>macOS 版</b><span>离线版 · 约 1.5 MB · 内置网页，断网可用 · 通用版（M 系列 / Intel）</span></div>
+            <div class="dl-info"><b>macOS 版</b><span>离线版 1.2 · 内置网页 ${esc((window.IVY_BUILD || {}).id || '')} · 约 1.5 MB · 断网可用 · 通用版（M 系列 / Intel）</span></div>
             <a class="dl-btn" href="/dl/note-MacOS.zip" download>下载</a>
           </div>
           <div class="dl-row">

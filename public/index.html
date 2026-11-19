@@ -1133,6 +1133,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .slash{width:min(258px,86vw)}
   /* 格式工具条收进 + 之后，手机上必须保留右上角这个插入入口 */
   .paper .tabbar{padding-right:84px}
+  /* 兜底：若某次高度没量准，源码框自己也能滚，不至于把正文永远藏起来 */
+  .source{overflow-y:auto}
 }
 
 /* ---- 表格尺寸选择器（工具栏「表格」下拉） ---- */
@@ -3317,7 +3319,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v243', at: '2026-11-19 17:34' };
+window.IVY_BUILD = { id: 'v244', at: '2026-11-20 01:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6935,6 +6937,20 @@ function lockScreenHtml(nbName, hint){
   </div>`;
 }
 
+/* 源码框按内容撑高：手机上是 #scroll 整页滚动，高度量错就会把后面的正文永远藏起来 */
+function fitSource(){
+  if((S.mode || 'live') !== 'source') return;
+  const src = document.getElementById('source');
+  if(!src || !src.isConnected) return;
+  src.style.height = 'auto';
+  src.style.height = Math.max(src.scrollHeight, 360) + 'px';
+}
+window.addEventListener('load', ()=>{
+  // 首屏有几次重绘，单次定时可能赶在 value 写入之前；多打几拍，最后一次一定量到真实内容
+  [60, 300, 900].forEach(ms=>setTimeout(()=>{ try{ fitSource(); }catch(e){} }, ms));
+  try{ document.fonts.ready.then(()=>{ try{ fitSource(); }catch(e){} }); }catch(e){}
+});
+
 function renderEditor(){
   if(trashView){
     renderTrashPane(); outlineEl.classList.add('hidden');
@@ -7001,9 +7017,11 @@ function renderEditor(){
   // 只在 renderEditor 里量一次会把标题撑成好几行，下面留一大片空白
   requestAnimationFrame(()=>{
     const t = document.getElementById('docTitle');
-    if(!t || !t.isConnected) return;
-    t.style.height = 'auto';
-    t.style.height = t.scrollHeight + 'px';
+    if(t && t.isConnected){
+      t.style.height = 'auto';
+      t.style.height = t.scrollHeight + 'px';
+    }
+    fitSource();
   });
   outlineEl.classList.remove('hidden');
   outlineEl.classList.toggle('pinned', !!S.outlineOpen);
@@ -7033,9 +7051,12 @@ window.addEventListener('resize', ()=>{
   titleFitTimer = setTimeout(()=>{
     const t = document.getElementById('docTitle');
     if(!t || !t.isConnected) return;
-    t.style.height = 'auto';
-    t.style.height = t.scrollHeight + 'px';
+    if(t && t.isConnected){
+      t.style.height = 'auto';
+      t.style.height = t.scrollHeight + 'px';
+    }
     try{ fitSplitSource(); }catch(e){}
+    fitSource();   // 横竖屏 / 地址栏收放改变宽度后重新量高
   }, 120);
 });
 

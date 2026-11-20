@@ -1383,7 +1383,23 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsi-bell.on{opacity:.85;color:rgb(var(--ivy))}
 .tsi-bell:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .tsi-bell svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-@media (hover:none){ .tsi-bell{opacity:.6} }
+.tsi-arch{flex:0 0 auto;width:20px;height:20px;margin-top:-2px;border:0;background:none;padding:0;border-radius:5px;
+  display:grid;place-items:center;color:rgb(var(--muted));opacity:.7;cursor:pointer;font-family:inherit;
+  touch-action:manipulation;transition:opacity .12s,background .12s,color .12s}
+.tsi:hover .tsi-arch{opacity:1}
+.tsi-arch:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.tsi-arch svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tsi-arch.del-armed{opacity:1;background:rgb(var(--ivy)/.14);color:rgb(var(--ivy))}
+.tsg-arch .tsg-h .ttl{color:rgb(var(--faint))}
+.tsi.arch{cursor:pointer;align-items:center}
+.tsi.arch .t{color:rgb(var(--muted));text-decoration:none}
+.tsi-arch-restore{flex:0 0 auto;width:20px;height:20px;border:0;background:none;padding:0;border-radius:5px;
+  display:grid;place-items:center;color:rgb(var(--faint));opacity:.5;cursor:pointer;font-family:inherit;
+  touch-action:manipulation;transition:opacity .12s,background .12s,color .12s}
+.tsi:hover .tsi-arch-restore{opacity:1}
+.tsi-arch-restore:hover{background:rgb(var(--hover));color:rgb(var(--ivy))}
+.tsi-arch-restore svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (hover:none){ .tsi-bell{opacity:.6} .tsi-arch{opacity:.85} .tsi-arch-restore{opacity:.7} }
 .tsh-empty{padding:26px 10px;text-align:center;font-size:12.5px;color:rgb(var(--faint));line-height:1.9}
 /* 苹果日历那一组：条目同样可以勾掉（只在本应用记，不回写日历） */
 .ics-row{padding-left:19px}
@@ -3011,6 +3027,7 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   .todo-mobile .tsi .src{font-size:11.5px}
   .todo-mobile .tsi input{width:17px;height:17px;margin-top:1px}
   .todo-mobile .tsi-bell{width:34px;height:34px}
+  .todo-mobile .tsi-arch,.todo-mobile .tsi-arch-restore{width:34px;height:34px}
   .todo-mobile .tsh-sub{margin-top:14px}
   /* 手机没有 esc 键，命令面板不必提示 */
   .esc-hint{display:none}
@@ -3242,6 +3259,7 @@ const ICONS = {
   lockOpen:'<rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 7.6-1.6"/>',
   file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M19 18v3H6.5A2.5 2.5 0 0 1 4 18.5"/>',
+  archive:'<rect x="3.4" y="4.4" width="17.2" height="4.6" rx="1.4"/><path d="M5.2 9v9.2A1.8 1.8 0 0 0 7 20h10a1.8 1.8 0 0 0 1.8-1.8V9"/><path d="M9.8 13.2h4.4"/>',
   trash:'<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>',
   graph:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M8.2 16.4 15.8 7.7M8.5 18h6"/>',
@@ -3323,7 +3341,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v246', at: '2026-11-20 08:12' };
+window.IVY_BUILD = { id: 'v247', at: '2026-11-20 16:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3473,6 +3491,11 @@ function normalizeState(s){
       }
       if(steps >= 12) nb.parentId = null;
     });
+    // 待办归档：只存本地快照（正文里那行 `- [x]` 不动，只是不再列出来）
+    if(!Array.isArray(s.todoArchived)) s.todoArchived = [];
+    else s.todoArchived = s.todoArchived.filter(a => a && typeof a.k === 'string' && a.k)
+      .map(a => ({ k:String(a.k).slice(0,300), noteId:String(a.noteId||''), noteTitle:String(a.noteTitle||''),
+                   text:String(a.text||'').slice(0,400), due:+a.due||0, doneDate:+a.doneDate||0, at:+a.at||Date.now() }));
     return s;
 }
 /* ========== 历史版本 ==========
@@ -4288,6 +4311,26 @@ function listSnippet(n){
     .slice(0, 90);
 }
 /* 删除按钮：桌面上双击才删，避免误点；触屏没有双击，保留单击 */
+/* 通用「点两下才执行」：桌面双击、手机双击都走这里。
+   第一次点亮按钮并提示，DEL_TAP_GAP 内再点一次才真正执行。 */
+function bindDoubleTap(el, run, hint){
+  if(!el) return;
+  el.onclick = e=>{
+    e.stopPropagation(); e.preventDefault();
+    const now = Date.now();
+    if(el._dtOn && now - el._dtAt < DEL_TAP_GAP){
+      clearTimeout(el._dtT); el._dtOn = false; el.classList.remove('del-armed');
+      run();
+      return;
+    }
+    el._dtOn = true; el._dtAt = now;
+    el.classList.add('del-armed');
+    clearTimeout(el._dtT);
+    el._dtT = setTimeout(()=>{ el._dtOn = false; el.classList.remove('del-armed'); }, DEL_TAP_GAP);
+    if(hint && !el._hinted){ el._hinted = true; toast(hint); }
+  };
+}
+
 /* 垃圾桶统一「点两下才删」：桌面双击、手机双击，避免误触。
    iOS 的 dblclick 不稳、还会连带双击缩放，所以自己数两次点击（420ms 内），
    第一次先亮红并提示，第二次才真正移入回收站。 */
@@ -4865,11 +4908,24 @@ function bindTodoBlock(root, repaint){
       ev.stopPropagation();
       openRemindDialog({todo:t, date:t.due || 0, repeat:t.repeat || ''});
     };
+    const archBtn = el.querySelector('[data-tsi-arch]');
+    if(archBtn) bindDoubleTap(archBtn, ()=>archiveTodo(t), '再点一下归档');
     el.onclick = (ev)=>{
       if(ev.target === cb) return;
-      if(ev.target.closest && ev.target.closest('[data-tsi-bell]')) return;
+      if(ev.target.closest && ev.target.closest('[data-tsi-bell],[data-tsi-arch]')) return;
       jumpToTodo(t);
       if(window.innerWidth > 640) re();      // 手机上跳走会换成笔记页，别再把待办列表重画回来
+    };
+  });
+  root.querySelectorAll('[data-arch-restore]').forEach(b=>{
+    b.onclick = ev=>{ ev.stopPropagation(); ev.preventDefault(); unarchiveTodo(b.dataset.archRestore); };
+  });
+  root.querySelectorAll('[data-arch]').forEach(el=>{
+    el.onclick = ev=>{
+      if(ev.target.closest && ev.target.closest('[data-arch-restore]')) return;
+      const a = (S.todoArchived || []).find(x => x && x.k === el.dataset.arch);
+      if(!a || !noteById(a.noteId)) return;
+      jumpToTodo({ noteId:a.noteId, line:0, text:a.text });
     };
   });
   root.querySelectorAll('[data-icsg]').forEach(b=>b.onclick=()=>{
@@ -5075,6 +5131,43 @@ function dueLabel(ts){
   return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) + ' ' + hm;
 }
 /* 把全库（或某一篇）的待办扫出来 */
+/* ========== 待办归档 ==========
+   归档 = 从列表里收起来，不动笔记正文。键用「笔记 id + 待办文字」，
+   因为行号会随编辑漂移，文字相对稳定。 */
+function todoKey(t){ return String(t.noteId || '') + '|' + String(t.text || '').trim(); }
+function todoArchivedList(){
+  if(!Array.isArray(S.todoArchived)) S.todoArchived = [];
+  return S.todoArchived.slice().sort((a,b)=> (b.at||0) - (a.at||0));
+}
+function isTodoArchived(t){
+  const k = todoKey(t);
+  return (S.todoArchived || []).some(a => a && a.k === k);
+}
+function archiveTodo(t){
+  if(!t || !t.done){ toast('只有已完成的待办才能归档'); return; }
+  const k = todoKey(t);
+  if(isTodoArchived(t)) return;
+  if(!Array.isArray(S.todoArchived)) S.todoArchived = [];
+  S.todoArchived.push({
+    k,
+    noteId: t.noteId || '',
+    noteTitle: t.noteTitle || '',
+    text: t.text || '',
+    due: t.due || 0,
+    doneDate: t.doneDate || 0,
+    at: Date.now()
+  });
+  save();
+  paintTodoSurfaces();
+  toast('已归档');
+}
+function unarchiveTodo(k){
+  S.todoArchived = (S.todoArchived || []).filter(a => a && a.k !== k);
+  save();
+  paintTodoSurfaces();
+  toast('已恢复到待办');
+}
+
 function collectTodos(noteId){
   const list = [];
   (S.notes || []).forEach(n=>{
@@ -5108,6 +5201,8 @@ function collectTodos(noteId){
         repeat: parseRepeat(raw),
         doneDate: parseDoneDate(raw)
       });
+      // 已归档的从各处列表里隐去（归档区单独展示）
+      if(list[list.length-1] && isTodoArchived(list[list.length-1])) list.pop();
     });
   });
   return list;
@@ -5302,6 +5397,26 @@ function jumpToTodo(t){
   }, 280);
 }
 
+/* 归档区：只展示收起来的已完成待办，点右侧圆形箭头恢复 */
+function archGroupHtml(){
+  const items = todoArchivedList();
+  if(!items.length) return '';
+  const folded = !!S.todoFolded['sarch'];
+  const day = ts => fmtDate(new Date(ts || Date.now()));
+  const row = a => `<div class="tsi done arch" data-arch="${esc(a.k)}" title="点一下跳到原笔记">
+      <div class="m">
+        <span class="t">${esc(a.text || '（空）')}</span>
+        <span class="src">${esc(a.noteTitle || '')} · 归档于 ${day(a.at)}</span>
+      </div>
+      <button class="tsi-arch-restore" data-arch-restore="${esc(a.k)}" title="恢复到待办列表">${ic('restore')}</button>
+    </div>`;
+  return `<div class="tsg tsg-arch">
+    <button class="tsg-h" data-tsg="arch"><svg class="gchev${folded?'':' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+      <span class="ttl">归档</span><span class="n">${items.length}</span></button>
+    ${folded ? '' : `<div class="tsg-body">${items.map(row).join('')}</div>`}
+  </div>`;
+}
+
 /* 侧边栏筛选 */
 function todoShelf(){
   const list = collectTodos();
@@ -5314,13 +5429,14 @@ function todoShelf(){
     const d = new Date(ts);
     return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   };
-  const item = t=>`<div class="tsi ${t.done?'done':''} ${S.todoSel === (t.noteId + ':' + t.line) ? 'sel':''}" data-tsi='${esc(JSON.stringify({noteId:t.noteId,line:t.line,text:t.text,due:t.due,repeat:t.repeat}))}'>
+  const item = t=>`<div class="tsi ${t.done?'done':''} ${S.todoSel === (t.noteId + ':' + t.line) ? 'sel':''}" data-tsi='${esc(JSON.stringify({noteId:t.noteId,line:t.line,text:t.text,due:t.due,repeat:t.repeat,done:!!t.done}))}'>
       <input type="checkbox" ${t.done?'checked':''} data-tsi-cb="1">
       <div class="m">
         <span class="t">${esc(t.text || '（空）')}${t.repeat?' <span class="rep">↻</span>':''}</span>
         <span class="src">${esc(t.noteTitle)}</span>
       </div>
       ${t.due?`<span class="tm${t.due < Date.now() && !t.done?' late':''}">${timeOf(t.due)}</span>`:''}
+      ${t.done?`<button class="tsi-arch" data-tsi-arch="1" title="双击归档">${ic('archive')}</button>`:''}
       <button class="tsi-bell${t.due?' on':''}" data-tsi-bell="1" title="${t.due?'修改提醒时间':'设置提醒'}">${ic(t.due?'clock':'bell')}</button>
     </div>`;
   const group = (key, title, arr)=>{
@@ -5347,6 +5463,7 @@ function todoShelf(){
   // 已完成单独成组，常驻显示：不再依赖「显示今天已完成」开关，也不限今天。
   // 这里只来自笔记里的 `- [x]`，苹果日历事件走下面的 icsShelfHtml()，不会混进来。
   body += group('done', '已完成待办', g.done);
+  body += archGroupHtml();
   body += icsShelfHtml();
 
   return `<div class="todo-shelf">

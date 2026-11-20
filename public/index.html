@@ -198,6 +198,10 @@ body.shelf-collapsed .nl-open{display:grid}
 .nl-row:hover .nl-del{opacity:1}
 .nl-row .nl-del:hover{background:rgb(var(--danger)/.12);color:rgb(var(--danger))}
 .nl-row .nl-del svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* 第一次点下的「待确认」态：红底红图标，第二次点才真删 */
+.nl-row .nl-del,.note-item .note-del{touch-action:manipulation}
+.nl-row .nl-del.del-armed{opacity:1;background:rgb(var(--danger)/.14);color:rgb(var(--danger))}
+.note-item .note-del.del-armed{opacity:1;background:rgb(var(--danger)/.14);color:rgb(var(--danger))}
 body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 /* 手机上行内两颗图标视觉只有 22px，热区往下扩到 40px（宽度刚好相接、不互相盖住） */
 @media (max-width:900px){
@@ -3319,7 +3323,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v245', at: '2026-11-20 01:48' };
+window.IVY_BUILD = { id: 'v246', at: '2026-11-20 08:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4284,16 +4288,27 @@ function listSnippet(n){
     .slice(0, 90);
 }
 /* 删除按钮：桌面上双击才删，避免误点；触屏没有双击，保留单击 */
+/* 垃圾桶统一「点两下才删」：桌面双击、手机双击，避免误触。
+   iOS 的 dblclick 不稳、还会连带双击缩放，所以自己数两次点击（420ms 内），
+   第一次先亮红并提示，第二次才真正移入回收站。 */
+const DEL_TAP_GAP = 420;
 function bindDeleteButton(b, id){
   if(!b) return;
-  const run = e=>{ e.stopPropagation(); e.preventDefault(); toggleTrash(id); };
-  const touchOnly = (window.matchMedia && window.matchMedia('(hover: none)').matches);
-  if(touchOnly){
-    b.onclick = run;
-  }else{
-    b.onclick = e=>{ e.stopPropagation(); e.preventDefault(); };
-    b.ondblclick = run;
-  }
+  const run = e=>{
+    e.stopPropagation(); e.preventDefault();
+    clearTimeout(b._dtT); b._dtOn = false; b.classList.remove('del-armed');
+    toggleTrash(id);
+  };
+  b.onclick = e=>{
+    e.stopPropagation(); e.preventDefault();
+    const now = Date.now();
+    if(b._dtOn && now - b._dtAt < DEL_TAP_GAP){ run(e); return; }
+    b._dtOn = true; b._dtAt = now;
+    b.classList.add('del-armed');
+    clearTimeout(b._dtT);
+    b._dtT = setTimeout(()=>{ b._dtOn = false; b.classList.remove('del-armed'); }, DEL_TAP_GAP);
+    if(!b._hinted){ b._hinted = true; toast('再点一下删除'); }
+  };
   b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
 }
 function listRowHtml(n){

@@ -2915,9 +2915,9 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   /* 手机上不用刻度列：只留悬浮条 */
   .outline-zone .ol-mini{display:none}
   .ol-handle{
-    position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:56;
+    position:fixed;right:0;top:42%;transform:translateY(-50%);z-index:56;
     display:grid;place-items:center;pointer-events:auto;
-    width:30px;height:74px;padding:0;border:0;border-radius:15px 0 0 15px;
+    width:21px;height:62px;padding:0;border:0;border-radius:11px 0 0 11px;
     background:rgb(var(--surface) / .92);color:rgb(var(--ink-2));
     -webkit-backdrop-filter:blur(14px) saturate(150%);
     backdrop-filter:blur(14px) saturate(150%);
@@ -2928,7 +2928,9 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
     background:rgb(var(--surface) / .92);
     box-shadow:-3px 0 16px rgb(0 0 0 / .4), inset 1px 1px 0 rgb(255 255 255 / .08), inset 0 0 0 .5px rgb(255 255 255 / .12);
   }
-  .ol-handle svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+  .ol-handle svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+  /* 视觉上很窄，但热区往外扩一圈，手指还是好点 */
+  .ol-handle::after{content:'';position:absolute;left:-14px;top:-10px;bottom:-10px;right:0}
   .ol-handle:active{transform:translateY(-50%) scale(.94)}
   /* 卡片展开时悬浮条让位 */
   body.ol-open .ol-handle{opacity:0;pointer-events:none}
@@ -3497,7 +3499,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.9', at: '2026-11-22 01:44' };
+window.IVY_BUILD = { id: '2.10', at: '2026-11-22 02:55' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

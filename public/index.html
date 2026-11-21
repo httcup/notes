@@ -2744,27 +2744,13 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
     background:rgb(var(--surface));box-shadow:0 1px 2px rgb(16 24 32/.08);
   }
   .set-x i{display:inline}
-  /* 「更多」就在关闭旁边；点它把分类菜单拉下来（不是下拉选择框） */
+  /* 「更多」就在关闭旁边；点它弹出和笔记列表「⋯」同一套的卡片菜单（popover） */
   .set-more{display:flex;gap:4px;padding:0 10px 0 7px}
   .set-more svg{width:17px;height:17px;fill:currentColor;stroke:none}
-  .set-more[aria-expanded=true]{background:rgb(var(--ink) / .1);color:rgb(var(--ink));box-shadow:inset 0 0 0 1px rgb(var(--ink) / .08)}
+  .set-more.on{background:rgb(var(--ink) / .1);color:rgb(var(--ink));box-shadow:inset 0 0 0 1px rgb(var(--ink) / .08)}
   #setMenu{display:none}
-  /* 分类不再横着排一长条，也不占一行：收进「更多」，点开是一张悬浮菜单 */
-  .set-nav{
-    display:none;position:absolute;left:12px;right:12px;top:calc(100% - 2px);z-index:20;
-    flex-direction:column;align-items:stretch;gap:2px;padding:6px;
-    max-height:min(76vh,520px);overflow:auto;overscroll-behavior:contain;
-    background:rgb(var(--surface));border:1px solid rgb(var(--line));border-radius:12px;
-    box-shadow:0 14px 34px rgb(16 24 32/.16);
-  }
-  .set-side.open .set-nav{display:flex}
-  .set-nav nav{flex-direction:column;gap:2px}
-  .set-nav button{
-    height:auto;min-height:36px;padding:6px 10px;background:transparent;flex:0 0 auto;
-    font-size:13.5px;text-align:left;border-radius:8px;
-  }
-  .set-nav-grp{padding:10px 10px 4px}
-  .set-nav button.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy))}
+  /* 手机上分类只在「更多」的卡片菜单里出现，侧栏那份导航整块不显示 */
+  .set-nav{display:none}
   .set-main{
     display:block;margin:0;border:0;border-radius:0;box-shadow:none;
     background:rgb(var(--surface));
@@ -2918,7 +2904,23 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 /* 只在手机（<=640px）去掉右边缘的刻度悬浮图标，大纲只从顶部按钮进出；
    iPad 竖屏（744px 起）不能落进这个区间，否则边缘悬浮图标会被误杀（v33 修复） */
 @media (max-width:640px){
-  .outline-zone{display:none}
+  /* 手机上也让大纲在右边缘悬浮（和电脑一样）：收起时是一列刻度，点一下滑出卡片。
+     只有刻度那一条吃触摸事件，整列不接事件，否则正文右侧一整条都滑不动 */
+  .outline-zone{
+    display:block;pointer-events:none;width:38px;z-index:46;
+    top:calc(92px + env(safe-area-inset-top));   /* 让开标签栏 50 + Markdown 工具条 38 */
+    bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  .outline-zone .ol-mini{pointer-events:auto;right:9px;width:26px;top:14px}
+  .outline-zone .ol-tick{right:4px;height:2px;border-radius:2px}
+  .outline-zone .ol-tick.li{height:1.5px}
+  .outline-zone .ol-tick.on{transform:scaleX(1.1)}
+  /* 展开时卡片从右边滑出：顶部避开标签栏与工具条，底部避开 Home 手势条 */
+  .outline{
+    right:6px;top:calc(94px + env(safe-area-inset-top));
+    width:min(236px,78vw);
+    max-height:calc(100dvh - 118px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
   /* 手机上书架改成抽屉：展开时盖在笔记上，而不是把正文挤成一条 */
   .shelf{
     position:fixed;left:0;top:0;bottom:0;z-index:80;
@@ -3254,9 +3256,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <button class="m-btn" id="mHome" title="笔记本栏" aria-label="展开或收起笔记本栏">
       <svg viewBox="0 0 24 24"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>
     </button>
-    <button class="m-btn" id="mTodo" title="待办日程" aria-label="打开待办日程">
-      <svg viewBox="0 0 24 24"><path d="M4.2 6.3l1.5 1.5 2.6-2.9"/><path d="M4.2 12.3l1.5 1.5 2.6-2.9"/><path d="M11.4 6.6h8.4M11.4 12.6h8.4M4.4 18.2h15.4"/></svg>
-    </button>
     <button class="m-btn" id="mSet" title="设置" aria-label="打开设置">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -3476,7 +3475,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.7', at: '2026-11-22 00:42' };
+window.IVY_BUILD = { id: '2.8', at: '2026-11-22 01:06' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11727,8 +11726,8 @@ function renderOutline(){
   outlineEl.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{
     jumpToHeading(b.dataset.j);
     updateOutlineActive();
-    // 触屏上跳完把面板收起，别挡住正文（固定状态下保持展开）
-    if(OL_TOUCH) setOutlinePanel(false);
+    // 触屏 / 手机上跳完把面板收起，别挡住正文（固定状态下保持展开）
+    if(OL_TOUCH || window.innerWidth <= 640) setOutlinePanel(false);
   });
   updateOutlineActive();
 }
@@ -11770,7 +11769,8 @@ document.addEventListener('pointerdown', e=>{
 /* 右边缘刻度：桌面点某根跳标题、点空白处固定；触屏（含 iPad）点边缘一律弹出/收起大纲，
    不做刻度跳转——触摸很难精确落在某根刻度上，点了没反应像「坏了」 */
 document.getElementById('outlineZone').addEventListener('click', e=>{
-  if(OL_TOUCH){
+  // 手机（窄屏）也按触屏处理：点边缘一律展开/收起，不做刻度跳转
+  if(OL_TOUCH || window.innerWidth <= 640){
     // 触屏点边缘：开着就彻底收起（含图钉固定），没开才展开
     if(document.body.classList.contains('ol-open') || S.outlineOpen) closeOutlinePanel();
     else toggleOutlinePanel();
@@ -11787,9 +11787,10 @@ document.getElementById('outlineZone').addEventListener('click', e=>{
   else toggleOutlinePin();
 });
 /* 触屏：点面板外面收起，避免一直盖住正文 */
-if(OL_TOUCH){
+{
   document.addEventListener('pointerdown', e=>{
     if(!document.body.classList.contains('ol-open')) return;
+    if(!(OL_TOUCH || window.innerWidth <= 640)) return;
     if(e.target.closest && (e.target.closest('#outline') || e.target.closest('#outlineZone') || e.target.closest('#paOutline'))) return;
     setOutlinePanel(false);
   }, true);
@@ -15415,13 +15416,8 @@ function setTabName(id){
 }
 function closeSettings(){
   const ov = $('#setOv');
-  if(ov){
-    ov.classList.remove('open');
-    const more = ov.querySelector('#setMore');
-    const side = ov.querySelector('.set-side');
-    if(side) side.classList.remove('open');
-    if(more) more.setAttribute('aria-expanded','false');
-  }
+  if(ov) ov.classList.remove('open');
+  try{ const po = $('#popover'); if(po && po.classList.contains('open')) poClose(po); }catch(e){}
   document.body.classList.remove('set-open');
   if(typeof syncMobileBar === 'function') syncMobileBar();
   remindRepaintHook = null;
@@ -15440,7 +15436,7 @@ function openSettings(tab){
           <div class="set-title">设置</div>
           <div class="set-acts">
             <button class="set-x" id="setMenu" title="视图 / 设置" aria-label="视图与设置">${ic('menu')}</button>
-            <button class="set-x set-more" id="setMore" aria-haspopup="menu" aria-expanded="false" title="更多分类" aria-label="更多分类">
+            <button class="set-x set-more" id="setMore" aria-haspopup="menu" title="更多分类" aria-label="更多分类">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="5.4" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18.6" cy="12" r="1.15"/></svg><i>更多</i>
             </button>
             <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
@@ -15464,20 +15460,23 @@ function openSettings(tab){
       if(group) lastGroup = group;
       return grp + `<button type="button" data-st="${id}"><span class="sn-ico">${ic(icon || 'gear')}</span><span class="sn-t">${name}</span></button>`;
     }).join('');
-    const side = ov.querySelector('.set-side');
     const more = ov.querySelector('#setMore');
-    const shutNav = ()=>{ side.classList.remove('open'); if(more) more.setAttribute('aria-expanded','false'); };
+    /* 「更多」直接用列表页那颗「⋯」的同一套菜单卡片（popover）：
+       同样是图标 + 文字 + 右侧 ✓，段与段之间一条细线，点外面/滚页面自动收起 */
     if(more) more.onclick = (e)=>{
       e.stopPropagation();
-      const open = side.classList.toggle('open');
-      more.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const items = [];
+      let lastGroup = null;
+      SET_TABS.forEach(([id, name, icon, group])=>{
+        if(group && group !== lastGroup && items.length) items.push('-');
+        if(group) lastGroup = group;
+        items.push([name, id === SET_TAB ? '✓' : '', '', icon || 'gear', ()=>{ SET_TAB = id; paintSettings(); }]);
+      });
+      popover(more, items);
     };
     ov.querySelectorAll('#setNav [data-st]').forEach(b=>{
-      b.onclick = ()=>{ SET_TAB = b.dataset.st; shutNav(); paintSettings(); };
+      b.onclick = ()=>{ SET_TAB = b.dataset.st; paintSettings(); };
     });
-    // 点菜单以外的地方收起；滚内容时也收起，免得菜单跟着飘
-    ov.addEventListener('click', e=>{ if(!side.contains(e.target)) shutNav(); });
-    ov.addEventListener('scroll', ()=>{ if(side.classList.contains('open')) shutNav(); }, { passive:true });
   }
   if(tab) SET_TAB = tab;
   ov.classList.add('open');
@@ -19091,15 +19090,12 @@ function pomoSet(k, v){
   const bar = document.getElementById('mBar');
   if(!bar) return;
   const home = document.getElementById('mHome');
-  const todoBtn = document.getElementById('mTodo');
   const setBtn = document.getElementById('mSet');
   const addBtn = document.getElementById('mNew');
   const inSet = ()=> document.body.classList.contains('set-open');
-  const inTodo = ()=> (S.view === 'notes' && S.scope === 'todo');
   const syncHome = ()=>{
     const so = inSet();
     if(home) home.classList.toggle('on', so ? false : !!S.shelfOpen);
-    if(todoBtn) todoBtn.classList.toggle('on', so ? false : inTodo());
     if(setBtn){
       setBtn.classList.toggle('on', so);
       const label = so ? '关闭设置' : '设置';
@@ -19112,12 +19108,6 @@ function pomoSet(k, v){
   if(home) home.onclick = ()=>{
     if(inSet()) closeSettings();
     toggleShelf(); syncHome();
-  };
-  if(todoBtn) todoBtn.onclick = ()=>{
-    if(inSet()){ try{ closeSettings(); }catch(e){} }
-    if(inTodo()){ try{ switchView('notes'); }catch(e){} }   // 已经在待办里：再点一下回笔记
-    else { try{ switchView('todo'); }catch(e){} }
-    syncHome();
   };
   if(setBtn) setBtn.onclick = ()=>{
     if(inSet()){ try{ closeSettings(); }catch(e){} }

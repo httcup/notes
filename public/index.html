@@ -2502,7 +2502,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   display:flex;flex-direction:column;gap:1px;overflow:auto;scrollbar-width:thin;
 }
 .set-nav nav{display:flex;flex-direction:column;gap:1px}
-.set-pick{display:none}
+/* 「更多」只在手机上出现：桌面左栏本来就一直列着全部分类 */
+.set-more{display:none}
 .set-nav-grp{
   padding:15px 9px 5px;font-size:11px;font-weight:600;letter-spacing:.05em;color:rgb(var(--faint));
 }
@@ -2728,25 +2729,22 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   }
   .set-top{padding:calc(10px + env(safe-area-inset-top)) 12px 6px 16px}
   .set-title{font-size:18px}
+  .set-acts{gap:6px}
   .set-x{
     height:32px;padding:0 10px 0 8px;color:rgb(var(--ink-2));
     background:rgb(var(--surface));box-shadow:0 1px 2px rgb(16 24 32/.08);
   }
   .set-x i{display:inline}
-  /* 分类不再横着排一长条：收成一颗「当前分类 ▾」按钮，点开才是菜单 */
-  .set-pick{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    width:calc(100% - 24px);margin:0 12px 8px;height:38px;padding:0 12px;
-    border-radius:10px;border:1px solid rgb(var(--line));background:rgb(var(--surface));
-    color:rgb(var(--ink));font-size:13.5px;font-weight:500;
-    box-shadow:0 1px 2px rgb(16 24 32/.05);
-  }
-  .set-pick .caret{width:15px;height:15px;flex:0 0 auto;transition:transform .18s var(--spring)}
-  .set-side.open .set-pick .caret{transform:rotate(180deg)}
+  /* 「更多」就在关闭旁边；点它把分类菜单拉下来（不是下拉选择框） */
+  .set-more{display:flex;gap:4px;padding:0 10px 0 7px}
+  .set-more svg{width:17px;height:17px;fill:currentColor;stroke:none}
+  .set-more[aria-expanded=true]{background:rgb(var(--ink));color:rgb(var(--surface))}
+  #setMenu{display:none}
+  /* 分类不再横着排一长条，也不占一行：收进「更多」，点开是一张悬浮菜单 */
   .set-nav{
     display:none;position:absolute;left:12px;right:12px;top:calc(100% - 2px);z-index:20;
     flex-direction:column;align-items:stretch;gap:2px;padding:6px;
-    max-height:min(72vh,470px);overflow:auto;overscroll-behavior:contain;
+    max-height:min(76vh,520px);overflow:auto;overscroll-behavior:contain;
     background:rgb(var(--surface));border:1px solid rgb(var(--line));border-radius:12px;
     box-shadow:0 14px 34px rgb(16 24 32/.16);
   }
@@ -2762,10 +2760,13 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
     display:block;margin:0;border:0;border-radius:0;box-shadow:none;
     background:rgb(var(--surface));
   }
-  .set-head{display:none}   /* 手机上当前分类已经写在顶部按钮里，不用再重复一遍 */
+  .set-head{display:block;padding:0 16px}
+  .set-head-in{padding:14px 0 2px}
+  .set-head h2{font-size:20px}
   .set-body{
     flex:0 0 auto;height:auto;overflow:visible;
-    padding:2px 16px calc(28px + env(safe-area-inset-bottom));
+    /* 底部三键浮在浮层之上，留出它们的高度 + 渐隐区 */
+    padding:0 16px calc(124px + env(safe-area-inset-bottom));
   }
 }
 }
@@ -3080,13 +3081,16 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
    玻璃配方：blur(28px) saturate(170%) + 10% 白 + inset 1px 1px #fff8，
    另加外圈细亮环、斜向反光；折射用 #mGlassDistort（Chrome 生效，Safari 退回纯模糊） */
 .m-bar{display:none}
+/* 浮条底下垫一层「渐隐遮罩」：列表滚到这儿时文字淡进背景色，
+   不会和玻璃按钮糊在一起（本身就是 canvas 色，看不出边界） */
+.m-scrim{display:none}
 .m-bar .m-glass{
-  background-color:rgb(255 255 255 / 40%);
+  background-color:rgb(255 255 255 / 46%);
   background-image:
     linear-gradient(142deg, rgb(255 255 255 / 55%) 0%, rgb(255 255 255 / 18%) 26%, rgb(255 255 255 / 0%) 56%),
     radial-gradient(95% 75% at 6% 0%, rgb(255 255 255 / 45%), rgb(255 255 255 / 0%) 64%);
   -webkit-backdrop-filter:blur(28px) saturate(170%);
-  backdrop-filter:blur(28px) saturate(170%) url(#mGlassDistort);
+  backdrop-filter:blur(28px) saturate(170%);
   box-shadow:
     inset 1px 1px 0 rgb(255 255 255 / 95%),
     inset -1px -1px 0 rgb(255 255 255 / 55%),
@@ -3094,8 +3098,14 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
     inset 0 0 0 1.5px rgb(17 20 26 / 6%),
     0 10px 26px rgb(16 24 32 / 14%);
 }
+/* Safari 的 backdrop-filter 不认 url() 滤镜函数：写成 blur() + url() 时整条声明会被丢掉，
+   连模糊也一起没了（底下的笔记正文就直接透出来）。所以基础模糊单独声明，
+   折射位移只给认得这个语法的浏览器（Chrome）加。 */
+@supports (backdrop-filter: url(#mGlassDistort)){
+  .m-bar .m-glass{backdrop-filter:blur(28px) saturate(170%) url(#mGlassDistort)}
+}
 [data-theme=dark] .m-bar .m-glass{
-  background-color:rgb(255 255 255 / 13%);
+  background-color:rgb(255 255 255 / 16%);
   background-image:
     linear-gradient(142deg, rgb(255 255 255 / 18%) 0%, rgb(255 255 255 / 5%) 26%, rgb(255 255 255 / 0%) 54%),
     radial-gradient(95% 75% at 6% 0%, rgb(255 255 255 / 14%), rgb(255 255 255 / 0%) 64%);
@@ -3114,8 +3124,26 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
     transition:transform .26s cubic-bezier(.32,.72,0,1), opacity .2s;
   }
   .m-bar > *{pointer-events:auto}
+  .m-scrim{
+    --sc:var(--canvas);
+    display:block;position:fixed;left:0;right:0;bottom:0;z-index:84;pointer-events:none;
+    height:calc(128px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,
+      rgb(var(--sc) / .68) 0 50%,
+      rgb(var(--sc) / .5) 66%,
+      rgb(var(--sc) / .18) 84%,
+      rgb(var(--sc) / 0) 100%);
+  }
   /* 进了笔记页就收起，别挡正文 */
   body.m-read .m-bar{transform:translateY(150%);opacity:0;pointer-events:none}
+  /* 设置是整屏浮层（z-index:150），这里把三键抬到浮层之上，设置页里也能一键回列表 / 新建 */
+  body.set-open .m-bar, body.set-open.m-read .m-bar{
+    z-index:152;transform:none;opacity:1;pointer-events:auto;
+  }
+  body.m-read .m-scrim{display:none}
+  /* 设置页铺的是 --surface（纯白），遮罩换成同色才不会看得出灰带；
+     浮层本身 z-index:150，遮罩得抬到它上面（仍在三键之下）才盖得住正文 */
+  body.set-open .m-scrim{display:block;--sc:var(--surface);z-index:151}
   .m-pill{display:flex;align-items:center;gap:2px;padding:5px;border-radius:999px}
   .m-btn{
     appearance:none;border:0;background:none;padding:0;margin:0;cursor:pointer;
@@ -3136,10 +3164,10 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   /* 底部三键已经承担了「展开书架 / 新建」，列表头这两颗就收起来，标题也更宽 */
   .nl-hd .nl-open, .nl-hd .nl-new,
   body.shelf-collapsed .nl-hd .nl-open, body.shelf-collapsed .nl-hd .nl-new{display:none}
-  /* 列表与抽屉底部留出浮条高度，最后一条不被压住 */
-  .nl-rows{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-  .shelf{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
-  .todo-mobile{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  /* 列表与抽屉底部留出浮条高度 + 渐隐区，最后一条不被压住也不被遮罩吃掉 */
+  .nl-rows{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+  .shelf{padding-bottom:calc(116px + env(safe-area-inset-bottom))}
+  .todo-mobile{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
   /* 首次打开那条「添加到主屏幕」别和浮条打架 */
   .ios-hint{bottom:calc(84px + env(safe-area-inset-bottom))}
 }
@@ -3209,6 +3237,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     </filter>
   </defs>
 </svg>
+<div class="m-scrim" id="mScrim" aria-hidden="true"></div>
 <div class="m-bar" id="mBar">
   <div class="m-pill m-glass">
     <button class="m-btn" id="mHome" title="笔记本栏" aria-label="展开或收起笔记本栏">
@@ -3433,7 +3462,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v248', at: '2026-11-21 23:44' };
+window.IVY_BUILD = { id: 'v249', at: '2026-11-21 23:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -15360,7 +15389,15 @@ function setTabName(id){
 }
 function closeSettings(){
   const ov = $('#setOv');
-  if(ov) ov.classList.remove('open');
+  if(ov){
+    ov.classList.remove('open');
+    const more = ov.querySelector('#setMore');
+    const side = ov.querySelector('.set-side');
+    if(side) side.classList.remove('open');
+    if(more) more.setAttribute('aria-expanded','false');
+  }
+  document.body.classList.remove('set-open');
+  if(typeof syncMobileBar === 'function') syncMobileBar();
   remindRepaintHook = null;
   setRemindReady = false;
   setAiReady = false;
@@ -15377,13 +15414,12 @@ function openSettings(tab){
           <div class="set-title">设置</div>
           <div class="set-acts">
             <button class="set-x" id="setMenu" title="视图 / 设置" aria-label="视图与设置">${ic('menu')}</button>
+            <button class="set-x set-more" id="setMore" aria-haspopup="menu" aria-expanded="false" title="更多分类" aria-label="更多分类">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="5.4" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18.6" cy="12" r="1.15"/></svg><i>更多</i>
+            </button>
             <button class="set-x" id="setClose" title="关闭设置" aria-label="关闭设置">${ic('x')}<i>关闭</i></button>
           </div>
         </div>
-        <button class="set-pick" id="setPick" aria-haspopup="listbox" aria-expanded="false">
-          <span id="setPickLabel">账户</span>
-          <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
         <aside class="set-nav"><nav id="setNav"></nav></aside>
       </div>
       <section class="set-main">
@@ -15403,23 +15439,24 @@ function openSettings(tab){
       return grp + `<button type="button" data-st="${id}"><span class="sn-ico">${ic(icon || 'gear')}</span><span class="sn-t">${name}</span></button>`;
     }).join('');
     const side = ov.querySelector('.set-side');
-    const pick = ov.querySelector('#setPick');
-    if(pick) pick.onclick = (e)=>{
+    const more = ov.querySelector('#setMore');
+    const shutNav = ()=>{ side.classList.remove('open'); if(more) more.setAttribute('aria-expanded','false'); };
+    if(more) more.onclick = (e)=>{
       e.stopPropagation();
       const open = side.classList.toggle('open');
-      pick.setAttribute('aria-expanded', open ? 'true' : 'false');
+      more.setAttribute('aria-expanded', open ? 'true' : 'false');
     };
     ov.querySelectorAll('#setNav [data-st]').forEach(b=>{
-      b.onclick = ()=>{ SET_TAB = b.dataset.st; side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); paintSettings(); };
+      b.onclick = ()=>{ SET_TAB = b.dataset.st; shutNav(); paintSettings(); };
     });
     // 点菜单以外的地方收起；滚内容时也收起，免得菜单跟着飘
-    ov.addEventListener('click', e=>{
-      if(!side.contains(e.target)){ side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); }
-    });
-    ov.addEventListener('scroll', ()=>{ if(side.classList.contains('open')){ side.classList.remove('open'); pick.setAttribute('aria-expanded','false'); } }, { passive:true });
+    ov.addEventListener('click', e=>{ if(!side.contains(e.target)) shutNav(); });
+    ov.addEventListener('scroll', ()=>{ if(side.classList.contains('open')) shutNav(); }, { passive:true });
   }
   if(tab) SET_TAB = tab;
   ov.classList.add('open');
+  document.body.classList.add('set-open');
+  if(typeof syncMobileBar === 'function') syncMobileBar();
   renderDock();            // 设置页里的那份底部导航（#dockSet2）也要画上，并刷新选中态
   paintSettings();
 }
@@ -15430,7 +15467,6 @@ function paintSettings(keepScroll){
   if(prevTab !== SET_TAB){ setRemindReady = false; setAiReady = false; remindRepaintHook = null; }
   nav.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on', b.dataset.st === SET_TAB));
   head.textContent = setTabName(SET_TAB);
-  const pickLabel = $('#setPickLabel'); if(pickLabel) pickLabel.textContent = setTabName(SET_TAB);
   const ovEl = $('#setOv');
   if(ovEl && prevTab !== SET_TAB) ovEl.scrollTop = 0;   // 手机上滚的是整个浮层
   pane.innerHTML = `<div class="set-inner">${setPaneHtml(SET_TAB)}</div>`;
@@ -19031,10 +19067,30 @@ function pomoSet(k, v){
   const home = document.getElementById('mHome');
   const setBtn = document.getElementById('mSet');
   const addBtn = document.getElementById('mNew');
-  const syncHome = ()=>{ if(home) home.classList.toggle('on', !!S.shelfOpen); };
-  if(home) home.onclick = ()=>{ toggleShelf(); syncHome(); };
-  if(setBtn) setBtn.onclick = ()=>{ try{ openSettings(); }catch(e){} };
+  const inSet = ()=> document.body.classList.contains('set-open');
+  const syncHome = ()=>{
+    const so = inSet();
+    if(home) home.classList.toggle('on', so ? false : !!S.shelfOpen);
+    if(setBtn){
+      setBtn.classList.toggle('on', so);
+      const label = so ? '关闭设置' : '设置';
+      setBtn.title = label; setBtn.setAttribute('aria-label', so ? '关闭设置' : '打开设置');
+    }
+    if(addBtn){ addBtn.title = so ? '新建笔记并关闭设置' : '新建笔记'; }
+  };
+  // 设置浮层打开 / 关闭时也要重算（openSettings / closeSettings 会调）
+  window.syncMobileBar = syncHome;
+  if(home) home.onclick = ()=>{
+    if(inSet()) closeSettings();
+    toggleShelf(); syncHome();
+  };
+  if(setBtn) setBtn.onclick = ()=>{
+    if(inSet()){ try{ closeSettings(); }catch(e){} }
+    else { try{ openSettings(); }catch(e){} }
+    syncHome();
+  };
   if(addBtn) addBtn.onclick = ()=>{
+    if(inSet()){ try{ closeSettings(); }catch(e){} }
     try{ newNote(); }catch(e){}
     if(window.innerWidth <= 640) document.body.classList.add('m-read');
     syncHome();

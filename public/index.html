@@ -3168,10 +3168,14 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   /* 进了笔记页就收起，别挡正文 */
   body.m-read .m-bar{transform:translateY(150%);opacity:0;pointer-events:none}
   /* 设置是整屏浮层（z-index:150），这里把三键抬到浮层之上，设置页里也能一键回列表 / 新建 */
+  /* 媒体库 / 关系图整屏页：底部三键也保留（Home / 设置 / 新建） */
+  body.m-view .m-bar{transform:none;opacity:1;pointer-events:auto}
   body.set-open .m-bar, body.set-open.m-read .m-bar{
     z-index:152;transform:none;opacity:1;pointer-events:auto;
   }
   body.m-read .m-scrim{display:none}
+  /* 媒体库 / 关系图也是白底整屏：底部同样垫一层同色渐隐 */
+  body.m-view .m-scrim{display:block;--sc:var(--surface)}
   /* 设置页铺的是 --surface（纯白），遮罩换成同色才不会看得出灰带；
      浮层本身 z-index:150，遮罩得抬到它上面（仍在三键之下）才盖得住正文 */
   body.set-open .m-scrim{display:block;--sc:var(--surface);z-index:151}
@@ -3194,6 +3198,9 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   .m-fab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round}
   /* 待办日程页：底部只留 Home（＋ 在右），设置齿轮在这里不出现 */
   body.m-todo #mSet{display:none}
+  /* 媒体库 / 关系图：底部三键压在上面，内容给自己留出位置 */
+  body.m-view .view-pad{padding-bottom:calc(124px + env(safe-area-inset-bottom))}
+  body.m-view .graph-zoom{bottom:calc(96px + env(safe-area-inset-bottom))}
   /* 底部三键已经承担了「展开书架 / 新建」，列表头这两颗就收起来，标题也更宽 */
   .nl-hd .nl-open, .nl-hd .nl-new,
   body.shelf-collapsed .nl-hd .nl-open, body.shelf-collapsed .nl-hd .nl-new{display:none}
@@ -3501,7 +3508,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.11', at: '2026-11-22 03:02' };
+window.IVY_BUILD = { id: '2.12', at: '2026-11-22 03:08' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -6967,6 +6974,8 @@ function renderAll(){
 function renderMain(){
   closeExportPanel();
   paperActions.innerHTML = '';
+  // 媒体库 / 关系图在手机上也是整屏页（带 m-read），底部浮条要单独放出来
+  document.body.classList.toggle('m-view', S.view === 'media' || S.view === 'graph');
   if(S.view!=='notes'){
     // 手机上 .fmt-bar 会被挪到 .paper 顶部常驻，切到待办 / 媒体库 / 关系图时得摘掉，
     // 否则待办列表上面顶着一排 Markdown 按钮

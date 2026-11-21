@@ -2331,15 +2331,13 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   color:rgb(var(--ink) / .34);
 }
 [data-theme=dark] .pomo-bg{color:rgb(var(--ink) / .48)}
+/* 番茄本体：不要外圈描边，红色就是「水位」；叶子固定在最上面不变 */
 .pomo-bg-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.pomo-bg-body{fill:rgb(var(--ink) / .05);stroke:rgb(var(--ink) / .16);stroke-width:2.6;stroke-linejoin:round}
-.pomo-bg-stem{fill:none;stroke:rgb(var(--ivy) / .55);stroke-width:6;stroke-linecap:round}
-.pomo-bg-leaf{fill:rgb(var(--ivy) / .42);stroke:none}
-.pomo-bg-fill{fill:rgb(214 66 42 / .8);transition:transform .45s linear}
-[data-theme=dark] .pomo-bg-fill{fill:rgb(214 66 42 / .78)}
-.pomo.rest .pomo-bg-art .pomo-bg-fill{fill:rgb(216 132 46 / .82)}
-.pomo.rest .pomo-bg-art .pomo-bg-stem{stroke:#e2924c99}
-.pomo.rest .pomo-bg-art .pomo-bg-leaf{fill:#e2924c66}
+.pomo-bg-body{fill:rgb(224 69 58 / .1);stroke:none}
+.pomo-bg-stem{fill:none;stroke:#2f8f43;stroke-width:6;stroke-linecap:round}
+.pomo-bg-leaf{fill:#3ea152;stroke:none}
+.pomo-bg-fill{fill:#e0453a;transition:transform .5s linear}
+[data-theme=dark] .pomo-bg-fill{fill:#cf3b30}
 .pomo-bg-time{font-size:18px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;
   letter-spacing:.01em;position:relative;transform:translateY(3px);color:rgb(var(--ink) / .62);
   transition:color .3s}
@@ -2381,7 +2379,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .pomo-acts button:hover{background:rgb(var(--hover))}
 .pomo-stat{margin-top:10px;padding-top:9px;border-top:.5px solid rgb(var(--line));font-size:11px;color:rgb(var(--faint));text-align:center}
 @media (max-width:640px){
-  .pomo-bg{right:6px;bottom:54px;width:74px;height:74px;z-index:86}
+  /* 让开底部浮条，别贴在 ＋ 上面 */
+  .pomo-bg{right:8px;bottom:calc(104px + env(safe-area-inset-bottom));width:78px;height:78px;z-index:86}
   .pomo-bg-time{font-size:14.5px;transform:translateY(2px)}
   .pomo-bg-label{bottom:10px;font-size:6.5px;letter-spacing:.1em}
   .pomo-panel{right:10px;top:42px;width:min(250px,86vw)}
@@ -3508,7 +3507,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.12', at: '2026-11-22 03:08' };
+window.IVY_BUILD = { id: '2.13', at: '2026-11-22 03:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -19039,7 +19038,7 @@ if('serviceWorker' in navigator){
 
 /* ============ 番茄钟：专注 25 / 休息 5，可自调，刷新不丢 ============ */
 const POMO_KEY = 'ivy.pomo.v1';
-const POMO_BG_H = 92; // 番茄注满：fill 矩形向下平移的距离（0=全空，POMO_BG_H=全满）
+const POMO_BG_H = 92; // 红色水面：fill 矩形向下平移的距离（0=整颗红，POMO_BG_H=红全没了）
 function pomoDefaults(){
   return { focus:25, rest:5, phase:'focus', running:false, endAt:0,
            remain:25 * 60000, auto:true, done:0, day:new Date().toDateString() };
@@ -19066,9 +19065,12 @@ function pomoPaint(){
   $('#pomoBgLabel').textContent = (isFocus ? '专注' : '休息') + (POMO.running ? '中' : ' · 暂停');
   const fillEl = $('#pomoBgFill');
   if(fillEl){
-    const fr = Math.min(1, Math.max(0, 1 - left / total)); // 已流逝比例：时间走完番茄正好注满
-    fillEl.style.transform = 'translateY(' + (POMO_BG_H * (1 - fr)).toFixed(1) + 'px)';
-    bg.classList.toggle('filled', fr >= 0.66); // 注满到字体位置后，数字转白保证可读
+    /* 像沙漏：一开始整颗红，时间越走红色水位越低，倒计时归零时红全没了。
+       （rect 整体往下平移，被番茄轮廓裁掉上半截，剩下的就是「剩下的红」） */
+    const remain = Math.min(1, Math.max(0, left / total));
+    fillEl.style.transform = 'translateY(' + ((1 - remain) * POMO_BG_H).toFixed(1) + 'px)';
+    // 水位落到数字下面后，数字转深色，不然白字压在浅底上看不清
+    bg.classList.toggle('filled', remain >= 0.62);
   }
   $('#pomoNow').textContent = txt;
   $('#pomoToggle').textContent = POMO.running ? '暂停'

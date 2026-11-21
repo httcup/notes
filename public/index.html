@@ -2738,7 +2738,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   /* 「更多」就在关闭旁边；点它把分类菜单拉下来（不是下拉选择框） */
   .set-more{display:flex;gap:4px;padding:0 10px 0 7px}
   .set-more svg{width:17px;height:17px;fill:currentColor;stroke:none}
-  .set-more[aria-expanded=true]{background:rgb(var(--ink));color:rgb(var(--surface))}
+  .set-more[aria-expanded=true]{background:rgb(var(--ink) / .1);color:rgb(var(--ink));box-shadow:inset 0 0 0 1px rgb(var(--ink) / .08)}
   #setMenu{display:none}
   /* 分类不再横着排一长条，也不占一行：收进「更多」，点开是一张悬浮菜单 */
   .set-nav{
@@ -3462,7 +3462,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: 'v249', at: '2026-11-21 23:58' };
+window.IVY_BUILD = { id: 'v250', at: '2026-11-22 00:12' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

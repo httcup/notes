@@ -685,6 +685,14 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .pa-btn:active{background:rgb(var(--hover));color:rgb(var(--ink))}
 .pa-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pa-btn.on{background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
+/* 顶部番茄按钮：和右下角那只同一套配色（红番茄 + 绿叶），不做描边 */
+.pa-btn.pa-pomo svg{overflow:visible}
+.pa-btn.pa-pomo .pi-body{fill:rgb(224 69 58 / .18);stroke:none}
+.pa-btn.pa-pomo .pi-fill{fill:#e0453a;stroke:none;transition:transform .5s linear}
+.pa-btn.pa-pomo .pi-stem{fill:none;stroke:#2f8f43;stroke-width:7;stroke-linecap:round}
+.pa-btn.pa-pomo .pi-leaf{fill:#3ea152;stroke:none}
+[data-theme=dark] .pa-btn.pa-pomo .pi-body{fill:rgb(224 69 58 / .22)}
+[data-theme=dark] .pa-btn.pa-pomo .pi-fill{fill:#cf3b30}
 
 .content-row{flex:1;display:flex;min-height:0;position:relative}
 
@@ -2940,6 +2948,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
     width:min(236px,78vw);
     max-height:calc(100dvh - 118px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
+  /* 抽屉头部：设置（底部浮条有齿轮）和「收起工作区」（点 Home 或点外面就能收）在手机上多余 */
+  #btnSettings, #btnShelf{display:none}
   /* 手机上书架改成抽屉：展开时盖在笔记上，而不是把正文挤成一条 */
   .shelf{
     position:fixed;left:0;top:0;bottom:0;z-index:80;
@@ -3507,7 +3517,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.13', at: '2026-11-22 03:12' };
+window.IVY_BUILD = { id: '2.14', at: '2026-11-22 03:18' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4576,12 +4586,17 @@ function openViewMenu(anchor, opts){
   try{ todo = collectTodos().filter(t=>!t.done).length; }catch(e){}
   const after = opts && opts.after;
   const go = fn => ()=>{ if(after) after(); fn(); };
-  popover(anchor, [
-    ['笔记', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
-    ['待办日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))],
+  // 手机：回全部笔记 / 待办日程走底部 Home 与抽屉里的「待办日程」，这个菜单只留媒体库、关系图
+  const mobile = window.innerWidth <= 640;
+  const items = [
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
     ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
-  ], {align:'left'});
+  ];
+  if(!mobile) items.unshift(
+    ['笔记', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
+    ['待办日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))]
+  );
+  popover(anchor, items, {align:'left'});
 }
 function renderList(){
   const host = $('#noteList'); if(!host) return;
@@ -7279,7 +7294,18 @@ function renderEditor(){
   const n = S.active ? noteById(S.active) : null;
 
   paperActions.innerHTML = `
-    <button class="pa-btn" id="paPomo" title="番茄钟：设置时长、开始 / 暂停">${ic('tomato')}</button>
+    <button class="pa-btn pa-pomo" id="paPomo" title="番茄钟：设置时长、开始 / 暂停">
+      <svg class="pomo-ic" viewBox="10 2 100 110" aria-hidden="true">
+        <defs><clipPath id="paPomoClip"><path d="M60 30C86 27 106 45 106 68C106 92 85 108 60 108C35 108 14 92 14 68C14 45 34 27 60 30Z"/></clipPath></defs>
+        <path class="pi-body" d="M60 30C86 27 106 45 106 68C106 92 85 108 60 108C35 108 14 92 14 68C14 45 34 27 60 30Z"/>
+        <g clip-path="url(#paPomoClip)"><rect class="pi-fill" id="paPomoFill" x="6" y="20" width="108" height="92"/></g>
+        <path class="pi-stem" d="M60 40C59 33 60 26 62 20"/>
+        <path class="pi-leaf" d="M60 41Q44.4 46.1 21.4 35.6Q46.4 31.8 60 41Z"/>
+        <path class="pi-leaf" d="M60 41Q45.5 33.3 37.1 9.4Q57.2 24.9 60 41Z"/>
+        <path class="pi-leaf" d="M60 41Q62.8 24.9 82.9 9.4Q74.5 33.3 60 41Z"/>
+        <path class="pi-leaf" d="M60 41Q73.6 31.8 98.6 35.6Q75.6 46.1 60 41Z"/>
+      </svg>
+    </button>
     <button class="pa-btn" id="paMore" title="更多">${ic('more')}</button>`;
   $('#paMore').onclick=(e)=>openNoteMenu(e.currentTarget);
 
@@ -19071,6 +19097,9 @@ function pomoPaint(){
     fillEl.style.transform = 'translateY(' + ((1 - remain) * POMO_BG_H).toFixed(1) + 'px)';
     // 水位落到数字下面后，数字转深色，不然白字压在浅底上看不清
     bg.classList.toggle('filled', remain >= 0.62);
+    // 顶部那颗小番茄同步一条水位，点开面板前也能看出还剩多少
+    const paFill = document.getElementById('paPomoFill');
+    if(paFill) paFill.style.transform = 'translateY(' + ((1 - remain) * POMO_BG_H).toFixed(1) + 'px)';
   }
   $('#pomoNow').textContent = txt;
   $('#pomoToggle').textContent = POMO.running ? '暂停'

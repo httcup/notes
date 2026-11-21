@@ -1880,6 +1880,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 /* 收起时：右边缘一列随笔记长度变化的短刻度，一根对应一个标题，当前位置高亮 */
 .outline-zone{position:fixed;right:0;top:58px;bottom:0;width:26px;z-index:45}
 .ol-mini{position:absolute;right:12px;top:34px;width:16px;transition:opacity .18s}
+/* 手机专属的右边缘悬浮条（桌面用不上，桌面靠刻度 + hover） */
+.ol-handle{display:none}
 .ol-tick{
   position:absolute;right:0;height:1px;padding:0;border:0;border-radius:1px;
   background:rgb(var(--ink)/.28);
@@ -2901,20 +2903,36 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   .outline-head{padding:2px 2px 6px}
   .ol-item{padding-top:6px;padding-bottom:6px}
 }
-/* 只在手机（<=640px）去掉右边缘的刻度悬浮图标，大纲只从顶部按钮进出；
-   iPad 竖屏（744px 起）不能落进这个区间，否则边缘悬浮图标会被误杀（v33 修复） */
+/* 手机（<=640px）：右边缘换成一颗常驻的「悬浮条」，
+   比一列看不见的刻度好点，也不会和正文的滑动手势打架。
+   iPad 竖屏（744px 起）不落进这个区间，仍是电脑那套刻度。 */
 @media (max-width:640px){
-  /* 手机上也让大纲在右边缘悬浮（和电脑一样）：收起时是一列刻度，点一下滑出卡片。
-     只有刻度那一条吃触摸事件，整列不接事件，否则正文右侧一整条都滑不动 */
   .outline-zone{
-    display:block;pointer-events:none;width:38px;z-index:46;
+    display:block;pointer-events:none;width:30px;z-index:56;
     top:calc(92px + env(safe-area-inset-top));   /* 让开标签栏 50 + Markdown 工具条 38 */
     bottom:calc(10px + env(safe-area-inset-bottom));
   }
-  .outline-zone .ol-mini{pointer-events:auto;right:9px;width:26px;top:14px}
-  .outline-zone .ol-tick{right:4px;height:2px;border-radius:2px}
-  .outline-zone .ol-tick.li{height:1.5px}
-  .outline-zone .ol-tick.on{transform:scaleX(1.1)}
+  /* 手机上不用刻度列：只留悬浮条 */
+  .outline-zone .ol-mini{display:none}
+  .ol-handle{
+    position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:56;
+    display:grid;place-items:center;pointer-events:auto;
+    width:30px;height:74px;padding:0;border:0;border-radius:15px 0 0 15px;
+    background:rgb(var(--surface) / .92);color:rgb(var(--ink-2));
+    -webkit-backdrop-filter:blur(14px) saturate(150%);
+    backdrop-filter:blur(14px) saturate(150%);
+    box-shadow:-3px 0 14px rgb(16 24 32 / .12), inset 1px 1px 0 rgb(255 255 255 / .7), inset 0 0 0 .5px rgb(var(--ink) / .07);
+    transition:opacity .16s,transform .16s;
+  }
+  [data-theme=dark] .ol-handle{
+    background:rgb(var(--surface) / .92);
+    box-shadow:-3px 0 16px rgb(0 0 0 / .4), inset 1px 1px 0 rgb(255 255 255 / .08), inset 0 0 0 .5px rgb(255 255 255 / .12);
+  }
+  .ol-handle svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round}
+  .ol-handle:active{transform:translateY(-50%) scale(.94)}
+  /* 卡片展开时悬浮条让位 */
+  body.ol-open .ol-handle{opacity:0;pointer-events:none}
+  body.ol-hidden .ol-handle{display:none}
   /* 展开时卡片从右边滑出：顶部避开标签栏与工具条，底部避开 Home 手势条 */
   .outline{
     right:6px;top:calc(94px + env(safe-area-inset-top));
@@ -3234,6 +3252,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <div class="outline-zone" id="outlineZone" title="大纲：靠近查看，点击固定">
           <div class="ol-mini" id="olMini"></div>
         </div>
+        <!-- 手机右边缘的悬浮条：独立按钮，不继承 .outline-zone 的 pointer-events:none -->
+        <button class="ol-handle" id="olHandle" type="button" title="大纲" aria-label="展开大纲">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        </button>
         <aside class="outline" id="outline"></aside>
       </div>
     </section>
@@ -3475,7 +3497,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.8', at: '2026-11-22 01:06' };
+window.IVY_BUILD = { id: '2.9', at: '2026-11-22 01:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11733,15 +11755,18 @@ function renderOutline(){
 }
 
 /* 手机 / iPad：点右上角「大纲」按钮或右边缘空白处展开、收起浮层 */
-function setOutlinePanel(on){
+function setOutlinePanel(on, opts){
   on = !!on;
+  /* pin:false = 只是「滑出来看一眼」（手机上点悬浮条走这条），不点亮图钉、不存成固定态，
+     否则下次打开 App 大纲会自己弹在那儿 */
+  const keep = !(opts && opts.pin === false);
   if(on) document.body.classList.remove('ol-force-close');
   document.body.classList.toggle('ol-open', on);
-  S.outlineOpen = on;                       // 图钉亮不亮跟着走，两处永远一致
-  outlineEl.classList.toggle('pinned', on);
-  document.body.classList.toggle('outline-pinned', on);
+  S.outlineOpen = keep ? on : false;        // 图钉亮不亮跟着走，两处永远一致
+  outlineEl.classList.toggle('pinned', keep && on);
+  document.body.classList.toggle('outline-pinned', keep && on);
   const pin = outlineEl.querySelector('#olPin');
-  if(pin) pin.classList.toggle('on', on);
+  if(pin) pin.classList.toggle('on', keep && on);
   const btn = document.getElementById('paOutline');
   if(btn) btn.classList.toggle('on', on);
   save();
@@ -11786,14 +11811,40 @@ document.getElementById('outlineZone').addEventListener('click', e=>{
   if(best && bd <= 9){ jumpToHeading(best.dataset.h); updateOutlineActive(); }
   else toggleOutlinePin();
 });
+/* 手机右边缘的悬浮条：点一下把大纲滑出来，再点一下 / 点正文收回。
+   不走图钉固定（pin:false），否则下次打开 App 大纲会自己弹在那儿。 */
+function toggleOutlinePeek(){
+  if(document.body.classList.contains('ol-open')) closeOutlinePanel();
+  else setOutlinePanel(true, { pin:false });
+}
+(function(){
+  const h = document.getElementById('olHandle');
+  if(!h) return;
+  let last = 0;
+  const tap = ()=>{
+    const t = Date.now();
+    if(t - last < 320) return;      // touchend 已经处理过就别再让 click 来一遍
+    last = t;
+    toggleOutlinePeek();
+  };
+  h.addEventListener('touchend', e=>{ e.preventDefault(); e.stopPropagation(); tap(); }, { passive:false });
+  h.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); tap(); });
+  // 触屏点完把残留的 hover 态清掉（iOS 的合成 mouseenter 会把刻度永久藏起来）
+  document.addEventListener('touchend', ()=>{ document.body.classList.remove('ol-peek'); }, { passive:true });
+})();
+
 /* 触屏：点面板外面收起，避免一直盖住正文 */
 {
-  document.addEventListener('pointerdown', e=>{
+  const closeIfOutside = (target)=>{
     if(!document.body.classList.contains('ol-open')) return;
     if(!(OL_TOUCH || window.innerWidth <= 640)) return;
-    if(e.target.closest && (e.target.closest('#outline') || e.target.closest('#outlineZone') || e.target.closest('#paOutline'))) return;
+    if(target && target.closest && (target.closest('#outline') || target.closest('#outlineZone') || target.closest('#paOutline'))) return;
     setOutlinePanel(false);
-  }, true);
+  };
+  document.addEventListener('pointerdown', e=>closeIfOutside(e.target), true);
+  // iOS 上点正文（尤其落在可编辑区）时 pointerdown 不一定来，补一个 touchend：
+  // 点正文就把大纲收回去，和用户预期一致
+  document.addEventListener('touchend', e=>closeIfOutside(e.target), true);
 }
 /* 鼠标移到卡片上时，刻度也让位；滚动时同步高亮当前标题 */
 outlineEl.addEventListener('mouseenter', ()=>document.body.classList.add('ol-peek'));

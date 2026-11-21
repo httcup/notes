@@ -1442,6 +1442,15 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   .nl-rows .tsi .t{font-size:14.5px}
   .nl-rows .tsi .src,.nl-rows .tsi .tm{font-size:11.5px}
   .nl-rows .tsi-bell{opacity:.55}
+  /* 手机没有 hover，右侧的归档 / 恢复 / 提醒得做成看得见、点得准的按钮：
+     20px 的小图标在手指下几乎点不到，之前手机上等于「没有归档」 */
+  .nl-rows .tsi-arch,.nl-rows .tsi-arch-restore,.nl-rows .tsi-bell{
+    width:30px;height:30px;flex:0 0 auto;margin-top:-1px;border-radius:9px;opacity:1;
+  }
+  .nl-rows .tsi-arch,.nl-rows .tsi-arch-restore{background:rgb(var(--ink)/.06);color:rgb(var(--ink-2))}
+  .nl-rows .tsi-arch svg,.nl-rows .tsi-arch-restore svg{width:15px;height:15px}
+  .nl-rows .tsi-arch.del-armed{background:rgb(var(--ivy)/.18);color:rgb(var(--ivy))}
+  .nl-rows .tsi-arch-restore{color:rgb(var(--ivy-ink))}
 }
 
 /* ---- 中栏：标签列表（点「标签」进这一页，再点某个标签看它的笔记） ---- */
@@ -3243,6 +3252,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <button class="m-btn" id="mHome" title="笔记本栏" aria-label="展开或收起笔记本栏">
       <svg viewBox="0 0 24 24"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>
     </button>
+    <button class="m-btn" id="mTodo" title="待办日程" aria-label="打开待办日程">
+      <svg viewBox="0 0 24 24"><path d="M4.2 6.3l1.5 1.5 2.6-2.9"/><path d="M4.2 12.3l1.5 1.5 2.6-2.9"/><path d="M11.4 6.6h8.4M11.4 12.6h8.4M4.4 18.2h15.4"/></svg>
+    </button>
     <button class="m-btn" id="mSet" title="设置" aria-label="打开设置">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -3462,7 +3474,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.5', at: '2026-11-22 00:18' };
+window.IVY_BUILD = { id: '2.6', at: '2026-11-22 00:34' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4654,6 +4666,16 @@ function renderTodoList(){
   rows.innerHTML = todoShelf();
   rows.scrollTop = keepTop;
   bindTodoBlock(rows, ()=>{ renderList(); renderShelf(); });
+  // 手机上没有 hover，归档图标容易被当成装饰：第一次进日程且有已完成项时点一句
+  if(window.innerWidth <= 640){
+    try{
+      const done = todoGroups(collectTodos()).done.length;
+      if(done && !localStorage.getItem('ivy.archHint')){
+        localStorage.setItem('ivy.archHint', '1');
+        setTimeout(()=>toast('已完成待办右侧的方框图标，双击即可归档'), 500);
+      }
+    }catch(e){}
+  }
 }
 
 /* ---------- 中栏：标签列表 ----------
@@ -6905,6 +6927,8 @@ function renderAll(){
   document.body.classList.toggle('shelf-collapsed', collapsed);
   $('#shelfOpen').classList.toggle('show', collapsed);
   renderShelf(); renderList(); renderDock(); renderTabs(); renderMain();
+  // 底部浮条的「待办日程」高亮跟着视图走
+  if(typeof window.syncMobileBar === 'function') window.syncMobileBar();
 }
 
 function renderMain(){
@@ -19065,12 +19089,15 @@ function pomoSet(k, v){
   const bar = document.getElementById('mBar');
   if(!bar) return;
   const home = document.getElementById('mHome');
+  const todoBtn = document.getElementById('mTodo');
   const setBtn = document.getElementById('mSet');
   const addBtn = document.getElementById('mNew');
   const inSet = ()=> document.body.classList.contains('set-open');
+  const inTodo = ()=> (S.view === 'notes' && S.scope === 'todo');
   const syncHome = ()=>{
     const so = inSet();
     if(home) home.classList.toggle('on', so ? false : !!S.shelfOpen);
+    if(todoBtn) todoBtn.classList.toggle('on', so ? false : inTodo());
     if(setBtn){
       setBtn.classList.toggle('on', so);
       const label = so ? '关闭设置' : '设置';
@@ -19083,6 +19110,12 @@ function pomoSet(k, v){
   if(home) home.onclick = ()=>{
     if(inSet()) closeSettings();
     toggleShelf(); syncHome();
+  };
+  if(todoBtn) todoBtn.onclick = ()=>{
+    if(inSet()){ try{ closeSettings(); }catch(e){} }
+    if(inTodo()){ try{ switchView('notes'); }catch(e){} }   // 已经在待办里：再点一下回笔记
+    else { try{ switchView('todo'); }catch(e){} }
+    syncHome();
   };
   if(setBtn) setBtn.onclick = ()=>{
     if(inSet()){ try{ closeSettings(); }catch(e){} }

@@ -3192,6 +3192,8 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   }
   .m-fab:active{transform:scale(.94)}
   .m-fab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round}
+  /* 待办日程页：底部只留 Home（＋ 在右），设置齿轮在这里不出现 */
+  body.m-todo #mSet{display:none}
   /* 底部三键已经承担了「展开书架 / 新建」，列表头这两颗就收起来，标题也更宽 */
   .nl-hd .nl-open, .nl-hd .nl-new,
   body.shelf-collapsed .nl-hd .nl-open, body.shelf-collapsed .nl-hd .nl-new{display:none}
@@ -3499,7 +3501,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.10', at: '2026-11-22 02:55' };
+window.IVY_BUILD = { id: '2.11', at: '2026-11-22 03:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4580,6 +4582,8 @@ function renderList(){
   const sc = S.scope || 'all';
   const inTodo = sc === 'todo';
   const inTags = sc === 'tags';
+  // 手机上待办日程页要更干净：底部浮条只留 Home，设置齿轮在这页收起来
+  document.body.classList.toggle('m-todo', !!inTodo && !trashView && S.view === 'notes');
   host.classList.toggle('nl-todo', inTodo || inTags || trashView);
   const hide = S.view !== 'notes';
   host.classList.toggle('hidden', hide);
@@ -4684,9 +4688,13 @@ function renderTodoList(){
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = '待办日程';
   if(cEl) cEl.textContent = String(c.open || 0);
-  // 不在「全部笔记」里，中栏左上角给一枚「‹ 全部」，手机上一点就回去
+  // 「‹ 全部」只在电脑/平板上给：手机上去掉这颗按钮，回全部笔记走底部 Home → 笔记本栏
   const bkEl = $('#nlBack');
-  if(bkEl){ bkEl.classList.add('show'); bkEl.onclick = ()=>goAllNotes(); }
+  if(bkEl){
+    const showBack = window.innerWidth > 640;
+    bkEl.classList.toggle('show', showBack);
+    bkEl.onclick = showBack ? ()=>goAllNotes() : null;
+  }
   const keepTop = rows.scrollTop;
   rows.innerHTML = todoShelf();
   rows.scrollTop = keepTop;

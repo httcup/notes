@@ -3179,6 +3179,8 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   .todo-mobile{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
   /* 首次打开那条「添加到主屏幕」别和浮条打架 */
   .ios-hint{bottom:calc(84px + env(safe-area-inset-bottom))}
+  /* 提示条也抬到浮条上面，否则「已归档」「再点一下」会被三个按钮压住 */
+  .toasts{bottom:calc(86px + env(safe-area-inset-bottom))}
 }
 </style>
 <script>
@@ -3474,7 +3476,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.6', at: '2026-11-22 00:34' };
+window.IVY_BUILD = { id: '2.7', at: '2026-11-22 00:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches

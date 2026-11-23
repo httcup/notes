@@ -28,10 +28,33 @@ function str(v, max) {
   return typeof v === 'string' ? v.slice(0, max) : '';
 }
 
+/* 账号级零散状态：现在只有「待办归档」列表。
+   archiveAt 是整块状态的版本号（毫秒），谁新用谁的，简单可靠 */
+function safePrefs(row) {
+  if (!row || !row.json) return null;
+  let v;
+  try { v = JSON.parse(row.json); } catch (e) { return null; }
+  if (!v || typeof v !== 'object') return null;
+  const list = Array.isArray(v.todoArchived)
+    ? v.todoArchived.slice(0, 2000).map((a) => ({
+        k: str(a && a.k, 300),
+        noteId: str(a && a.noteId, 80),
+        noteTitle: str(a && a.noteTitle, 200),
+        text: str(a && a.text, 400),
+        due: Number(a && a.due) || 0,
+        doneDate: Number(a && a.doneDate) || 0,
+        at: Number(a && a.at) || 0
+      })).filter((a) => a.k)
+    : [];
+  return { todoArchived: list, archiveAt: Number(v.archiveAt) || Number(row.updated_at) || 0 };
+}
+
 async function readAll(env, uid) {
-  const [notesRes, nbsRes] = await env.DB.batch([
+  const [notesRes, nbsRes, prefsRes] = await env.DB.batch([
     env.DB.prepare('SELECT * FROM notes WHERE user_id = ?1').bind(uid),
-    env.DB.prepare('SELECT * FROM notebooks WHERE user_id = ?1').bind(uid)
+    env.DB.prepare('SELECT * FROM notebooks WHERE user_id = ?1').bind(uid),
+    // 账号级零散状态（待办归档等）：老账号还没这行，取不到就是空
+    env.DB.prepare('SELECT json, updated_at FROM user_prefs WHERE user_id = ?1').bind(uid)
   ]);
   const notes = (notesRes.results || []).map((r) => ({
     id: r.id,
@@ -55,7 +78,7 @@ async function readAll(env, uid) {
     lock: safeLock(r.lock),            // 笔记本密码锁（salt/hash），没锁就是 null
     updatedAt: r.updated_at || 0
   }));
-  return { notes, notebooks, serverTime: Date.now() };
+  return { notes, notebooks, prefs: safePrefs(prefsRes && prefsRes.results && prefsRes.results[0]), serverTime: Date.now() };
 }
 
 export async function onRequest({ request, env }) {
@@ -139,6 +162,24 @@ export async function onRequest({ request, env }) {
             hasLock
           )
         );
+      }
+
+      // 待办归档列表：整块按 archiveAt 后写覆盖（归档只在本机存过，换设备就空了）
+      const prefs = body.prefs;
+      const prefsAt = Math.max(0, Number(prefs && prefs.archiveAt) || 0);
+      if (prefs && typeof prefs === 'object' && prefsAt > 0) {
+        const clean = safePrefs({ json: JSON.stringify(prefs), updated_at: prefsAt });
+        if (clean && Array.isArray(clean.todoArchived)) {
+          stmts.push(
+            env.DB.prepare(
+              `INSERT INTO user_prefs (user_id, json, updated_at) VALUES (?1, ?2, ?3)
+               ON CONFLICT(user_id) DO UPDATE SET
+                 json = excluded.json,
+                 updated_at = excluded.updated_at
+               WHERE excluded.updated_at > user_prefs.updated_at`
+            ).bind(uid, JSON.stringify(clean), prefsAt)
+          );
+        }
       }
 
       if (stmts.length) await env.DB.batch(stmts);

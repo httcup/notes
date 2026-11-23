@@ -3748,7 +3748,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.52', at: '2026-11-23 14:40' };
+window.IVY_BUILD = { id: '2.54', at: '2026-11-23 14:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -3898,11 +3898,16 @@ function normalizeState(s){
       }
       if(steps >= 12) nb.parentId = null;
     });
-    // 待办归档：只存本地快照（正文里那行 `- [x]` 不动，只是不再列出来）
+    // 待办归档：以前只存本地快照（正文里那行 `- [x]` 不动，只是不再列出来），
+    // 现在会跟账号同步，todoArchivedAt 是这份列表的版本号
     if(!Array.isArray(s.todoArchived)) s.todoArchived = [];
     else s.todoArchived = s.todoArchived.filter(a => a && typeof a.k === 'string' && a.k)
       .map(a => ({ k:String(a.k).slice(0,300), noteId:String(a.noteId||''), noteTitle:String(a.noteTitle||''),
                    text:String(a.text||'').slice(0,400), due:+a.due||0, doneDate:+a.doneDate||0, at:+a.at||Date.now() }));
+    if(!Number.isFinite(+s.todoArchivedAt)) s.todoArchivedAt = 0;
+    // 老数据：归档列表是本机攒的、还没有版本号。给个时间戳，登录后尽快推上云端，
+    // 否则换设备拉到的永远是空的
+    if(!s.todoArchivedAt && s.todoArchived.length){ s.todoArchivedAt = Date.now(); PREFS_NEEDS_PUSH = true; }
     return s;
 }
 /* ========== 历史版本 ==========
@@ -4223,6 +4228,7 @@ function save(){
   if(typeof calTodoPushSoon === 'function'){ try{ calTodoPushSoon(); }catch(e){} }   // 待办改了就推去苹果日历
   if(typeof queueSync === 'function') queueSync();
 }
+var PREFS_NEEDS_PUSH = false;   // load() 里发现本地归档还没上云，就在启动后补推一次
 S = load();
 loadVersions();
 
@@ -5570,7 +5576,7 @@ function todoArchivedList(){
     const k = todoKey(a);
     if(a.k !== k){ a.k = k; fixed = true; }
   });
-  if(fixed) save();
+  if(fixed){ S.todoArchivedAt = Date.now(); save(); }
   return S.todoArchived.slice().sort((a,b)=> (b.at||0) - (a.at||0));
 }
 function isTodoArchived(t){
@@ -5592,12 +5598,14 @@ function archiveTodo(t){
     doneDate: t.doneDate || 0,
     at: Date.now()
   });
+  S.todoArchivedAt = Date.now();      // 版本号：同步时整块覆盖，别的设备也能看到
   save();
   paintTodoSurfaces();
   toast('已归档');
 }
 function unarchiveTodo(k){
   S.todoArchived = (S.todoArchived || []).filter(a => a && a.k !== k && todoKey(a) !== k);
+  S.todoArchivedAt = Date.now();
   save();
   paintTodoSurfaces();
   toast('已恢复到待办');
@@ -16004,7 +16012,10 @@ function syncHomeFloat(){
       if(r.width && r.left > 0) HOME_FLOAT_POS = { left: Math.round(r.left), top: Math.round(r.top) };
     }
   }
-  const show = !S.shelfOpen && (S.view || 'notes') !== 'notes' && window.innerWidth > 900;
+  // 只在「没有中栏」的视图里需要它（媒体库 / 关系图）；日程待办有了中栏，
+  // 中栏头上本来就有展开侧栏的按钮，再摆一颗浮动的会正好压在那排图标上
+  const noList = (S.view === 'media' || S.view === 'graph');
+  const show = !S.shelfOpen && noList && window.innerWidth > 900;
   f.classList.toggle('show', show);
   if(show){
     // 没有记录时（一打开就是收起状态）按侧栏宽度算：右侧四个 36 的图标贴着侧栏右边
@@ -16233,6 +16244,8 @@ function localPayload(){
   }));
   return {
     notes: live.concat(tombs),
+    // 账号级零散状态：待办归档（archiveAt 是版本号，服务端后写覆盖）
+    prefs: { todoArchived: Array.isArray(S.todoArchived) ? S.todoArchived : [], archiveAt: Number(S.todoArchivedAt) || 0 },
     notebooks: S.notebooks.map(nb=>({
       id:nb.id, name:nb.name, color:nb.color||'', open:nb.open!==false,
       deleted:!!nb.deleted, updatedAt:nb.updatedAt||0,
@@ -16298,6 +16311,16 @@ function applyRemote(data){
         if(!hasLock) cur.lock = curLock;        // 云端没这个字段，别把本机密码锁抹掉
         changed = true;
       }
+    }
+  }
+  // 待办归档：整块按 archiveAt 后写覆盖（以前只存本机，换设备就变成 0）
+  const remotePrefs = data && data.prefs;
+  if(remotePrefs && Array.isArray(remotePrefs.todoArchived)){
+    const remoteAt = Number(remotePrefs.archiveAt) || 0;
+    if(remoteAt > Number(S.todoArchivedAt || 0)){
+      S.todoArchived = remotePrefs.todoArchived;
+      S.todoArchivedAt = remoteAt;
+      changed = true;
     }
   }
   // 把云端同步过来的标签也记进历史库，之后即使从笔记上摘掉也还能再选
@@ -16405,6 +16428,8 @@ async function pullRemote(){
     renderDock(); updateSyncBadge();
   }
 }
+// 本地有还没上云的归档（老数据迁移）：启动后补推一次
+if(PREFS_NEEDS_PUSH){ try{ queueSync(); }catch(e){} }
 setInterval(pullRemote, 45000);
 document.addEventListener('visibilitychange', ()=>{
   if(!isConnected()) return;

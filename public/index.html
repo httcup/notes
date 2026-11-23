@@ -2098,10 +2098,12 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   .cal-cell{padding:3px 4px;gap:1px}
   .cal-d{font-size:11.5px}
   .cal-cell.today .cal-d{min-width:18px;height:18px;font-size:11px}
-  .cal-l{display:none}
-  .cal-ev{font-size:9.5px;padding:0 3px;line-height:1.5}
-  .cal-ev b{display:none}
-  .cal-ev .dot{width:4px;height:4px}
+  .cal-l{font-size:9px}
+  .cal-cl{gap:3px;min-height:19px}
+  /* 手机格子窄，事件只留「圆点 + 截断标题」，比纯圆点有用 */
+  .cal-ev{font-size:9px;padding:0 2px;gap:2px;line-height:1.5}
+  .cal-ev b{display:block;font-size:9px}
+  .cal-ev .dot{width:3px;height:3px}
   .cal-cell .cal-evs{gap:1px}
   .cal-shelf-hd,.cal-mini{display:none}
 }
@@ -3622,7 +3624,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.16', at: '2026-11-23 10:12' };
+window.IVY_BUILD = { id: '2.17', at: '2026-11-23 10:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -12939,9 +12941,10 @@ function paintCalendar(){
     const evs = groups.get(c.key) || [];
     const shown = evs.slice(0, 3);
     const more = evs.length - shown.length;
+    const narrow = window.innerWidth <= 640;   // 手机格子窄，时间前缀会把标题挤掉，点开再看
     const evHtml = shown.map(ev=>{
       const col = calColor(ev.cal, ev.color);
-      const label = (ev.allDay ? '' : calHm(ev.start) + ' ') + ev.title;
+      const label = (ev.allDay || narrow ? '' : calHm(ev.start) + ' ') + ev.title;
       return `<button class="cal-ev" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
         <i class="dot"></i><b>${esc(label)}</b></button>`;
     }).join('');
@@ -12952,7 +12955,7 @@ function paintCalendar(){
   }).join('');
 
   const note = CAL.err
-    ? `<div class="cal-note">${esc(CAL.err)}　日历是苹果日历的镜像，在 Mac 上跑一次 tools/apple-calendar-sync.py 就会同步上来。</div>`
+    ? `<div class="cal-note">${esc(CAL.err)}　在 Mac 上双击「苹果日历同步」即可更新。</div>`
     : '';
 
   scrollEl.innerHTML = `<div class="cal-wrap">
@@ -13258,7 +13261,9 @@ function switchView(v){
       renderAll(); save();
       return;
     }
-    // 待办 / 媒体库 / 关系图在手机上也是整屏页：先开 m-read 再画，否则主区是 display:none
+    // 待办 / 媒体库 / 关系图 / 日历在手机上也是整屏页：先开 m-read 再画，否则主区是 display:none
+    // 从抽屉里点进来的（比如点「日历」），抽屉得一起收掉，否则整屏页被菜单盖着
+    shelfCloseIfDrawer();
     M_READ_BACK = document.body.classList.contains('m-read');
     document.body.classList.add('m-read');
     renderAll(); save();

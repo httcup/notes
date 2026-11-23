@@ -171,6 +171,17 @@ a{color:inherit;text-decoration:none}
 .nl-hd b{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nl-hd em{font-style:normal;font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
 .nl-hd .nl-r{margin-left:auto;display:flex;gap:2px;flex:0 0 auto}
+/* 标签页：标题前的折叠箭头 + 右上角「新建标签」 */
+.nl-tagfold{
+  width:20px;height:20px;flex:0 0 auto;display:grid;place-items:center;border-radius:5px;
+  color:rgb(var(--faint));transition:transform .18s var(--spring),background .14s,color .14s;
+  transform:rotate(0deg);
+}
+.nl-tagfold.open{transform:rotate(90deg)}
+.nl-tagfold:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
+.nl-tagfold svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nl-newtag{color:rgb(var(--ivy))}
+.nl-newtag:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy))}
 /* 手机上从某个笔记本 / 标签的列表回「全部笔记」：只有窄屏的中栏是整页，才需要这枚返回 */
 .nl-back{
   display:none;align-items:center;gap:1px;flex:0 0 auto;
@@ -586,6 +597,11 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 [data-theme=dark] .build-tag.warn{color:#e8a15c}
 .build-tag .rf{font-size:10px;padding:1px 6px;border-radius:5px;background:rgb(var(--hover));color:inherit;white-space:nowrap}
 .build-tag .rf:hover{background:rgb(var(--ivy-soft))}
+/* 搬到标题行之后：紧贴品牌名，别把名字挤没了 */
+.brand .brand-name{min-width:0}
+.brand .sync-pip{margin-left:1px;padding:0}
+.brand .build-tag{gap:4px}
+@media (max-width:640px){ .brand .build-tag{display:none} }
 
 /* dock */
 .dock{
@@ -645,7 +661,28 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 .avatar:hover{transform:scale(1.06)}
 
 /* ============ paper ============ */
-.main-wrap{flex:1;min-width:0;display:flex;padding:8px 8px 8px 0}.paper{
+.main-wrap{flex:1;min-width:0;display:flex;padding:8px 8px 8px 0;position:relative}
+/* 中栏（笔记列表 / 日程待办）折叠：缝隙上那颗小按钮，点一下让正文占满 */
+.list-collapse{
+  position:absolute;left:-11px;top:14px;z-index:6;width:22px;height:22px;
+  display:grid;place-items:center;border-radius:6px;
+  color:rgb(var(--faint));background:rgb(var(--surface)/.92);
+  border:1px solid rgb(var(--line));box-shadow:0 1px 3px rgb(0 0 0/.06);
+  backdrop-filter:blur(6px);transition:color .14s,background .14s,opacity .14s;opacity:.55;
+}
+.main-wrap:hover .list-collapse,.list-collapse:hover{opacity:1;color:rgb(var(--ink-2))}
+.list-collapse:hover{background:rgb(var(--hover))}
+.list-collapse svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.list-collapse .lc-ar{transition:transform .2s var(--spring)}
+body.list-collapsed .list-collapse .lc-ar{transform:scaleX(-1)}
+body.list-collapsed .notelist{display:none}
+/* 桌面给标签栏留出那颗按钮的位置，别把它压在第一个标签上 */
+@media (min-width:901px){ .tabbar{padding-left:34px} }
+@media (max-width:900px){
+  .list-collapse{display:none}
+  body.list-collapsed .notelist{display:flex}   /* 手机上列表是整页，不能跟着藏 */
+}
+.paper{
   flex:1;min-width:0;display:flex;flex-direction:column;position:relative;overflow:hidden;
   background:rgb(var(--surface));border:1px solid #e9ecef;border-radius:14px;
   box-shadow:var(--shadow-paper);
@@ -1468,6 +1505,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
    日程和笔记共用同一根中栏：分组标题 + 每条一行，行距 / 圆角 / 选中底色都跟着笔记列表走，
    只是每行前面多一个勾选框，右边是时间（和「提醒」按钮） */
 .notelist.nl-todo .nl-new,.notelist.nl-todo .nl-r{display:none}
+/* 标签页：右上角留着（搜索 / 新建标签），只藏「新建笔记」 */
+.notelist.nl-tags .nl-new{display:none}
 .nl-rows .todo-shelf{display:block;min-height:0;padding:0}
 .nl-rows .tsh-meta{padding:2px 8px 9px}
 .nl-rows .tsh-sw{margin:0 8px 10px;font-size:11.5px}
@@ -3481,6 +3520,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <header class="shelf-head">
       <div class="brand">
         <h1 class="brand-name" id="brandName">随手笔记</h1>
+        <span class="sync-pip off" id="syncPip" role="img" aria-label="云同步状态"></span>
+        <div class="build-tag" id="buildTag" title="点击查看版本信息"></div>
       </div>
       <div class="head-actions" id="headActions">
         <button class="icon-btn" id="btnHome" title="主目录" aria-label="回到主目录"></button>
@@ -3489,10 +3530,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       </div>
     </header>
     <div class="shelf-body" id="shelfBody"></div>
-    <div class="shelf-foot">
-      <span class="sync-pip off" id="syncPip" role="img" aria-label="云同步状态"></span>
-      <div class="build-tag" id="buildTag" title="点击查看版本信息"></div>
-    </div>
     <nav class="dock" id="dock"></nav>
   </aside>
   <section class="notelist" id="noteList">
@@ -3509,6 +3546,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="nl-rows" id="nlRows"></div>
   </section>
   <main class="main-wrap">
+    <button class="list-collapse" id="listCollapse" title="收起中间的列表" aria-label="收起中间的列表"></button>
     <button class="shelf-open" id="shelfOpen" title="展开书架 (⌘\)"></button>
     <button class="home-float" id="homeFloat" title="主目录" aria-label="回到主目录"></button>
     <section class="paper">
@@ -3765,7 +3803,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.58', at: '2026-11-23 15:24' };
+window.IVY_BUILD = { id: '2.64', at: '2026-11-23 15:45' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4405,6 +4443,27 @@ const $ = s => document.querySelector(s);
 const shelfBody = $('#shelfBody');
 const brandName = $('#brandName');
 
+/* 中栏（笔记列表 / 日程待办）折叠：让正文占满整个宽度。
+   状态存 S.listCollapsed，跟着本机走；手机上列表是整页，按钮本身不显示 */
+function syncListCollapse(){
+  const b = $('#listCollapse');
+  const on = !!S.listCollapsed;
+  document.body.classList.toggle('list-collapsed', on);
+  if(!b) return;
+  if(!b.dataset.done){
+    b.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3.4" y="5" width="17.2" height="14" rx="3"/><path d="M9.4 5v14"/><path class="lc-ar" d="m15.6 9.6-2.6 2.4 2.6 2.4"/></svg>';
+    b.dataset.done = '1';
+    b.onclick = ()=>{
+      S.listCollapsed = !S.listCollapsed;
+      syncListCollapse();
+      save();
+      try{ if(typeof paintCalShell === 'function') paintCalShell(); }catch(e){}
+    };
+  }
+  const label = on ? '展开中间的列表' : '收起中间的列表';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+}
 /* 中栏头部那颗按钮：日历页是「+ 新建日程」，其它页是「新建笔记」。
    视图切换时 renderShelf() 会再调一次，否则切过去图标还是旧的那个 */
 function syncNlNew(){
@@ -4414,9 +4473,13 @@ function syncNlNew(){
   b.title = cal ? '新建日程' : '新建笔记 (⌘N)';
   b.setAttribute('aria-label', cal ? '新建日程' : '新建笔记');
   b.classList.toggle('is-cal', cal);
+  // 日程待办里「更多」那套（排序 / 多选 / 批量）用不上，收起来
+  const more = $('#nlMore');
+  if(more) more.style.display = cal ? 'none' : '';
 }
 function paintRowIcons(){
   syncNlNew();
+  try{ syncListCollapse(); }catch(e){}
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
@@ -4841,12 +4904,19 @@ function openListMore(anchor){
    媒体库 / 关系图收进 设置 → 外观 → 其他视图（见 setAppearanceHtml） */
 function renderList(){
   const host = $('#noteList'); if(!host) return;
+  dropTagChrome();
   const sc = S.scope || 'all';
-  const inTodo = sc === 'todo';
-  const inTags = sc === 'tags';
+  // scope 是全局残留的：从标签页切到日历，scope 还是 'tags'，会把中栏头部的按钮一起藏掉，
+  // 所以这几个状态只在「笔记视图」里算
+  const inNotesView = (S.view || 'notes') === 'notes';
+  const tv = inNotesView && !!trashView;
+  const inTodo = inNotesView && sc === 'todo' && !tv;
+  const inTags = inNotesView && sc === 'tags' && !tv;
   // 手机上待办日程页要更干净：底部浮条只留 Home，设置齿轮在这页收起来
-  document.body.classList.toggle('m-todo', !!inTodo && !trashView && S.view === 'notes');
-  host.classList.toggle('nl-todo', inTodo || inTags || trashView);
+  document.body.classList.toggle('m-todo', !!inTodo);
+  host.classList.toggle('nl-todo', inTodo || tv);
+  // 标签页要留右上角那组（搜索 / 新建标签），所以单独一个 class 只藏「新建笔记」
+  host.classList.toggle('nl-tags', inTags);
   // 日历在桌面上也用中栏（我的日历 / 待办），只有窄屏才整屏铺开
   const calHere = S.view === 'calendar' && window.innerWidth > 900;
   const hide = S.view !== 'notes' && !calHere;
@@ -4978,9 +5048,9 @@ function renderTodoList(){
 
 /* ---------- 中栏：标签列表 ----------
    「标签」和「全部笔记 / 日程 / 回收站」一样，点开先在中栏列出来，再点某个标签才筛笔记 */
-function tagsListHtml(){
+function tagsListHtml(keysArg){
   const notes = liveNotes();
-  const keys = tagPillKeys(notes);
+  const keys = Array.isArray(keysArg) ? keysArg : tagPillKeys(notes);
   const untagged = notes.filter(n=>!tagOf(n).length).length;
   if(!keys.length && !untagged){
     return `<div class="nl-empty nl-empty-first">
@@ -5007,17 +5077,77 @@ function bindTagRows(root){
 function renderTagList(){
   const rows = $('#nlRows'); if(!rows) return;
   const notes = liveNotes();
-  const keys = tagPillKeys(notes);
+  // 用历史库 + 已用的标签：刚「新建标签」还没贴到笔记上时也能看到（计数 0）
+  const used = tagPillKeys(notes);
+  const keys = allTags().sort((a,b)=> tagCount(b)-tagCount(a) || a.localeCompare(b,'zh-CN'));
   const untagged = notes.filter(n=>!tagOf(n).length).length;
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = '标签';
   if(cEl) cEl.textContent = String(keys.length + (untagged ? 1 : 0));
   const bkEl = $('#nlBack');
   if(bkEl){ bkEl.classList.add('show'); bkEl.onclick = ()=>goAllNotes(); }
+  ensureTagFold(rows);
   const keepTop = rows.scrollTop;
-  rows.innerHTML = tagsListHtml();
+  rows.innerHTML = S.tagListClosed ? '' : tagsListHtml(keys);
   rows.scrollTop = keepTop;
   bindTagRows(rows);
+}
+/* 标签页头部的折叠箭头 + 右上角「新建标签」。别处列表渲染时会被摘掉 */
+function ensureTagFold(rows){
+  let f = $('#nlTagFold');
+  if(!f){
+    f = document.createElement('button');
+    f.id = 'nlTagFold';
+    f.className = 'nl-tagfold';
+    f.innerHTML = '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>';
+    f.onclick = ()=>{ S.tagListClosed = !S.tagListClosed; save(); renderTagList(); };
+    const t = $('#nlTitle');
+    if(t && t.parentNode) t.parentNode.insertBefore(f, t);
+  }
+  f.classList.toggle('open', !S.tagListClosed);
+  const label = S.tagListClosed ? '展开标签列表' : '收起标签列表';
+  f.title = label; f.setAttribute('aria-label', label);
+
+  let add = $('#nlNewTag');
+  if(!add){
+    add = document.createElement('button');
+    add.id = 'nlNewTag';
+    add.className = 'icon-btn nl-newtag';
+    add.title = '新建标签'; add.setAttribute('aria-label', '新建标签');
+    add.innerHTML = ic('plus');
+    add.onclick = ()=>openNewTag(add);
+    const r = document.querySelector('.nl-hd .nl-r');
+    if(r) r.appendChild(add);
+  }
+}
+function dropTagChrome(){
+  const f = $('#nlTagFold'); if(f) f.remove();
+  const a = $('#nlNewTag'); if(a) a.remove();
+}
+/* 新建标签：只是先记进历史库，贴到笔记上时直接能选（也能立刻用来筛） */
+function openNewTag(anchor){
+  popover(anchor, [['#', `<div class="tag-pick">
+      <div class="tp-search"><input id="ntIn" placeholder="新标签名称，回车创建" autocomplete="off" spellcheck="false"></div>
+    </div>`]], { align:'right' });
+  const po = $('#popover'); if(!po) return;
+  const inp = po.querySelector('#ntIn'); if(!inp) return;
+  setTimeout(()=>inp.focus(), 30);
+  const go = ()=>{
+    const t = String(inp.value||'').trim().slice(0, 60);
+    if(!t){ inp.focus(); return; }
+    rememberTag(t);
+    S.tagListClosed = false;
+    save();
+    poClose(po);
+    renderTagList(); renderShelf();
+    toast('已新建标签「' + t + '」');
+  };
+  inp.onkeydown = e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); go(); }
+    if(e.key === 'Escape'){ e.preventDefault(); poClose(po); }
+  };
+  const btn = po.querySelector('#ntGo');
+  if(btn) btn.onclick = go;
 }
 
 /* ---------- 中栏：回收站列表 ----------
@@ -5071,6 +5201,7 @@ function emptyTrash(){
 }
 function renderTrashList(){
   const rows = $('#nlRows'); if(!rows) return;
+  dropTagChrome();
   const list = S.notes.filter(n=>n.trashed && !n.deleted);
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = '回收站';
@@ -7305,6 +7436,7 @@ function renderAll(){
   $('#shelfOpen').classList.toggle('show', collapsed);
   renderShelf(); renderList(); renderDock(); renderTabs(); renderMain();
   syncHomeFloat();          // 要等 renderShelf 把头部按钮的显隐定下来，才量得到位置
+  try{ syncListCollapse(); }catch(e){}
   // 底部浮条的「待办日程」高亮跟着视图走
   if(typeof window.syncMobileBar === 'function') window.syncMobileBar();
 }
@@ -8060,7 +8192,7 @@ function dockFmtBar(){
 let _dockT = null;
 window.addEventListener('resize', ()=>{
   clearTimeout(_dockT);
-  _dockT = setTimeout(()=>{ dockFmtBar(); if(fmtSync) fmtSync(); }, 150);
+  _dockT = setTimeout(()=>{ dockFmtBar(); if(fmtSync) fmtSync(); try{ syncListCollapse(); }catch(e){} }, 150);
   try{ syncHomeFloat(); }catch(e){}
 });
 
@@ -13372,6 +13504,7 @@ function paintCalShell(){
 }
 /* 中栏：我的日历 + 迷你月历 + 待办 / 完成 / 归档 */
 function renderCalList(){
+  dropTagChrome();
   if(window.innerWidth <= 900) return;      // 窄屏没有中栏，日历内容画在抽屉里
   const rows = $('#nlRows'); if(!rows) return;
   const host = $('#noteList'); if(!host) return;
@@ -20713,7 +20846,7 @@ if('serviceWorker' in navigator){
   const b = window.IVY_BUILD || { id:'?', at:'' };
   let state = '未检测';
   const paint = (html, warn)=>{ el.innerHTML = html; el.classList.toggle('warn', !!warn); };
-  paint(`<span class="bd">${esc(b.id)}</span><span>·</span><span>${esc(b.at)}</span>`);
+  paint(`<span class="bd">${esc(b.id)}</span>`);   // 时间不再显示，悬停/点击还能看到
   el.title = `构建 ${b.id} · ${b.at}\n点击复制版本信息`;
   el.onclick = ()=>{
     const info = `随手笔记 · 构建 ${b.id} (${b.at}) · 线上检测：${state}`;

@@ -85,7 +85,7 @@ export async function onRequest({ request, env }) {
       const from = num(url.searchParams.get('from'), now - 90 * DAY);
       const to = num(url.searchParams.get('to'), now + 90 * DAY);
       const res = await env.DB
-        .prepare(`SELECT uid, cal, color, title, start, end, all_day, location, notes, updated_at
+        .prepare(`SELECT uid, cal, color, title, start, end, all_day, location, notes, updated_at, href, etag
                   FROM calendar_events
                   WHERE user_id = ?1 AND start < ?3 AND end >= ?2
                   ORDER BY start ASC LIMIT ${MAX_EVENTS}`)
@@ -101,6 +101,9 @@ export async function onRequest({ request, env }) {
         allDay: !!r.all_day,
         location: r.location || '',
         notes: r.notes || '',
+        // 带 href 的才是能写回 iCloud 的事件（从 CalDAV 同步来的）
+        href: r.href || '',
+        etag: r.etag || '',
         updatedAt: Number(r.updated_at) || 0
       }));
       return json({ ok: true, from, to, count: events.length, events });

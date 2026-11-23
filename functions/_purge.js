@@ -14,6 +14,7 @@ export const USER_SCOPED_TABLES = [
   'ics_sources',    // 苹果日历订阅
   'ics_done',       // 日历勾选状态
   'notes_feeds',    // 笔记推送取数凭证
+  'calendar_events', // 苹果日历镜像（Mac 端脚本推上来的事件快照）
   'usage_daily',    // 每日用量计数
   'ai_config'       // 自己填的 AI 接口配置（含加密后的密钥）
 ];

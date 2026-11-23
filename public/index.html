@@ -103,6 +103,16 @@ a{color:inherit;text-decoration:none}
 /* 桌面收起侧栏后，列表头自带一枚展开按钮，别再叠一个浮动的 */
 @media (min-width:901px){ .shelf-open.show{display:none} }
 .shelf-open svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+/* 侧栏收起后，侧栏头里那颗「主目录」跟着没了：在别的视图里补一颗浮动的，
+   位置就在日历 / 媒体库页面左上角那块空白（手机上有返回键，不用它） */
+.home-float{
+  position:fixed;left:12px;top:12px;z-index:41;width:32px;height:32px;display:none;place-items:center;
+  border-radius:9px;color:rgb(var(--muted));background:rgb(var(--surface)/.9);
+  box-shadow:var(--shadow-float);backdrop-filter:blur(8px);
+}
+.home-float:hover{color:rgb(var(--ink))}
+.home-float.show{display:grid}
+.home-float svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .shelf-head{display:flex;align-items:center;gap:8px;height:52px;padding:0 4px}
 .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
 .brand-name{
@@ -3482,6 +3492,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   </section>
   <main class="main-wrap">
     <button class="shelf-open" id="shelfOpen" title="展开书架 (⌘\)"></button>
+    <button class="home-float" id="homeFloat" title="主目录" aria-label="回到主目录"></button>
     <section class="paper">
       <div class="tabbar" id="tabbar"></div>
       <div class="paper-actions" id="paperActions"></div>
@@ -3736,7 +3747,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.46', at: '2026-11-23 14:14' };
+window.IVY_BUILD = { id: '2.48', at: '2026-11-23 14:22' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4376,8 +4387,11 @@ function paintRowIcons(){
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
+  const homeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
   const hm = $('#btnHome');
-  if(hm) hm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
+  if(hm) hm.innerHTML = homeIcon;
+  const hf = $('#homeFloat');
+  if(hf) hf.innerHTML = homeIcon;
   const st = $('#btnSettings'); if(st) st.innerHTML = ic('gear');
   $('#btnShelf').innerHTML = ic('panelLeft');
   $('#shelfOpen').innerHTML = ic('panelLeft');
@@ -7233,6 +7247,7 @@ function renderAll(){
   document.querySelector('.shelf').classList.toggle('collapsed', collapsed);
   document.body.classList.toggle('shelf-collapsed', collapsed);
   $('#shelfOpen').classList.toggle('show', collapsed);
+  syncHomeFloat();
   renderShelf(); renderList(); renderDock(); renderTabs(); renderMain();
   // 底部浮条的「待办日程」高亮跟着视图走
   if(typeof window.syncMobileBar === 'function') window.syncMobileBar();
@@ -15903,7 +15918,15 @@ function toggleShelf(){
   document.querySelector('.shelf').classList.toggle('collapsed', !S.shelfOpen);
   document.body.classList.toggle('shelf-collapsed', !S.shelfOpen);
   $('#shelfOpen').classList.toggle('show', !S.shelfOpen);
+  syncHomeFloat();
   save();
+}
+/* 侧栏收起后，侧栏头里那颗「主目录」也跟着没了：在别的视图（日历/媒体库/关系图）里
+   补一颗浮动的，桌面上才有（手机/平板本来就有展开键或返回键） */
+function syncHomeFloat(){
+  const f = $('#homeFloat');
+  if(!f) return;
+  f.classList.toggle('show', !S.shelfOpen && (S.view || 'notes') !== 'notes' && window.innerWidth > 900);
 }
 /* 直接把左边的书架收起来（不看屏幕宽度），手机抽屉和桌面并排都走这一条 */
 function closeShelfNow(){
@@ -15913,6 +15936,7 @@ function closeShelfNow(){
   if(sh) sh.classList.add('collapsed');
   document.body.classList.add('shelf-collapsed');
   const btn = $('#shelfOpen'); if(btn) btn.classList.add('show');
+  syncHomeFloat();
   save();
   return true;
 }
@@ -15986,8 +16010,9 @@ $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') clo
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
 $('#btnNewNb').onclick=()=>newNotebook();
-/* 主目录：直接回笔记列表（媒体库 / 关系图挪到 设置 → 外观 → 其他视图） */
+/* 主目录：直接回笔记列表（媒体库 / 关系图挪到了 设置 左侧导航里） */
 $('#btnHome').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
+$('#homeFloat').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
 $('#btnSettings').onclick=()=>openSettings();
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);

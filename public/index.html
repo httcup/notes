@@ -2159,8 +2159,23 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-day-item .m{font-size:11px;color:rgb(var(--faint));margin-top:1px}
 .cal-pop-n{margin-top:9px;padding-top:8px;border-top:1px solid rgb(var(--line));font-size:12px;color:rgb(var(--ink-2));line-height:1.7;white-space:pre-wrap;word-break:break-word}
 /* 左栏：日历列表 + 迷你月历 */
-.cal-shelf-hd{display:flex;align-items:center;justify-content:space-between;padding:2px 10px 6px}
-.cal-shelf-hd .t{font-size:11.5px;font-weight:600;color:rgb(var(--faint));letter-spacing:.4px}
+.cal-shelf-hd{display:flex;align-items:center;gap:5px;width:100%;padding:4px 9px;border-radius:7px;
+  background:transparent;font-family:inherit;cursor:pointer;text-align:left}
+.cal-shelf-hd:hover{background:rgb(var(--hover))}
+.cal-shelf-hd .chev{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;color:rgb(var(--faint));flex:0 0 auto;transform:rotate(-90deg);transition:transform .14s}
+.cal-shelf-hd .chev.open{transform:rotate(0)}
+.cal-shelf-hd .t{flex:1;font-size:11.5px;font-weight:600;color:rgb(var(--faint));letter-spacing:.4px}
+.cal-shelf-hd .n{font-size:10.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
+
+/* 左栏底部：没写日期的待办 / 归档 */
+.cal-todos{margin:10px 6px 10px;padding-top:10px;border-top:1px solid rgb(var(--line)/.7)}
+.cal-tabs{display:flex;gap:2px;padding:2px;border-radius:8px;background:rgb(var(--hover))}
+.cal-tab{flex:1;height:24px;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:6px;
+  background:transparent;font-family:inherit;font-size:11.5px;font-weight:600;color:rgb(var(--faint))}
+.cal-tab i{font-style:normal;font-size:10px;font-variant-numeric:tabular-nums;opacity:.85}
+.cal-tab.on{background:rgb(var(--surface));color:rgb(var(--ink));box-shadow:0 1px 2px rgb(16 24 32/.1)}
+.cal-todo-body{display:flex;flex-direction:column;gap:1px;margin-top:5px}
+.cal-todo-empty{padding:7px 4px;font-size:11px;line-height:1.7;color:rgb(var(--faint))}
 .cal-src{display:flex;align-items:center;gap:7px;width:100%;padding:4px 9px;border-radius:7px;font-family:inherit;background:transparent;text-align:left}
 .cal-src:hover{background:rgb(var(--hover))}
 .cal-src i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
@@ -3715,7 +3730,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.40', at: '2026-11-23 11:28' };
+window.IVY_BUILD = { id: '2.42', at: '2026-11-23 11:42' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4430,19 +4445,7 @@ function tagPillKeys(notes){
   NO_TAG_LABEL = keys.includes('未加标签') ? '未添加标签' : '未加标签';
   return keys.sort((a,b)=>a.localeCompare(b, 'zh-CN'));
 }
-/* 侧栏的「日程」入口：和「全部笔记 / 标签 / 回收站」同一套标题行。
-   点它不再就地展开，而是把待办列表画到中栏（和笔记列表同一个位置），
-   点其中一条 → 右边打开那篇笔记并滚到那一行。 */
-function schedNavHtml(){
-  const c = todoCounts();
-  const on = (S.scope || 'all') === 'todo';
-  return `<button class="side-hd sep sched-nav${on ? ' on' : ''}" data-act="goto-todo"
-      title="查看全部待办日程">
-      <span class="lb"><span class="ico">${ic('todo')}</span><span class="t">待办日程</span></span>
-      <span class="n">${c.open || 0}</span>
-    </button>`;
-}
-/* 「标签」入口：和「全部笔记 / 日程 / 回收站」同一套标题行。
+/* 「标签」入口：和「全部笔记 / 回收站」同一套标题行。
    点它 → 中栏变成标签列表（和笔记列表同一个位置），再点某个标签才筛笔记 */
 function tagNavHtml(notes){
   const keys = tagPillKeys(notes);
@@ -5045,7 +5048,7 @@ function openTrashNote(id){
 
 function renderShelf(){
   // 日程已经并进笔记侧栏，牌子就还挂着「随手笔记」（媒体库/关系图仍是自己的侧栏）
-  brandName.textContent = ({media:'媒体库', graph:'关系图', calendar:'日历'})[S.view] || '随手笔记';
+  brandName.textContent = ({media:'媒体库', graph:'关系图', calendar:'日程待办'})[S.view] || '随手笔记';
   document.body.classList.remove('view-todo');
 
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
@@ -5143,9 +5146,8 @@ function renderShelf(){
   // 进二级列表时，笔记本那棵树让位，免得两块挤在一起
   if(!inlineMode) html += `<div class="sec-body${nClosed ? ' hidden' : ''}">${body}</div>`;
 
-  // 日程：一条导航行，点开中栏换成待办列表（不再就地铺一整列）
-  html += schedNavHtml();
-  if(inlineMode === 'todo') html += inlineBody(todoShelf());
+  // 待办日程不再占一行导航：没写日期的待办挪到「日程待办」（日历）左栏，
+  // 写了日期的直接落在日历格子里，底部 Dock 仍可进完整待办列表
 
   // 标签：点开在中栏列出所有标签
   html += tagNavHtml(notes);
@@ -5153,7 +5155,7 @@ function renderShelf(){
 
   // 回收站：点开在中栏列出被删的笔记
   html += `<button class="side-hd sep${trashView ? ' on' : ''}" data-act="trash"><span class="ico">${ic('trash')}</span><span class="t">回收站</span><span class="n">${trash.length}</span></button>`;
-  html += `<button class="side-hd sep${S.view==='calendar' ? ' on' : ''}" data-act="calendar"><span class="ico">${ic('calendar')}</span><span class="t">日历</span></button>`;
+  html += `<button class="side-hd sep${S.view==='calendar' ? ' on' : ''}" data-act="calendar"><span class="ico">${ic('calendar')}</span><span class="t">日程待办</span></button>`;
   if(inlineMode === 'trash') html += inlineBody(trashListHtml());
   shelfBody.innerHTML = html;
   bindShelf();
@@ -5542,11 +5544,21 @@ function dueLabel(ts){
 function todoKey(t){ return String(t.noteId || '') + '|' + String(t.text || '').trim(); }
 function todoArchivedList(){
   if(!Array.isArray(S.todoArchived)) S.todoArchived = [];
+  // 修历史数据：早先日历那套哈希函数顶掉了 todoKey，归档键全被算成同一个，
+  // 于是「归档一条 → 所有待办都被当成已归档」。这里按 noteId|text 重算一遍。
+  let fixed = false;
+  S.todoArchived.forEach(a=>{
+    if(!a) return;
+    const k = todoKey(a);
+    if(a.k !== k){ a.k = k; fixed = true; }
+  });
+  if(fixed) save();
   return S.todoArchived.slice().sort((a,b)=> (b.at||0) - (a.at||0));
 }
 function isTodoArchived(t){
   const k = todoKey(t);
-  return (S.todoArchived || []).some(a => a && a.k === k);
+  // 两边的键都现算：早期存下来的 a.k 可能是错的（见 todoArchivedList 里的说明）
+  return (S.todoArchived || []).some(a => a && todoKey(a) === k);
 }
 function archiveTodo(t){
   if(!t || !t.done){ toast('只有已完成的待办才能归档'); return; }
@@ -5567,7 +5579,7 @@ function archiveTodo(t){
   toast('已归档');
 }
 function unarchiveTodo(k){
-  S.todoArchived = (S.todoArchived || []).filter(a => a && a.k !== k);
+  S.todoArchived = (S.todoArchived || []).filter(a => a && a.k !== k && todoKey(a) !== k);
   save();
   paintTodoSurfaces();
   toast('已恢复到待办');
@@ -5812,19 +5824,37 @@ function archGroupHtml(){
   const items = todoArchivedList();
   if(!items.length) return '';
   const folded = !!S.todoFolded['sarch'];
+  return `<div class="tsg tsg-arch">
+    <button class="tsg-h" data-tsg="arch"><svg class="gchev${folded?'':' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+      <span class="ttl">归档</span><span class="n">${items.length}</span></button>
+    ${folded ? '' : `<div class="tsg-body">${items.map(archRowHtml).join('')}</div>`}
+  </div>`;
+}
+
+/* 单条待办（侧栏 / 日历左栏共用模板） */
+function todoRowHtml(t){
+  const hm = t.due ? (()=>{ const d = new Date(t.due); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); })() : '';
+  return `<div class="tsi ${t.done?'done':''} ${S.todoSel === (t.noteId + ':' + t.line) ? 'sel':''}" data-tsi='${esc(JSON.stringify({noteId:t.noteId,line:t.line,text:t.text,due:t.due,repeat:t.repeat,done:!!t.done}))}'>
+      <input type="checkbox" ${t.done?'checked':''} data-tsi-cb="1">
+      <div class="m">
+        <span class="t">${esc(t.text || '（空）')}${t.repeat?' <span class="rep">↻</span>':''}</span>
+        <span class="src">${esc(t.noteTitle)}</span>
+      </div>
+      ${t.due?`<span class="tm${t.due < Date.now() && !t.done?' late':''}">${hm}</span>`:''}
+      ${t.done?`<button class="tsi-arch" data-tsi-arch="1" title="双击归档">${ic('archive')}</button>`:''}
+      <button class="tsi-bell${t.due?' on':''}" data-tsi-bell="1" title="${t.due?'修改提醒时间':'设置提醒'}">${ic(t.due?'clock':'bell')}</button>
+    </div>`;
+}
+/* 归档条目（侧栏 / 日历左栏共用模板） */
+function archRowHtml(a){
   const day = ts => fmtDate(new Date(ts || Date.now()));
-  const row = a => `<div class="tsi done arch" data-arch="${esc(a.k)}" title="点一下跳到原笔记">
+  return `<div class="tsi done arch" data-arch="${esc(a.k)}" title="点一下跳到原笔记">
       <div class="m">
         <span class="t">${esc(a.text || '（空）')}</span>
         <span class="src">${esc(a.noteTitle || '')} · 归档于 ${day(a.at)}</span>
       </div>
       <button class="tsi-arch-restore" data-arch-restore="${esc(a.k)}" title="恢复到待办列表">${ic('restore')}</button>
     </div>`;
-  return `<div class="tsg tsg-arch">
-    <button class="tsg-h" data-tsg="arch"><svg class="gchev${folded?'':' open'}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
-      <span class="ttl">归档</span><span class="n">${items.length}</span></button>
-    ${folded ? '' : `<div class="tsg-body">${items.map(row).join('')}</div>`}
-  </div>`;
 }
 
 /* 侧边栏筛选 */
@@ -5834,21 +5864,7 @@ function todoShelf(){
   const c = todoCounts();
   if(!S.todoFolded || typeof S.todoFolded !== 'object') S.todoFolded = {};
 
-  const timeOf = ts=>{
-    if(!ts) return '';
-    const d = new Date(ts);
-    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-  };
-  const item = t=>`<div class="tsi ${t.done?'done':''} ${S.todoSel === (t.noteId + ':' + t.line) ? 'sel':''}" data-tsi='${esc(JSON.stringify({noteId:t.noteId,line:t.line,text:t.text,due:t.due,repeat:t.repeat,done:!!t.done}))}'>
-      <input type="checkbox" ${t.done?'checked':''} data-tsi-cb="1">
-      <div class="m">
-        <span class="t">${esc(t.text || '（空）')}${t.repeat?' <span class="rep">↻</span>':''}</span>
-        <span class="src">${esc(t.noteTitle)}</span>
-      </div>
-      ${t.due?`<span class="tm${t.due < Date.now() && !t.done?' late':''}">${timeOf(t.due)}</span>`:''}
-      ${t.done?`<button class="tsi-arch" data-tsi-arch="1" title="双击归档">${ic('archive')}</button>`:''}
-      <button class="tsi-bell${t.due?' on':''}" data-tsi-bell="1" title="${t.due?'修改提醒时间':'设置提醒'}">${ic(t.due?'clock':'bell')}</button>
-    </div>`;
+  const item = todoRowHtml;
   const group = (key, title, arr)=>{
     const rows = arr.slice();
     if(!rows.length) return '';
@@ -5894,6 +5910,8 @@ function dayTitleShort(idx, baseTs){
 /* 待办相关的数据变了（勾选 / 改提醒 / 日历同步）：侧栏数字和中栏日程列表一起刷新 */
 function paintTodoSurfaces(){
   try{ renderShelf(); }catch(e){}
+  // 日历页：给待办加了 / 改了日期，格子要跟着出现或挪位置
+  try{ if(S.view === 'calendar') paintCalendar(); }catch(e){}
   try{ if((S.scope || 'all') === 'todo') renderList(); }catch(e){}
 }
 function monthTitle(k){
@@ -12995,6 +13013,8 @@ const CAL = {
   autoSyncing: false,
   syncing: false,      // 正在从 iCloud 拉
   writing: 0,          // 正在写回 iCloud 的条数（新建/改动/删除）
+  calOpen: false,      // 左栏「我的日历」是否展开（默认折叠）
+  todoTab: 'todo',     // 左栏底部标签：todo 待办 / arch 归档
   key: ''              // 已加载的时间窗，避免来回切月重复请求
 };
 
@@ -13053,8 +13073,10 @@ const ordToKey = o => {
 };
 
 /* 待办在苹果日历里的「文件名」：用 笔记 id + 文字 做稳定 key，
-   这样上方插入新行不会让下面的待办换身份（行号会变，文字不会） */
-function todoKey(noteId, text){
+   这样上方插入新行不会让下面的待办换身份（行号会变，文字不会）。
+   注意别叫 todoKey：待办归档那套（第 5544 行）已经占了这个名字，
+   同名函数后定义的会顶掉前一个，曾导致归档 key 全撞成同一个哈希。 */
+function calTodoHash(noteId, text){
   let h = 2166136261;
   const s = String(noteId || '') + '|' + String(text || '');
   for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -13074,7 +13096,7 @@ function calTodoEvents(){
       const start = hasTime ? t.due : Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
       out.push({
         uid: 'todo:' + t.noteId + ':' + t.line,
-        key: todoKey(t.noteId, t.text),
+        key: calTodoHash(t.noteId, t.text),
         cal: '待办', color: '#8b5cf6',
         title: t.text || '待办',
         start,
@@ -13144,20 +13166,30 @@ function calShelf(){
     : ((CAL.meta && CAL.meta.calendars) || []);
   const y = CAL.y || new Date().getFullYear();
   const m = CAL.m || (new Date().getMonth()+1);
-  let html = `<div class="cal-shelf-hd"><span class="t">我的日历</span></div>`;
+  // 日历列表默认折叠（手机抽屉里没有折叠头，直接展开）
+  const mobile = window.innerWidth <= 640;
+  const open = mobile || CAL.calOpen === true;
+  const onCount = list.filter(c => linked ? c.on : !CAL.hidden[c.cal]).length;
+  let html = `<button class="cal-shelf-hd" data-calcalft="1" aria-expanded="${open?'true':'false'}"
+      title="${open?'收起日历列表':'展开日历列表'}">
+      <svg class="chev${open?' open':''}" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+      <span class="t">我的日历</span><span class="n">${onCount||''}</span>
+    </button>`;
   if(linked && CAL.authBad){
     html += `<button class="cal-warn" data-calreauth="1">登录已失效 · 点此重连</button>`;
   }
-  if(!list.length){
-    html += `<div class="ol-empty" style="padding:6px 9px">${CAL.loading ? '读取中…' : '还没有同步的日历'}</div>`;
-  }else{
-    html += list.map(c=>{
-      const on = linked ? c.on : !CAL.hidden[c.cal];
-      const src = linked ? `data-calhref="${esc(c.href)}"` : `data-calsrc="${esc(c.cal)}"`;
-      return `<button class="cal-src${on?'':' off'}" ${src} title="${on?'点击隐藏':'点击显示'}">
-        <i style="background:${calColor(c.cal, c.color)}"></i><span class="t">${esc(c.cal)}</span><span class="n">${c.count||''}</span>
-      </button>`;
-    }).join('');
+  if(open){
+    if(!list.length){
+      html += `<div class="ol-empty" style="padding:6px 9px">${CAL.loading ? '读取中…' : '还没有同步的日历'}</div>`;
+    }else{
+      html += list.map(c=>{
+        const on = linked ? c.on : !CAL.hidden[c.cal];
+        const src = linked ? `data-calhref="${esc(c.href)}"` : `data-calsrc="${esc(c.cal)}"`;
+        return `<button class="cal-src${on?'':' off'}" ${src} title="${on?'点击隐藏':'点击显示'}">
+          <i style="background:${calColor(c.cal, c.color)}"></i><span class="t">${esc(c.cal)}</span><span class="n">${c.count||''}</span>
+        </button>`;
+      }).join('');
+    }
   }
   /* 迷你月历 */
   const cells = calCells(y, m);
@@ -13177,13 +13209,42 @@ function calShelf(){
       }).join('')}
     </div>
   </div>`;
+  /* 没写日期的待办 + 归档：写了日期的已经在格子里了，不在这儿重复 */
+  html += calTodoPanelHtml();
   return html;
+}
+
+/* 左栏「待办 / 归档」：只列没写日期的待办 */
+function calTodoPanelHtml(){
+  const tab = CAL.todoTab === 'arch' ? 'arch' : 'todo';
+  let list = [], arch = [];
+  try{ list = collectTodos().filter(t => !t.due); }catch(e){}
+  try{ arch = todoArchivedList(); }catch(e){}
+  const rows = tab === 'arch' ? arch.map(archRowHtml).join('') : list.map(todoRowHtml).join('');
+  const empty = tab === 'arch'
+    ? '还没有归档的待办。<br>已完成那条右边的方框，双击即可归档。'
+    : '没有待排期的待办。<br>写了日期的会直接出现在日历里。';
+  return `<div class="cal-todos">
+    <div class="cal-tabs">
+      <button class="cal-tab${tab==='todo'?' on':''}" data-caltab="todo">待办${list.length?`<i>${list.length}</i>`:''}</button>
+      <button class="cal-tab${tab==='arch'?' on':''}" data-caltab="arch">归档${arch.length?`<i>${arch.length}</i>`:''}</button>
+    </div>
+    <div class="cal-todo-body">${rows || `<div class="cal-todo-empty">${empty}</div>`}</div>
+  </div>`;
 }
 
 function bindCalShelf(){
   const rw = shelfBody.querySelector('[data-calreauth]');
   if(rw) rw.onclick = ()=>openCalSetup({ reauth:true });
-  shelfBody.querySelectorAll('[data-calsrc]').forEach(b=>{
+  const cfold = shelfBody.querySelector('[data-calcalft]');
+  if(cfold) cfold.onclick = ()=>{ CAL.calOpen = !(CAL.calOpen === true); renderShelf(); };
+  shelfBody.querySelectorAll('[data-caltab]').forEach(b=>{
+    b.onclick = ()=>{ CAL.todoTab = b.dataset.caltab === 'arch' ? 'arch' : 'todo'; renderShelf(); };
+  });
+  // 左栏的待办和「待办日程」页共用一套交互：勾选 / 设提醒 / 归档 / 点开原笔记
+  if(typeof bindTodoBlock === 'function' && shelfBody.querySelector('.cal-todos')){
+    bindTodoBlock(shelfBody, ()=>{ renderShelf(); paintCalendar(); });
+  }  shelfBody.querySelectorAll('[data-calsrc]').forEach(b=>{
     b.onclick = ()=>{
       const name = b.dataset.calsrc;
       CAL.hidden[name] = !CAL.hidden[name];
@@ -13233,6 +13294,7 @@ function calToday(){
 }
 
 function paintCalendar(){
+  if(S.view !== 'calendar') return;   // 不在日历页时别去动正文容器（下面会整体重写 scrollEl）
   if(!CAL.y){ const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1; }
   const y = CAL.y, m = CAL.m;
   const cells = calCells(y, m);

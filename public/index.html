@@ -2182,7 +2182,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-more{font-size:10px;color:rgb(var(--faint));padding-left:5px;line-height:1.4}
 /* 悬停某一天弹出的黄历小卡：农历 / 干支 / 宜忌（数据来自 tyme4ts，同站内万年历） */
 .cal-alm{
-  position:fixed;z-index:9000;width:400px;max-width:calc(100vw - 24px);
+  position:fixed;z-index:9000;width:400px;max-width:calc(100vw - 24px);max-height:calc(100vh - 16px);overflow:hidden;
   padding:14px 16px 12px;border-radius:14px;box-sizing:border-box;
   background:rgb(var(--surface));border:.5px solid rgb(var(--line));
   box-shadow:0 20px 48px rgb(16 24 32/.2),0 2px 8px rgb(16 24 32/.08);
@@ -2212,7 +2212,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-alm-yjh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
 .cal-alm-yjh b{font-family:var(--font-serif);font-size:12px;font-weight:700;color:rgb(var(--ink));letter-spacing:.14em}
 .cal-alm-yjh em{font-style:normal;font-size:10.5px;color:rgb(var(--faint));letter-spacing:.02em}
-.cal-alm-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cal-alm-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
+.cal-alm.wide{width:452px}
 .cal-alm-col{border-radius:10px;padding:8px 8px 9px;min-width:0}
 .cal-alm-col.yi{background:rgb(43 138 92/.075)}
 .cal-alm-col.ji{background:rgb(214 74 62/.065)}
@@ -2228,6 +2229,10 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 }
 .cal-alm-chips .none{background:transparent;border:0;padding-left:0;color:rgb(var(--faint))}
 .cal-alm-chips .more{background:transparent;border:0;color:rgb(var(--faint));padding-left:1px}
+/* 条数多（>16）时收紧一点：字号、内边距、间距都缩一档，两栏高度不至于太夸张 */
+.cal-alm-chips.dense{gap:3px}
+.cal-alm-chips.dense span{font-size:10px;padding:1px 5px;border-radius:5px}
+.cal-alm-chips.dense .none,.cal-alm-chips.dense .more{font-size:10.5px}
 .cal-alm-ft{
   margin-top:9px;padding-top:9px;border-top:1px solid rgb(var(--line));
   display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:10.5px;line-height:1.5;
@@ -3920,7 +3925,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.71', at: '2026-11-23 16:43' };
+window.IVY_BUILD = { id: '2.72', at: '2026-11-23 16:58' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -14068,11 +14073,13 @@ function almOf(key){
   return o;
 }
 
+/* 宜忌词：全部列出来（黄历这东西少一条都可能被当成没写），
+   条数多的时候换紧凑排版，免得卡片长得竖不起来 */
 function almChips(list, max){
   if(!list.length) return '<span class="none">诸事不宜</span>';
-  const shown = list.slice(0, max || 16);
+  const shown = list.slice(0, max || 40);
   let html = shown.map(x=>`<span>${esc(x)}</span>`).join('');
-  if(list.length > shown.length) html += `<span class="more">+${list.length - shown.length}</span>`;
+  if(list.length > shown.length) html += `<span class="more">另 ${list.length - shown.length} 项</span>`;
   return html;
 }
 function almCardHtml(o){
@@ -14101,8 +14108,8 @@ function almCardHtml(o){
     <div class="cal-alm-yj">
       <div class="cal-alm-yjh"><b>宜 / 忌</b><em>${esc(o.gzD)}日 · 建除「${esc(o.duty)}」</em></div>
       <div class="cal-alm-cols">
-        <div class="cal-alm-col yi"><u>宜</u><div class="cal-alm-chips">${almChips(o.yi, 12)}</div></div>
-        <div class="cal-alm-col ji"><u>忌</u><div class="cal-alm-chips">${o.ji.length ? almChips(o.ji, 12) : '<span class="none">无</span>'}</div></div>
+        <div class="cal-alm-col yi"><u>宜</u><div class="cal-alm-chips${o.yi.length > 16 ? ' dense' : ''}">${almChips(o.yi)}</div></div>
+        <div class="cal-alm-col ji"><u>忌</u><div class="cal-alm-chips${o.ji.length > 16 ? ' dense' : ''}">${o.ji.length ? almChips(o.ji) : '<span class="none">无</span>'}</div></div>
       </div>
     </div>
     ${ft.length ? `<div class="cal-alm-ft">${ft.join('')}</div>` : ''}`;
@@ -14124,6 +14131,14 @@ function almWaitHtml(key){
       </div>
     </div>
     <div class="cal-alm-wait">正在读取宜忌…</div>`;
+}
+/* 填卡片内容：宜忌条数多（>16）时切宽版，免得一列里挤成一团 */
+function almPaint(o, key){
+  if(!ALM.el) return;
+  if(!o){ ALM.el.classList.remove('wide'); ALM.el.innerHTML = almWaitHtml(key); return; }
+  const dense = o.yi.length > 16 || o.ji.length > 16;
+  ALM.el.classList.toggle('wide', dense);
+  ALM.el.innerHTML = almCardHtml(o);
 }
 function almPlace(cell){
   const el = ALM.el;
@@ -14160,7 +14175,7 @@ function almShow(cell){
   }
   ALM.cell = cell;
   const o = almOf(key);
-  ALM.el.innerHTML = o ? almCardHtml(o) : almWaitHtml(key);
+  almPaint(o, key);
   almPlace(cell);
   ALM.el.classList.add('on');
   if(!o){
@@ -14168,7 +14183,7 @@ function almShow(cell){
       if(ALM.cell !== cell) return;                       // 鼠标已经挪走就不补了
       const o2 = almOf(key);
       if(!o2) return;
-      ALM.el.innerHTML = almCardHtml(o2);
+      almPaint(o2, key);
       almPlace(cell);
     }).catch(()=>{});
   }

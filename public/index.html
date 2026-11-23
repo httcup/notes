@@ -1096,6 +1096,12 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .rc-select:focus{outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09)}
 .rc-note{font-size:11px;line-height:1.6;color:rgb(var(--faint));margin-top:7px}
 .rc-note a{color:rgb(var(--ivy-ink));cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.rc-steps{margin:0 0 10px;padding-left:17px;font-size:11.5px;line-height:1.75;color:rgb(var(--muted))}
+.rc-steps li{margin-bottom:3px}
+.rc-steps b{font-weight:600;color:rgb(var(--ink-2))}
+.rc-steps a{color:rgb(var(--ivy-ink));text-decoration:underline;text-underline-offset:2px}
+.rc-sub{font-size:10.5px;color:rgb(var(--faint));margin-top:12px;padding-top:9px;border-top:.5px solid rgb(var(--line))}
+.rc-legacy .rc-src{margin-top:6px}
 .rc-src{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;background:rgb(var(--sunken));margin-top:7px}
 .rc-src-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .rc-src-m b{font-size:12px;font-weight:500;color:rgb(var(--ink))}
@@ -2063,6 +2069,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-set-p{font-size:12px;color:rgb(var(--muted));line-height:1.7;margin:2px 0 14px}
 .cal-set-p a{color:rgb(var(--ivy));text-decoration:none}
 .cal-set-warn{background:rgb(var(--danger)/.08);color:rgb(var(--danger));border-radius:9px;padding:9px 11px;margin-top:2px}
+.cal-warn{display:block;width:100%;text-align:left;font-family:inherit;font-size:12px;font-weight:600;line-height:1.5;
+  color:rgb(var(--danger));background:rgb(var(--danger)/.08);border-radius:8px;padding:8px 10px;margin:6px 0 2px}
 .cal-fld{margin-bottom:11px}
 .cal-fld label{display:block;font-size:11.5px;font-weight:600;color:rgb(var(--ink-2));margin-bottom:5px}
 .cal-fld input[type=text],.cal-fld input[type=password],.cal-fld input[type=date],.cal-fld input[type=time],.cal-fld textarea,.cal-fld select{
@@ -2099,6 +2107,14 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-syncbtn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .cal-syncbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .cal-syncbtn.on svg{animation:calspin .9s linear infinite}
+/* 还没连 iCloud：这个按钮就是登录入口，做得像主按钮 */
+.cal-syncbtn.login{background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-weight:600}
+.cal-syncbtn.login:hover{background:rgb(var(--ivy));color:rgb(var(--on-ivy));opacity:.88}
+.cal-syncbtn.bad{color:rgb(var(--danger));background:rgb(var(--danger)/.1)}
+@media(max-width:640px){
+  .cal-syncbtn.login{padding:0 9px;font-size:11.5px;gap:4px}
+  .cal-syncbtn.login svg{width:12px;height:12px}
+}
 @keyframes calspin{to{transform:rotate(360deg)}}
 .cal-note a{color:rgb(var(--ivy));text-decoration:none;cursor:pointer}
 
@@ -3679,7 +3695,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.24', at: '2026-11-23 10:28' };
+window.IVY_BUILD = { id: '2.31', at: '2026-11-23 10:56' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4744,19 +4760,16 @@ function openListMore(anchor){
 }
 /* 顶部「视图 / 设置」菜单：原来侧栏底部那排图标收在这里 */
 function openViewMenu(anchor, opts){
-  let todo = 0;
-  try{ todo = collectTodos().filter(t=>!t.done).length; }catch(e){}
   const after = opts && opts.after;
   const go = fn => ()=>{ if(after) after(); fn(); };
-  // 手机：回全部笔记 / 待办日程走底部 Home 与抽屉里的「待办日程」，这个菜单只留媒体库、关系图
+  // 手机：回全部笔记走底部 Home，这个菜单只留媒体库、关系图
   const mobile = window.innerWidth <= 640;
   const items = [
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
     ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
   ];
   if(!mobile) items.unshift(
-    ['笔记', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
-    ['待办日程', (S.view==='notes' && S.scope==='todo') ? '✓' : (todo ? todo + ' 项' : ''), '', 'todo', go(()=>switchView('todo'))]
+    ['主目录', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))]
   );
   popover(anchor, items, {align:'left'});
 }
@@ -6512,15 +6525,17 @@ function remindBodyHtml(){
     : perm === 'unsupported' ? '<b class="rc-no">此浏览器不支持</b>'
     : '<b class="rc-no">还没允许</b>';
 
-  const srcList = icsSources().length ? icsSources().map(s=>`
-      <div class="rc-src">
-        <div class="rc-src-m"><b>${esc(s.name)}</b>
-          <span>${s.error ? `<b class="rc-no">${esc(s.error)}</b>`
-            : (s.lastSync ? `已同步 ${s.count || 0} 条 · ${new Date(s.lastSync).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' })}` : '还没同步')}</span>
-        </div>
-        <button class="rc-mini" data-ics-sync="${esc(s.id)}">同步</button>
-        <button class="rc-mini" data-ics-del="${esc(s.id)}" style="color:rgb(var(--danger))">删除</button>
-      </div>`).join('') : '';
+  const srcList = icsSources().length ? `
+      <div class="rc-sub">早期的只读订阅（webcal）</div>
+      <div class="rc-legacy">
+        ${icsSources().map(s=>`
+        <div class="rc-src">
+          <div class="rc-src-m"><b>${esc(s.name)}</b>
+            <span>${s.error ? `<b class="rc-no">${esc(s.error)}</b>`
+              : (s.lastSync ? `已同步 ${s.count || 0} 条 · 只读` : '还没同步')}</span>
+          </div>
+        </div>`).join('')}
+      </div>` : '';
 
   const feedBlock = FEED.token
     ? `<code class="rc-link" id="rcLink">${esc(FEED.webcal || FEED.url || '')}
@@ -6563,14 +6578,17 @@ function remindBodyHtml(){
     </div>
 
     <div class="rc-box">
-      <div class="rc-box-h">${ic('calendar')}<b>从苹果日历同步</b></div>
-      <div class="rc-p">在日历 App 里把日历「公开共享」，把拿到的 <code>webcal://…</code> 链接粘进来：事件只读显示在左侧「日程」里，到点也会提醒。不会改动你的笔记。<b>链接存在账号里，其它设备登录后自动出现，不用再填一次。</b></div>
+      <div class="rc-box-h">${ic('calendar')}<b>苹果日历同步（双向）</b></div>
+      <div class="rc-p">用 Apple ID 直连 iCloud，两边保持一致：<b>这里新建、改时间、删掉的，会写回苹果日历</b>；在苹果日历里改的，下次同步也会拉过来。</div>
+      <ol class="rc-steps">
+        <li>先登录账号（设置 → 账户 / 同步），日历要跟着账号走。</li>
+        <li>左栏点「日历」，右上角点<b>同步</b> → <b>连接</b>。</li>
+        <li>填 Apple ID；App 专用密码去 <a href="https://appleid.apple.com/account/manage" target="_blank" rel="noopener">appleid.apple.com</a> → 登录与安全 → App 专用密码 → 生成，<b>16 位，不是登录密码</b>。</li>
+        <li>点「连接」自动拉完；之后每次进日历页会顺手同步一次（3 分钟内不重复）。</li>
+      </ol>
+      <div class="rc-acts"><button class="rc-btn primary" id="rcGoCal">去日历连接</button></div>
+      <div class="rc-note">密码只加密存在你自己的账号下，不会回传到页面。<b>改过 Apple ID 密码或撤销过专用密码会失效</b>，失效时日历侧栏会出现「登录已失效 · 点此重连」，点一下重填即可。</div>
       ${srcList}
-      <div class="rc-add">
-        <input class="rc-input" id="rcIcsUrl" placeholder="粘贴公开共享的日历链接（webcal:// 或 https://）" spellcheck="false">
-        <button class="rc-btn primary" id="rcIcsAdd">添加</button>
-      </div>
-      <div class="rc-note">只支持「公开共享」的日历；私有日历要 Apple ID 应用专用密码，这里不碰。各设备各自拉取、各自缓存，加一次就够。</div>
     </div>`;
 }
 /* 控件绑定：root 是任意容器（弹窗 / 设置页），repaint 由调用方决定重绘哪里 */
@@ -6633,6 +6651,15 @@ function bindRemindBody(root, repaint){
     }
   };
   if(q('#rcExport')) q('#rcExport').onclick = ()=>exportTodoIcs();
+  /* 设置页 / 提醒中心里直接跳去日历连接，不用自己找入口 */
+  if(q('#rcGoCal')) q('#rcGoCal').onclick = ()=>{
+    closeRemindCenter();
+    if(document.body.classList.contains('set-open')) closeSettings();
+    switchView('calendar');
+    const need = !(CAL.dav && CAL.dav.connected);
+    if(need) setTimeout(()=>{ if(!(CAL.dav && CAL.dav.connected)) openCalSetup(); }, 260);
+    else toast('已经连上了，点右上角「同步」可以马上拉一次');
+  };
   if(q('#rcIcsAdd')) q('#rcIcsAdd').onclick = async ()=>{
     const inp = q('#rcIcsUrl');
     const url = (inp.value || '').trim();
@@ -6656,15 +6683,6 @@ function bindRemindBody(root, repaint){
       paintRemindCenter();
       paintTodoSurfaces();
       toast(s.error ? ('同步失败：' + s.error) : ('已同步 ' + (s.count || 0) + ' 条日程'));
-    };
-  });
-  root.querySelectorAll('[data-ics-del]').forEach(b=>{
-    b.onclick = ()=>{
-      if(!confirm('删除这个日历订阅？左侧「日程」里来自它的条目会消失，日历本身不受影响。')) return;
-      removeIcsSource(b.dataset.icsDel);
-      paintRemindCenter();
-      paintTodoSurfaces();
-      toast('已删除这个日历订阅');
     };
   });
   root.querySelectorAll('[data-rc]').forEach(a=>{
@@ -9177,8 +9195,12 @@ function helpBodyHtml(tab){
         <p class="help-p">提醒事项不支持订阅日历链接，但有两条路：<br>
         ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
         ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
-      <div class="help-sec"><h4>从苹果日历同步进来</h4>
-        <p class="help-p">只能同步<b>公开共享</b>的日历。在 iPhone / Mac 日历里点日历右边的 <code>ⓘ</code> →「公开日历」→ 复制链接，把 <code>webcal://…</code> 粘到「提醒与日历」→「从苹果日历同步」。<b>链接存在你的账号里，换手机或另一台电脑登录后自动出现，不用再填一次。</b>事件出现在左侧日程最下面的「来自苹果日历」分组，每条前面都有勾选框；<b>勾选只记在这边（也跟着账号同步），不会写回日历</b>，标题时间要改还是到日历 App 里改。</p></div>
+      <div class="help-sec"><h4>和苹果日历双向同步</h4>
+        <p class="help-p">在左栏点「<b>日历</b>」→ 右上角「<b>同步</b>」→「连接」，填 Apple ID 和<b>App 专用密码</b>（去 <code>appleid.apple.com</code> → 登录与安全 → App 专用密码生成，16 位，不是登录密码）。连上之后两边就是同一份：<br>
+        ① 在网页日历里点空白格新建、点事件改/删，都会立刻写回苹果日历，手机和 Mac 上马上能看到；<br>
+        ② 在苹果日历、iPhone 或别的设备上改的，下次打开日历页会自动拉过来（也可以点「同步」手动拉）；<br>
+        ③ 左栏的日历列表可以逐个开关，关掉的不会被拉取；节气和农历节假日是本地算的，不用联网。<br>
+        <b>改过 Apple ID 密码或撤销过专用密码，同步就会失效</b>，侧栏会出现「登录已失效 · 点此重连」，重新填一次新密码即可，数据不会丢。</p></div>
       <div class="help-sec"><h4>分组</h4>
         <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
       <div class="help-sec"><h4>写法</h4>
@@ -12879,6 +12901,8 @@ const CAL = {
   err: '',
   meta: null,
   dav: null,           // CalDAV 连接状态（连上 Apple ID 后才有）
+  authBad: false,      // iCloud 说密码不对：侧栏挂一条「点此重连」
+  autoSyncing: false,
   key: ''              // 已加载的时间窗，避免来回切月重复请求
 };
 
@@ -12980,6 +13004,9 @@ function calShelf(){
   const y = CAL.y || new Date().getFullYear();
   const m = CAL.m || (new Date().getMonth()+1);
   let html = `<div class="cal-shelf-hd"><span class="t">我的日历</span></div>`;
+  if(linked && CAL.authBad){
+    html += `<button class="cal-warn" data-calreauth="1">登录已失效 · 点此重连</button>`;
+  }
   if(!list.length){
     html += `<div class="ol-empty" style="padding:6px 9px">${CAL.loading ? '读取中…' : '还没有同步的日历'}</div>`;
   }else{
@@ -13013,6 +13040,8 @@ function calShelf(){
 }
 
 function bindCalShelf(){
+  const rw = shelfBody.querySelector('[data-calreauth]');
+  if(rw) rw.onclick = ()=>openCalSetup({ reauth:true });
   shelfBody.querySelectorAll('[data-calsrc]').forEach(b=>{
     b.onclick = ()=>{
       const name = b.dataset.calsrc;
@@ -13025,11 +13054,14 @@ function bindCalShelf(){
       const href = b.dataset.calhref;
       const cur = (CAL.dav.calendars || []).find(c => c.href === href);
       if(!cur) return;
+      const turningOn = cur.on === false;
       try{
-        await apiCall('/api/caldav', { method:'POST', body:{ action:'toggle', href, on: cur.on === false } });
+        await apiCall('/api/caldav', { method:'POST', body:{ action:'toggle', href, on: turningOn } });
         await loadCalDav();
         CAL.key = '';
         renderShelf();
+        // 刚打开的日历库里还没有事件，顺手拉一次，否则点了像没反应
+        if(turningOn){ await calSync(null, true); }
         await ensureCalData(true);
       }catch(e){ toast(e.message || '改不了'); }
     };
@@ -13090,16 +13122,16 @@ function paintCalendar(){
   const linked = !!dav.connected;
   let note = '';
   if(CAL.err){
-    note = `<div class="cal-note">${esc(CAL.err)}　在 Mac 上双击「苹果日历同步」即可更新。</div>`;
-  }else if(isConnected() && !linked){
-    note = `<div class="cal-note">还没连接苹果日历　<a data-calopen="1">点这里连接</a>，连上后能直接在这里增删改，改动会同步回手机和 Mac。</div>`;
+    note = `<div class="cal-note">${esc(CAL.err)}</div>`;
   }
 
   scrollEl.innerHTML = `<div class="cal-wrap">
     <div class="cal-bar">
       <div class="cal-month">${y} 年 ${m} 月${CAL.loading?' <i>同步中…</i>':''}</div>
       <div class="cal-tools">
-        ${linked ? `<button class="cal-syncbtn" data-calsync="1" title="从 iCloud 拉一次"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg>同步</button>` : ''}
+        ${linked
+          ? `<button class="cal-syncbtn${CAL.authBad ? ' bad' : ''}" data-calsync="1" title="${CAL.authBad ? 'iCloud 登录失效，点一下重新连接' : '从 iCloud 拉一次 · ' + calAgo(dav.lastSync)}"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg>同步</button>`
+          : `<button class="cal-syncbtn login" data-callogin="1" title="用 Apple ID 连接 iCloud 日历，之后两边自动一致"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg>同步苹果日历</button>`}
         <div class="cal-seg"><button class="on" disabled>月</button></div>
         <div class="cal-step">
           <button data-calprev="1" aria-label="上个月"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
@@ -13141,7 +13173,14 @@ function paintCalendar(){
       };
     });
     wrap.querySelectorAll('[data-calsync]').forEach(b=>{
-      b.onclick = e=>{ e.stopPropagation(); calSync(b); };
+      b.onclick = e=>{
+        e.stopPropagation();
+        if(CAL.authBad){ openCalSetup({ reauth:true }); return; }
+        calSync(b);
+      };
+    });
+    wrap.querySelectorAll('[data-callogin]').forEach(b=>{
+      b.onclick = e=>{ e.stopPropagation(); openCalSetup(); };
     });
     wrap.querySelectorAll('[data-calopen]').forEach(a=>{
       a.onclick = e=>{ e.preventDefault(); openCalSetup(); };
@@ -13348,6 +13387,7 @@ function openCalSetup(opts){
           await apiCall('/api/caldav', { method:'POST', body:{ action:'toggle', href:cb.dataset.cal, on:cb.checked } });
           await loadCalDav();
           renderShelf();
+          if(cb.checked) await calSync(null, true);   // 新打开的日历得先拉一次才有事件
         }catch(e){ toast(e.message || '改不了'); cb.checked = !cb.checked; }
       };
     });
@@ -13365,6 +13405,7 @@ function openCalSetup(opts){
         await apiCall('/api/caldav', { method:'POST', body:{ action:'disconnect' } });
         CAL.dav = { connected:false };
         CAL.davAt = 0;
+        CAL.authBad = false;
         CAL.key = '';
         m.remove();
         await ensureCalData(true);
@@ -13375,7 +13416,7 @@ function openCalSetup(opts){
   });
 }
 
-async function calSync(btn, silent){
+async function calSync(btn, silent, opts){
   if(!CAL.dav || !CAL.dav.connected){ openCalSetup(); return; }
   if(btn) btn.classList.add('on');
   try{
@@ -13388,14 +13429,24 @@ async function calSync(btn, silent){
     });
     const r = await res.json().catch(()=>({}));
     if(!res.ok){
+      // 会话过期和 iCloud 密码失效都是 401，靠 authBad 区分：前者续一下会话再试
+      if(res.status === 401 && !r.authBad && SYNC.token && SYNC.key && !(opts && opts.retried)){
+        const okLogin = await relogin();
+        if(okLogin) return calSync(btn, silent, { retried:true });
+      }
       if(r.authBad){
-        toast('iCloud 登录失效了，重新填一次 App 专用密码');
-        openCalSetup({ reauth:true });
+        // 静默同步（进页面时自动跑的）不要弹窗打断，改成侧栏一条提示
+        if(silent){ CAL.authBad = true; if(S.view === 'calendar') renderShelf(); }
+        else{
+          toast('iCloud 登录失效了，重新填一次 App 专用密码');
+          openCalSetup({ reauth:true });
+        }
       }else{
         toast(r.error || ('同步失败 HTTP ' + res.status));
       }
       return;
     }
+    CAL.authBad = false;
     CAL.key = '';
     await ensureCalData(true);
     await loadCalDav();
@@ -13554,7 +13605,17 @@ function renderCalendar(){
   ensureCalData(false);
   // 一分钟内不重复问；刚登录 / 刚断开时 CAL.dav 会被置空，下次进来自动重取
   if(CAL.dav === null || Date.now() - (CAL.davAt || 0) > 60000){
-    loadCalDav().then(()=>{ if(S.view === 'calendar'){ renderShelf(); paintCalendar(); } });
+    loadCalDav().then(()=>{
+      if(S.view !== 'calendar') return;
+      renderShelf(); paintCalendar();
+      // 进日历页顺手拉一次 iCloud（3 分钟内刚同步过就跳过），
+      // 这样在苹果日历里改完，回到网页不用专门点「同步」
+      const dav = CAL.dav || {};
+      if(dav.connected && !CAL.authBad && !CAL.autoSyncing && Date.now() - (dav.lastSync||0) > 180000){
+        CAL.autoSyncing = true;
+        calSync(null, true).finally(()=>{ CAL.autoSyncing = false; });
+      }
+    });
   }
 }
 

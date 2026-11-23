@@ -179,6 +179,23 @@ export async function onRequest({ request, env }) {
     if (action === 'sync') {
       const from = Number(body.from) || (Date.now() - 180 * DAY);
       const to = Number(body.to) || (Date.now() + 180 * DAY);
+
+      // 每次同步顺手刷新日历清单：苹果那边新建/删除/改名日历，这里不用重连就能跟上。
+      // 开关状态按 href 保留，新出现的日历默认打开。
+      try {
+        const fresh = await DAV.listCalendars(auth, row.home);
+        if (fresh.calendars && fresh.calendars.length) {
+          const prevOn = calList(row).reduce((m, c) => { m[c.href] = c.on !== false; return m; }, {});
+          const merged = fresh.calendars.map((c) => ({ ...c, on: prevOn[c.href] !== false }));
+          const next = JSON.stringify(merged);
+          if (next !== String(row.calendars || '')) {
+            await env.DB.prepare('UPDATE caldav_config SET calendars=?2, updated_at=?3 WHERE user_id=?1')
+              .bind(uid, next, Date.now()).run();
+            row.calendars = next;
+          }
+        }
+      } catch (e) { /* 刷新失败不影响本次拉取 */ }
+
       const cals = calList(row).filter((c) => c.on !== false);
       if (!cals.length) return json({ error: '没有打开任何日历' }, 400);
 
@@ -224,6 +241,17 @@ export async function onRequest({ request, env }) {
       await env.DB
         .prepare(`DELETE FROM calendar_events WHERE user_id = ?1 AND start < ?3 AND end >= ?2 AND cal IN (${inList})`)
         .bind(uid, from, to, ...okCals).run();
+
+      // 苹果那边删掉或改了名的日历，本地还留着它的旧事件 —— 顺手清掉。
+      // 名字不在当前日历列表里的一律算过期（NULL/空串是早期脚本留下的，也一并清）
+      const known = calList(row).map((c) => c.name).filter(Boolean);
+      if (known.length) {
+        const notIn = known.map((_, k) => '?' + (k + 4)).join(',');
+        await env.DB
+          .prepare(`DELETE FROM calendar_events WHERE user_id = ?1 AND start < ?3 AND end >= ?2
+                    AND (cal IS NULL OR cal = '' OR cal NOT IN (${notIn}))`)
+          .bind(uid, from, to, ...known).run();
+      }
 
       const stmts = collected.map((e) => {
         const key = rowUid(e.href.split('/').slice(0, -1).join('/'), e.uid);

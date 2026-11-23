@@ -662,22 +662,24 @@ body.ol-touch .note-item:hover .note-pin,body.ol-touch .note-item.active .note-p
 
 /* ============ paper ============ */
 .main-wrap{flex:1;min-width:0;display:flex;padding:8px 8px 8px 0;position:relative}
-/* 中栏（笔记列表 / 日程待办）折叠：缝隙上那颗小按钮，点一下让正文占满 */
+/* 中栏（笔记列表 / 日程待办）折叠：正文左上角一颗「全屏 / 还原」图标，点一下让正文占满 */
 .list-collapse{
-  position:absolute;left:-11px;top:14px;z-index:6;width:22px;height:22px;
-  display:grid;place-items:center;border-radius:6px;
-  color:rgb(var(--faint));background:rgb(var(--surface)/.92);
-  border:1px solid rgb(var(--line));box-shadow:0 1px 3px rgb(0 0 0/.06);
-  backdrop-filter:blur(6px);transition:color .14s,background .14s,opacity .14s;opacity:.55;
+  position:absolute;left:9px;top:20px;z-index:6;width:26px;height:26px;
+  display:grid;place-items:center;border-radius:7px;
+  color:rgb(var(--muted));background:transparent;
+  transition:color .14s,background .14s,opacity .14s;opacity:.78;
 }
-.main-wrap:hover .list-collapse,.list-collapse:hover{opacity:1;color:rgb(var(--ink-2))}
+.main-wrap:hover .list-collapse,.list-collapse:hover{opacity:1;color:rgb(var(--ink))}
 .list-collapse:hover{background:rgb(var(--hover))}
-.list-collapse svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.list-collapse .lc-ar{transition:transform .2s var(--spring)}
-body.list-collapsed .list-collapse .lc-ar{transform:scaleX(-1)}
+body.list-collapsed .list-collapse{opacity:1;color:rgb(var(--ink-2))}
+.list-collapse svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* 没折叠时显示「四角向外」的全屏图标，折叠后切成「四角向内」的还原图标 */
+.list-collapse .lc-in{display:none}
+body.list-collapsed .list-collapse .lc-out{display:none}
+body.list-collapsed .list-collapse .lc-in{display:block}
 body.list-collapsed .notelist{display:none}
 /* 桌面给标签栏留出那颗按钮的位置，别把它压在第一个标签上 */
-@media (min-width:901px){ .tabbar{padding-left:34px} }
+@media (min-width:901px){ .paper .tabbar{padding-left:38px} }
 @media (max-width:900px){
   .list-collapse{display:none}
   body.list-collapsed .notelist{display:flex}   /* 手机上列表是整页，不能跟着藏 */
@@ -1544,6 +1546,8 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .nl-row .nl-c{font-size:11px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
 .nl-row.tg-row{padding-top:9px;padding-bottom:10px}
 .nl-row.tg-row .nl-t1{padding-right:34px}
+/* 标签行只有一颗垃圾桶，贴右边缘居中；笔记行那种 32px 偏移是因为旁边还有「⋯」 */
+.nl-row.tg-row .nl-del{right:8px;top:8px}
 .nl-rows .nl-cap{padding:10px 8px 6px;font-size:11.5px;color:rgb(var(--faint))}
 .nl-rows .nl-cap-btn{
   display:flex;align-items:center;gap:7px;width:100%;margin:4px 0 10px;padding:8px;
@@ -2082,7 +2086,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .ol-empty{font-size:12px;color:rgb(var(--faint));padding:8px 9px}
 
 /* ============ calendar（苹果日历镜像的月视图） ============ */
-.cal-wrap{padding:32px 28px 26px;display:flex;flex-direction:column;height:100%;box-sizing:border-box}
+.cal-wrap{padding:28px 26px 0;display:flex;flex-direction:column;height:100%;box-sizing:border-box}
 .cal-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .cal-month{font-size:21px;font-weight:650;color:rgb(var(--ink));letter-spacing:.3px}
 .cal-month i{font-style:normal;font-size:12.5px;font-weight:500;color:rgb(var(--faint));margin-left:8px;letter-spacing:0}
@@ -2094,12 +2098,25 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-step button{height:28px;min-width:28px;padding:0 6px;border-radius:7px;display:grid;place-items:center;color:rgb(var(--ink-2));background:transparent;font-family:inherit;font-size:12.5px}
 .cal-step button:hover{background:rgb(var(--hover))}
 .cal-step svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid rgb(var(--line))}
+.cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid rgb(var(--line));flex:0 0 auto}
 .cal-dow{padding:0 0 7px 9px;font-size:12px;color:rgb(var(--faint));font-weight:500}
-.cal-body{
-  flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,minmax(0,1fr));
-  min-height:0;border-left:1px solid rgb(var(--line));border-top:1px solid rgb(var(--line));
+/* 连续月历：一层竖直滚动容器，月份首尾相接（苹果日历那种上下滑） */
+.cal-scroll{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  border-left:1px solid rgb(var(--line));border-top:1px solid rgb(var(--line));
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;overflow-anchor:none;
 }
+.cal-scroll::-webkit-scrollbar{width:0;height:0}
+.cal-mblk{position:relative}
+/* 每月的月份标签：粘在滚动容器顶部，滚过一个月就换下一个 */
+.cal-mhd{
+  position:sticky;top:0;z-index:2;height:30px;box-sizing:border-box;
+  display:flex;align-items:center;padding:0 9px;
+  font-size:12px;font-weight:650;color:rgb(var(--ink-2));letter-spacing:.2px;
+  background:rgb(var(--surface)/.95);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgb(var(--line));
+}
+.cal-wk{display:grid;grid-template-columns:repeat(7,1fr);min-height:var(--cal-row-h,104px)}
 .cal-cell{
   position:relative;border-right:1px solid rgb(var(--line));border-bottom:1px solid rgb(var(--line));
   padding:5px 6px 4px;overflow:hidden;display:flex;flex-direction:column;gap:3px;min-height:0;
@@ -2268,7 +2285,10 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   .cal-wrap{padding:10px 8px 0;height:100%;min-height:0}
   .cal-month{font-size:17px}
   .cal-seg{display:none}
-  .cal-body{grid-template-rows:repeat(6,minmax(50px,1fr));min-height:0}
+  /* 手机上月份标签收窄一点，把高度留给格子 */
+  .cal-mhd{height:26px;font-size:11.5px;padding:0 6px}
+  /* 底部有浮动条，给滚动内容留出位置，别让最后一行被压住 */
+  .cal-scroll{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
   .cal-cell{padding:3px 4px;gap:1px}
   .cal-d{font-size:11.5px}
   .cal-cell.today .cal-d{min-width:18px;height:18px;font-size:11px}
@@ -3806,7 +3826,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.66', at: '2026-11-23 15:44' };
+window.IVY_BUILD = { id: '2.67', at: '2026-11-23 15:59' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4454,7 +4474,11 @@ function syncListCollapse(){
   document.body.classList.toggle('list-collapsed', on);
   if(!b) return;
   if(!b.dataset.done){
-    b.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3.4" y="5" width="17.2" height="14" rx="3"/><path d="M9.4 5v14"/><path class="lc-ar" d="m15.6 9.6-2.6 2.4 2.6 2.4"/></svg>';
+    // 全屏图标：四角向外 = 收起中栏看全屏；四角向内 = 还原
+    b.innerHTML = '<svg viewBox="0 0 24 24">'
+      + '<g class="lc-out"><path d="M9.6 4.8H7.2A2.4 2.4 0 0 0 4.8 7.2v2.4"/><path d="M14.4 4.8h2.4a2.4 2.4 0 0 1 2.4 2.4v2.4"/><path d="M19.2 14.4v2.4a2.4 2.4 0 0 1-2.4 2.4h-2.4"/><path d="M4.8 14.4v2.4a2.4 2.4 0 0 0 2.4 2.4h2.4"/></g>'
+      + '<g class="lc-in"><path d="M4.8 9.6h2.4A2.4 2.4 0 0 0 9.6 7.2V4.8"/><path d="M19.2 9.6h-2.4A2.4 2.4 0 0 1 14.4 7.2V4.8"/><path d="M19.2 14.4h-2.4a2.4 2.4 0 0 0-2.4 2.4v2.4"/><path d="M4.8 14.4h2.4a2.4 2.4 0 0 1 2.4 2.4v2.4"/></g>'
+      + '</svg>';
     b.dataset.done = '1';
     b.onclick = ()=>{
       S.listCollapsed = !S.listCollapsed;
@@ -4463,7 +4487,7 @@ function syncListCollapse(){
       try{ if(typeof paintCalShell === 'function') paintCalShell(); }catch(e){}
     };
   }
-  const label = on ? '展开中间的列表' : '收起中间的列表';
+  const label = on ? '退出全屏（显示列表）' : '全屏（收起列表）';
   b.title = label;
   b.setAttribute('aria-label', label);
 }
@@ -4472,10 +4496,13 @@ function syncListCollapse(){
 function syncNlNew(){
   const b = $('#nlNew'); if(!b) return;
   const cal = (S.view === 'calendar');
-  b.innerHTML = ic(cal ? 'plus' : 'compose');
-  b.title = cal ? '新建日程' : '新建笔记 (⌘N)';
-  b.setAttribute('aria-label', cal ? '新建日程' : '新建笔记');
+  // 标签列表里点开某个标签后，这颗按钮变成「返回全部标签」的标签图标
+  const backTag = !cal && (S.view || 'notes') === 'notes' && (S.scope || '').indexOf('tag:') === 0;
+  b.innerHTML = ic(backTag ? 'tag' : (cal ? 'plus' : 'compose'));
+  b.title = backTag ? '返回全部标签' : (cal ? '新建日程' : '新建笔记 (⌘N)');
+  b.setAttribute('aria-label', b.title);
   b.classList.toggle('is-cal', cal);
+  b.classList.toggle('is-backtag', backTag);
   // 日程待办里「更多」那套（排序 / 多选 / 批量）用不上，收起来
   const more = $('#nlMore');
   if(more) more.style.display = cal ? 'none' : '';
@@ -4533,17 +4560,20 @@ function usedTags(notes){
   notes.forEach(n=>tagOf(n).forEach(t=>{ if(t) set.add(t); }));
   return [...set];
 }
-/* 删除标签 = 把它从所有笔记上摘掉，笔记本身保留 */
-function deleteTag(t){
+/* 删除标签 = 把它从所有笔记上摘掉，笔记本身保留。
+   now=true 是不弹系统确认框的版本（中栏垃圾桶双击已经确认过一次了） */
+function deleteTag(t, now){
   if(!t || t === NO_TAG) return;
   const affected = S.notes.filter(n=>tagOf(n).includes(t));
-  if(!confirm('删除标签「'+t+'」？\n\n会从 '+affected.length+' 篇笔记上移除这个标签，笔记本身不会删除。')) return;
-  const now = Date.now();
-  affected.forEach(n=>{ n.tags = tagOf(n).filter(x=>x!==t); n.updatedAt = now; });
+  if(!now && !confirm('删除标签「'+t+'」？\n\n会从 '+affected.length+' 篇笔记上移除这个标签，笔记本身不会删除。')) return;
+  const ts = Date.now();
+  affected.forEach(n=>{ n.tags = tagOf(n).filter(x=>x!==t); n.updatedAt = ts; });
   S.tagLibrary = (S.tagLibrary||[]).filter(x=>x!==t);
   if(S.tagClosed) delete S.tagClosed[t];
+  // 正停在这个标签的筛选里：删完退回标签列表，别停在一个已经不存在的标签上
+  if((S.scope || '') === 'tag:' + t) S.scope = 'tags';
   renderAll(); save();
-  toast('已删除标签「'+t+'」，'+affected.length+' 篇笔记已更新');
+  toast('已删除标签「' + t + '」，' + affected.length + ' 篇笔记已更新');
 }
 function openTagMenu(anchor, t){
   if(!t || t === NO_TAG) return;
@@ -5072,19 +5102,25 @@ function tagsListHtml(keysArg){
       <div class="ne-d">在笔记上点「+ 标签」，这里就会出现。</div>
     </div>`;
   }
-  const row = (k, name, c, on)=>`<div class="nl-row tg-row${on ? ' on' : ''}" data-tagrow="${esc(k)}" role="button" tabindex="0">
+  const row = (k, name, c, on, del)=>`<div class="nl-row tg-row${on ? ' on' : ''}" data-tagrow="${esc(k)}" role="button" tabindex="0">
       <span class="nl-t1"><span class="nl-t">${name}</span><span class="nl-c">${c}</span></span>
+      ${del ? `<span class="nl-del" data-tagdel="${esc(k)}" role="button" title="双击删除标签">${ic('trash')}</span>` : ''}
     </div>`;
   let html = keys.map(k=>{
     const c = notes.filter(n=>tagOf(n).includes(k)).length;
-    return row(k, `<span class="h">#</span>${esc(k)}`, c, S.scope === 'tag:' + k);
+    return row(k, `<span class="h">#</span>${esc(k)}`, c, S.scope === 'tag:' + k, true);
   }).join('');
-  if(untagged) html += row(NO_TAG, `<span style="color:rgb(var(--muted))">${esc(NO_TAG_LABEL)}</span>`, untagged, S.scope === 'tag:' + NO_TAG);
+  if(untagged) html += row(NO_TAG, `<span style="color:rgb(var(--muted))">${esc(NO_TAG_LABEL)}</span>`, untagged, S.scope === 'tag:' + NO_TAG, false);
   return html;
 }
 function bindTagRows(root){
   root.querySelectorAll('[data-tagrow]').forEach(el=>{
     el.onclick = ()=>setScope('tag:' + el.dataset.tagrow);
+  });
+  // 垃圾桶：和笔记行一样双击才删（第一次点亮红底提示，第二次真删）
+  root.querySelectorAll('[data-tagdel]').forEach(b=>{
+    bindDoubleTap(b, ()=>deleteTag(b.dataset.tagdel, true), '双击删除标签');
+    b.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); };
   });
 }
 function renderTagList(){
@@ -7869,6 +7905,8 @@ window.addEventListener('resize', ()=>{
     }
     try{ fitSplitSource(); }catch(e){}
     fitSource();   // 横竖屏 / 地址栏收放改变宽度后重新量高
+    // 日历每格的高度是按可视高度算的，窗口一变要重画一次
+    try{ if(typeof S !== 'undefined' && S.view === 'calendar') paintCalendar(); }catch(e){}
   }, 120);
 });
 
@@ -13228,6 +13266,11 @@ const CAL = {
   writing: 0,          // 正在写回 iCloud 的条数（新建/改动/删除）
   calOpen: false,      // 左栏「我的日历」是否展开（默认折叠）
   todoTab: 'todo',     // 左栏底部标签：todo 待办 / done 完成 / arch 归档
+  bidx: null,          // 月历上已经铺开的月份（y*12+m-1，连续滚动用）
+  jump: null,          // 下次重绘后要落到哪一天 { y, m, day }
+  extending: false,    // 正在往两头续月份
+  scrolling: 0,        // 平滑滚动到什么时候（期间不续月 / 不重画）
+  seq: 0,              // 事件请求序号：后发的覆盖先发的
   key: ''              // 已加载的时间窗，避免来回切月重复请求
 };
 
@@ -13586,52 +13629,232 @@ function bindCalShelf(root){
     b.onclick = ()=>{
       const k = Number(b.dataset.calday);
       const y = Math.floor(k/10000), m = Math.floor(k%10000/100), d = k%100;
-      CAL.y = y; CAL.m = m;
-      renderCalendar();
+      calGoMonth(y, m, d);
     };
   });
 }
 
+/* ---------- 连续月历：上下滑就像苹果日历，本月的尾巴接着下月的开头 ---------- */
+/* 周行起点用「UTC 天序号」算，跨时区 / 夏令时都不会错位 */
+function calMondayOrd(y, m, d){
+  const o = Math.floor(Date.UTC(y, m - 1, d) / DAYMS);
+  const wd = (new Date(o * DAYMS).getUTCDay() + 6) % 7;      // 周一 = 0
+  return o - wd;
+}
+const calIdxOf = (y, m) => y * 12 + (m - 1);
+const calIdxYm = i => ({ y: Math.floor(i / 12), m: i % 12 + 1 });
+/* 一周只归一个月：周里出现过 1 号就归那个月，否则归周一所在的月。
+   这样同一天不会被画两遍，月份标签也正好落在 1 号那一周上面。 */
+function calWeekOwner(startOrd){
+  for(let i = 0; i < 7; i++){
+    const d = new Date((startOrd + i) * DAYMS);
+    if(d.getUTCDate() === 1) return calIdxOf(d.getUTCFullYear(), d.getUTCMonth() + 1);
+  }
+  const d = new Date(startOrd * DAYMS);
+  return calIdxOf(d.getUTCFullYear(), d.getUTCMonth() + 1);
+}
+/* 某个月要画哪几行周（连续的天序号起点） */
+function calMonthWeeks(y, m){
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const end = Math.floor(Date.UTC(y, m - 1, last) / DAYMS);
+  const me = calIdxOf(y, m), out = [];
+  for(let s = calMondayOrd(y, m, 1); s <= end; s += 7){
+    if(calWeekOwner(s) === me) out.push(s);
+  }
+  if(!out.length) out.push(calMondayOrd(y, m, 1));
+  return out;
+}
+/* 记住当前看到的是哪一周、被滚过去多少像素：重绘 / 前面插进新月份后照着还原 */
+function calCaptureScroll(){
+  const sc = $('#calScroll');
+  if(!sc) return null;
+  const top = sc.getBoundingClientRect().top;
+  let row = null;
+  for(const r of sc.querySelectorAll('.cal-wk')){
+    if(r.getBoundingClientRect().bottom > top + 1){ row = r; break; }
+  }
+  if(!row) return { wk: 0, off: sc.scrollTop };
+  return { wk: Number(row.dataset.wk), off: top - row.getBoundingClientRect().top };
+}
+function calRestoreScroll(sc, a){
+  if(!sc || !a) return;
+  const row = a.wk ? sc.querySelector('.cal-wk[data-wk="' + a.wk + '"]') : null;
+  if(!row){ sc.scrollTop = a.off; return; }
+  const top = sc.getBoundingClientRect().top;
+  sc.scrollTop += (row.getBoundingClientRect().top - top) + a.off;
+}
+/* 滚到某年某月某天所在的那一周：上面的月份标签是粘性条，别让周行被它盖住 */
+function calScrollToDay(sc, y, m, day, smooth){
+  if(!sc) return;
+  const ord = Math.floor(Date.UTC(y, m - 1, day || 1) / DAYMS);
+  let row = null;
+  for(const r of sc.querySelectorAll('.cal-wk')){
+    const s = Number(r.dataset.wk);
+    if(ord >= s && ord < s + 7){ row = r; break; }
+  }
+  if(!row) return;
+  const hd = row.parentNode && row.parentNode.querySelector('.cal-mhd');
+  const head = hd ? hd.offsetHeight : 30;
+  const top = sc.getBoundingClientRect().top;
+  const to = Math.max(0, sc.scrollTop + (row.getBoundingClientRect().top - top) - head);
+  if(smooth){
+    // 平滑滚动期间别去续月份 / 重画：元素一重建，动画就断了
+    CAL.scrolling = Date.now() + 700;
+    try{ sc.scrollTo({ top: to, behavior: 'smooth' }); }
+    catch(e){ sc.scrollTop = to; }
+  }else{
+    sc.scrollTop = to;
+  }
+}
+/* 工具栏上的月份跟着滚动换：只改文字，别整块重画（重画会把滚动位置带跑） */
+function calBarMonth(y, m){
+  const el = scrollEl.querySelector('.cal-month');
+  if(!el) return;
+  const txt = y + ' 年 ' + m + ' 月';
+  const n = el.firstChild;
+  if(n && n.nodeType === 3) n.nodeValue = txt;
+  else el.insertBefore(document.createTextNode(txt), n);
+}
+let calScrollRAF = 0;
+function calOnScroll(){
+  if(calScrollRAF) return;
+  calScrollRAF = requestAnimationFrame(()=>{
+    calScrollRAF = 0;
+    const sc = $('#calScroll');
+    if(!sc) return;
+    // 顶上压着哪个月：CAL.y/m、工具栏标题、左栏迷你月历一起跟着走
+    const top = sc.getBoundingClientRect().top;
+    let blk = null;
+    for(const b of sc.querySelectorAll('.cal-mblk')){
+      if(b.getBoundingClientRect().bottom > top + 4){ blk = b; break; }
+    }
+    if(blk){
+      const { y, m } = calIdxYm(Number(blk.dataset.block));
+      if(y !== CAL.y || m !== CAL.m){
+        CAL.y = y; CAL.m = m;
+        calBarMonth(y, m);
+        // 左栏迷你月历跟着换月；手机抽屉收着时不用白重画一遍
+        if(window.innerWidth > 900 || S.shelfOpen){ try{ paintCalShell(); }catch(e){} }
+      }
+    }
+    // 滑到两头就再铺一个月，能一直往上 / 往下翻（平滑滚动途中先别动，否则动画会被重绘打断）
+    const room = sc.scrollHeight - sc.scrollTop - sc.clientHeight;
+    if(Date.now() < (CAL.scrolling || 0)) return;
+    if(sc.scrollTop < 240) calExtend(-1);
+    else if(room < 560) calExtend(1);
+  });
+}
+/* 往前 / 往后多铺一个月。paintCalendar 会按周行锚点把滚动位置还原，
+   所以插在前面也不会「跳到别处」 */
+function calExtend(dir){
+  if(CAL.extending) return;
+  if(!Array.isArray(CAL.bidx) || !CAL.bidx.length) return;
+  if(CAL.bidx.length >= 60) return;          // 铺太多就收手，别一直加
+  CAL.extending = true;
+  if(dir < 0) CAL.bidx.unshift(CAL.bidx[0] - 1);
+  else CAL.bidx.push(CAL.bidx[CAL.bidx.length - 1] + 1);
+  paintCalendar();
+  CAL.extending = false;
+  ensureCalData(false);                      // 新区间的事件顺手拉一下
+}
 function calShift(delta){
-  let y = CAL.y, m = CAL.m + delta;
-  if(m < 1){ m = 12; y--; }
-  if(m > 12){ m = 1; y++; }
-  CAL.y = y; CAL.m = m;
-  renderCalendar();
+  const t = calIdxYm(calIdxOf(CAL.y, CAL.m) + delta);   // CAL.y/m 是顶上看的那一月
+  calGoMonth(t.y, t.m);
 }
 function calToday(){
   const t = new Date();
-  CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1;
-  renderCalendar();
+  calGoMonth(t.getFullYear(), t.getMonth() + 1, t.getDate());
+}
+/* 跳到某个月（可指定落到哪一天）：不在已铺开的窗口里就重铺一段，再滚过去 */
+function calGoMonth(y, m, day){
+  const i = calIdxOf(y, m);
+  const bs = Array.isArray(CAL.bidx) ? CAL.bidx : [];
+  const inWin = bs.length && i >= bs[0] && i <= bs[bs.length - 1];
+  CAL.y = y; CAL.m = m;
+  if(!inWin){
+    CAL.bidx = [i - 1, i, i + 1, i + 2];   // 目标不在窗口里：重铺一段，paint 时直接落过去
+    CAL.jump = { y, m, day: day || 0 };
+  }
+  paintCalendar();
+  paintCalShell();
+  ensureCalData(false);
+  // 滚动放到最后：前面几步会重画，放在中间会把平滑滚动打断
+  if(inWin) calScrollToDay($('#calScroll'), y, m, day || 1, true);
+}
+/* 格子的点击都挂在滚动容器上（内容会一直往后加，逐格绑定会漏） */
+function calBindGrid(sc){
+  sc.addEventListener('click', e=>{
+    const evb = e.target.closest('[data-calev]');
+    if(evb){ e.stopPropagation(); calShowEvent(evb.dataset.calev, evb); return; }
+    const cell = e.target.closest('[data-day]');
+    if(!cell) return;
+    const k = Number(cell.dataset.day);
+    const now = Date.now();
+    // 双击 = 新建（第一次点击先等 300ms，看是不是双击的起手）
+    if(CAL_TAP.k === k && now - CAL_TAP.at < 420){
+      CAL_TAP = { k: 0, at: 0 };
+      if(CAL.dav && CAL.dav.connected) openCalEventForm(null, k);
+      else openCalSetup();
+      return;
+    }
+    CAL_TAP = { k, at: now };
+    setTimeout(()=>{
+      if(CAL_TAP.k !== k) return;
+      CAL_TAP = { k: 0, at: 0 };
+      if((calGroup(calAllEvents()).get(k) || []).length) calShowDay(k, cell);
+    }, 300);
+  });
 }
 
 function paintCalendar(){
   if(S.view !== 'calendar') return;   // 不在日历页时别去动正文容器（下面会整体重写 scrollEl）
   if(!CAL.y){ const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1; }
-  const y = CAL.y, m = CAL.m;
-  const cells = calCells(y, m);
+  if(!Array.isArray(CAL.bidx) || !CAL.bidx.length){
+    const a = calIdxOf(CAL.y, CAL.m);
+    CAL.bidx = [a - 1, a, a + 1, a + 2];   // 先铺「上个月 → 后两个月」，上下都够滑一段
+  }
+  const jump = CAL.jump || null;
+  const anchor = jump ? null : calCaptureScroll();
   const groups = calGroup(calAllEvents());
   const t = new Date();
   const todayKey = calKeyOf(t.getFullYear(), t.getMonth()+1, t.getDate());
+  const narrow = window.innerWidth <= 640;   // 手机格子窄，时间前缀会把标题挤掉，点开再看
 
-  const body = cells.map(c=>{
-    const evs = groups.get(c.key) || [];
-    const shown = evs.slice(0, 3);
-    const more = evs.length - shown.length;
-    const narrow = window.innerWidth <= 640;   // 手机格子窄，时间前缀会把标题挤掉，点开再看
-    const evHtml = shown.map(ev=>{
-      const col = calColor(ev.cal, ev.color);
-      const label = (ev.allDay || narrow ? '' : calHm(ev.start) + ' ') + ev.title;
-      const cls = 'cal-ev' + (ev.todo ? ' todo' : '') + (ev.todo && ev.todo.done ? ' done' : '');
-      return `<button class="${cls}" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
-        <i class="dot"></i><b>${esc(label)}</b></button>`;
+  // 一格多高：让一屏差不多正好放下一个月，上下各露一点相邻月份
+  const avail = (scrollEl.clientHeight || 660) - (narrow ? 100 : 118);
+  const rowH = narrow
+    ? Math.max(58, Math.min(96, Math.round(avail / 6)))
+    : Math.max(74, Math.min(138, Math.round(avail / 6)));
+
+  const blocks = CAL.bidx.map((bi, k)=>{
+    const { y, m } = calIdxYm(bi);
+    const rows = calMonthWeeks(y, m).map(s=>{
+      const cells = [];
+      for(let i = 0; i < 7; i++){
+        const d = new Date((s + i) * DAYMS);
+        const cy = d.getUTCFullYear(), cm = d.getUTCMonth() + 1, cd = d.getUTCDate();
+        const key = calKeyOf(cy, cm, cd);
+        const evs = groups.get(key) || [];
+        const shown = evs.slice(0, narrow ? 2 : 3);
+        const more = evs.length - shown.length;
+        const evHtml = shown.map(ev=>{
+          const col = calColor(ev.cal, ev.color);
+          const label = (ev.allDay || narrow ? '' : calHm(ev.start) + ' ') + ev.title;
+          const cls = 'cal-ev' + (ev.todo ? ' todo' : '') + (ev.todo && ev.todo.done ? ' done' : '');
+          return `<button class="${cls}" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
+            <i class="dot"></i><b>${esc(label)}</b></button>`;
+        }).join('');
+        const fest = calFestival(cy, cm, cd);
+        const sub = fest || lunarLabel(cy, cm, cd);
+        cells.push(`<div class="cal-cell${cm !== m ? ' out' : ''}${key === todayKey ? ' today' : ''}" data-day="${key}">
+          <div class="cal-cl"><span class="cal-d">${cd}</span><span class="cal-l${fest ? ' fest' : ''}">${sub}</span></div>
+          <div class="cal-evs">${evHtml}${more > 0 ? `<div class="cal-more">还有 ${more} 项</div>` : ''}</div>
+        </div>`);
+      }
+      return `<div class="cal-wk" data-wk="${s}">${cells.join('')}</div>`;
     }).join('');
-    const fest = calFestival(c.y, c.m, c.d);
-    const sub = fest || lunarLabel(c.y, c.m, c.d);
-    return `<div class="cal-cell${c.out?' out':''}${c.key===todayKey?' today':''}" data-day="${c.key}">
-      <div class="cal-cl"><span class="cal-d">${c.d}</span><span class="cal-l${fest?' fest':''}">${sub}</span></div>
-      <div class="cal-evs">${evHtml}${more>0?`<div class="cal-more">还有 ${more} 项</div>`:''}</div>
-    </div>`;
+    const mh = (m === 1 || k === 0) ? `${y} 年 ${m} 月` : `${m} 月`;
+    return `<div class="cal-mblk" data-block="${bi}"><div class="cal-mhd">${mh}</div>${rows}</div>`;
   }).join('');
 
   const dav = CAL.dav || {};
@@ -13641,9 +13864,9 @@ function paintCalendar(){
     note = `<div class="cal-note">${esc(CAL.err)}</div>`;
   }
 
-  scrollEl.innerHTML = `<div class="cal-wrap">
+  scrollEl.innerHTML = `<div class="cal-wrap" style="--cal-row-h:${rowH}px">
     <div class="cal-bar">
-      <div class="cal-month">${y} 年 ${m} 月${CAL.loading?' <i>同步中…</i>':''}</div>
+      <div class="cal-month">${CAL.y} 年 ${CAL.m} 月${CAL.loading?' <i>同步中…</i>':''}</div>
       <div class="cal-tools">
         ${linked
           ? `<button class="cal-syncbtn${CAL.authBad ? ' bad' : ''}${CAL.syncing ? ' on' : ''}${CAL.writing > 0 ? ' busy' : ''}" id="calSyncBtn" data-calsync="1" title="从 iCloud 拉一次"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg><b class="cal-sync-t">${calSyncLabel()}</b></button>`
@@ -13658,7 +13881,7 @@ function paintCalendar(){
     </div>
     ${note}
     <div class="cal-dows">${['周一','周二','周三','周四','周五','周六','周日'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}</div>
-    <div class="cal-body">${body}</div>
+    <div class="cal-scroll" id="calScroll">${blocks}</div>
   </div>`;
 
   const wrap = scrollEl.querySelector('.cal-wrap');
@@ -13666,28 +13889,6 @@ function paintCalendar(){
     wrap.querySelectorAll('[data-calprev]').forEach(b=>b.onclick = ()=>calShift(-1));
     wrap.querySelectorAll('[data-calnext]').forEach(b=>b.onclick = ()=>calShift(1));
     wrap.querySelectorAll('[data-caltoday]').forEach(b=>b.onclick = calToday);
-    wrap.querySelectorAll('[data-calev]').forEach(b=>{
-      b.onclick = e=>{ e.stopPropagation(); calShowEvent(b.dataset.calev, b); };
-    });
-    wrap.querySelectorAll('[data-day]').forEach(c=>{
-      c.onclick = ()=>{
-        const k = Number(c.dataset.day);
-        const now = Date.now();
-        // 双击 = 新建（第一次点击先等 300ms，看是不是双击的起手）
-        if(CAL_TAP.k === k && now - CAL_TAP.at < 420){
-          CAL_TAP = { k: 0, at: 0 };
-          if(CAL.dav && CAL.dav.connected) openCalEventForm(null, k);
-          else openCalSetup();
-          return;
-        }
-        CAL_TAP = { k, at: now };
-        setTimeout(()=>{
-          if(CAL_TAP.k !== k) return;
-          CAL_TAP = { k: 0, at: 0 };
-          if((calGroup(calAllEvents()).get(k) || []).length) calShowDay(k, c);
-        }, 300);
-      };
-    });
     wrap.querySelectorAll('[data-calsync]').forEach(b=>{
       b.onclick = e=>{
         e.stopPropagation();
@@ -13701,6 +13902,19 @@ function paintCalendar(){
     wrap.querySelectorAll('[data-calopen]').forEach(a=>{
       a.onclick = e=>{ e.preventDefault(); openCalSetup(); };
     });
+  }
+  const sc = $('#calScroll');
+  if(sc){
+    sc.addEventListener('scroll', calOnScroll, { passive:true });
+    calBindGrid(sc);
+    if(jump){
+      calScrollToDay(sc, jump.y, jump.m, jump.day || 1, false);
+      CAL.jump = null;
+    }else if(anchor){
+      calRestoreScroll(sc, anchor);
+    }else{
+      calScrollToDay(sc, CAL.y, CAL.m, 1, false);
+    }
   }
 }
 
@@ -14043,8 +14257,7 @@ async function calSync(btn, silent, opts){
   if(btn) btn.classList.add('on');
   paintCalSyncBtn();
   try{
-    const from = new Date(CAL.y, CAL.m-2, 1).getTime();
-    const to = new Date(CAL.y, CAL.m+1, 1).getTime();
+    const { from, to } = calRange();
     // 不用 apiCall：失败时要拿到 authBad，好把人直接带到「重新连接」
     const res = await fetch('/api/caldav', {
       method:'POST', headers: authHeaders(true),
@@ -14254,6 +14467,18 @@ function openCalEventForm(ev, dayKey){
   });
 }
 
+/* 当前铺开的月份对应的区间：前后各多留一个月（读库和从 iCloud 拉都用它） */
+function calRange(){
+  if(!Array.isArray(CAL.bidx) || !CAL.bidx.length){
+    const a = calIdxOf(CAL.y, CAL.m);
+    CAL.bidx = [a - 1, a, a + 1, a + 2];
+  }
+  const f = calIdxYm(CAL.bidx[0] - 1), l = calIdxYm(CAL.bidx[CAL.bidx.length - 1] + 1);
+  return {
+    from: new Date(f.y, f.m - 1, 1).getTime(),
+    to: new Date(l.y, l.m - 1, 1).getTime()
+  };
+}
 async function ensureCalData(force){
   if(!isConnected()){
     CAL.err = '还没登录账号';
@@ -14261,19 +14486,23 @@ async function ensureCalData(force){
     paintCalendar();
     return;
   }
-  const from = new Date(CAL.y, CAL.m-2, 1).getTime();
-  const to = new Date(CAL.y, CAL.m+1, 1).getTime();
+  // 月份窗口跟着已铺开的格子走：上下滑出来的月份也要有事件
+  const { from, to } = calRange();
   const key = from + '~' + to;
-  if(!force && CAL.key === key){ paintCalendar(); return; }
+  // 区间没变就直接用现有的，别重画：重画会把正在跑的滚动动画打断
+  if(!force && CAL.key === key) return;
+  const seq = (CAL.seq = (CAL.seq || 0) + 1);
   CAL.loading = true; CAL.err = '';
   paintCalendar();
   try{
     const d = await apiCall('/api/calevents?from=' + from + '&to=' + to);
+    if(seq !== CAL.seq) return;        // 又请求了更宽的一段，这次的结果已经过期
     CAL.events = d.events || [];
     CAL.key = key;
     CAL.loading = false;
     apiCall('/api/calevents?meta=1').then(mm=>{ CAL.meta = mm; paintCalShell(); }).catch(()=>{});
   }catch(e){
+    if(seq !== CAL.seq) return;
     CAL.loading = false;
     CAL.err = e.status === 401 ? '登录后才有日历' : (e.message || '读取失败');
   }
@@ -16260,7 +16489,10 @@ function renderPalette(q){
 function gotoCalEvent(ev){
   if(!ev) return;
   const d = new Date(Number(ev.start) || Date.now());
-  CAL.y = d.getFullYear(); CAL.m = d.getMonth() + 1;
+  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  CAL.y = y; CAL.m = m;
+  CAL.bidx = [calIdxOf(y, m) - 1, calIdxOf(y, m), calIdxOf(y, m) + 1, calIdxOf(y, m) + 2];
+  CAL.jump = { y, m, day };          // 目标月份可能不在刚才铺开的窗口里，重置窗口
   try{ switchView('calendar'); }catch(e){ return; }
   setTimeout(()=>{
     try{
@@ -16404,6 +16636,8 @@ $('#homeFloat').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('note
 $('#btnSettings').onclick=()=>openSettings();
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>{
+  // 标签详情页：这颗图标就是「返回全部标签」
+  if((S.view || 'notes') === 'notes' && (S.scope || '').indexOf('tag:') === 0){ setScope('tags'); return; }
   if((S.view || 'notes') === 'calendar'){ openCalEventForm(null, calNewDayKey()); return; }
   newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
 };

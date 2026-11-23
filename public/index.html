@@ -3711,7 +3711,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.33', at: '2026-11-23 11:02' };
+window.IVY_BUILD = { id: '2.34', at: '2026-11-23 11:06' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13695,10 +13695,17 @@ function openCalEventForm(ev, dayKey){
       calWriteStart();
       toast(isNew ? '已创建，正在同步到苹果日历' : '已保存，正在同步');
 
-      apiCall('/api/caldav', { method:'POST', body: { action:'save', event: {
-        uid: before ? before.uid : '', href: before ? before.href : '', etag: before ? before.etag : '',
-        calHref, title, start: s, end: en, allDay, location: loc, notes: note
-      } } }).then(r=>{
+      // keepalive：写 iCloud 要几秒，中途切走/关掉页面也让这次请求跑完
+      fetch('/api/caldav', { method:'POST', headers: authHeaders(true), keepalive: true,
+        body: JSON.stringify({ action:'save', event: {
+          uid: before ? before.uid : '', href: before ? before.href : '', etag: before ? before.etag : '',
+          calHref, title, start: s, end: en, allDay, location: loc, notes: note
+        } }) })
+      .then(async res=>{
+        const out = await res.json().catch(()=>({}));
+        if(!res.ok) throw new Error(out.error || ('HTTP ' + res.status));
+        return out;
+      }).then(r=>{
         if(isNew){
           const hit = CAL.events.find(x => x.uid === tmp.uid);
           if(hit){ hit.uid = r.uid || hit.uid; hit.href = r.href || ''; hit.etag = r.etag || ''; hit.pending = false; }
@@ -13734,13 +13741,19 @@ function openCalEventForm(ev, dayKey){
         calRepaint();
         calWriteStart();
         toast('已删除，正在同步到苹果日历');
-        apiCall('/api/caldav', { method:'POST', body:{ action:'remove', href: ev.href, etag: ev.etag } })
-          .then(()=>{ if(CAL.dav) CAL.dav.lastSync = Date.now(); })
-          .catch(e2=>{
-            if(i0 >= 0) CAL.events.splice(i0, 0, ev);  // 失败放回去
-            toast('删除失败：' + (e2.message || '未知错误'));
-          })
-          .finally(()=>{ calWriteEnd(); calRepaint(); });
+      fetch('/api/caldav', { method:'POST', headers: authHeaders(true), keepalive: true,
+        body: JSON.stringify({ action:'remove', href: ev.href, etag: ev.etag }) })
+        .then(async res=>{
+          const out = await res.json().catch(()=>({}));
+          if(!res.ok) throw new Error(out.error || ('HTTP ' + res.status));
+          return out;
+        })
+        .then(()=>{ if(CAL.dav) CAL.dav.lastSync = Date.now(); })
+        .catch(e2=>{
+          if(i0 >= 0) CAL.events.splice(i0, 0, ev);  // 失败放回去
+          toast('删除失败：' + (e2.message || '未知错误'));
+        })
+        .finally(()=>{ calWriteEnd(); calRepaint(); });
       };
     };
     setTimeout(()=>{ const i = m.querySelector('#ceTitle'); if(i){ i.focus(); i.select(); } }, 60);

@@ -72,7 +72,9 @@ async function dav(url, { method = 'GET', auth, body, depth, extra } = {}) {
   if (extra) Object.assign(headers, extra);
   const res = await fetch(url, { method, headers, body });
   const text = await res.text();
-  return { status: res.status, ok: res.ok, text, headers: res.headers };
+  // res.url 是跟随重定向后的真实地址：iCloud 会把账号甩到 p55-caldav 这种分区主机，
+  // 后续所有相对 href 都必须基于它解析，否则请求打到主域名上会拿到空列表
+  return { status: res.status, ok: res.ok, text, headers: res.headers, url: res.url || url };
 }
 
 /* ---------------- 1. 发现 principal ---------------- */
@@ -84,9 +86,9 @@ export async function discoverPrincipal(auth) {
   // iCloud 对错误凭据给 403（有时 401），都算认证失败
   if (r.status === 401 || r.status === 403) return { error: 'auth' };
   if (!r.ok) return { error: 'http' + r.status, detail: r.text.slice(0, 200) };
-  const href = xmlText(r.text, 'current-user-principal') || '';
-  const inner = /<[^>]*href[^>]*>([\s\S]*?)<\/[^>]*href>/i.exec(xmlBlocks(r.text, 'current-user-principal')[0] || '');
-  const principal = absUrl(inner ? unxml(inner[1]).trim() : href);
+  const block = xmlBlocks(r.text, 'current-user-principal')[0] || '';
+  const inner = /<[^>]*href[^>]*>([\s\S]*?)<\/[^>]*href>/i.exec(block);
+  const principal = absUrl(inner ? unxml(inner[1]).trim() : '', r.url);
   if (!principal) return { error: 'no-principal', detail: r.text.slice(0, 300) };
   return { principal };
 }
@@ -101,7 +103,7 @@ export async function discoverHome(auth, principal) {
   if (!r.ok) return { error: 'http' + r.status, detail: r.text.slice(0, 200) };
   const block = xmlBlocks(r.text, 'calendar-home-set')[0] || '';
   const inner = /<[^>]*href[^>]*>([\s\S]*?)<\/[^>]*href>/i.exec(block);
-  const home = absUrl(inner ? unxml(inner[1]).trim() : '');
+  const home = absUrl(inner ? unxml(inner[1]).trim() : '', r.url);
   if (!home) return { error: 'no-home', detail: r.text.slice(0, 300) };
   return { home };
 }
@@ -119,25 +121,33 @@ const PF_CALS = `<?xml version="1.0" encoding="utf-8"?>
 
 export async function listCalendars(auth, home) {
   const r = await dav(home, { method: 'PROPFIND', auth, depth: 1, body: PF_CALS });
-  if (!r.ok) return { error: 'http' + r.status, detail: r.text.slice(0, 200) };
-  const out = [];
+  if (!r.ok) return { error: 'http' + r.status, detail: r.text.slice(0, 300) };
+
+  const items = [];
   for (const block of xmlBlocks(r.text, 'response')) {
     const hrefM = /<(?:[\w.-]+:)?href\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?href>/i.exec(block);
     const href = absUrl(unxml((hrefM ? hrefM[1] : '').trim()), home);
     if (!href) continue;
-    // 只要真正的日历（resourcetype 里有 <calendar/>），跳过收件箱之类
-    if (!/<(?:[\w.-]+:)?calendar\s*\/?>/i.test(block)) continue;
     const comps = [...block.matchAll(/<(?:[\w.-]+:)?comp\b[^>]*name="([^"]+)"/gi)].map((m) => m[1].toUpperCase());
-    if (comps.length && !comps.includes('VEVENT')) continue;   // 只关心日程，不要「提醒事项」
-    const name = xmlText(block, 'displayname') || decodeURIComponent(href.split('/').filter(Boolean).pop() || '日历');
+    const name = xmlText(block, 'displayname') || decodeURIComponent(href.split('/').filter(Boolean).pop() || '');
     const color = xmlText(block, 'calendar-color') || '';
-    out.push({
-      href,
-      name: name.slice(0, 80),
+    items.push({
+      href, name, comps,
+      // 关键是这里：iCloud 给的是 <calendar xmlns="urn:ietf:params:xml:ns:caldav"/>，
+      // 带属性的写法，只认 <calendar/> 会把日历全过滤掉
+      isCal: /<(?:[\w.-]+:)?calendar(?:\s[^>]*)?\/?>/i.test(block),
       color: /^#[0-9a-f]{6}/i.test(color) ? color.slice(0, 7) : ''
     });
   }
-  return { calendars: out };
+
+  const norm = (it) => ({ href: it.href, name: (it.name || '日历').slice(0, 80), color: it.color });
+  // 先按 resourcetype 挑；挑不出来（不同服务器写法不一致）就退一步：
+  // 凡是带名字、又不是 home 本身的集合都当日历，宁可多列也别空着
+  let picked = items.filter((it) => it.isCal && (!it.comps.length || it.comps.includes('VEVENT')));
+  if (!picked.length) {
+    picked = items.filter((it) => it.name && it.href.replace(/\/$/, '') !== String(home).replace(/\/$/, ''));
+  }
+  return { calendars: picked.map(norm), raw: r.text };
 }
 
 /* ---------------- 4. 拉事件 ---------------- */
@@ -341,5 +351,9 @@ export async function probe(appleId, appPassword) {
   if (h.error) return { error: h.error, detail: h.detail };
   const c = await listCalendars(auth, h.home);
   if (c.error) return { error: c.error, detail: c.detail };
-  return { auth, principal: p.principal, home: h.home, calendars: c.calendars };
+  // 一个日历都没有时，把原始响应留一份给前端看，方便定位（只截前 1200 字）
+  return {
+    auth, principal: p.principal, home: h.home, calendars: c.calendars,
+    raw: c.calendars.length ? '' : String(c.raw || '').slice(0, 1200)
+  };
 }

@@ -2037,6 +2037,8 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   display:inline-grid;place-items:center;font-size:12.5px;font-weight:600;line-height:1;
 }
 .cal-l{font-size:10.5px;color:rgb(var(--faint));line-height:1.5;white-space:nowrap}
+.cal-l.fest{color:rgb(var(--ivy));font-weight:600}
+[data-theme=dark] .cal-l.fest{color:rgb(var(--ivy-ink))}
 .cal-cell.today .cal-l{color:rgb(224 69 58)}
 .cal-evs{display:flex;flex-direction:column;gap:2px;min-height:0;overflow:hidden}
 .cal-ev{
@@ -2077,7 +2079,10 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-btns .primary:disabled{opacity:.6}
 .cal-btns .ghost{background:rgb(var(--sunken));color:rgb(var(--ink-2));flex:0 0 auto;padding:0 16px}
 .cal-btns .danger{background:transparent;color:rgb(var(--danger));box-shadow:inset 0 0 0 .5px rgb(var(--danger)/.35);flex:0 0 auto;padding:0 16px}
-.cal-err{font-size:12px;color:rgb(var(--danger));line-height:1.6;margin-top:9px;min-height:0}
+.cal-err{font-size:12px;color:rgb(var(--danger));line-height:1.6;margin-top:9px;min-height:0;white-space:pre-wrap;word-break:break-all}
+.cal-dbg{margin-top:9px}
+.cal-dbg-t{font-size:11px;color:rgb(var(--faint));margin-bottom:4px}
+.cal-dbg textarea{width:100%;box-sizing:border-box;height:96px;padding:7px 8px;border-radius:7px;font-family:var(--font-mono);font-size:10.5px;line-height:1.5;border:.5px solid rgb(var(--line));background:rgb(var(--sunken));color:rgb(var(--ink-2));resize:vertical}
 .cal-ok{font-size:12px;color:rgb(var(--ivy-ink));line-height:1.6;margin-top:9px}
 .cal-cals{display:flex;flex-direction:column;gap:2px;margin:4px 0 12px;max-height:180px;overflow:auto}
 .cal-cals label{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:7px;font-size:12.5px;color:rgb(var(--ink-2));cursor:pointer}
@@ -3673,7 +3678,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.20', at: '2026-11-23 11:02' };
+window.IVY_BUILD = { id: '2.23', at: '2026-11-23 11:36' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -12835,6 +12840,36 @@ function lunarLabel(y, m, d){
   }catch(e){ return ''; }
 }
 
+/* 24 节气：1900 年小寒起算的分钟偏移表，日期级精度够用，且不需要联网 */
+const S_TERM = [0,21208,42467,63836,85337,107014,128867,150921,173149,195551,218072,240693,
+  263343,285989,308563,331033,353350,375494,397447,419210,440795,462224,483532,504758];
+const S_NAME = ['小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至',
+  '小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至'];
+function calTermDay(y, n){
+  const ms = 31556925974.7 * (y - 1900) + S_TERM[n] * 60000 + Date.UTC(1900, 0, 6, 2, 5);
+  return new Date(ms).getUTCDate();
+}
+/* 节日：农历节日靠农历算法推，公历节日是固定日期 —— 都不依赖外部数据 */
+const FEST_SOLAR = {
+  '1-1':'元旦','2-14':'情人节','3-8':'妇女节','3-12':'植树节','4-1':'愚人节',
+  '5-1':'劳动节','5-4':'青年节','6-1':'儿童节','7-1':'建党节','8-1':'建军节',
+  '9-10':'教师节','10-1':'国庆节','11-11':'双十一','12-24':'平安夜','12-25':'圣诞节'
+};
+const FEST_LUNAR = {
+  '1-1':'春节','1-15':'元宵','2-2':'龙抬头','5-5':'端午','7-7':'七夕',
+  '7-15':'中元','8-15':'中秋','9-9':'重阳','12-8':'腊八','12-23':'小年'
+};
+function calFestival(y, m, d){
+  const base = (m - 1) * 2;                 // 每个月两个节气
+  for(let k=0; k<2; k++){
+    const n = base + k;
+    if(calTermDay(y, n) === d) return S_NAME[n];
+  }
+  const l = solar2lunar(y, m, d);
+  if(l && !l.leap && FEST_LUNAR[l.m + '-' + l.d]) return FEST_LUNAR[l.m + '-' + l.d];
+  return FEST_SOLAR[m + '-' + d] || '';
+}
+
 const CAL = {
   y: 0, m: 0,
   events: [],
@@ -13018,8 +13053,10 @@ function paintCalendar(){
       return `<button class="cal-ev" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
         <i class="dot"></i><b>${esc(label)}</b></button>`;
     }).join('');
+    const fest = calFestival(c.y, c.m, c.d);
+    const sub = fest || lunarLabel(c.y, c.m, c.d);
     return `<div class="cal-cell${c.out?' out':''}${c.key===todayKey?' today':''}" data-day="${c.key}">
-      <div class="cal-cl"><span class="cal-d">${c.d}</span><span class="cal-l">${lunarLabel(c.y,c.m,c.d)}</span></div>
+      <div class="cal-cl"><span class="cal-d">${c.d}</span><span class="cal-l${fest?' fest':''}">${sub}</span></div>
       <div class="cal-evs">${evHtml}${more>0?`<div class="cal-more">还有 ${more} 项</div>`:''}</div>
     </div>`;
   }).join('');
@@ -13062,9 +13099,20 @@ function paintCalendar(){
     wrap.querySelectorAll('[data-day]').forEach(c=>{
       c.onclick = ()=>{
         const k = Number(c.dataset.day);
-        const list = calGroup(CAL.events).get(k) || [];
-        if(!list.length && CAL.dav && CAL.dav.connected){ openCalEventForm(null, k); return; }
-        calShowDay(k, c);
+        const now = Date.now();
+        // 双击 = 新建（第一次点击先等 300ms，看是不是双击的起手）
+        if(CAL_TAP.k === k && now - CAL_TAP.at < 420){
+          CAL_TAP = { k: 0, at: 0 };
+          if(CAL.dav && CAL.dav.connected) openCalEventForm(null, k);
+          else openCalSetup();
+          return;
+        }
+        CAL_TAP = { k, at: now };
+        setTimeout(()=>{
+          if(CAL_TAP.k !== k) return;
+          CAL_TAP = { k: 0, at: 0 };
+          if((calGroup(CAL.events).get(k) || []).length) calShowDay(k, c);
+        }, 300);
       };
     });
     wrap.querySelectorAll('[data-calsync]').forEach(b=>{
@@ -13161,6 +13209,7 @@ function calAgo(ts){
   return Math.floor(d/86400000) + ' 天前';
 }
 const CAL_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+let CAL_TAP = { k: 0, at: 0 };   // 日期格双击判定
 
 async function loadCalDav(){
   if(!isConnected()){ CAL.dav = null; return; }
@@ -13206,9 +13255,30 @@ function openCalSetup(){
         const appPassword = m.querySelector('#cdPass').value.trim();
         if(!appleId || !appPassword){ err.textContent = '两个都要填'; return; }
         go.disabled = true; go.textContent = '连接中…'; err.textContent = '';
+        m.querySelectorAll('.cal-dbg').forEach(x=>x.remove());
         try{
-          const r = await apiCall('/api/caldav', { method:'POST', body:{ action:'connect', appleId, appPassword } });
-          CAL.dav = { connected:true, appleId:r.appleId, calendars:r.calendars || [], lastSync:0 };
+          // 这里不用 apiCall：失败时要拿到 debug 原文，apiCall 会把它丢掉
+          const res = await fetch('/api/caldav', {
+            method:'POST', headers: authHeaders(true),
+            body: JSON.stringify({ action:'connect', appleId, appPassword })
+          });
+          const d = await res.json().catch(()=>({}));
+          if(!res.ok){
+            err.textContent = d.error || ('HTTP ' + res.status);
+            if(d.debug){
+              const box = document.createElement('div');
+              box.className = 'cal-dbg';
+              box.innerHTML = '<div class="cal-dbg-t">诊断信息（复制后发我）</div>';
+              const ta = document.createElement('textarea');
+              ta.readOnly = true;
+              ta.value = d.debug;
+              box.appendChild(ta);
+              err.parentNode.insertBefore(box, err.nextSibling);
+            }
+            go.disabled = false; go.textContent = '连接';
+            return;
+          }
+          CAL.dav = { connected:true, appleId:d.appleId, calendars:d.calendars || [], lastSync:0 };
           m.remove();
           toast('已连接，正在拉取事件…');
           await calSync(null, true);

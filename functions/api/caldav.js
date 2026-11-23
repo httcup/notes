@@ -121,7 +121,12 @@ export async function onRequest({ request, env }) {
       const p = await DAV.probe(appleId, pass);
       if (p.error === 'auth') return json({ error: 'Apple ID 或 App 专用密码不对（密码要去 appleid.apple.com 生成，不是登录密码）' }, 400);
       if (p.error) return json({ error: '连不上 iCloud：' + p.error, detail: p.detail || '' }, 502);
-      if (!p.calendars.length) return json({ error: '这个账号下没找到可写的日历' }, 400);
+      if (!p.calendars.length) {
+        return json({
+          error: '这个账号下没找到可写的日历',
+          debug: 'home=' + p.home + '\n\n' + (p.raw || '')
+        }, 400);
+      }
 
       const sealed = await seal(env.IVY_SECRET, pass);
       const now = Date.now();

@@ -2180,6 +2180,65 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-ev.done{opacity:.5}
 .cal-ev.done b{text-decoration:line-through}
 .cal-more{font-size:10px;color:rgb(var(--faint));padding-left:5px;line-height:1.4}
+/* 悬停某一天弹出的黄历小卡：农历 / 干支 / 宜忌（数据来自 tyme4ts，同站内万年历） */
+.cal-alm{
+  position:fixed;z-index:9000;width:400px;max-width:calc(100vw - 24px);
+  padding:14px 16px 12px;border-radius:14px;box-sizing:border-box;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));
+  box-shadow:0 20px 48px rgb(16 24 32/.2),0 2px 8px rgb(16 24 32/.08);
+  opacity:0;transform:translateY(4px) scale(.995);pointer-events:none;
+  transition:opacity .13s ease,transform .13s ease;
+}
+.cal-alm.on{opacity:1;transform:none}
+.cal-alm-hd{display:flex;align-items:flex-start;gap:12px}
+.cal-alm-d{
+  font-family:var(--font-serif);font-size:36px;font-weight:600;line-height:.92;letter-spacing:-.02em;
+  color:rgb(var(--ink));font-variant-numeric:tabular-nums;min-width:46px;padding-top:2px;
+}
+.cal-alm-md{flex:1;min-width:0}
+.cal-alm-w{display:flex;align-items:baseline;gap:8px;font-size:11.5px;color:rgb(var(--muted));line-height:1.5;letter-spacing:.01em}
+.cal-alm-w em{font-style:normal;margin-left:auto;font-size:10.5px;color:rgb(var(--faint))}
+.cal-alm-lu{font-family:var(--font-serif);font-size:15.5px;font-weight:600;color:rgb(var(--ink));line-height:1.5;margin-top:2px;letter-spacing:.01em}
+.cal-alm-gz{font-size:10.5px;color:rgb(var(--faint));line-height:1.5;margin-top:1px;letter-spacing:.02em}
+.cal-alm-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.cal-alm-tag{
+  font-size:10.5px;line-height:1.55;padding:1px 8px;border-radius:999px;
+  background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink));font-weight:600;letter-spacing:.02em;
+}
+.cal-alm-tag.gray{background:rgb(var(--sunken));color:rgb(var(--muted));font-weight:500}
+.cal-alm-tag.red{background:rgb(224 69 58/.12);color:rgb(196 52 43);font-weight:600}
+[data-theme=dark] .cal-alm-tag.red{background:rgb(224 69 58/.22);color:rgb(255 146 136)}
+.cal-alm-yj{margin-top:10px;padding-top:10px;border-top:1px solid rgb(var(--line))}
+.cal-alm-yjh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cal-alm-yjh b{font-family:var(--font-serif);font-size:12px;font-weight:700;color:rgb(var(--ink));letter-spacing:.14em}
+.cal-alm-yjh em{font-style:normal;font-size:10.5px;color:rgb(var(--faint));letter-spacing:.02em}
+.cal-alm-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cal-alm-col{border-radius:10px;padding:8px 8px 9px;min-width:0}
+.cal-alm-col.yi{background:rgb(43 138 92/.075)}
+.cal-alm-col.ji{background:rgb(214 74 62/.065)}
+[data-theme=dark] .cal-alm-col.yi{background:rgb(86 180 130/.11)}
+[data-theme=dark] .cal-alm-col.ji{background:rgb(224 90 78/.1)}
+.cal-alm-col>u{display:block;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.16em;margin-bottom:6px}
+.cal-alm-col.yi>u{color:rgb(var(--ivy-ink))}
+.cal-alm-col.ji>u{color:rgb(var(--danger))}
+.cal-alm-chips{display:flex;flex-wrap:wrap;gap:4px}
+.cal-alm-chips span{
+  font-size:10.5px;line-height:1.5;padding:2px 6px;border-radius:6px;letter-spacing:.02em;
+  background:rgb(var(--surface));border:.5px solid rgb(var(--line));color:rgb(var(--ink-2));
+}
+.cal-alm-chips .none{background:transparent;border:0;padding-left:0;color:rgb(var(--faint))}
+.cal-alm-chips .more{background:transparent;border:0;color:rgb(var(--faint));padding-left:1px}
+.cal-alm-ft{
+  margin-top:9px;padding-top:9px;border-top:1px solid rgb(var(--line));
+  display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:10.5px;line-height:1.5;
+  color:rgb(var(--ink-2));
+}
+.cal-alm-ft span{display:flex;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-alm-ft b{font-weight:500;color:rgb(var(--faint));flex:0 0 auto;min-width:26px}
+.cal-alm-ft i{font-style:normal;color:rgb(var(--faint))}
+.cal-alm-ft .bad{color:rgb(196 52 43)}
+[data-theme=dark] .cal-alm-ft .bad{color:rgb(255 146 136)}
+.cal-alm-wait{margin-top:11px;padding-top:10px;border-top:1px solid rgb(var(--line));font-size:11px;color:rgb(var(--faint))}
 /* 连接 / 编辑弹窗（CalDAV） */
 .cal-mask{position:fixed;inset:0;z-index:9500;background:rgb(10 14 20/.32);display:grid;place-items:center;padding:18px;backdrop-filter:blur(2px)}
 .cal-set{
@@ -3861,7 +3920,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.68', at: '2026-11-23 16:26' };
+window.IVY_BUILD = { id: '2.71', at: '2026-11-23 16:43' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4503,6 +4562,7 @@ const brandName = $('#brandName');
 
 /* 中栏（笔记列表 / 日程待办）折叠：让正文占满整个宽度。
    状态存 S.listCollapsed，跟着本机走；手机上列表是整页，按钮本身不显示 */
+let SHELF_AUTO = false;   // 全屏按钮顺手收起的左侧目录栏，退出全屏时要还原
 function syncListCollapse(){
   const b = $('#listCollapse');
   const on = !!S.listCollapsed;
@@ -4516,8 +4576,20 @@ function syncListCollapse(){
       + '</svg>';
     b.dataset.done = '1';
     b.onclick = ()=>{
-      S.listCollapsed = !S.listCollapsed;
+      const next = !S.listCollapsed;
+      S.listCollapsed = next;
+      if(next){
+        // 进全屏：左侧目录栏也一起收起，正文才真的是整屏（窄屏本来就是抽屉，不用管）
+        if(S.shelfOpen && document.documentElement.clientWidth > 900){
+          SHELF_AUTO = true;             // 记下是这颗按钮顺手收的，退出全屏时还原
+          closeShelfNow();
+        }
+      }else if(SHELF_AUTO){
+        SHELF_AUTO = false;
+        if(!S.shelfOpen) toggleShelf();
+      }
       syncListCollapse();
+      syncHomeFloat();
       save();
       try{ if(typeof paintCalShell === 'function') paintCalShell(); }catch(e){}
     };
@@ -5807,7 +5879,16 @@ function dueLabel(ts){
   if(d.getFullYear() === now.getFullYear()) return (d.getMonth()+1) + '月' + d.getDate() + '日 ' + hm;
   return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()) + ' ' + hm;
 }
-/* 把全库（或某一篇）的待办扫出来 */
+/* 待办行原文 → 纯文字：去掉 @时间 / ⏰ / 🔁 / ✅ 这些标记（collectTodos 和归档校验共用） */
+function todoTextOf(raw){
+  return String(raw || '')
+    .replace(new RegExp(DUE_TIME_RE.source, 'g'), '')
+    .replace(new RegExp(DUE_AT_RE.source, 'g'), '')
+    .replace(new RegExp(REPEAT_RE.source, 'gi'), '')
+    .replace(new RegExp(DONE_DATE_RE.source, 'g'), '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
 /* ========== 待办归档 ==========
    归档 = 从列表里收起来，不动笔记正文。键用「笔记 id + 待办文字」，
    因为行号会随编辑漂移，文字相对稳定。 */
@@ -5822,6 +5903,9 @@ function todoArchivedList(){
     const k = todoKey(a);
     if(a.k !== k){ a.k = k; fixed = true; }
   });
+  // 笔记里已经把这条待办删掉了 → 归档也不留
+  const kept = S.todoArchived.filter(a => a && !todoArchGone(a));
+  if(kept.length !== S.todoArchived.length){ S.todoArchived = kept; fixed = true; }
   if(fixed){ S.todoArchivedAt = Date.now(); save(); }
   return S.todoArchived.slice().sort((a,b)=> (b.at||0) - (a.at||0));
 }
@@ -5829,6 +5913,25 @@ function isTodoArchived(t){
   const k = todoKey(t);
   // 两边的键都现算：早期存下来的 a.k 可能是错的（见 todoArchivedList 里的说明）
   return (S.todoArchived || []).some(a => a && todoKey(a) === k);
+}
+/* 这条归档还该留着吗：笔记本身还在、也没进回收站，但正文里已经把这条待办删掉了
+   → 归档跟着消失（不然归档区会堆一堆点不回笔记的死条目）。
+   笔记整篇找不到（还没同步下来 / 被删了）就先留着，别在数据没到位时把归档清空。 */
+function todoArchGone(a){
+  const n = (S.notes || []).find(x => x && x.id === a.noteId);
+  if(!n || n.trashed) return false;
+  const want = String(a.text || '').trim();       // 按文字比，比键稳（键里还夹着 id）
+  if(!want) return false;
+  if(!String(n.body || '').trim()) return false;  // 正文还没同步下来，别当成「删了」
+  let inFence = false, hit = false;
+  String(n.body || '').split('\n').forEach(ln=>{
+    if(hit) return;
+    if(/^\s*```/.test(ln)){ inFence = !inFence; return; }
+    if(inFence) return;
+    const m = ln.match(TODO_RE);
+    if(m && todoTextOf(m[4]) === want) hit = true;
+  });
+  return !hit;
 }
 function archiveTodo(t){
   if(!t || !t.done){ toast('只有已完成的待办才能归档'); return; }
@@ -5857,6 +5960,7 @@ function unarchiveTodo(k){
   toast('已恢复到待办');
 }
 
+/* 把全库（或某一篇）的待办扫出来 */
 function collectTodos(noteId){
   const list = [];
   (S.notes || []).forEach(n=>{
@@ -5872,13 +5976,7 @@ function collectTodos(noteId){
       if(!m) return;
       const raw = m[4];
       const due = parseDue(raw);
-      const text = raw
-        .replace(new RegExp(DUE_TIME_RE.source, 'g'), '')
-        .replace(new RegExp(DUE_AT_RE.source, 'g'), '')
-        .replace(new RegExp(REPEAT_RE.source, 'gi'), '')
-        .replace(new RegExp(DONE_DATE_RE.source, 'g'), '')
-        .replace(/[ \t]{2,}/g, ' ')
-        .trim();
+      const text = todoTextOf(raw);
       list.push({
         noteId: n.id,
         noteTitle: n.title || '无标题',
@@ -13831,6 +13929,7 @@ function calBarMonth(y, m){
 let calScrollRAF = 0;
 function calOnScroll(){
   if(calScrollRAF) return;
+  almHide();                 // 滚起来就别让黄历卡挂在原地
   calScrollRAF = requestAnimationFrame(()=>{
     calScrollRAF = 0;
     const sc = $('#calScroll');
@@ -13895,6 +13994,223 @@ function calGoMonth(y, m, day){
   if(inWin) calScrollToDay($('#calScroll'), y, m, day || 1, true);
 }
 /* 格子的点击都挂在滚动容器上（内容会一直往后加，逐格绑定会漏） */
+/* ============ 悬停格子：黄历小卡（农历 / 干支 / 宜忌） ============
+   数据用 tyme4ts（MIT，和 slide-clock 万年历同一个库），按需加载，首次进日历空闲时预热。
+   卡片挂在 body 上、position:fixed：日历滚动容器是 overflow:auto，放在里面会被裁掉。 */
+const ALM = { p: null, warm: false, cache: new Map(), el: null, cell: null, timer: 0, hideT: 0 };
+
+function almLoad(){
+  if(window.Tyme) return Promise.resolve(window.Tyme);
+  if(ALM.p) return ALM.p;
+  ALM.p = new Promise((res, rej)=>{
+    const sc = document.createElement('script');
+    sc.src = '/vendor/tyme.min.js';
+    sc.async = true;
+    sc.onload = ()=>window.Tyme ? res(window.Tyme) : rej(new Error('tyme missing'));
+    sc.onerror = ()=>{ ALM.p = null; rej(new Error('tyme load failed')); };
+    document.head.appendChild(sc);
+  });
+  return ALM.p;
+}
+/* 进日历页后过一会儿再拉库：不挡首屏，等真要悬停时基本已经好了 */
+function almWarm(){
+  if(ALM.warm || window.Tyme) return;
+  ALM.warm = true;
+  setTimeout(()=>{ almLoad().catch(()=>{ ALM.warm = false; }); }, 1200);
+}
+const ALM_CAN_HOVER = ()=> {
+  try{ return window.matchMedia('(hover:hover) and (pointer:fine)').matches; }catch(e){ return false; }
+};
+const ALM_WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+
+/* 某一天的黄历信息，按 yyyymmdd 缓存；库还没到位时返回 null */
+function almOf(key){
+  if(ALM.cache.has(key)) return ALM.cache.get(key);
+  const T = window.Tyme;
+  if(!T) return null;
+  const y = Math.floor(key / 10000), m = Math.floor(key % 10000 / 100), d = key % 100;
+  const s = (fn)=>{ try{ const v = fn(); return v == null ? '' : String(v); }catch(e){ return ''; } };
+  const arr = (fn)=>{ try{ return (fn() || []).map(x=>String(x)).filter(Boolean); }catch(e){ return []; } };
+  let o = null;
+  try{
+    const sd  = T.SolarDay.fromYmd(y, m, d);
+    const lu  = sd.getLunarDay();
+    const gz  = lu.getSixtyCycle();          // 日干支（辛丑）
+    const star = lu.getTwentyEightStar();
+    const td  = s(()=>String(sd.getTermDay()));   // 「小雪第2天」
+    const termDay = /第1天$/.test(td);
+    const fest = s(()=>sd.getFestival() ? sd.getFestival().toString() : '')
+              || s(()=>lu.getFestival() ? lu.getFestival().toString() : '');
+    o = {
+      key, y, m, d,
+      lunar: s(()=>lu.toString()),                 // 农历丙午年十月十五
+      gzY: s(()=>lu.getYearSixtyCycle().toString()),
+      gzM: s(()=>lu.getMonthSixtyCycle().toString()),
+      gzD: s(()=>gz.toString()),
+      zodiac: s(()=>lu.getYearSixtyCycle().getEarthBranch().getZodiac().toString()),
+      constellation: s(()=>sd.getConstellation().toString()),
+      duty: s(()=>lu.getDuty().toString()),        // 建除十二神：满
+      twelve: s(()=>lu.getTwelveStar().toString()),// 值神：玉堂
+      star: s(()=>star.toString()),
+      starLuck: s(()=>star.getLuck().toString()),
+      sound: s(()=>gz.getSound().toString()),      // 纳音
+      clash: s(()=>gz.getEarthBranch().getOpposite().toString()),
+      clashZodiac: s(()=>gz.getEarthBranch().getOpposite().getZodiac().toString()),
+      term: td ? td.replace(/第\d+天$/, '') : '',
+      termDay,
+      six: s(()=>lu.getSixStar().toString()),
+      festival: fest,
+      yi: arr(()=>lu.getRecommends()),
+      ji: arr(()=>lu.getAvoids())
+    };
+  }catch(e){ o = null; }
+  if(o) ALM.cache.set(key, o);
+  return o;
+}
+
+function almChips(list, max){
+  if(!list.length) return '<span class="none">诸事不宜</span>';
+  const shown = list.slice(0, max || 16);
+  let html = shown.map(x=>`<span>${esc(x)}</span>`).join('');
+  if(list.length > shown.length) html += `<span class="more">+${list.length - shown.length}</span>`;
+  return html;
+}
+function almCardHtml(o){
+  const wk = ALM_WEEK[new Date(o.y, o.m - 1, o.d).getDay()];
+  const tk = calKeyOf(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+  const tags = [];
+  if(o.key === tk) tags.push('<span class="cal-alm-tag red">今天</span>');
+  if(o.festival) tags.push(`<span class="cal-alm-tag">${esc(o.festival)}</span>`);
+  if(o.termDay && o.term) tags.push(`<span class="cal-alm-tag">${esc(o.term)}</span>`);
+  const ft = [];
+  if(o.twelve) ft.push(`<span><b>值神</b>${esc(o.twelve)}</span>`);
+  if(o.star) ft.push(`<span><b>星宿</b>${esc(o.star)}${o.starLuck ? `<i class="${o.starLuck.indexOf('凶') >= 0 ? 'bad' : ''}">·${esc(o.starLuck)}</i>` : ''}</span>`);
+  if(o.clash) ft.push(`<span><b>冲煞</b>冲${esc(o.clashZodiac)}（${esc(o.clash)}）</span>`);
+  if(o.sound) ft.push(`<span><b>纳音</b>${esc(o.sound)}</span>`);
+  if(o.term) ft.push(`<span><b>节气</b>${esc(o.term)}</span>`);
+  if(o.six) ft.push(`<span><b>六曜</b>${esc(o.six)}</span>`);
+  return `<div class="cal-alm-hd">
+      <div class="cal-alm-d">${o.d}</div>
+      <div class="cal-alm-md">
+        <div class="cal-alm-w"><span>${o.y} 年 ${o.m} 月 · ${wk}</span>${o.constellation ? `<em>${esc(o.constellation)}座</em>` : ''}</div>
+        <div class="cal-alm-lu">${esc(o.lunar)}</div>
+        <div class="cal-alm-gz">${esc(o.gzY)}年 · ${esc(o.gzM)}月 · ${esc(o.gzD)}日</div>
+      </div>
+    </div>
+    ${tags.length ? `<div class="cal-alm-tags">${tags.join('')}</div>` : ''}
+    <div class="cal-alm-yj">
+      <div class="cal-alm-yjh"><b>宜 / 忌</b><em>${esc(o.gzD)}日 · 建除「${esc(o.duty)}」</em></div>
+      <div class="cal-alm-cols">
+        <div class="cal-alm-col yi"><u>宜</u><div class="cal-alm-chips">${almChips(o.yi, 12)}</div></div>
+        <div class="cal-alm-col ji"><u>忌</u><div class="cal-alm-chips">${o.ji.length ? almChips(o.ji, 12) : '<span class="none">无</span>'}</div></div>
+      </div>
+    </div>
+    ${ft.length ? `<div class="cal-alm-ft">${ft.join('')}</div>` : ''}`;
+}
+/* 库还没下载完时的占位：先把农历日子给出来，宜忌随后补上 */
+function almWaitHtml(key){
+  const y = Math.floor(key / 10000), m = Math.floor(key % 10000 / 100), d = key % 100;
+  const wk = ALM_WEEK[new Date(y, m - 1, d).getDay()];
+  let lu = '';
+  try{
+    const l = solar2lunar(y, m, d);
+    if(l) lu = '农历' + (l.leap ? '闰' : '') + LUNAR_MON[l.m] + LUNAR_DAY[l.d];
+  }catch(e){}
+  return `<div class="cal-alm-hd">
+      <div class="cal-alm-d">${d}</div>
+      <div class="cal-alm-md">
+        <div class="cal-alm-w">${y} 年 ${m} 月 · ${wk}</div>
+        <div class="cal-alm-lu">${lu || '&nbsp;'}</div>
+      </div>
+    </div>
+    <div class="cal-alm-wait">正在读取宜忌…</div>`;
+}
+function almPlace(cell){
+  const el = ALM.el;
+  if(!el) return;
+  const r = cell.getBoundingClientRect();
+  const w = el.offsetWidth || 376, h = el.offsetHeight || 260;
+  const gap = 10, m = 10;
+  let left = r.right + gap;
+  if(left + w > window.innerWidth - m) left = r.left - w - gap;          // 右边放不下就翻到左边
+  if(left < m) left = Math.max(m, Math.min(window.innerWidth - w - m, r.left + r.width / 2 - w / 2));
+  let top = r.top + r.height / 2 - h / 2;                                // 竖直方向对着格子居中
+  // 别盖住顶部那排工具栏：限定在日历滚动区里，放不下再退回窗口边界
+  const sc = document.getElementById('calScroll');
+  if(sc){
+    const sr = sc.getBoundingClientRect();
+    if(sr.bottom - sr.top > h + 8){
+      if(top < sr.top + 2) top = sr.top + 2;
+      if(top + h > sr.bottom - 2) top = sr.bottom - 2 - h;
+    }
+  }
+  if(top + h > window.innerHeight - m) top = window.innerHeight - m - h;
+  if(top < m) top = m;
+  el.style.left = Math.round(left) + 'px';
+  el.style.top = Math.round(top) + 'px';
+}
+function almShow(cell){
+  const key = Number(cell.dataset.day);
+  if(!key) return;
+  if(!ALM.el){
+    ALM.el = document.createElement('div');
+    ALM.el.className = 'cal-alm';
+    ALM.el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(ALM.el);
+  }
+  ALM.cell = cell;
+  const o = almOf(key);
+  ALM.el.innerHTML = o ? almCardHtml(o) : almWaitHtml(key);
+  almPlace(cell);
+  ALM.el.classList.add('on');
+  if(!o){
+    almLoad().then(()=>{
+      if(ALM.cell !== cell) return;                       // 鼠标已经挪走就不补了
+      const o2 = almOf(key);
+      if(!o2) return;
+      ALM.el.innerHTML = almCardHtml(o2);
+      almPlace(cell);
+    }).catch(()=>{});
+  }
+}
+function almHide(){
+  if(ALM.timer){ clearTimeout(ALM.timer); ALM.timer = 0; }
+  if(ALM.hideT){ clearTimeout(ALM.hideT); ALM.hideT = 0; }
+  ALM.cell = null;
+  if(ALM.el) ALM.el.classList.remove('on');
+}
+/* 悬停 = 停在格子上 180ms 才弹，避免扫一下就闪；
+   离开后 70ms 再收，格子↔子元素的抖动不会反复开关 */
+function almBindHover(sc){
+  if(!ALM_CAN_HOVER()) return;
+  sc.addEventListener('pointerover', e=>{
+    const cell = e.target.closest && e.target.closest('[data-day]');
+    if(!cell || !sc.contains(cell)) return;
+    if(cell === ALM.cell) return;
+    if(ALM.hideT){ clearTimeout(ALM.hideT); ALM.hideT = 0; }
+    if(ALM.timer) clearTimeout(ALM.timer);
+    ALM.timer = setTimeout(()=>{
+      ALM.timer = 0;
+      if(!sc.isConnected) return;
+      almShow(cell);
+    }, 180);
+  });
+  sc.addEventListener('pointerout', e=>{
+    const cell = e.target.closest && e.target.closest('[data-day]');
+    if(!cell) return;
+    const to = e.relatedTarget;
+    if(to && cell.contains(to)) return;
+    if(ALM.timer){ clearTimeout(ALM.timer); ALM.timer = 0; }
+    if(ALM.hideT) clearTimeout(ALM.hideT);
+    ALM.hideT = setTimeout(()=>{ ALM.hideT = 0; almHide(); }, 70);
+  });
+  sc.addEventListener('wheel', almHide, { passive:true });
+  sc.addEventListener('pointerdown', almHide);
+}
+/* 点别处、改窗口大小也收起来，别让卡片挂在屏幕上 */
+document.addEventListener('pointerdown', ()=>{ if(ALM.cell) almHide(); }, true);
+window.addEventListener('resize', almHide);
+
 function calBindGrid(sc){
   sc.addEventListener('click', e=>{
     const evb = e.target.closest('[data-calev]');
@@ -13921,6 +14237,7 @@ function calBindGrid(sc){
 
 function paintCalendar(){
   if(S.view !== 'calendar') return;   // 不在日历页时别去动正文容器（下面会整体重写 scrollEl）
+  almHide();                          // 格子要重建，悬停卡先收起来
   if(!CAL.y){ const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1; }
   if(!Array.isArray(CAL.bidx) || !CAL.bidx.length){
     const a = calIdxOf(CAL.y, CAL.m);
@@ -14020,6 +14337,8 @@ function paintCalendar(){
   if(sc){
     sc.addEventListener('scroll', calOnScroll, { passive:true });
     calBindGrid(sc);
+    almBindHover(sc);      // 悬停格子出黄历小卡（仅指针设备）
+    almWarm();             // 空闲时把农历库拉下来，悬停就即时
     if(jump){
       calScrollToDay(sc, jump.y, jump.m, jump.day || 1, false);
       CAL.jump = null;

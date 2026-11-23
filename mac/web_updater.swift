@@ -13,7 +13,7 @@ final class IvyWebUpdater {
     static let files = [
         "index.html", "s.html", "version.js", "sw.js", "manifest.webmanifest",
         "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png",
-        "vendor/mermaid.min.js"
+        "vendor/mermaid.min.js", "vendor/tyme.min.js"
     ]
 
     private let fm = FileManager.default

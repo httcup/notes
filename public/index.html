@@ -165,6 +165,8 @@ a{color:inherit;text-decoration:none}
   color:rgb(var(--ink-2));transition:background .14s,color .14s;
 }
 .nl-new:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.nl-new.is-cal{color:rgb(var(--ivy))}
+.nl-new.is-cal:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy))}
 .nl-new svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .nl-hd b{font-size:13.5px;font-weight:600;color:rgb(var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nl-hd em{font-style:normal;font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums;flex:0 0 auto}
@@ -3763,7 +3765,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.57', at: '2026-11-23 15:16' };
+window.IVY_BUILD = { id: '2.58', at: '2026-11-23 15:24' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4403,8 +4405,18 @@ const $ = s => document.querySelector(s);
 const shelfBody = $('#shelfBody');
 const brandName = $('#brandName');
 
+/* 中栏头部那颗按钮：日历页是「+ 新建日程」，其它页是「新建笔记」。
+   视图切换时 renderShelf() 会再调一次，否则切过去图标还是旧的那个 */
+function syncNlNew(){
+  const b = $('#nlNew'); if(!b) return;
+  const cal = (S.view === 'calendar');
+  b.innerHTML = ic(cal ? 'plus' : 'compose');
+  b.title = cal ? '新建日程' : '新建笔记 (⌘N)';
+  b.setAttribute('aria-label', cal ? '新建日程' : '新建笔记');
+  b.classList.toggle('is-cal', cal);
+}
 function paintRowIcons(){
-  const nlNew = $('#nlNew'); if(nlNew) nlNew.innerHTML = ic('compose');
+  syncNlNew();
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
@@ -5080,6 +5092,7 @@ function openTrashNote(id){
 }
 
 function renderShelf(){
+  try{ syncNlNew(); }catch(e){}
   // 日程已经并进笔记侧栏，牌子就还挂着「随手笔记」（媒体库/关系图仍是自己的侧栏）
   brandName.textContent = ({media:'媒体库', graph:'关系图', calendar:'日程待办'})[S.view] || '随手笔记';
   document.body.classList.remove('view-todo');
@@ -13937,6 +13950,14 @@ async function calSync(btn, silent, opts){
 }
 
 /* 新建 / 编辑事件 */
+/* 新建日程时预填哪一天：正在看本月就用今天，翻到别的月份就用那个月 1 号 */
+function calNewDayKey(){
+  const t = new Date();
+  const y = (typeof CAL !== 'undefined' && CAL.y) || t.getFullYear();
+  const m = (typeof CAL !== 'undefined' && CAL.m) || (t.getMonth() + 1);
+  const sameMonth = (y === t.getFullYear() && m === t.getMonth() + 1);
+  return y * 10000 + m * 100 + (sameMonth ? t.getDate() : 1);
+}
 function openCalEventForm(ev, dayKey){
   const d = CAL.dav || {};
   if(!d.connected){ openCalSetup(); return; }
@@ -16238,7 +16259,10 @@ $('#btnHome').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'
 $('#homeFloat').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
 $('#btnSettings').onclick=()=>openSettings();
 $('#shelfOpen').onclick=()=>toggleShelf();
-$('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
+$('#nlNew').onclick=()=>{
+  if((S.view || 'notes') === 'calendar'){ openCalEventForm(null, calNewDayKey()); return; }
+  newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
+};
 $('#nlOpen').onclick=()=>toggleShelf();
 $('#nlMore').onclick=(e)=>openListMore(e.currentTarget);
 $('#nlSearch').onclick=()=>openPalette();
@@ -20893,13 +20917,8 @@ function pomoSet(k, v){
     if(inSet()){ try{ closeSettings(); }catch(e){} }
     // 日历页：右下角这颗加号是「新建日程」，不是新建笔记
     if((S.view || 'notes') === 'calendar'){
-      try{
-        const t = new Date();
-        const y = CAL.y || t.getFullYear(), m = CAL.m || (t.getMonth() + 1);
-        const sameMonth = (y === t.getFullYear() && m === t.getMonth() + 1);
-        const day = sameMonth ? t.getDate() : 1;
-        openCalEventForm(null, y * 10000 + m * 100 + day);
-      }catch(e){ toast('打不开新建日程'); }
+      try{ openCalEventForm(null, calNewDayKey()); }
+      catch(e){ toast('打不开新建日程'); }
       syncHome();
       return;
     }

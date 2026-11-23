@@ -3425,6 +3425,9 @@ button,a,[role=button]{-webkit-tap-highlight-color:transparent}
   /* 底部三键已经承担了「展开书架 / 新建」，列表头这两颗就收起来，标题也更宽 */
   .nl-hd .nl-open, .nl-hd .nl-new,
   body.shelf-collapsed .nl-hd .nl-open, body.shelf-collapsed .nl-hd .nl-new{display:none}
+  /* 标题整块可点：展开主目录（笔记本栏），热区放大一点，手指好按 */
+  .nl-hd #nlTitle, .nl-hd #nlCount{cursor:pointer}
+  .nl-hd #nlTitle{padding:5px 3px;margin:-5px -3px}
   /* 列表与抽屉底部留出浮条高度 + 渐隐区，最后一条不被压住也不被遮罩吃掉 */
   .nl-rows{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
   .shelf{padding-bottom:calc(116px + env(safe-area-inset-bottom))}
@@ -3730,7 +3733,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.42', at: '2026-11-23 11:42' };
+window.IVY_BUILD = { id: '2.43', at: '2026-11-23 12:10' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -20613,6 +20616,18 @@ function pomoSet(k, v){
   if(sh && window.MutationObserver){
     new MutationObserver(syncHome).observe(sh, { attributes:true, attributeFilter:['class'] });
   }
+  // 手机上顶部的「全部笔记 15」也能当展开按钮：手指够得到，
+  // 点一下就把折叠的笔记本栏（主目录）抽出来，和 Home 等价；桌面上保持原样（点了没反应）
+  const openFromTitle = ()=>{
+    if(window.innerWidth > 640) return;
+    if(inSet()){ try{ closeSettings(); }catch(e){} }
+    if(!S.shelfOpen) toggleShelf();
+    syncHome();
+  };
+  ['nlTitle','nlCount'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.onclick = openFromTitle;
+  });
   syncHome();
 })();
 

@@ -113,7 +113,12 @@ export async function onRequest({ request, env }) {
                trashed = excluded.trashed,
                deleted = excluded.deleted,
                updated_at = excluded.updated_at
-             WHERE excluded.updated_at > notes.updated_at`
+             -- 彻底删除（墓碑）必须一票通过，且删了就删了：
+             --   以前只看时间戳，手机和电脑时钟差几十秒、或另一台还留着旧副本时，
+             --   墓碑会被丢掉，下一次拉取这篇又回到回收站（「清空了一会又回来」）。
+             -- 现在：墓碑无条件写入；已经是 deleted=1 的行不再被任何 payload 复活。
+             WHERE (excluded.deleted = 1 AND notes.deleted = 0)
+                OR (excluded.deleted = 0 AND notes.deleted = 0 AND excluded.updated_at > notes.updated_at)`
           ).bind(
             uid,
             str(n.id, 80),

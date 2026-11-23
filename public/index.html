@@ -299,6 +299,19 @@ body.ol-touch .nl-row .nl-more,body.ol-touch .nl-row .nl-del{opacity:.5}
 }
 .side-hd.on{color:rgb(var(--ink));background:rgb(var(--ink)/.055)}
 .side-hd.on .n{color:rgb(var(--ink-2))}
+/* 「全部笔记」行尾的新建笔记本：数字让出位置，加号贴着右边缘（以前在窗口右上角） */
+.side-hd.has-new .n{right:38px}
+.side-new{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:24px;height:24px;border-radius:6px;display:grid;place-items:center;
+  color:rgb(var(--faint));cursor:pointer;
+  transition:background .14s,color .14s,opacity .14s;opacity:0;
+}
+.side-hd:hover .side-new,.side-hd.on .side-new{opacity:1}
+.side-new:hover{background:rgb(var(--ivy-soft));color:rgb(var(--ivy))}
+.side-new svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* 触屏没有 hover，直接常显 */
+@media (hover:none){ .side-new{opacity:1} }
 @media (max-width:900px){ .side-hd{padding-top:9px;padding-bottom:9px} }
 /* 侧栏「日程」入口：四个标题里它单独一条分隔线 */
 .sched-nav .t{flex:1}
@@ -1406,6 +1419,9 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .tsi .tm{font-size:10.5px;color:rgb(var(--faint));flex:0 0 auto;font-variant-numeric:tabular-nums;margin-top:1px}
 .tsi .tm.late{color:rgb(var(--danger))}
 .tsi .rep{color:rgb(var(--ivy));font-size:10.5px}
+/* 左栏「待办」里混排的日程：左边一颗日历色小方块，代替待办的勾选框 */
+.tsi.evrow .evd{width:9px;height:9px;border-radius:3px;flex:0 0 auto;margin-top:5px}
+.tsi.evrow{padding-left:19px}
 .tsi-bell{flex:0 0 auto;width:20px;height:20px;margin-top:-2px;border-radius:5px;display:grid;place-items:center;
   color:rgb(var(--faint));opacity:0;transition:opacity .12s,background .12s,color .12s}
 .tsi:hover .tsi-bell{opacity:1}
@@ -3466,7 +3482,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       </div>
       <div class="head-actions" id="headActions">
         <button class="icon-btn" id="btnHome" title="主目录" aria-label="回到主目录"></button>
-        <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
         <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置"></button>
         <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
       </div>
@@ -3748,7 +3763,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.54', at: '2026-11-23 14:58' };
+window.IVY_BUILD = { id: '2.56', at: '2026-11-23 14:52' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4392,7 +4407,6 @@ function paintRowIcons(){
   const nlNew = $('#nlNew'); if(nlNew) nlNew.innerHTML = ic('compose');
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
-  const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
   // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
   const homeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
   const hm = $('#btnHome');
@@ -4997,7 +5011,7 @@ function renderTagList(){
 /* ---------- 中栏：回收站列表 ----------
    回收站也是「先在中栏列出来」，点一篇 → 右边只读预览，可恢复 / 彻底删除 */
 function trashListHtml(){
-  const list = S.notes.filter(n=>n.trashed);
+  const list = S.notes.filter(n=>n.trashed && !n.deleted);
   if(!list.length){
     return `<div class="nl-empty nl-empty-first">
       <div class="ne-ico">${ic('trash')}</div>
@@ -5035,7 +5049,7 @@ function openTrashRowMenu(anchor, id){
   ]);
 }
 function emptyTrash(){
-  const ids = S.notes.filter(n=>n.trashed).map(n=>n.id);
+  const ids = S.notes.filter(n=>n.trashed && !n.deleted).map(n=>n.id);
   if(!ids.length) return;
   if(!confirm('清空回收站？这 ' + ids.length + ' 篇笔记将被彻底删除，不可恢复。')) return;
   S.active = null;
@@ -5045,7 +5059,7 @@ function emptyTrash(){
 }
 function renderTrashList(){
   const rows = $('#nlRows'); if(!rows) return;
-  const list = S.notes.filter(n=>n.trashed);
+  const list = S.notes.filter(n=>n.trashed && !n.deleted);
   const tEl = $('#nlTitle'), cEl = $('#nlCount');
   if(tEl) tEl.textContent = '回收站';
   if(cEl) cEl.textContent = String(list.length);
@@ -5084,11 +5098,12 @@ function renderShelf(){
   const trash = S.notes.filter(n=>n.trashed);
   // 「全部笔记」这个标题也能点：只收笔记本这一块，标签和日程各占一行、不受影响
   const nClosed = !!S.notesClosed;
-  let html = `<button class="side-hd${nClosed ? ' closed' : ''}${((S.scope||'all')==='all' && !trashView && (S.view||'notes')==='notes') ? ' on' : ''}" data-act="scope-all"
+  let html = `<button class="side-hd has-new${nClosed ? ' closed' : ''}${((S.scope||'all')==='all' && !trashView && (S.view||'notes')==='notes') ? ' on' : ''}" data-act="scope-all"
       title="回到全部笔记">
       <span class="lb"><i class="caret" data-fold-notes aria-expanded="${nClosed ? 'false' : 'true'}"
         title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">&#9654;</i><span class="t">全部笔记</span></span>
       <span class="n">${notes.length}</span>
+      <span class="side-new" data-nbnew="1" role="button" tabindex="0" title="新建笔记本" aria-label="新建笔记本">${ic('folderPlus')}</span>
     </button>`;
   let body = '';
   // 置顶笔记单独列在书架最上面（只在小屏内联模式下需要；桌面在中栏里置顶优先）
@@ -5106,7 +5121,6 @@ function renderShelf(){
       <div class="nb-notes pin-notes ${pOpen?'':'hidden'}">${pinnedNotes.map(noteRow).join('')}</div>
     </div>`;
   }
-  if(inlineNotes) body += `<button class="shelf-row new-nb" data-act="new-nb">${ic('plus')}<span class="t">新建笔记本</span></button>`;
 
   const byNb = {};
   notes.filter(n=>n.notebookId).forEach(n=>{ (byNb[n.notebookId] = byNb[n.notebookId]||[]).push(n); });
@@ -5265,6 +5279,10 @@ function bindShelf(){
       if(nbLockOf(nb)){ lockNow(id); return; }
       openLockDlg('set', id);
     };
+  });
+  /* 「全部笔记」标题行尾那颗新建笔记本：别让它冒泡到标题（否则会顺手切回全部笔记） */
+  shelfBody.querySelectorAll('[data-nbnew]').forEach(b=>{
+    b.onclick = e=>{ e.stopPropagation(); e.preventDefault(); newNotebook(); };
   });
   shelfBody.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{
     const a = b.dataset.act;
@@ -12353,7 +12371,7 @@ function purgeNote(id, quiet){
   if(!n) return;
   if(!quiet && !confirm('彻底删除「'+(n.title||'无标题')+'」？删除后不可恢复。')) return;
   // 关键：留一个墓碑并排队上传，否则服务端那条还在，下次同步会被拉回来
-  S.pendingDeletes = (S.pendingDeletes||[]).filter(x=>x!==id).concat([id]);
+  S.pendingDeletes = (S.pendingDeletes||[]).filter(x=>x!==id).concat([id]).slice(-500);
   S.notes = S.notes.filter(x=>x.id!==id);
   S.tabs = (S.tabs||[]).filter(t=>t!==id);
   if(S.active===id) S.active = S.tabs[0] || null;
@@ -13255,6 +13273,20 @@ function calShelf(){
 
 /* 左栏三个标签：待办（未完成）/ 完成 / 归档。
    待办里没写日期的排在前面——它们不会出现在右边的格子，只能在这儿看到 */
+/* 日程一行（左栏「待办」里混排用）：点开和日历格子里点事件是同一个卡片 */
+function calTodoEvRow(ev){
+  const col = calColor(ev.cal, ev.color);
+  const d = new Date(Number(ev.start) || 0);
+  const t = new Date();
+  const same = d.toDateString() === t.toDateString();
+  const md = same ? '今天' : ((d.getMonth() + 1) + '/' + d.getDate());
+  const hm = ev.allDay ? '' : ' ' + calHm(ev.start);
+  return `<div class="tsi evrow" data-calevrow="${esc(ev.uid)}" title="${esc(ev.title || '')}">
+    <i class="evd" style="background:${col}"></i>
+    <div class="m"><span class="t">${esc(ev.title || '（无标题）')}</span><span class="src">${esc(ev.cal || '日历')}</span></div>
+    <span class="tm">${md}${hm}</span>
+  </div>`;
+}
 function calTodoPanelHtml(){
   const tab = (CAL.todoTab === 'arch' || CAL.todoTab === 'done') ? CAL.todoTab : 'todo';
   let all = [], arch = [];
@@ -13269,9 +13301,29 @@ function calTodoPanelHtml(){
   });
   // 完成：最近做完的在前
   const done = all.filter(t => t.done).sort((a, b)=> (b.doneDate || b.due || 0) - (a.doneDate || a.due || 0));
+  // 「待办」里也带上日历里的日程：没日期的待办在前，其余（日程 / 有日期的待办）按日期往后排
+  const mixed = [];
+  open.forEach(t => mixed.push({ ts: Number(t.due) || 0, html: todoRowHtml(t, { withDate:true }) }));
+  if(tab === 'todo'){
+    (CAL.events || []).forEach(ev => {
+      if(!ev || CAL.hidden[ev.cal]) return;
+      let ts = Number(ev.start) || 0;
+      if(ev.allDay){                       // 全天事件是 UTC 午夜，换算成本地当天 0 点再排序
+        const d = new Date(ts);
+        ts = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime();
+      }
+      mixed.push({ ts, html: calTodoEvRow(ev) });
+    });
+  }
+  mixed.sort((a, b)=>{
+    if(!a.ts && !b.ts) return 0;
+    if(!a.ts) return -1;
+    if(!b.ts) return 1;
+    return a.ts - b.ts;
+  });
   const rows = tab === 'arch' ? arch.map(archRowHtml).join('')
     : tab === 'done' ? done.map(t => todoRowHtml(t, { withDate:true })).join('')
-    : open.map(t => todoRowHtml(t, { withDate:true })).join('');
+    : mixed.map(x => x.html).join('');
   const empty = tab === 'arch'
     ? '还没有归档的待办。<br>「完成」里那条右边的方框，双击即可归档。'
     : tab === 'done'
@@ -13327,6 +13379,10 @@ function bindCalShelf(root){
       CAL.todoTab = (k === 'arch' || k === 'done') ? k : 'todo';
       paintCalShell();
     };
+  });
+  // 列表里混排的日程：点开和日历格子里点事件是同一张卡片
+  el.querySelectorAll('[data-calevrow]').forEach(r=>{
+    r.onclick = e=>{ e.stopPropagation(); calShowEvent(r.dataset.calevrow, r); };
   });
   // 左栏的待办和「待办日程」页共用一套交互：勾选 / 设提醒 / 归档 / 点开原笔记
   if(typeof bindTodoBlock === 'function' && el.querySelector('.cal-todos')){
@@ -15959,6 +16015,22 @@ function renderPalette(q){
   ].filter(c=>!query || c.t.toLowerCase().includes(query));
   const notes = liveNotes().filter(n=>!query || (n.title||'无标题').toLowerCase().includes(query) || n.body.toLowerCase().includes(query)).slice(0,8);
 
+  // 待办 / 日程 / 标签 也一起搜（只有输入了关键字才列，空搜索还是只看笔记和命令）
+  let todos = [], evs = [], tags = [];
+  if(query){
+    try{
+      todos = collectTodos().filter(t => !t.done &&
+        ((t.text||'').toLowerCase().includes(query) || (t.noteTitle||'').toLowerCase().includes(query))).slice(0, 6);
+    }catch(e){}
+    try{
+      evs = ((CAL && CAL.events) || []).filter(ev => ev && (ev.title||'').toLowerCase().includes(query))
+        .sort((a,b)=> (a.start||0) - (b.start||0)).slice(0, 6);
+    }catch(e){}
+    try{
+      tags = tagPillKeys(liveNotes()).filter(k => k && k.toLowerCase().includes(query) && k !== NO_TAG_LABEL).slice(0, 6);
+    }catch(e){}
+  }
+
   paletteRows = [];
   let html='';
   if(notes.length){
@@ -15967,6 +16039,32 @@ function renderPalette(q){
       paletteRows.push({f:()=>{ closePalette(); openNote(n.id); }});
       html += `<button class="p-row" data-p="${paletteRows.length-1}">${ic('file')}<span class="t">${esc(n.title||'无标题')}</span>
         <span class="h">${n.body.replace(/\s+/g,' ').slice(0,28)}</span></button>`;
+    });
+  }
+  if(todos.length){
+    html += `<div class="p-group">待办</div>`;
+    todos.forEach(t=>{
+      paletteRows.push({f:()=>{ closePalette(); jumpToTodo(t); }});
+      const when = t.due ? dueChipLabel(t.due) : '无日期';
+      html += `<button class="p-row" data-p="${paletteRows.length-1}">${ic('todo')}<span class="t">${esc(t.text||'（空）')}</span>
+        <span class="h">${esc(t.noteTitle||'')} · ${esc(when)}</span></button>`;
+    });
+  }
+  if(evs.length){
+    html += `<div class="p-group">日程</div>`;
+    evs.forEach(ev=>{
+      paletteRows.push({f:()=>{ closePalette(); gotoCalEvent(ev); }});
+      const d = new Date(Number(ev.start)||Date.now());
+      const when = (d.getMonth()+1) + '月' + d.getDate() + '日' + (ev.allDay ? ' 全天' : ' ' + calHm(ev.start));
+      html += `<button class="p-row" data-p="${paletteRows.length-1}">${ic('calendar')}<span class="t">${esc(ev.title||'（无标题）')}</span>
+        <span class="h">${esc(when)}${ev.cal?' · '+esc(ev.cal):''}</span></button>`;
+    });
+  }
+  if(tags.length){
+    html += `<div class="p-group">标签</div>`;
+    tags.forEach(k=>{
+      paletteRows.push({f:()=>{ closePalette(); setScope('tag:' + k); }});
+      html += `<button class="p-row" data-p="${paletteRows.length-1}">${ic('tag')}<span class="t">#${esc(k)}</span></button>`;
     });
   }
   if(cmds.length){
@@ -15981,6 +16079,20 @@ function renderPalette(q){
   paletteSel = 0;
   paintPaletteSel();
   $('#paletteList').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>paletteRows[+b.dataset.p].f());
+}
+/* 搜索里点中一条日程：跳到日历页对应月份，并打开同样的详情卡片 */
+function gotoCalEvent(ev){
+  if(!ev) return;
+  const d = new Date(Number(ev.start) || Date.now());
+  CAL.y = d.getFullYear(); CAL.m = d.getMonth() + 1;
+  try{ switchView('calendar'); }catch(e){ return; }
+  setTimeout(()=>{
+    try{
+      const uid = String(ev.uid).replace(/"/g, '\\"');
+      const el = document.querySelector('.cal-ev[data-calev="' + uid + '"]');
+      if(el){ el.scrollIntoView({ block:'center' }); calShowEvent(ev.uid, el); }
+    }catch(e){}
+  }, 300);
 }
 function paintPaletteSel(){
   $('#paletteList').querySelectorAll('.p-row').forEach((r,i)=>r.classList.toggle('sel', i===paletteSel));
@@ -16109,7 +16221,7 @@ document.addEventListener('keydown', e=>{
 $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') closePalette(); });
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
-$('#btnNewNb').onclick=()=>newNotebook();
+
 /* 主目录：直接回笔记列表（媒体库 / 关系图挪到了 设置 左侧导航里） */
 $('#btnHome').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
 $('#homeFloat').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
@@ -16273,8 +16385,13 @@ function applyRemote(data){
     if(pending.has(r.id)) continue;
     if(!Array.isArray(r.tags)) r.tags = [];       // 兼容老客户端/老数据
     const cur = map.get(r.id);
+    // 云端说这篇已经彻底删了：本地立刻移除（包括还躺在回收站里的那份），
+    // 不能只是打个 deleted 标记等后面过滤，回收站列表是按 trashed 列的
+    if(r.deleted){
+      if(cur){ S.notes = S.notes.filter(n=>n.id!==r.id); map.delete(r.id); changed = true; }
+      continue;
+    }
     if(!cur){
-      if(r.deleted) continue;                     // 服务端的墓碑不必进内存
       S.notes.push(r); changed = true;
     }
     else if((r.updatedAt||0) > (cur.updatedAt||0)){
@@ -16370,10 +16487,14 @@ async function syncNow(opts={}){
         applyRemote(pre);
       }
     }
-    const data = await api('POST', localPayload());
+    const payload = localPayload();
+    // 这次请求真正带上去的墓碑。清空回收站时如果刚好有一次同步在路上，
+    // 之前会把「请求发出后才删的」也一起清掉，墓碑就永远送不出去 → 下一篇拉取又回来了
+    const sentTombs = new Set(S.pendingDeletes || []);
+    const data = await api('POST', payload);
     const changed = applyRemote(data);
     S.notes = S.notes.filter(n=>!n.deleted);
-    S.pendingDeletes = [];
+    S.pendingDeletes = (S.pendingDeletes || []).filter(id => !sentTombs.has(id));
     SYNC.last = Date.now(); SYNC.state = 'ok'; SYNC.error = '';
     syncFails = 0; clearTimeout(syncRetryTimer); syncRetryTimer = null;
     syncSave();
@@ -20739,7 +20860,12 @@ function pomoSet(k, v){
       const label = so ? '关闭设置' : '设置';
       setBtn.title = label; setBtn.setAttribute('aria-label', so ? '关闭设置' : '打开设置');
     }
-    if(addBtn){ addBtn.title = so ? '新建笔记并关闭设置' : '新建笔记'; }
+    if(addBtn){
+      const cal = (S.view === 'calendar');
+      const label = cal ? '新建日程' : (so ? '新建笔记并关闭设置' : '新建笔记');
+      addBtn.title = label; addBtn.setAttribute('aria-label', label);
+      addBtn.classList.toggle('is-cal', cal);
+    }
   };
   // 设置浮层打开 / 关闭时也要重算（openSettings / closeSettings 会调）
   window.syncMobileBar = syncHome;
@@ -20754,6 +20880,18 @@ function pomoSet(k, v){
   };
   if(addBtn) addBtn.onclick = ()=>{
     if(inSet()){ try{ closeSettings(); }catch(e){} }
+    // 日历页：右下角这颗加号是「新建日程」，不是新建笔记
+    if((S.view || 'notes') === 'calendar'){
+      try{
+        const t = new Date();
+        const y = CAL.y || t.getFullYear(), m = CAL.m || (t.getMonth() + 1);
+        const sameMonth = (y === t.getFullYear() && m === t.getMonth() + 1);
+        const day = sameMonth ? t.getDate() : 1;
+        openCalEventForm(null, y * 10000 + m * 100 + day);
+      }catch(e){ toast('打不开新建日程'); }
+      syncHome();
+      return;
+    }
     try{ newNote(); }catch(e){}
     if(window.innerWidth <= 640) document.body.classList.add('m-read');
     syncHome();

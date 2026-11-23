@@ -66,6 +66,43 @@ function rowUid(calHref, uid) {
   return String(calHref).replace(/\/$/, '').split('/').pop() + '::' + uid;
 }
 
+/* 笔记待办镜像成的事件：文件名固定为 ivy-todo-<key>.ics，
+   所以不用记 href/etag，key 就够定位、覆盖、删除 */
+const TODO_FILE_RE = /\/ivy-todo-([0-9a-f]{4,32})\.ics$/i;
+
+async function pushTodos(auth, calHref, todos, kept) {
+  const base = String(calHref).replace(/\/$/, '');
+  const want = new Map();
+  for (const t of (Array.isArray(todos) ? todos : []).slice(0, 400)) {
+    const k = String(t.key || '').toLowerCase();
+    if (!/^[0-9a-f]{4,32}$/.test(k)) continue;
+    const title = String(t.title || '').trim().slice(0, 300);
+    const start = Number(t.start) || 0;
+    if (!title || !start) continue;
+    want.set(k, { title, start, end: Number(t.end) || start + DAY, allDay: !!t.allDay });
+  }
+  const jobs = [];
+  let pushed = 0;
+  let removed = 0;
+  for (const [k, t] of want) {
+    const old = kept.get(k);
+    if (old && old.title === t.title && Number(old.start) === Number(t.start) && !!old.allDay === t.allDay) continue;
+    const href = base + '/ivy-todo-' + k + '.ics';
+    jobs.push(() => DAV.putEventForce(auth, href, DAV.buildIcs({
+      uid: 'ivy-todo-' + k + '@ivynote', title: t.title, start: t.start, end: t.end, allDay: t.allDay
+    })).then((r) => { if (r.ok) pushed++; }));
+  }
+  for (const [k, old] of kept) {
+    if (want.has(k)) continue;                 // 笔记里删了 / 做完了 → 苹果日历里也撤掉
+    jobs.push(() => DAV.deleteEvent(auth, old.href, '').then((r) => { if (r.ok) removed++; }));
+  }
+  // iCloud 单次 PUT 可能要好几秒，4 条并发跑，别串成一长串
+  for (let i = 0; i < jobs.length; i += 4) {
+    await Promise.all(jobs.slice(i, i + 4).map((f) => f().catch(() => {})));
+  }
+  return { pushed, removed, total: want.size };
+}
+
 async function getRow(env, uid) {
   return env.DB.prepare('SELECT * FROM caldav_config WHERE user_id = ?1').bind(uid).first();
 }
@@ -204,6 +241,7 @@ export async function onRequest({ request, env }) {
       const per = [];
       const collected = [];
       const seen = new Set();
+      const keptTodo = new Map();     // 笔记待办推上去的事件：key -> {href,title,start,allDay}
       let authBad = false;
       for (const c of cals) {
         const r = await DAV.fetchCalendar(auth, c.href, from, to);
@@ -217,6 +255,13 @@ export async function onRequest({ request, env }) {
         okCals.push(c.name);
         per.push(c.name + ' ' + r.events.length);
         for (const ev of r.events) {
+          // 笔记待办镜像出来的事件（文件名 ivy-todo-<key>.ics）不进库，
+          // 日历上那一条由前端直接用笔记内容画，避免同一件事出现两次
+          const tm = /\/ivy-todo-([0-9a-f]{4,32})\.ics$/i.exec(ev.href || '');
+          if (tm) {
+            keptTodo.set(tm[1].toLowerCase(), { href: ev.href, title: ev.title, start: ev.start, allDay: !!ev.allDay });
+            continue;
+          }
           // 重复事件（RRULE）服务器只给主事件，这里保留第一条实例，避免同一 UID 反复覆盖
           const k = c.href + '|' + ev.uid;
           if (seen.has(k)) continue;
@@ -269,7 +314,35 @@ export async function onRequest({ request, env }) {
 
       await env.DB.prepare('UPDATE caldav_config SET last_sync=?2, updated_at=?2 WHERE user_id=?1')
         .bind(uid, Date.now()).run();
-      return json({ ok: true, pulled: collected.length, per, errors, authBad, lastSync: Date.now() });
+
+      // 笔记里带日期的待办，顺手写成苹果日历里的事件（单向：笔记 → 苹果）
+      let todo = { pushed: 0, removed: 0 };
+      if (Array.isArray(body.todos)) {
+        const target = cals.find((c) => okCals.includes(c.name)) || cals[0];
+        try {
+          todo = await pushTodos(auth, target.href, body.todos, keptTodo);
+        } catch (e) { /* 待办推送失败不影响事件同步 */ }
+      }
+
+      return json({ ok: true, pulled: collected.length, per, errors, authBad, todo, lastSync: Date.now() });
+    }
+
+    /* ---------------- 只推待办（笔记一改就调，不拉全天事件） ---------------- */
+    if (action === 'pushtodos') {
+      const cals = calList(row).filter((c) => c.on !== false);
+      if (!cals.length) return json({ error: '没有打开任何日历' }, 400);
+      const target = cals[0];
+      const now = Date.now();
+      const r = await DAV.fetchCalendar(auth, target.href, now - 730 * DAY, now + 730 * DAY);
+      if (r.error === 'http401' || r.error === 'http403') return json({ error: 'iCloud 登录失效', authBad: true }, 401);
+      if (r.error) return json({ error: '拉取失败：' + r.error }, 502);
+      const kept = new Map();
+      for (const ev of r.events) {
+        const tm = TODO_FILE_RE.exec(ev.href || '');
+        if (tm) kept.set(tm[1].toLowerCase(), { href: ev.href, title: ev.title, start: ev.start, allDay: !!ev.allDay });
+      }
+      const out = await pushTodos(auth, target.href, Array.isArray(body.todos) ? body.todos : [], kept);
+      return json({ ok: true, ...out });
     }
 
     /* ---------------- 写回：新建 / 修改 ---------------- */

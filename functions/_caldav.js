@@ -333,6 +333,15 @@ export async function putEvent(auth, href, ics, etag) {
   return { ok: true, href, etag: (r.headers.get('etag') || '').replace(/^W\//, '').replace(/"/g, '') };
 }
 
+/* 不带条件头的 PUT：笔记里的待办是「以笔记为准」的单向镜像，
+   同一个文件名反复覆盖，不需要 If-None-Match（带了反而 412） */
+export async function putEventForce(auth, href, ics) {
+  const extra = { 'content-type': 'text/calendar; charset=utf-8' };
+  const r = await dav(href, { method: 'PUT', auth, body: ics, extra });
+  if (!r.ok) return { error: 'http' + r.status, detail: r.text.slice(0, 200) };
+  return { ok: true, href };
+}
+
 export async function deleteEvent(auth, href, etag) {
   const extra = {};
   if (etag) extra['if-match'] = etag;

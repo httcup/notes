@@ -1020,6 +1020,10 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   outline:none;border-color:rgb(var(--ivy)/.5);box-shadow:0 0 0 3px rgb(var(--ivy)/.09);
 }
 .due-tip{font-size:11.5px;line-height:1.6;color:rgb(var(--faint));margin:3px 0 13px;padding-left:44px}
+.due-chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:rgb(var(--ink-2));cursor:pointer;user-select:none}
+/* .due-row>label 只给左边那个 34px 的标签，勾选框这行要占满 */
+.due-row>label.due-chk{width:auto;flex:1 1 auto;font-size:12.5px;color:rgb(var(--ink-2))}
+.due-chk input{width:15px;height:15px;margin:0;accent-color:rgb(var(--ivy));cursor:pointer}
 .due-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end}
 .due-del{margin-right:auto;font-size:12.5px;color:rgb(var(--danger));padding:5px 9px;border-radius:7px;transition:background .12s,color .12s}
 .due-del:hover{background:rgb(var(--danger-soft))}
@@ -3711,7 +3715,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.34', at: '2026-11-23 11:06' };
+window.IVY_BUILD = { id: '2.39', at: '2026-11-23 11:46' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4183,6 +4187,7 @@ function save(){
     try{ localStorage.setItem(LS_KEY, JSON.stringify(copy)); }catch(e){}   // 镜像，超 5MB 失败也无妨
   }catch(e){}
   try{ if(typeof recordVersion === 'function') recordVersion(noteById(S.active)); }catch(e){}
+  if(typeof calTodoPushSoon === 'function'){ try{ calTodoPushSoon(); }catch(e){} }   // 待办改了就推去苹果日历
   if(typeof queueSync === 'function') queueSync();
 }
 S = load();
@@ -5732,14 +5737,18 @@ function stripDueMarks(line){
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\s+$/, '');
 }
-function setTodoDue(t, ts, quiet){
+function setTodoDue(t, ts, quiet, allDay){
   const n = noteById(t.noteId); if(!n) return;
   const lines = String(n.body || '').split('\n');
   const ln = lines[t.line];
   if(!ln || !TODO_RE.test(ln)) return;
   const bare = stripDueMarks(ln);
   const d = ts ? new Date(ts) : null;
-  const tail = d ? ` ⏰${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : '';
+  // 全天只写日期，不带钟点 —— 日历那边也就按整天显示
+  const tail = d
+    ? (allDay ? ` ⏰${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`
+              : ` ⏰${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`)
+    : '';
   lines[t.line] = bare + tail;
   n.body = lines.join('\n');
   n.updatedAt = Date.now();
@@ -5750,7 +5759,7 @@ function setTodoDue(t, ts, quiet){
     paintLive();
   }
   save();
-  if(!quiet) toast(d ? '提醒已设为 ' + dueLabel(ts) : '已取消提醒');
+  if(!quiet) toast(d ? '提醒已设为 ' + (allDay ? (d.getMonth()+1) + '月' + d.getDate() + '日 全天' : dueLabel(ts)) : '已取消提醒');
 }
 
 /* 点待办 → 打开那篇笔记并滚到该条（日程视图下右侧开笔记，左侧仍是日程） */
@@ -6026,6 +6035,21 @@ function loadIcsCache(){
 }
 function saveIcsCache(){ try{ localStorage.setItem(ICS_STORE, JSON.stringify(ICAL)); }catch(e){} }
 function icsSources(){ return (ICAL && ICAL.sources) || []; }
+/* 连上苹果日历（CalDAV 双向同步）之后，旧的 webcal 只读订阅就是重复的残留：
+   一次性清掉，免得侧栏一直挂着一个「来自苹果日历」的分组 */
+let icsPurged = false;
+async function icsPurgeLegacy(){
+  if(icsPurged || !isConnected()) return;
+  icsPurged = true;
+  const srcs = icsSources();
+  if(!srcs.length) return;
+  for(const s of srcs){ try{ await icsDropSource(s.id); }catch(e){} }
+  ICAL.sources = [];
+  try{ saveIcsCache(); }catch(e){}
+  try{ localStorage.removeItem(ICS_DONE_STORE); ICS_DONE = {}; }catch(e){}
+  try{ paintTodoSurfaces(); }catch(e){}
+  toast('旧的只读日历订阅已停用，日历改走苹果日历双向同步');
+}
 /* 「已完成」是自己记的：不回写苹果日历，但跟着账号同步 */
 const ICS_DONE_STORE = 'ivy.icsdone.v1';
 let ICS_DONE = (function(){
@@ -6532,6 +6556,7 @@ function paintRemindCenter(){
   ov.innerHTML = `<div class="rc-card" role="dialog" aria-label="提醒与日历">
     <div class="rc-title">${ic('bell')}<span>提醒与日历</span></div>
     ${remindBodyHtml()}
+    ${remindFeedCardHtml()}
     <div class="rc-foot"><button class="rc-close" id="rcClose">关闭</button></div>
   </div>`;
   const c = ov.querySelector('#rcClose');
@@ -6563,20 +6588,6 @@ function remindBodyHtml(){
         </div>`).join('')}
       </div>` : '';
 
-  const feedBlock = FEED.token
-    ? `<code class="rc-link" id="rcLink">${esc(FEED.webcal || FEED.url || '')}
-         <button class="rc-copy" id="rcCopy" title="复制订阅链接">${ic('link')}</button></code>
-       <div class="rc-acts">
-         <button class="rc-btn primary" id="rcOpen">用日历打开</button>
-         <button class="rc-btn" id="rcReset">重新生成</button>
-         <button class="rc-btn danger" id="rcOff">停止订阅</button>
-       </div>
-       <div class="rc-note">已收录 ${FEED.count || 0} 条带日期的待办 · 日历大约每 30 分钟同步一次</div>
-       <div class="rc-note">要出现在「提醒事项」App：<a data-rc="vtodo">下载提醒事项 .ics</a>（Mac 上「文件 → 导入」），或用快捷指令定时拉 <a data-rc="json">JSON</a>。</div>`
-    : `<div class="rc-acts">
-         <button class="rc-btn primary" id="rcMake">生成订阅链接</button>
-         <button class="rc-btn" id="rcExport">导出 .ics 文件</button>
-       </div>`;
 
   return `<div class="rc-box">
       <div class="rc-box-h"><b>在这台设备上提醒带日期的待办</b>
@@ -6598,12 +6609,6 @@ function remindBodyHtml(){
     </div>
 
     <div class="rc-box">
-      <div class="rc-box-h">${ic('clock')}<b>日历订阅</b></div>
-      <div class="rc-p">把带日期的待办同步到 iPhone、Mac、Google 或 Outlook 日历，由日历负责提醒，即使不打开笔记也不会错过。链接本身就是凭证，请勿分享。</div>
-      ${feedBlock}
-    </div>
-
-    <div class="rc-box">
       <div class="rc-box-h">${ic('calendar')}<b>苹果日历同步（双向）</b></div>
       <div class="rc-p">用 Apple ID 直连 iCloud，两边保持一致：<b>这里新建、改时间、删掉的，会写回苹果日历</b>；在苹果日历里改的，下次同步也会拉过来。</div>
       <ol class="rc-steps">
@@ -6618,6 +6623,29 @@ function remindBodyHtml(){
     </div>`;
 }
 /* 控件绑定：root 是任意容器（弹窗 / 设置页），repaint 由调用方决定重绘哪里 */
+/* 日历订阅卡片（webcal 只读订阅）：放在这一页最下面 */
+function remindFeedCardHtml(){
+  const feedBlock = FEED.token
+    ? `<code class="rc-link" id="rcLink">${esc(FEED.webcal || FEED.url || '')}
+         <button class="rc-copy" id="rcCopy" title="复制订阅链接">${ic('link')}</button></code>
+       <div class="rc-acts">
+         <button class="rc-btn primary" id="rcOpen">用日历打开</button>
+         <button class="rc-btn" id="rcReset">重新生成</button>
+         <button class="rc-btn danger" id="rcOff">停止订阅</button>
+       </div>
+       <div class="rc-note">已收录 ${FEED.count || 0} 条带日期的待办 · 日历大约每 30 分钟同步一次</div>
+       <div class="rc-note">要出现在「提醒事项」App：<a data-rc="vtodo">下载提醒事项 .ics</a>（Mac 上「文件 → 导入」），或用快捷指令定时拉 <a data-rc="json">JSON</a>。</div>`
+    : `<div class="rc-acts">
+         <button class="rc-btn primary" id="rcMake">生成订阅链接</button>
+         <button class="rc-btn" id="rcExport">导出 .ics 文件</button>
+       </div>`;
+  return `<div class="rc-box">
+      <div class="rc-box-h">${ic('clock')}<b>日历订阅</b></div>
+      <div class="rc-p">把带日期的待办同步到 iPhone、Mac、Google 或 Outlook 日历，由日历负责提醒，即使不打开笔记也不会错过。链接本身就是凭证，请勿分享。</div>
+      ${feedBlock}
+    </div>`;
+}
+
 function bindRemindBody(root, repaint){
   if(!root) return;
   const q = s=>root.querySelector(s);
@@ -8682,7 +8710,10 @@ function openRemindDialog(opts){
   ov.innerHTML = `<div class="due-card" role="dialog" aria-label="设置提醒">
       <div class="due-chips">${DUE_PRESETS.map(p=>`<button class="due-cb" data-dp="${p.k}">${p.label}</button>`).join('')}</div>
       <div class="due-row"><label>日期</label><input type="date" id="dueDate"></div>
-      <div class="due-row"><label>时间</label><input type="time" id="dueTime"></div>
+      <div class="due-row"><label>全天</label>
+        <label class="due-chk"><input type="checkbox" id="dueAllDay"> 不设具体时间，当天一整天</label>
+      </div>
+      <div class="due-row" id="dueTimeRow"><label>时间</label><input type="time" id="dueTime"></div>
       <div class="due-row"><label>重复</label>
         <select id="dueRep">
           <option value="">不重复</option>
@@ -8703,16 +8734,30 @@ function openRemindDialog(opts){
   const dateIn = ov.querySelector('#dueDate');
   const timeIn = ov.querySelector('#dueTime');
   const repIn = ov.querySelector('#dueRep');
+  const adIn = ov.querySelector('#dueAllDay');
+  const timeRow = ov.querySelector('#dueTimeRow');
   dateIn.value = fmtDate(init);
   timeIn.value = opts.time != null ? opts.time : fmtTime(init);
   repIn.value = opts.repeat || '';
+  // 全天：这条待办本来就只写了日期（没有钟点）就默认勾上
+  adIn.checked = opts.allDay != null ? !!opts.allDay
+    : !!(opts.todo && opts.todo.due && opts.todo.hasTime === false);
+
+  const paintAllDay = ()=>{
+    timeRow.style.display = adIn.checked ? 'none' : '';
+    ov.querySelector('.due-tip').textContent = adIn.checked
+      ? '全天：日历里显示成整天的一条，不占具体钟点。'
+      : '不填时间：当天按设置中的时间提醒。';
+  };
+  adIn.onchange = ()=>{ paintAllDay(); syncChips(); };
+  paintAllDay();
 
   const syncChips = ()=>{
     ov.querySelectorAll('[data-dp]').forEach(b=>{
       const p = DUE_PRESETS.find(x=>x.k === b.dataset.dp);
       const d = duePresetDate(p);
       const sameDate = fmtDate(d) === dateIn.value;
-      const sameTime = p.hasTime ? (fmtTime(d) === timeIn.value) : !timeIn.value;
+      const sameTime = adIn.checked ? !p.hasTime : (p.hasTime ? (fmtTime(d) === timeIn.value) : !timeIn.value);
       b.classList.toggle('on', sameDate && sameTime);
     });
   };
@@ -8725,6 +8770,7 @@ function openRemindDialog(opts){
       const d = duePresetDate(p);
       dateIn.value = fmtDate(d);
       timeIn.value = p.hasTime ? fmtTime(d) : '';
+      if(p.hasTime && adIn.checked){ adIn.checked = false; paintAllDay(); }   // 选了带钟点的预设就取消全天
       syncChips();
     };
   });
@@ -8755,19 +8801,23 @@ function openRemindDialog(opts){
     if(!ds){ toast('先选一个日期'); return; }
     const [y, mo, dd] = ds.split('-').map(Number);
     const [hh, mi] = ts0.split(':').map(Number);
-    const stamp = new Date(y, mo - 1, dd, hh, mi, 0, 0).getTime();
+    const allDay = adIn.checked;
+    const stamp = allDay ? new Date(y, mo - 1, dd, 0, 0, 0, 0).getTime()
+      : new Date(y, mo - 1, dd, hh, mi, 0, 0).getTime();
     const rep = repIn.value;
     close();
     maybeAskNotifyOnRemind();
     if(opts.todo){
-      setTodoDue(opts.todo, stamp, true);
+      setTodoDue(opts.todo, stamp, true, allDay);
       setTodoRepeat(opts.todo, rep, true);
       renderShelf();
-      toast('提醒已设为 ' + dueChipLabel(stamp));
+      toast('提醒已设为 ' + (allDay ? (mo + '月' + dd + '日 全天') : dueChipLabel(stamp)));
     }else{
       const d = new Date(stamp);
-      insertPlainAtCaret('⏰' + fmtDate(d) + ' ' + fmtTime(d) + (rep ? ' 🔁 every ' + rep : ''), opts.anchor);
-      toast('已插入提醒时间');
+      insertPlainAtCaret(allDay
+        ? '⏰' + fmtDate(d) + (rep ? ' 🔁 every ' + rep : '')
+        : '⏰' + fmtDate(d) + ' ' + fmtTime(d) + (rep ? ' 🔁 every ' + rep : ''), opts.anchor);
+      toast(allDay ? '已插入全天提醒' : '已插入提醒时间');
     }
   };
   ov.onmousedown = (e)=>{ if(e.target === ov) close(); };
@@ -8797,12 +8847,26 @@ function todoForChip(chip){
   const blocks = parseBlocks(n.body);
   const idx = blk ? +blk.dataset.i : -1;
   const cand = (idx >= 0 && blocks[idx]) ? [blocks[idx]] : blocks;
-  const todos = collectTodos();
+  const todos = collectTodos().filter(t => t.noteId === n.id);
+  const inBlk = [];
   for(const b of cand){
-    const hit = todos.find(t=>t.noteId === n.id && t.line >= b.start && t.line < b.end);
-    if(hit) return hit;
+    todos.forEach(t => { if(t.line >= b.start && t.line < b.end) inBlk.push(t); });
   }
-  return null;
+  if(!inBlk.length) return null;
+  if(inBlk.length === 1) return inBlk[0];
+  /* 一个块里往往有好几条待办（一份清单）：不能直接取第一条，
+     否则点第二条的胶囊会改到第一条的提醒。先按「胶囊所在那一行」的文字对。 */
+  let host = chip.parentElement, lineTxt = '';
+  for(let k = 0; k < 4 && host; k++){
+    const t = (host.textContent || '').replace(/\s+/g, ' ').trim();
+    if(t){ lineTxt = t; break; }
+    host = host.parentElement;
+  }
+  let pick = inBlk.filter(t => t.text && lineTxt.indexOf(t.text) >= 0);
+  if(!pick.length) pick = inBlk;
+  const chipTs = +chip.dataset.due || 0;
+  const sameDue = pick.find(t => t.due === chipTs);
+  return sameDue || pick[0];
 }
 document.addEventListener('click', (e)=>{
   const chip = e.target && e.target.closest ? e.target.closest('.due-chip') : null;
@@ -12988,6 +13052,15 @@ const ordToKey = o => {
   return calKeyOf(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
 };
 
+/* 待办在苹果日历里的「文件名」：用 笔记 id + 文字 做稳定 key，
+   这样上方插入新行不会让下面的待办换身份（行号会变，文字不会） */
+function todoKey(noteId, text){
+  let h = 2166136261;
+  const s = String(noteId || '') + '|' + String(text || '');
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16);
+}
+
 /* 笔记里带日期的待办也一并铺到日历上：只读展示，点开能跳回那条待办 */
 function calTodoEvents(){
   if(typeof collectTodos !== 'function') return [];
@@ -12997,9 +13070,11 @@ function calTodoEvents(){
       if(!t.due) continue;
       const hasTime = !!t.hasTime;
       const dt = new Date(t.due);
-      const start = hasTime ? t.due : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+      // 全天用 UTC 午夜（和 CalDAV 的 DTSTART;VALUE=DATE 一致），写回苹果才是同一天
+      const start = hasTime ? t.due : Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
       out.push({
         uid: 'todo:' + t.noteId + ':' + t.line,
+        key: todoKey(t.noteId, t.text),
         cal: '待办', color: '#8b5cf6',
         title: t.text || '待办',
         start,
@@ -13011,6 +13086,12 @@ function calTodoEvents(){
     }
   }catch(e){}
   return out;
+}
+/* 要推给苹果日历的待办：只推没做完的（做完的那条会从苹果日历里撤掉） */
+function calTodoPushList(){
+  return calTodoEvents()
+    .filter(e => !e.todo.done)
+    .map(e => ({ key: e.key, title: e.title, start: e.start, end: e.end, allDay: e.allDay }));
 }
 /* 日历用的全量事件 = iCloud 同步来的 + 笔记里带日期的待办 */
 function calAllEvents(){
@@ -13414,6 +13495,7 @@ async function loadCalDav(){
     const d = await apiCall('/api/caldav');
     CAL.dav = d && d.connected ? d : { connected:false };
     calCacheSave(CAL.dav);                 // 服务器说没连才算没连
+    if(CAL.dav.connected) icsPurgeLegacy();
   }catch(e){
     // 网络抖一下就保留上次的快照，别把「已连接」误画成要重新登录
     if(!CAL.dav || !CAL.dav.connected) CAL.dav = calCacheLoad() || { connected:false };
@@ -13552,6 +13634,32 @@ function openCalSetup(opts){
   });
 }
 
+/* 笔记里的待办一改，隔两秒把变更推给苹果日历（只推待办，不拉全天事件）。
+   先算签名比对，内容没变就不发请求。 */
+let calTodoTimer = null, calTodoSig = '';
+function calTodoSigNow(list){
+  return (list || calTodoPushList()).map(t => t.key + ':' + t.title + ':' + t.start + ':' + (t.allDay ? 1 : 0)).sort().join('|');
+}
+function calTodoPushSoon(){
+  if(!isConnected()) return;
+  if(calTodoTimer) clearTimeout(calTodoTimer);
+  calTodoTimer = setTimeout(calTodoPushNow, 2500);
+}
+async function calTodoPushNow(){
+  calTodoTimer = null;
+  const dav = CAL.dav || calCacheLoad();
+  if(!dav || !dav.connected) return;
+  let list;
+  try{ list = calTodoPushList(); }catch(e){ return; }
+  const sig = calTodoSigNow(list);
+  if(sig === calTodoSig) return;
+  calTodoSig = sig;
+  try{
+    await fetch('/api/caldav', { method:'POST', headers: authHeaders(true), keepalive: true,
+      body: JSON.stringify({ action:'pushtodos', todos: list }) });
+  }catch(e){}
+}
+
 async function calSync(btn, silent, opts){
   if(!CAL.dav || !CAL.dav.connected){ openCalSetup(); return; }
   CAL.syncing = true;
@@ -13563,7 +13671,7 @@ async function calSync(btn, silent, opts){
     // 不用 apiCall：失败时要拿到 authBad，好把人直接带到「重新连接」
     const res = await fetch('/api/caldav', {
       method:'POST', headers: authHeaders(true),
-      body: JSON.stringify({ action:'sync', from, to })
+      body: JSON.stringify({ action:'sync', from, to, todos: calTodoPushList() })
     });
     const r = await res.json().catch(()=>({}));
     if(!res.ok){
@@ -13586,6 +13694,7 @@ async function calSync(btn, silent, opts){
     }
     CAL.authBad = false;
     CAL.key = '';
+    try{ calTodoSig = calTodoSigNow(); }catch(e){}   // 这次同步里已经推过待办了，别再推一遍
     await ensureCalData(true);
     await loadCalDav();
     if(S.view === 'calendar'){ renderShelf(); paintCalendar(); }
@@ -16706,7 +16815,6 @@ const SET_TABS = [
   ['mcp', 'API 令牌与 MCP', 'code', '数据与共享'],
   ['sync', '备份 / 导入 / 导出', 'download', '数据与共享'],
   ['share', '分享管理', 'share', '数据与共享'],
-  ['data', '数据', 'folder', '数据与共享'],
   ['help', '使用说明', 'help', '其他'],
   ['client', '客户端下载', 'globe', '其他'],
   ['ai', 'AI 接口设置', 'spark', '其他'],
@@ -16792,6 +16900,7 @@ function openSettings(tab){
 function paintSettings(keepScroll){
   const nav = $('#setNav'), pane = $('#setPane'), head = $('#setHead');
   if(!nav || !pane) return;
+  if(!SET_TABS.some(t=>t[0] === SET_TAB)) SET_TAB = 'account';   // 旧版本停在已删掉的页时兜底
   const prevTab = _setPaintedTab, prevScroll = pane.scrollTop;
   if(prevTab !== SET_TAB){ setRemindReady = false; setAiReady = false; remindRepaintHook = null; }
   nav.querySelectorAll('[data-st]').forEach(b=>b.classList.toggle('on', b.dataset.st === SET_TAB));
@@ -16805,13 +16914,12 @@ function paintSettings(keepScroll){
   _setPaintedTab = SET_TAB;
 }
 function setPaneHtml(tab){
-  if(tab === 'account') return setAccountHtml();
+  if(tab === 'account') return setAccountHtml() + '<div class="set-sec">数据</div>' + setDataHtml();
   if(tab === 'appearance') return setAppearanceHtml();
   if(tab === 'remind') return setRemindHtml();
   if(tab === 'mcp') return setMcpHtml();
   if(tab === 'sync') return setSyncHtml();
   if(tab === 'share') return setShareHtml();
-  if(tab === 'data') return setDataHtml();
   if(tab === 'help') return setHelpHtml();
   if(tab === 'client') return setClientHtml();
   if(tab === 'ai') return setAiHtml();
@@ -17209,7 +17317,8 @@ function setRemindHtml(){
   return `<p class="set-note" style="margin:2px 0 14px">提醒、日历订阅、苹果日历同步都在这一页设，改完立刻生效。</p>
     ${remindBodyHtml()}
     <div class="set-sec">同步到苹果备忘录</div>
-    ${npfBodyHtml()}`;
+    ${npfBodyHtml()}
+    ${remindFeedCardHtml()}`;
 }
 
 /* ---- API 令牌与 MCP ---- */
@@ -17516,7 +17625,7 @@ function bindPane(tab){
     });
   }
 
-  if(tab === 'data'){
+  if(tab === 'account'){
     const a = $('#setTrash'); if(a) a.onclick = ()=>{ closeSettings(); if(typeof openTrashView === 'function') openTrashView(); };
     const b = $('#setGoBackup'); if(b) b.onclick = ()=>{ SET_TAB = 'sync'; paintSettings(); };
     const w = $('#setWipeLocal'); if(w) w.onclick = () => openWipeSheet();
@@ -20204,6 +20313,8 @@ setTimeout(()=>{ icsSync(); }, 6000);
 setInterval(()=>{ icsSync(); }, 20 * 60000);
 /* 日历顶部的同步按钮显示「刚刚 / N 分钟前」，隔一会儿刷一下文字 */
 setInterval(()=>{ if(S.view === 'calendar') paintCalSyncBtn(); }, 30000);
+/* 已经连上苹果日历的账号：启动时顺手清掉旧的 webcal 只读订阅，别让「来自苹果日历」一直挂着 */
+setTimeout(()=>{ try{ const d = (typeof calCacheLoad === 'function') ? calCacheLoad() : null; if(d && d.connected) icsPurgeLegacy(); }catch(e){} }, 6000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') icsSync();
 });

@@ -3733,7 +3733,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.43', at: '2026-11-23 12:10' };
+window.IVY_BUILD = { id: '2.44', at: '2026-11-23 12:14' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4789,15 +4789,12 @@ function openListMore(anchor){
 function openViewMenu(anchor, opts){
   const after = opts && opts.after;
   const go = fn => ()=>{ if(after) after(); fn(); };
-  // 手机：回全部笔记走底部 Home，这个菜单只留媒体库、关系图
-  const mobile = window.innerWidth <= 640;
+  // 手机上也要有「主目录」：日历页的抽屉里只剩媒体库 / 关系图的话，回不到笔记
   const items = [
+    ['主目录', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
     ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
     ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
   ];
-  if(!mobile) items.unshift(
-    ['主目录', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))]
-  );
   popover(anchor, items, {align:'left'});
 }
 function renderList(){

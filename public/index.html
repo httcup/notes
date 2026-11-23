@@ -2750,6 +2750,9 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 }
 .set-nav button .sn-ico svg{width:12.5px;height:12.5px}
 .set-nav button .sn-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 「媒体库 / 关系图」是跳出去的入口，不是当前页：右上一个斜箭头 */
+.set-nav button .sn-go{margin-left:auto;font-size:12px;line-height:1;color:rgb(var(--faint));transform:translateY(-1px)}
+.set-nav button:hover .sn-go{color:rgb(var(--ink-2))}
 .set-nav button:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .set-nav button.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-weight:600}
 .set-nav button.on .sn-ico{background:rgb(255 255 255/.22);color:rgb(var(--on-ivy));box-shadow:none}
@@ -3733,7 +3736,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.45', at: '2026-11-23 14:05' };
+window.IVY_BUILD = { id: '2.46', at: '2026-11-23 14:14' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -16873,6 +16876,9 @@ const SET_TABS = [
   ['account', '账户 / 同步', 'cloud', ''],
   ['appearance', '外观', 'sun', ''],
   ['remind', '提醒与日历', 'bell', ''],
+  // 这两项点了不是换页，而是关掉设置直接进对应视图（见 openSettings 里的点击处理）
+  ['media', '媒体库', 'image', ''],
+  ['graph', '关系图', 'graph', ''],
   ['mcp', 'API 令牌与 MCP', 'code', '数据与共享'],
   ['sync', '备份 / 导入 / 导出', 'download', '数据与共享'],
   ['share', '分享管理', 'share', '数据与共享'],
@@ -16931,7 +16937,9 @@ function openSettings(tab){
     ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name, icon, group])=>{
       const grp = (group && group !== lastGroup) ? `<div class="set-nav-grp">${group}</div>` : '';
       if(group) lastGroup = group;
-      return grp + `<button type="button" data-st="${id}"><span class="sn-ico">${ic(icon || 'gear')}</span><span class="sn-t">${name}</span></button>`;
+      // 媒体库 / 关系图：点一下就离开设置页，给个右上角小箭头提示
+      const go = (id === 'media' || id === 'graph') ? '<span class="sn-go">↗</span>' : '';
+      return grp + `<button type="button" data-st="${id}"${go?' data-goto="1"':''}><span class="sn-ico">${ic(icon || 'gear')}</span><span class="sn-t">${name}</span>${go}</button>`;
     }).join('');
     const more = ov.querySelector('#setMore');
     /* 「更多」直接用列表页那颗「⋯」的同一套菜单卡片（popover）：
@@ -16943,12 +16951,19 @@ function openSettings(tab){
       SET_TABS.forEach(([id, name, icon, group])=>{
         if(group && group !== lastGroup && items.length) items.push('-');
         if(group) lastGroup = group;
-        items.push([name, id === SET_TAB ? '✓' : '', '', icon || 'gear', ()=>{ SET_TAB = id; paintSettings(); }]);
+        items.push([name, id === SET_TAB ? '✓' : '', '', icon || 'gear', ()=>{
+          if(id === 'media' || id === 'graph'){ closeSettings(); switchView(id); return; }
+          SET_TAB = id; paintSettings();
+        }]);
       });
       popover(more, items);
     };
     ov.querySelectorAll('#setNav [data-st]').forEach(b=>{
-      b.onclick = ()=>{ SET_TAB = b.dataset.st; paintSettings(); };
+      b.onclick = ()=>{
+        const id = b.dataset.st;
+        if(b.dataset.goto){ closeSettings(); switchView(id === 'graph' ? 'graph' : 'media'); return; }
+        SET_TAB = id; paintSettings();
+      };
     });
   }
   if(tab) SET_TAB = tab;
@@ -17370,13 +17385,7 @@ function setAppearanceHtml(){
       <button type="button" class="set-chip${mode === 'source' ? ' on' : ''}" data-mode="source">源码</button>
       <button type="button" class="set-chip${mode === 'split' ? ' on' : ''}" data-mode="split">双栏</button>
     </div>
-    <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>
-    <div class="set-sec">其他视图</div>
-    <div class="set-row"><div><div class="t">媒体库</div><div class="d">笔记里上传过的图片和附件，按分类浏览、清理。</div></div>
-      <button class="set-btn" data-openview="media">打开</button></div>
-    <div class="set-row"><div><div class="t">关系图</div><div class="d">按 [[双链]] 和标签看笔记之间的连线。</div></div>
-      <button class="set-btn" data-openview="graph">打开</button></div>
-    <p class="set-note">这两页以前在左栏顶部的「视图」菜单里，现在收在这里。</p>`;
+    <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>`;
 }
 
 /* ---- 提醒与日历（直接铺在设置页里，不再开单独弹窗） ---- */
@@ -17643,14 +17652,6 @@ function bindPane(tab){
     }
     pane.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick = ()=>{ setMode(b.dataset.mode); paintSettings(); };
-    });
-    // 媒体库 / 关系图：原来在左栏的视图菜单里，现在从这里进
-    pane.querySelectorAll('[data-openview]').forEach(b=>{
-      b.onclick = ()=>{
-        const v = b.dataset.openview;
-        closeSettings();
-        switchView(v === 'graph' ? 'graph' : 'media');
-      };
     });
   }
 

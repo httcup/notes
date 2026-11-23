@@ -100,6 +100,8 @@ export async function onRequest({ request, env }) {
         ok: true,
         connected: true,
         appleId: maskId(row.apple_id),
+        // 重新连接时用来预填输入框（只回给自己这个账号）
+        appleIdRaw: row.apple_id,
         home: row.home || '',
         calendars: calList(row),
         lastSync: Number(row.last_sync) || 0,
@@ -181,11 +183,22 @@ export async function onRequest({ request, env }) {
       if (!cals.length) return json({ error: '没有打开任何日历' }, 400);
 
       const errors = [];
+      const okCals = [];
+      const per = [];
       const collected = [];
       const seen = new Set();
+      let authBad = false;
       for (const c of cals) {
         const r = await DAV.fetchCalendar(auth, c.href, from, to);
-        if (r.error) { errors.push(c.name + ': ' + r.error); continue; }
+        if (r.error) {
+          // 401/403 说明凭据已经不能用了（改过 Apple ID 密码、撤销过 App 专用密码），
+          // 这不是「这个日历没权限」，得让用户重连，不能静默当成空日历
+          if (r.error === 'http401' || r.error === 'http403') authBad = true;
+          errors.push(c.name + ': ' + r.error);
+          continue;
+        }
+        okCals.push(c.name);
+        per.push(c.name + ' ' + r.events.length);
         for (const ev of r.events) {
           // 重复事件（RRULE）服务器只给主事件，这里保留第一条实例，避免同一 UID 反复覆盖
           const k = c.href + '|' + ev.uid;
@@ -195,9 +208,22 @@ export async function onRequest({ request, env }) {
         }
       }
 
-      // 窗口内的旧数据整体换掉：以 iCloud 为准，避免删掉的事件还挂在本地
-      await env.DB.prepare('DELETE FROM calendar_events WHERE user_id = ?1 AND start < ?3 AND end >= ?2')
-        .bind(uid, from, to).run();
+      // 一条都没拉到就别动库：以前这里无条件 DELETE，密码一失效就把整个日历清空了
+      if (!okCals.length) {
+        return json({
+          error: authBad
+            ? 'iCloud 拒绝了登录，App 专用密码可能已失效（改过 Apple ID 密码或撤销过就会失效）'
+            : '所有日历都没拉到数据',
+          authBad, errors
+        }, authBad ? 401 : 502);
+      }
+
+      // 窗口内的旧数据换掉：只清拉取成功的那些日历，
+      // 失败的日历保持原样，免得某次网络抖动把整月事件抹掉
+      const inList = okCals.map((_, k) => '?' + (k + 4)).join(',');
+      await env.DB
+        .prepare(`DELETE FROM calendar_events WHERE user_id = ?1 AND start < ?3 AND end >= ?2 AND cal IN (${inList})`)
+        .bind(uid, from, to, ...okCals).run();
 
       const stmts = collected.map((e) => {
         const key = rowUid(e.href.split('/').slice(0, -1).join('/'), e.uid);
@@ -215,7 +241,7 @@ export async function onRequest({ request, env }) {
 
       await env.DB.prepare('UPDATE caldav_config SET last_sync=?2, updated_at=?2 WHERE user_id=?1')
         .bind(uid, Date.now()).run();
-      return json({ ok: true, pulled: collected.length, errors, lastSync: Date.now() });
+      return json({ ok: true, pulled: collected.length, per, errors, authBad, lastSync: Date.now() });
     }
 
     /* ---------------- 写回：新建 / 修改 ---------------- */

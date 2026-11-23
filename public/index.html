@@ -2062,6 +2062,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-set-hd svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .cal-set-p{font-size:12px;color:rgb(var(--muted));line-height:1.7;margin:2px 0 14px}
 .cal-set-p a{color:rgb(var(--ivy));text-decoration:none}
+.cal-set-warn{background:rgb(var(--danger)/.08);color:rgb(var(--danger));border-radius:9px;padding:9px 11px;margin-top:2px}
 .cal-fld{margin-bottom:11px}
 .cal-fld label{display:block;font-size:11.5px;font-weight:600;color:rgb(var(--ink-2));margin-bottom:5px}
 .cal-fld input[type=text],.cal-fld input[type=password],.cal-fld input[type=date],.cal-fld input[type=time],.cal-fld textarea,.cal-fld select{
@@ -3678,7 +3679,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.23', at: '2026-11-23 11:36' };
+window.IVY_BUILD = { id: '2.24', at: '2026-11-23 10:28' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -12911,25 +12912,49 @@ function calCells(y, m){
   return cells;
 }
 
+const DAYMS = 86400000;
+
+/* 全天事件的「第几天」用 UTC 日期算：CalDAV 里的 DTSTART;VALUE=DATE 就是当天 UTC 零点，
+   用本地时区算会整体挪 8 小时，end 那侧就多出一格（23 号建的日程 24 号也跟着出现）。
+   苹果旧脚本给的是本地零点的全天事件，这时退回本地日期。
+   end 有两种写法：CalDAV 是次日零点的排他边界，旧脚本是当天 23:59 —— 减 1 秒两种都能落到同一天。 */
+function calAllDayOrds(ev){
+  const d0 = new Date(ev.start);
+  const utcMode = d0.getTime() % DAYMS === 0;
+  const ord = ts => {
+    const d = new Date(ts);
+    return utcMode
+      ? Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / DAYMS)
+      : Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAYMS);
+  };
+  const a = ord(ev.start);
+  const b = ord(Math.max(ev.start, ev.end - 1000));
+  return [a, Math.max(a, b)];
+}
+const ordToKey = o => {
+  const d = new Date(o * DAYMS);
+  return calKeyOf(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
+};
+
 /* 事件按天摊开：跨天的（假期、出差）每一格都要出现 */
 function calGroup(events){
   const map = new Map();
+  const push = (k, ev) => { if(!map.has(k)) map.set(k, []); map.get(k).push(ev); };
   for(const ev of events){
     if(!ev || CAL.hidden[ev.cal]) continue;
     const s = new Date(ev.start);
     if(isNaN(s)) continue;
-    let cur = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-    // 苹果日历的全天事件 end 给的是当天 23:59（不是次日 0 点），减 1 秒才落在最后一天；
-    // 减一整天会把最后一天吃掉
-    const stop = ev.allDay ? Math.max(ev.start, ev.end - 1000) : ev.end;
-    for(let guard=0; guard<90; guard++){
-      if(cur.getTime() > stop && guard > 0) break;
-      const k = calKeyOf(cur.getFullYear(), cur.getMonth()+1, cur.getDate());
-      if(!map.has(k)) map.set(k, []);
-      map.get(k).push(ev);
-      if(cur.getTime() > stop) break;
-      cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
+    let a, b;
+    if(ev.allDay){
+      [a, b] = calAllDayOrds(ev);
+    }else{
+      a = Math.floor(Date.UTC(s.getFullYear(), s.getMonth(), s.getDate()) / DAYMS);
+      const e = new Date(ev.end);
+      b = Math.floor(Date.UTC(e.getFullYear(), e.getMonth(), e.getDate()) / DAYMS);
+      if(isNaN(b) || b < a) b = a;
     }
+    if(b - a > 120) b = a + 120;               // 跑飞的长事件兜一下
+    for(let o = a; o <= b; o++) push(ordToKey(o), ev);
   }
   for(const arr of map.values()){
     arr.sort((a,b)=>{
@@ -13236,14 +13261,19 @@ function calMaskOpen(html, mount){
   return m;
 }
 
-function openCalSetup(){
+function openCalSetup(opts){
   if(!isConnected()){ toast('先在「设置 → 账户」里登录账号'); return; }
   const d = CAL.dav || {};
-  if(!d.connected){
+  const reauth = !!(opts && opts.reauth);          // 已连上，但密码失效 / 想换密码
+  if(!d.connected || reauth){
+    const back = d && d.connected
+      ? `<p class="cal-set-p cal-set-warn">iCloud 拒绝了现在的密码：改过 Apple ID 密码、或撤销过 App 专用密码，旧的就会失效。去 appleid.apple.com 重新生成一个填进来即可，日历本身不会动。</p>`
+      : `<p class="cal-set-p">用 Apple ID 和「App 专用密码」直连 iCloud。连上之后，在这里新建、修改、删除的事件都会写回苹果日历，手机和 Mac 上立刻能看到。</p>`;
+    const preId = esc((d && d.appleIdRaw) || '');
     calMaskOpen(`
-      <div class="cal-set-hd"><h3>连接苹果日历</h3><button data-x>${CAL_X}</button></div>
-      <p class="cal-set-p">用 Apple ID 和「App 专用密码」直连 iCloud。连上之后，在这里新建、修改、删除的事件都会写回苹果日历，手机和 Mac 上立刻能看到。</p>
-      <div class="cal-fld"><label>Apple ID</label><input id="cdId" type="text" placeholder="you@icloud.com" autocomplete="username" spellcheck="false"></div>
+      <div class="cal-set-hd"><h3>${d && d.connected ? '重新连接苹果日历' : '连接苹果日历'}</h3><button data-x>${CAL_X}</button></div>
+      ${back}
+      <div class="cal-fld"><label>Apple ID</label><input id="cdId" type="text" placeholder="you@icloud.com" value="${preId}" autocomplete="username" spellcheck="false"></div>
       <div class="cal-fld"><label>App 专用密码</label><input id="cdPass" type="password" placeholder="abcd-efgh-ijkl-mnop" autocomplete="off" spellcheck="false"></div>
       <p class="cal-set-p">这不是登录密码。去 <a href="https://appleid.apple.com/account/manage" target="_blank" rel="noopener">appleid.apple.com</a> → 登录与安全 → App 专用密码 → 生成，复制过来（16 位，中间有横线也行）。密码只加密存在你自己的账号下，不会回传到页面。</p>
       <div class="cal-err" id="cdErr"></div>
@@ -13281,6 +13311,7 @@ function openCalSetup(){
           CAL.dav = { connected:true, appleId:d.appleId, calendars:d.calendars || [], lastSync:0 };
           m.remove();
           toast('已连接，正在拉取事件…');
+          await loadCalDav();              // 再读一次状态，拿到完整字段（重新连接要用）
           await calSync(null, true);
         }catch(e){
           err.textContent = e.message || '连接失败';
@@ -13307,6 +13338,7 @@ function openCalSetup(){
     <div class="cal-err" id="cdErr"></div>
     <div class="cal-btns">
       <button class="primary" id="cdSync">立即同步</button>
+      <button class="ghost" id="cdRe">换密码</button>
       <button class="danger" id="cdOff">断开</button>
     </div>
   `, m=>{
@@ -13326,6 +13358,7 @@ function openCalSetup(){
       b.disabled = false; b.textContent = '立即同步';
       m.remove();
     };
+    m.querySelector('#cdRe').onclick = ()=>{ m.remove(); openCalSetup({ reauth:true }); };
     m.querySelector('#cdOff').onclick = async ()=>{
       if(!confirm('断开后，同步来的事件会从网页里移除，苹果日历本身不受影响。确定断开？')) return;
       try{
@@ -13348,14 +13381,33 @@ async function calSync(btn, silent){
   try{
     const from = new Date(CAL.y, CAL.m-2, 1).getTime();
     const to = new Date(CAL.y, CAL.m+1, 1).getTime();
-    const r = await apiCall('/api/caldav', { method:'POST', body:{ action:'sync', from, to } });
+    // 不用 apiCall：失败时要拿到 authBad，好把人直接带到「重新连接」
+    const res = await fetch('/api/caldav', {
+      method:'POST', headers: authHeaders(true),
+      body: JSON.stringify({ action:'sync', from, to })
+    });
+    const r = await res.json().catch(()=>({}));
+    if(!res.ok){
+      if(r.authBad){
+        toast('iCloud 登录失效了，重新填一次 App 专用密码');
+        openCalSetup({ reauth:true });
+      }else{
+        toast(r.error || ('同步失败 HTTP ' + res.status));
+      }
+      return;
+    }
     CAL.key = '';
     await ensureCalData(true);
     await loadCalDav();
     if(S.view === 'calendar'){ renderShelf(); paintCalendar(); }
     if(!silent){
       const bad = (r.errors || []).length;
-      toast(bad ? `同步了 ${r.pulled} 条，${bad} 个日历失败` : `已同步 ${r.pulled} 条`);
+      if(r.authBad){
+        toast('iCloud 登录失效了，重新填一次 App 专用密码');
+        openCalSetup({ reauth:true });
+      }else{
+        toast(bad ? `同步了 ${r.pulled} 条，${bad} 个日历失败` : `已同步 ${r.pulled} 条`);
+      }
     }
   }catch(e){
     toast(e.message || '同步失败');

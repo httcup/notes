@@ -3763,7 +3763,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.56', at: '2026-11-23 14:52' };
+window.IVY_BUILD = { id: '2.57', at: '2026-11-23 15:16' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13305,13 +13305,24 @@ function calTodoPanelHtml(){
   const mixed = [];
   open.forEach(t => mixed.push({ ts: Number(t.due) || 0, html: todoRowHtml(t, { withDate:true }) }));
   if(tab === 'todo'){
+    // 只列「今天及以后」的日程：昨天和更早的不再占位置（日历格子里照样看得到）
+    const nt = new Date();
+    const todayKey = nt.getFullYear()*10000 + (nt.getMonth()+1)*100 + nt.getDate();
+    const keyOfLocal = d => d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+    const keyOfUtc = d => d.getUTCFullYear()*10000 + (d.getUTCMonth()+1)*100 + d.getUTCDate();
     (CAL.events || []).forEach(ev => {
       if(!ev || CAL.hidden[ev.cal]) return;
       let ts = Number(ev.start) || 0;
+      let lastKey;
       if(ev.allDay){                       // 全天事件是 UTC 午夜，换算成本地当天 0 点再排序
         const d = new Date(ts);
         ts = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime();
+        const e = new Date(Math.max(ts, (Number(ev.end) || ts) - 1000));
+        lastKey = keyOfUtc(e);
+      }else{
+        lastKey = keyOfLocal(new Date(Number(ev.end) || ts));   // 跨天还没结束的算在结束那天
       }
+      if(lastKey < todayKey) return;
       mixed.push({ ts, html: calTodoEvRow(ev) });
     });
   }

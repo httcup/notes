@@ -2054,6 +2054,10 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 }
 .cal-ev b{font-weight:400;overflow:hidden;text-overflow:ellipsis}
 .cal-ev .dot{width:5px;height:5px;border-radius:50%;background:var(--evc);flex:0 0 auto}
+/* 笔记里的待办：小方点，做完的划掉变淡 */
+.cal-ev.todo .dot{border-radius:1.5px}
+.cal-ev.done{opacity:.5}
+.cal-ev.done b{text-decoration:line-through}
 .cal-more{font-size:10px;color:rgb(var(--faint));padding-left:5px;line-height:1.4}
 /* 连接 / 编辑弹窗（CalDAV） */
 .cal-mask{position:fixed;inset:0;z-index:9500;background:rgb(10 14 20/.32);display:grid;place-items:center;padding:18px;backdrop-filter:blur(2px)}
@@ -2103,10 +2107,22 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-pop-btns button{flex:1;height:30px;border-radius:7px;font-family:inherit;font-size:12px;font-weight:500}
 .cal-pop-btns .ed{background:rgb(var(--sunken));color:rgb(var(--ink-2))}
 .cal-pop-btns .dl{background:transparent;color:rgb(var(--danger))}
+/* 卡片里的二次确认条：替代系统 confirm，直接长在卡片里 */
+.cal-pop-cf{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:9px;border-top:1px solid rgb(var(--line))}
+.cal-pop-cf[hidden]{display:none}
+.cal-pop-cf span{flex:1;min-width:0;font-size:11.5px;line-height:1.5;color:rgb(var(--faint))}
+.cal-pop-cf button{height:28px;padding:0 12px;border-radius:7px;font-family:inherit;font-size:12px;font-weight:600}
+.cal-pop-cf .cf-no{background:rgb(var(--sunken));color:rgb(var(--ink-2))}
+.cal-pop-cf .cf-yes{background:rgb(var(--danger));color:#fff}
+.cal-pop-cf .cf-yes:disabled{opacity:.7}
+.cal-pop-wait{margin-top:10px;padding-top:9px;border-top:1px solid rgb(var(--line));font-size:11.5px;color:rgb(var(--faint))}
+.cal-pop-t.done{text-decoration:line-through;opacity:.6}
 .cal-syncbtn{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:7px;font-family:inherit;font-size:12.5px;color:rgb(var(--ink-2));background:rgb(var(--sunken))}
 .cal-syncbtn:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
 .cal-syncbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .cal-syncbtn.on svg{animation:calspin .9s linear infinite}
+.cal-syncbtn b{font-weight:500;font-size:12px}
+.cal-syncbtn.busy svg{animation:calspin 1.4s linear infinite}
 /* 还没连 iCloud：这个按钮就是登录入口，做得像主按钮 */
 .cal-syncbtn.login{background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-weight:600}
 .cal-syncbtn.login:hover{background:rgb(var(--ivy));color:rgb(var(--on-ivy));opacity:.88}
@@ -3695,7 +3711,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.31', at: '2026-11-23 10:56' };
+window.IVY_BUILD = { id: '2.33', at: '2026-11-23 11:02' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5409,6 +5425,15 @@ const DUE_AT_RE = /@\s*(今天|今晚|明晚|明天|后天|大后天|周末|本�
 /* 🔁 / 📅 后面跟重复规则 */
 const REPEAT_RE = /(?:🔁|📅)\s*(every\s+day|every\s+weekday|every\s+week|every\s+month|every\s+year|每天|每个工作日|每周|每月|每年|工作日)/i;
 const DONE_DATE_RE = /✅\s*(\d{4})-(\d{1,2})-(\d{1,2})/;
+/* 待办里写的是「日期」还是「日期 + 钟点」：日历里前者当全天、后者当定时 */
+function todoHasTime(raw){
+  const s = String(raw || '');
+  const a = s.match(DUE_TIME_RE);
+  if(a) return !!a[4];
+  const b = s.match(DUE_AT_RE);
+  if(b) return !!(b[3] || /今晚|明晚|tonight/i.test(b[1] || ''));
+  return false;
+}
 const TODO_REMIND_STORE = 'ivy.todo.reminded';
 let todoFilter = 'open';
 
@@ -5573,6 +5598,7 @@ function collectTodos(noteId){
         done: /[xX]/.test(m[3]),
         text,
         due,
+        hasTime: todoHasTime(raw),          // 写没写具体钟点：日历里决定是全天还是定时
         repeat: parseRepeat(raw),
         doneDate: parseDoneDate(raw)
       });
@@ -12903,6 +12929,8 @@ const CAL = {
   dav: null,           // CalDAV 连接状态（连上 Apple ID 后才有）
   authBad: false,      // iCloud 说密码不对：侧栏挂一条「点此重连」
   autoSyncing: false,
+  syncing: false,      // 正在从 iCloud 拉
+  writing: 0,          // 正在写回 iCloud 的条数（新建/改动/删除）
   key: ''              // 已加载的时间窗，避免来回切月重复请求
 };
 
@@ -12959,6 +12987,35 @@ const ordToKey = o => {
   const d = new Date(o * DAYMS);
   return calKeyOf(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
 };
+
+/* 笔记里带日期的待办也一并铺到日历上：只读展示，点开能跳回那条待办 */
+function calTodoEvents(){
+  if(typeof collectTodos !== 'function') return [];
+  const out = [];
+  try{
+    for(const t of collectTodos()){
+      if(!t.due) continue;
+      const hasTime = !!t.hasTime;
+      const dt = new Date(t.due);
+      const start = hasTime ? t.due : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+      out.push({
+        uid: 'todo:' + t.noteId + ':' + t.line,
+        cal: '待办', color: '#8b5cf6',
+        title: t.text || '待办',
+        start,
+        end: hasTime ? t.due + 1800000 : start + DAYMS,
+        allDay: !hasTime,
+        location: '', notes: '', href: '', etag: '',
+        todo: { noteId: t.noteId, line: t.line, done: !!t.done, repeat: t.repeat || '' }
+      });
+    }
+  }catch(e){}
+  return out;
+}
+/* 日历用的全量事件 = iCloud 同步来的 + 笔记里带日期的待办 */
+function calAllEvents(){
+  return (CAL.events || []).concat(calTodoEvents());
+}
 
 /* 事件按天摊开：跨天的（假期、出差）每一格都要出现 */
 function calGroup(events){
@@ -13021,7 +13078,7 @@ function calShelf(){
   /* 迷你月历 */
   const cells = calCells(y, m);
   const tk = (()=>{ const t = new Date(); return calKeyOf(t.getFullYear(), t.getMonth()+1, t.getDate()); })();
-  const evDays = new Set([...calGroup(CAL.events).keys()]);
+  const evDays = new Set([...calGroup(calAllEvents()).keys()]);
   html += `<div class="cal-mini">
     <div class="cal-mini-hd">
       <button data-calprev="1" aria-label="上个月">${'<svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>'}</button>
@@ -13095,7 +13152,7 @@ function paintCalendar(){
   if(!CAL.y){ const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1; }
   const y = CAL.y, m = CAL.m;
   const cells = calCells(y, m);
-  const groups = calGroup(CAL.events);
+  const groups = calGroup(calAllEvents());
   const t = new Date();
   const todayKey = calKeyOf(t.getFullYear(), t.getMonth()+1, t.getDate());
 
@@ -13107,7 +13164,8 @@ function paintCalendar(){
     const evHtml = shown.map(ev=>{
       const col = calColor(ev.cal, ev.color);
       const label = (ev.allDay || narrow ? '' : calHm(ev.start) + ' ') + ev.title;
-      return `<button class="cal-ev" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
+      const cls = 'cal-ev' + (ev.todo ? ' todo' : '') + (ev.todo && ev.todo.done ? ' done' : '');
+      return `<button class="${cls}" data-calev="${esc(ev.uid)}" style="--evc:${col};--evbg:${hexA(col,.13)}" title="${esc(label)}">
         <i class="dot"></i><b>${esc(label)}</b></button>`;
     }).join('');
     const fest = calFestival(c.y, c.m, c.d);
@@ -13130,7 +13188,7 @@ function paintCalendar(){
       <div class="cal-month">${y} 年 ${m} 月${CAL.loading?' <i>同步中…</i>':''}</div>
       <div class="cal-tools">
         ${linked
-          ? `<button class="cal-syncbtn${CAL.authBad ? ' bad' : ''}" data-calsync="1" title="${CAL.authBad ? 'iCloud 登录失效，点一下重新连接' : '从 iCloud 拉一次 · ' + calAgo(dav.lastSync)}"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg>同步</button>`
+          ? `<button class="cal-syncbtn${CAL.authBad ? ' bad' : ''}${CAL.syncing ? ' on' : ''}${CAL.writing > 0 ? ' busy' : ''}" id="calSyncBtn" data-calsync="1" title="从 iCloud 拉一次"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg><b class="cal-sync-t">${calSyncLabel()}</b></button>`
           : `<button class="cal-syncbtn login" data-callogin="1" title="用 Apple ID 连接 iCloud 日历，之后两边自动一致"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 5v6h-6"/></svg>同步苹果日历</button>`}
         <div class="cal-seg"><button class="on" disabled>月</button></div>
         <div class="cal-step">
@@ -13168,7 +13226,7 @@ function paintCalendar(){
         setTimeout(()=>{
           if(CAL_TAP.k !== k) return;
           CAL_TAP = { k: 0, at: 0 };
-          if((calGroup(CAL.events).get(k) || []).length) calShowDay(k, c);
+          if((calGroup(calAllEvents()).get(k) || []).length) calShowDay(k, c);
         }, 300);
       };
     });
@@ -13190,7 +13248,7 @@ function paintCalendar(){
 
 function calShowEvent(uid, anchor){
   document.querySelectorAll('.cal-pop').forEach(e=>e.remove());
-  const ev = CAL.events.find(x=>x.uid === uid);
+  const ev = calAllEvents().find(x=>x.uid === uid);
   if(!ev) return;
   const col = calColor(ev.cal, ev.color);
   const d1 = new Date(ev.start), d2 = new Date(ev.end);
@@ -13198,26 +13256,50 @@ function calShowEvent(uid, anchor){
   const when = ev.allDay
     ? `${d1.getMonth()+1}月${d1.getDate()}日 全天`
     : `${d1.getMonth()+1}月${d1.getDate()}日 ${calHm(ev.start)} – ${sameDay ? calHm(ev.end) : (d2.getMonth()+1)+'月'+d2.getDate()+'日 '+calHm(ev.end)}`;
+  const isTodo = !!ev.todo;
   const pop = document.createElement('div');
   pop.className = 'cal-pop';
-  pop.innerHTML = `<div class="cal-pop-t">${esc(ev.title)}</div>
+  pop.innerHTML = `<div class="cal-pop-t${isTodo && ev.todo.done ? ' done' : ''}">${esc(ev.title)}</div>
     <div class="cal-pop-r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.6V12l3 1.8"/></svg><span>${when}</span></div>
     ${ev.location?`<div class="cal-pop-r"><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span>${esc(ev.location)}</span></div>`:''}
-    <div class="cal-pop-cal"><i style="background:${col}"></i>${esc(ev.cal || '日历')}</div>
+    <div class="cal-pop-cal"><i style="background:${col}"></i>${esc(ev.cal || '日历')}${isTodo && ev.todo.done ? ' · 已完成' : ''}</div>
     ${ev.notes?`<div class="cal-pop-n">${esc(ev.notes)}</div>`:''}
-    ${ev.href?`<div class="cal-pop-btns"><button class="ed" data-evedit="1">编辑</button><button class="dl" data-evdely="1">删除</button></div>`:''}`;
+    ${isTodo
+      ? `<div class="cal-pop-btns"><button class="ed" data-evtodo="1">打开这条待办</button></div>`
+      : ((ev.pending && !ev.href) ? `<div class="cal-pop-wait">正在同步到苹果日历…</div>`
+        : (ev.href ? `<div class="cal-pop-btns"><button class="ed" data-evedit="1">编辑</button><button class="dl" data-evdely="1">删除</button></div>
+      <div class="cal-pop-cf" data-cf hidden><span>苹果日历上也会一起删掉</span><button class="cf-no">取消</button><button class="cf-yes">删除</button></div>` : ''))}`;
   document.body.appendChild(pop);
+  const tb = pop.querySelector('[data-evtodo]');
+  if(tb) tb.onclick = ()=>{
+    pop.remove();
+    if(typeof openNote === 'function') openNote(ev.todo.noteId);
+    toast('待办在「' + (noteById(ev.todo.noteId) || {}).title + '」里，改日期也去那边改');
+  };
   const eb = pop.querySelector('[data-evedit]');
   if(eb) eb.onclick = ()=>{ pop.remove(); openCalEventForm(ev, 0); };
+  const cf = pop.querySelector('[data-cf]');
+  const btnRow = pop.querySelector('.cal-pop-btns');
   const db = pop.querySelector('[data-evdely]');
-  if(db) db.onclick = async ()=>{
-    if(!confirm('删除这条日程？苹果日历上也会一起删掉。')) return;
-    try{
-      await apiCall('/api/caldav', { method:'POST', body:{ action:'remove', href: ev.href, etag: ev.etag } });
+  if(db) db.onclick = ()=>{
+    // 用页面里的确认条，别弹系统对话框（原来那个 confirm 会跳出当前上下文）
+    btnRow.hidden = true; cf.hidden = false;
+    pop.querySelector('.cf-no').onclick = ()=>{ cf.hidden = true; btnRow.hidden = false; };
+    pop.querySelector('.cf-yes').onclick = (e)=>{
+      const i0 = CAL.events.indexOf(ev);
+      if(i0 >= 0) CAL.events.splice(i0, 1);
       pop.remove();
-      toast('已删除');
-      await calSync(null, true);
-    }catch(e){ toast(e.message || '删除失败'); }
+      calRepaint();
+      calWriteStart();
+      toast('已删除，正在同步到苹果日历');
+      apiCall('/api/caldav', { method:'POST', body:{ action:'remove', href: ev.href, etag: ev.etag } })
+        .then(()=>{ if(CAL.dav) CAL.dav.lastSync = Date.now(); })
+        .catch(e2=>{
+          if(i0 >= 0) CAL.events.splice(i0, 0, ev);
+          toast('删除失败：' + (e2.message || '未知错误'));
+        })
+        .finally(()=>{ calWriteEnd(); calRepaint(); });
+    };
   };
   const r = anchor.getBoundingClientRect();
   const pw = pop.offsetWidth, ph = pop.offsetHeight;
@@ -13235,7 +13317,7 @@ function calShowEvent(uid, anchor){
 /* 点格子看当天：手机上事件只剩圆点，得有个地方看清楚是什么 */
 function calShowDay(key, anchor){
   document.querySelectorAll('.cal-pop').forEach(e=>e.remove());
-  const list = calGroup(CAL.events).get(key) || [];
+  const list = calGroup(calAllEvents()).get(key) || [];
   if(!list.length) return;
   const m = Math.floor(key % 10000 / 100), d = key % 100;
   const pop = document.createElement('div');
@@ -13272,16 +13354,69 @@ function calAgo(ts){
   if(d < 86400000) return Math.floor(d/3600000) + ' 小时前';
   return Math.floor(d/86400000) + ' 天前';
 }
+/* ---------- 同步状态：顶部按钮上直接显示「同步中 / 保存中 / 几分钟前」 ---------- */
+function calSyncLabel(){
+  if(CAL.authBad) return '重新连接';
+  if(CAL.syncing) return '同步中';
+  if(CAL.writing > 0) return '保存中';
+  const d = CAL.dav || {};
+  return d.lastSync ? calAgo(d.lastSync) : '还没同步';
+}
+function paintCalSyncBtn(){
+  const b = document.querySelector('#calSyncBtn');
+  if(!b) return;
+  b.classList.toggle('on', !!CAL.syncing);
+  b.classList.toggle('busy', CAL.writing > 0);
+  b.classList.toggle('bad', !!CAL.authBad);
+  const t = b.querySelector('.cal-sync-t');
+  if(t) t.textContent = calSyncLabel();
+  const d = CAL.dav || {};
+  b.title = CAL.authBad ? 'iCloud 登录失效，点一下重新连接'
+    : (d.lastSync ? '上次同步 ' + new Date(d.lastSync).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) + '，点一下立即同步'
+      : '点一下从 iCloud 拉取');
+}
+function calWriteStart(){ CAL.writing = (CAL.writing || 0) + 1; paintCalSyncBtn(); }
+function calWriteEnd(){ CAL.writing = Math.max(0, (CAL.writing || 0) - 1); paintCalSyncBtn(); }
+/* 只在日历页重画：paintCalendar 会改写主区，别的视图下调用会把正文冲掉 */
+function calRepaint(){
+  if(S.view !== 'calendar') return;
+  paintCalendar();
+  renderShelf();
+}
 const CAL_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 let CAL_TAP = { k: 0, at: 0 };   // 日期格双击判定
 
+const CAL_STORE = 'ivy.caldav';
+/* 连接状态在本机留一份快照：换设备/刷新时先按「已连接」画出来，
+   再去服务器核对。真正的凭据在账号库里（D1），所以别的设备登录同一个
+   笔记账号时不用再填一次 Apple 密码。 */
+function calCacheSave(d){
+  try{
+    if(d && d.connected) localStorage.setItem(CAL_STORE, JSON.stringify({
+      connected: true, appleId: d.appleId || '', appleIdRaw: d.appleIdRaw || '',
+      calendars: d.calendars || [], lastSync: d.lastSync || 0, synced: d.synced || 0
+    }));
+    else localStorage.removeItem(CAL_STORE);
+  }catch(e){}
+}
+function calCacheLoad(){
+  try{
+    const raw = localStorage.getItem(CAL_STORE);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    return d && d.connected ? d : null;
+  }catch(e){ return null; }
+}
+
 async function loadCalDav(){
-  if(!isConnected()){ CAL.dav = null; return; }
+  if(!isConnected()){ CAL.dav = null; calCacheSave(null); return; }
   try{
     const d = await apiCall('/api/caldav');
     CAL.dav = d && d.connected ? d : { connected:false };
+    calCacheSave(CAL.dav);                 // 服务器说没连才算没连
   }catch(e){
-    CAL.dav = { connected:false };
+    // 网络抖一下就保留上次的快照，别把「已连接」误画成要重新登录
+    if(!CAL.dav || !CAL.dav.connected) CAL.dav = calCacheLoad() || { connected:false };
   }
   CAL.davAt = Date.now();
 }
@@ -13406,6 +13541,7 @@ function openCalSetup(opts){
         CAL.dav = { connected:false };
         CAL.davAt = 0;
         CAL.authBad = false;
+        calCacheSave(null);
         CAL.key = '';
         m.remove();
         await ensureCalData(true);
@@ -13418,7 +13554,9 @@ function openCalSetup(opts){
 
 async function calSync(btn, silent, opts){
   if(!CAL.dav || !CAL.dav.connected){ openCalSetup(); return; }
+  CAL.syncing = true;
   if(btn) btn.classList.add('on');
+  paintCalSyncBtn();
   try{
     const from = new Date(CAL.y, CAL.m-2, 1).getTime();
     const to = new Date(CAL.y, CAL.m+1, 1).getTime();
@@ -13463,6 +13601,8 @@ async function calSync(btn, silent, opts){
   }catch(e){
     toast(e.message || '同步失败');
   }finally{
+    CAL.syncing = false;
+    paintCalSyncBtn();
     if(btn) btn.classList.remove('on');
   }
 }
@@ -13503,16 +13643,17 @@ function openCalEventForm(ev, dayKey){
     <div class="cal-fld"><label>地点</label><input id="ceLoc" type="text" maxlength="200" value="${esc(ev ? ev.location : '')}"></div>
     <div class="cal-fld"><label>备注</label><textarea id="ceNote" maxlength="2000">${esc(ev ? ev.notes : '')}</textarea></div>
     <div class="cal-err" id="ceErr"></div>
-    <div class="cal-btns">
+    <div class="cal-btns" id="ceBtns">
       <button class="primary" id="ceSave">${isNew?'创建':'保存'}</button>
       ${isNew?'':'<button class="danger" id="ceDel">删除</button>'}
     </div>
+    ${isNew?'':`<div class="cal-pop-cf" id="ceCf" hidden><span>苹果日历上也会一起删掉</span><button class="cf-no" id="ceNo">取消</button><button class="cf-yes" id="ceYes">删除</button></div>`}
   `, m=>{
     const all = m.querySelector('#ceAllDay'), times = m.querySelector('#ceTimes');
     all.onchange = ()=>{ times.style.display = all.checked ? 'none' : ''; };
     const err = m.querySelector('#ceErr');
 
-    m.querySelector('#ceSave').onclick = async (e)=>{
+    m.querySelector('#ceSave').onclick = (e)=>{
       const btn = e.currentTarget;
       const title = m.querySelector('#ceTitle').value.trim();
       if(!title){ err.textContent = '标题不能为空'; return; }
@@ -13531,40 +13672,76 @@ function openCalEventForm(ev, dayKey){
         en = new Date(Y, Mo-1, Da, H2, Mi2).getTime();
         if(en <= s) en = s + 3600000;
       }
-      btn.disabled = true; btn.textContent = '保存中…'; err.textContent = '';
-      try{
-        const body = {
-          action: 'save',
-          event: {
-            uid: ev ? ev.uid : '',
-            href: ev ? ev.href : '',
-            etag: ev ? ev.etag : '',
-            calHref: m.querySelector('#ceCal').value,
-            title, start: s, end: en, allDay: all.checked,
-            location: m.querySelector('#ceLoc').value.trim(),
-            notes: m.querySelector('#ceNote').value.trim()
-          }
-        };
-        await apiCall('/api/caldav', { method:'POST', body });
-        m.remove();
-        toast(isNew ? '已创建并写入苹果日历' : '已保存');
-        await calSync(null, true);
-      }catch(e2){
-        err.textContent = e2.message || '保存失败';
-        btn.disabled = false; btn.textContent = isNew?'创建':'保存';
+      const calHref = m.querySelector('#ceCal').value;
+      const calObj = cals.find(c => c.href === calHref) || {};
+      const loc = m.querySelector('#ceLoc').value.trim();
+      const note = m.querySelector('#ceNote').value.trim();
+      const allDay = all.checked;
+
+      /* 先把改动落到本地并立刻重画，写 iCloud 放后台 —— 不用干等几秒 */
+      const before = ev ? { ...ev } : null;
+      let tmp = ev;
+      if(isNew){
+        tmp = { uid: 'tmp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          cal: calObj.name || '', color: calObj.color || '', title, start: s, end: en,
+          allDay, location: loc, notes: note, href: '', etag: '', pending: true };
+        CAL.events.push(tmp);
+      }else{
+        Object.assign(ev, { cal: calObj.name || ev.cal, title, start: s, end: en, allDay, location: loc, notes: note, pending: true });
       }
+      m.remove();
+      CAL.key = '';
+      calRepaint();
+      calWriteStart();
+      toast(isNew ? '已创建，正在同步到苹果日历' : '已保存，正在同步');
+
+      apiCall('/api/caldav', { method:'POST', body: { action:'save', event: {
+        uid: before ? before.uid : '', href: before ? before.href : '', etag: before ? before.etag : '',
+        calHref, title, start: s, end: en, allDay, location: loc, notes: note
+      } } }).then(r=>{
+        if(isNew){
+          const hit = CAL.events.find(x => x.uid === tmp.uid);
+          if(hit){ hit.uid = r.uid || hit.uid; hit.href = r.href || ''; hit.etag = r.etag || ''; hit.pending = false; }
+        }else if(ev){
+          ev.uid = r.uid || ev.uid; ev.href = r.href || ev.href; ev.etag = r.etag || ev.etag; ev.pending = false;
+        }
+        if(CAL.dav) CAL.dav.lastSync = Date.now();     // 写成功也算同步过，按钮上的时间跟着走
+        CAL.key = '';
+        toast(isNew ? '已写入苹果日历' : '已保存到苹果日历');
+      }).catch(e2=>{
+        // 写失败就回滚，别让界面显示一条其实没存上的日程
+        if(isNew){ CAL.events = CAL.events.filter(x => x.uid !== tmp.uid); }
+        else if(ev && before){ Object.assign(ev, before); }
+        toast('没写进苹果日历：' + (e2.message || '失败'));
+      }).finally(()=>{
+        calWriteEnd();
+        calRepaint();
+      });
     };
 
     const del = m.querySelector('#ceDel');
-    if(del) del.onclick = async ()=>{
-      if(!confirm('删除这条日程？苹果日历上也会一起删掉。')) return;
-      del.disabled = true;
-      try{
-        await apiCall('/api/caldav', { method:'POST', body:{ action:'remove', href: ev.href, etag: ev.etag } });
+    if(del) del.onclick = ()=>{
+      // 和卡片一样，用面板里的确认条，不弹系统对话框
+      m.querySelector('#ceBtns').hidden = true;
+      const cf2 = m.querySelector('#ceCf');
+      cf2.hidden = false;
+      m.querySelector('#ceNo').onclick = ()=>{ cf2.hidden = true; m.querySelector('#ceBtns').hidden = false; };
+      m.querySelector('#ceYes').onclick = (e)=>{
+        const yes = e.currentTarget;
+        const i0 = CAL.events.indexOf(ev);
+        if(i0 >= 0) CAL.events.splice(i0, 1);        // 先摘掉，界面立刻没了
         m.remove();
-        toast('已删除');
-        await calSync(null, true);
-      }catch(e2){ err.textContent = e2.message || '删除失败'; del.disabled = false; }
+        calRepaint();
+        calWriteStart();
+        toast('已删除，正在同步到苹果日历');
+        apiCall('/api/caldav', { method:'POST', body:{ action:'remove', href: ev.href, etag: ev.etag } })
+          .then(()=>{ if(CAL.dav) CAL.dav.lastSync = Date.now(); })
+          .catch(e2=>{
+            if(i0 >= 0) CAL.events.splice(i0, 0, ev);  // 失败放回去
+            toast('删除失败：' + (e2.message || '未知错误'));
+          })
+          .finally(()=>{ calWriteEnd(); calRepaint(); });
+      };
     };
     setTimeout(()=>{ const i = m.querySelector('#ceTitle'); if(i){ i.focus(); i.select(); } }, 60);
   });
@@ -13601,6 +13778,9 @@ function renderCalendar(){
   paperActions.innerHTML = '';
   scrollEl.style.display = '';
   if(!CAL.y){ const t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth()+1; }
+  // 先按本机快照画：换设备登录同一个笔记账号时，这里已经是「已连接」，
+  // 不用等接口回来才变，也不会闪一下「同步苹果日历」的登录按钮
+  if(CAL.dav === null){ const c = calCacheLoad(); if(c){ CAL.dav = c; CAL.davAt = 0; } }
   paintCalendar();
   ensureCalData(false);
   // 一分钟内不重复问；刚登录 / 刚断开时 CAL.dav 会被置空，下次进来自动重取
@@ -20009,6 +20189,8 @@ document.addEventListener('visibilitychange', ()=>{
 /* ---- 苹果日历订阅：进页面拉一次，之后每 20 分钟 ---- */
 setTimeout(()=>{ icsSync(); }, 6000);
 setInterval(()=>{ icsSync(); }, 20 * 60000);
+/* 日历顶部的同步按钮显示「刚刚 / N 分钟前」，隔一会儿刷一下文字 */
+setInterval(()=>{ if(S.view === 'calendar') paintCalSyncBtn(); }, 30000);
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') icsSync();
 });

@@ -3715,7 +3715,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.39', at: '2026-11-23 11:46' };
+window.IVY_BUILD = { id: '2.40', at: '2026-11-23 11:28' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13087,11 +13087,14 @@ function calTodoEvents(){
   }catch(e){}
   return out;
 }
-/* 要推给苹果日历的待办：只推没做完的（做完的那条会从苹果日历里撤掉） */
+/* 要推给苹果日历的待办：全部推（做完的不撤，只在标题前打 [已完成]）；
+   只有笔记里这条待办真的删掉了，苹果日历里那条才会跟着删（后端按 key 差集处理） */
 function calTodoPushList(){
-  return calTodoEvents()
-    .filter(e => !e.todo.done)
-    .map(e => ({ key: e.key, title: e.title, start: e.start, end: e.end, allDay: e.allDay }));
+  return calTodoEvents().map(e => ({
+    key: e.key,
+    title: e.todo.done ? '[已完成] ' + e.title : e.title,
+    start: e.start, end: e.end, allDay: e.allDay
+  }));
 }
 /* 日历用的全量事件 = iCloud 同步来的 + 笔记里带日期的待办 */
 function calAllEvents(){

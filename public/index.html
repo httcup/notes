@@ -3310,6 +3310,9 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
 .m-back .mb-ar{font-size:20px;line-height:1;color:rgb(var(--muted));margin-top:-2px;margin-left:-1px}
 .m-back .mb-t{font-weight:600;white-space:nowrap;letter-spacing:-.01em;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
 .m-back .mb-n{font-size:11.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
+/* 日历 / 媒体库 / 关系图页的返回键：直接是「主目录」那颗图标，点一下回主目录并展开抽屉 */
+.m-back.m-home{width:32px;height:30px;padding:0;margin-left:-2px;justify-content:center}
+.m-back.m-home svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 @media (max-width:640px){
   .notelist{display:flex!important;flex:1 1 auto;width:auto;flex-basis:auto;border-left:0;background:rgb(var(--canvas))}
   .nl-hd{height:54px;padding:0 8px 0 6px;gap:6px}
@@ -3803,7 +3806,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.65', at: '2026-11-23 15:47' };
+window.IVY_BUILD = { id: '2.66', at: '2026-11-23 15:44' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4477,13 +4480,23 @@ function syncNlNew(){
   const more = $('#nlMore');
   if(more) more.style.display = cal ? 'none' : '';
 }
+/* 主目录图标（方框 + 一条横线）：左栏头部、折叠后的浮动按钮、手机日历页返回键都用它 */
+const HOME_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
+/* 回主目录：切回笔记视图，手机上顺手把主目录抽屉拉出来 */
+function goHomeDir(){
+  if((S.view || 'notes') !== 'notes'){ try{ switchView('notes'); }catch(e){} }
+  if(window.innerWidth <= 640){
+    if(!S.shelfOpen){ try{ toggleShelf(); }catch(e){} }
+    try{ if(typeof window.syncMobileBar === 'function') window.syncMobileBar(); }catch(e){}
+  }
+}
 function paintRowIcons(){
   syncNlNew();
   try{ syncListCollapse(); }catch(e){}
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
-  const homeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
+  const homeIcon = HOME_ICON;
   const hm = $('#btnHome');
   if(hm) hm.innerHTML = homeIcon;
   const hf = $('#homeFloat');
@@ -7076,11 +7089,9 @@ function renderTabs(){
         const b = $('#mBack');
         if(b) b.onclick = ()=>{ document.body.classList.remove('m-read'); renderAll(); };
       }else{
-        const nm = ({todo:'待办日程', media:'媒体库', graph:'关系图'})[S.view] || '';
-        bar.innerHTML = `<button class="m-back" id="mBackView" title="回到笔记" aria-label="回到笔记">`
-          + `<span class="mb-ar">‹</span><span class="mb-t">笔记</span><span class="mb-n">${nm}</span></button>`;
+        bar.innerHTML = `<button class="m-back m-home" id="mBackView" title="主目录" aria-label="主目录">${HOME_ICON}</button>`;
         const bv = $('#mBackView');
-        if(bv) bv.onclick = ()=>switchView('notes');
+        if(bv) bv.onclick = ()=>goHomeDir();
       }
     }else bar.innerHTML = '';
     return;
@@ -16388,7 +16399,7 @@ $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
 
 /* 主目录：直接回笔记列表（媒体库 / 关系图挪到了 设置 左侧导航里） */
-$('#btnHome').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
+$('#btnHome').onclick=()=>goHomeDir();
 $('#homeFloat').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
 $('#btnSettings').onclick=()=>openSettings();
 $('#shelfOpen').onclick=()=>toggleShelf();

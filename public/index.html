@@ -3748,7 +3748,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.51', at: '2026-11-23 14:32' };
+window.IVY_BUILD = { id: '2.52', at: '2026-11-23 14:40' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4815,9 +4815,12 @@ function renderList(){
   // 手机上待办日程页要更干净：底部浮条只留 Home，设置齿轮在这页收起来
   document.body.classList.toggle('m-todo', !!inTodo && !trashView && S.view === 'notes');
   host.classList.toggle('nl-todo', inTodo || inTags || trashView);
-  const hide = S.view !== 'notes';
+  // 日历在桌面上也用中栏（我的日历 / 待办），只有窄屏才整屏铺开
+  const calHere = S.view === 'calendar' && window.innerWidth > 900;
+  const hide = S.view !== 'notes' && !calHere;
   host.classList.toggle('hidden', hide);
   if(hide) return;
+  if(calHere){ renderCalList(); return; }
   if(trashView){ renderTrashList(); return; }
   if(inTodo){ renderTodoList(); return; }
   if(inTags){ renderTagList(); return; }
@@ -5066,14 +5069,16 @@ function renderShelf(){
 
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
-  if(S.view==='calendar'){ shelfBody.innerHTML = calShelf(); bindShelf(); bindCalShelf(); return; }
+  // 桌面：日程待办和「标签 / 回收站」一样，左栏只留那行导航，内容画在中栏；
+  // 窄屏没有中栏，仍旧把日历内容铺在抽屉里
+  if(S.view==='calendar' && window.innerWidth <= 900){ shelfBody.innerHTML = calShelf(); bindShelf(); bindCalShelf(); return; }
 
   const inlineNotes = window.innerWidth > 640 && window.innerWidth <= 900;   // 平板竖屏：侧栏内联列笔记；手机走列表页
   const notes = liveNotes();
   const trash = S.notes.filter(n=>n.trashed);
   // 「全部笔记」这个标题也能点：只收笔记本这一块，标签和日程各占一行、不受影响
   const nClosed = !!S.notesClosed;
-  let html = `<button class="side-hd${nClosed ? ' closed' : ''}${((S.scope||'all')==='all' && !trashView) ? ' on' : ''}" data-act="scope-all"
+  let html = `<button class="side-hd${nClosed ? ' closed' : ''}${((S.scope||'all')==='all' && !trashView && (S.view||'notes')==='notes') ? ' on' : ''}" data-act="scope-all"
       title="回到全部笔记">
       <span class="lb"><i class="caret" data-fold-notes aria-expanded="${nClosed ? 'false' : 'true'}"
         title="${nClosed ? '展开笔记本列表' : '收起笔记本列表'}">&#9654;</i><span class="t">全部笔记</span></span>
@@ -5934,8 +5939,8 @@ function dayTitleShort(idx, baseTs){
 /* 待办相关的数据变了（勾选 / 改提醒 / 日历同步）：侧栏数字和中栏日程列表一起刷新 */
 function paintTodoSurfaces(){
   try{ renderShelf(); }catch(e){}
-  // 日历页：给待办加了 / 改了日期，格子要跟着出现或挪位置
-  try{ if(S.view === 'calendar') paintCalendar(); }catch(e){}
+  // 日历页：给待办加了 / 改了日期，格子要跟着出现或挪位置；中栏那份列表也要重画
+  try{ if(S.view === 'calendar'){ paintCalendar(); renderCalList(); } }catch(e){}
   try{ if((S.scope || 'all') === 'todo') renderList(); }catch(e){}
 }
 function monthTitle(k){
@@ -8854,7 +8859,7 @@ function openRemindDialog(opts){
     if(opts.todo){
       setTodoDue(opts.todo, stamp, true, allDay);
       setTodoRepeat(opts.todo, rep, true);
-      renderShelf();
+      renderShelf(); paintCalShell();
       toast('提醒已设为 ' + (allDay ? (mo + '月' + dd + '日 全天') : dueChipLabel(stamp)));
     }else{
       const d = new Date(stamp);
@@ -13275,29 +13280,58 @@ function calTodoPanelHtml(){
   </div>`;
 }
 
-function bindCalShelf(){
-  const rw = shelfBody.querySelector('[data-calreauth]');
+/* 日历这块的内容画在哪儿，跟「标签 / 回收站」一个套路：
+   桌面（>900）画在中栏，窄屏手机 / 平板竖屏没有中栏，仍旧画在抽屉里 */
+function paintCalShell(){
+  if(S.view !== 'calendar') return;
+  if(window.innerWidth > 900) renderCalList(); else renderShelf();
+}
+/* 中栏：我的日历 + 迷你月历 + 待办 / 完成 / 归档 */
+function renderCalList(){
+  if(window.innerWidth <= 900) return;      // 窄屏没有中栏，日历内容画在抽屉里
+  const rows = $('#nlRows'); if(!rows) return;
+  const host = $('#noteList'); if(!host) return;
+  host.classList.remove('hidden');
+  const tEl = $('#nlTitle'), cEl = $('#nlCount');
+  if(tEl) tEl.textContent = '日程待办';
+  const bkEl = $('#nlBack');
+  if(bkEl){ bkEl.classList.remove('show'); bkEl.onclick = null; }
+  if(cEl){
+    const n = (CAL.dav && CAL.dav.connected) ? (CAL.dav.calendars || []).length : ((CAL.meta && CAL.meta.calendars) || []).length;
+    cEl.textContent = n ? String(n) : '';
+  }
+  const keepTop = rows.scrollTop;
+  rows.innerHTML = calShelf();
+  rows.scrollTop = keepTop;
+  bindCalShelf(rows);
+}
+
+function bindCalShelf(root){
+  const el = root || shelfBody;
+  const repaint = ()=>{ paintCalShell(); paintCalendar(); };
+  const rw = el.querySelector('[data-calreauth]');
   if(rw) rw.onclick = ()=>openCalSetup({ reauth:true });
-  const cfold = shelfBody.querySelector('[data-calcalft]');
-  if(cfold) cfold.onclick = ()=>{ CAL.calOpen = !(CAL.calOpen === true); renderShelf(); };
-  shelfBody.querySelectorAll('[data-caltab]').forEach(b=>{
+  const cfold = el.querySelector('[data-calcalft]');
+  if(cfold) cfold.onclick = ()=>{ CAL.calOpen = !(CAL.calOpen === true); paintCalShell(); };
+  el.querySelectorAll('[data-caltab]').forEach(b=>{
     b.onclick = ()=>{
       const k = b.dataset.caltab;
       CAL.todoTab = (k === 'arch' || k === 'done') ? k : 'todo';
-      renderShelf();
+      paintCalShell();
     };
   });
   // 左栏的待办和「待办日程」页共用一套交互：勾选 / 设提醒 / 归档 / 点开原笔记
-  if(typeof bindTodoBlock === 'function' && shelfBody.querySelector('.cal-todos')){
-    bindTodoBlock(shelfBody, ()=>{ renderShelf(); paintCalendar(); });
-  }  shelfBody.querySelectorAll('[data-calsrc]').forEach(b=>{
+  if(typeof bindTodoBlock === 'function' && el.querySelector('.cal-todos')){
+    bindTodoBlock(el, repaint);
+  }
+  el.querySelectorAll('[data-calsrc]').forEach(b=>{
     b.onclick = ()=>{
       const name = b.dataset.calsrc;
       CAL.hidden[name] = !CAL.hidden[name];
-      renderShelf(); paintCalendar();
+      repaint();
     };
   });
-  shelfBody.querySelectorAll('[data-calhref]').forEach(b=>{
+  el.querySelectorAll('[data-calhref]').forEach(b=>{
     b.onclick = async ()=>{
       const href = b.dataset.calhref;
       const cur = (CAL.dav.calendars || []).find(c => c.href === href);
@@ -13307,16 +13341,16 @@ function bindCalShelf(){
         await apiCall('/api/caldav', { method:'POST', body:{ action:'toggle', href, on: turningOn } });
         await loadCalDav();
         CAL.key = '';
-        renderShelf();
+        paintCalShell();
         // 刚打开的日历库里还没有事件，顺手拉一次，否则点了像没反应
         if(turningOn){ await calSync(null, true); }
         await ensureCalData(true);
       }catch(e){ toast(e.message || '改不了'); }
     };
   });
-  shelfBody.querySelectorAll('[data-calprev]').forEach(b=>b.onclick = ()=>calShift(-1));
-  shelfBody.querySelectorAll('[data-calnext]').forEach(b=>b.onclick = ()=>calShift(1));
-  shelfBody.querySelectorAll('[data-calday]').forEach(b=>{
+  el.querySelectorAll('[data-calprev]').forEach(b=>b.onclick = ()=>calShift(-1));
+  el.querySelectorAll('[data-calnext]').forEach(b=>b.onclick = ()=>calShift(1));
+  el.querySelectorAll('[data-calday]').forEach(b=>{
     b.onclick = ()=>{
       const k = Number(b.dataset.calday);
       const y = Math.floor(k/10000), m = Math.floor(k%10000/100), d = k%100;
@@ -13573,7 +13607,7 @@ function calWriteEnd(){ CAL.writing = Math.max(0, (CAL.writing || 0) - 1); paint
 function calRepaint(){
   if(S.view !== 'calendar') return;
   paintCalendar();
-  renderShelf();
+  paintCalShell();
 }
 const CAL_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 let CAL_TAP = { k: 0, at: 0 };   // 日期格双击判定
@@ -13714,7 +13748,7 @@ function openCalSetup(opts){
         try{
           await apiCall('/api/caldav', { method:'POST', body:{ action:'toggle', href:cb.dataset.cal, on:cb.checked } });
           await loadCalDav();
-          renderShelf();
+          paintCalShell();
           if(cb.checked) await calSync(null, true);   // 新打开的日历得先拉一次才有事件
         }catch(e){ toast(e.message || '改不了'); cb.checked = !cb.checked; }
       };
@@ -13738,7 +13772,7 @@ function openCalSetup(opts){
         CAL.key = '';
         m.remove();
         await ensureCalData(true);
-        renderShelf(); paintCalendar();
+        paintCalShell(); paintCalendar();
         toast('已断开');
       }catch(e){ toast(e.message || '断开失败'); }
     };
@@ -13793,7 +13827,7 @@ async function calSync(btn, silent, opts){
       }
       if(r.authBad){
         // 静默同步（进页面时自动跑的）不要弹窗打断，改成侧栏一条提示
-        if(silent){ CAL.authBad = true; if(S.view === 'calendar') renderShelf(); }
+        if(silent){ CAL.authBad = true; paintCalShell(); }
         else{
           toast('iCloud 登录失效了，重新填一次 App 专用密码');
           openCalSetup({ reauth:true });
@@ -13808,7 +13842,7 @@ async function calSync(btn, silent, opts){
     try{ calTodoSig = calTodoSigNow(); }catch(e){}   // 这次同步里已经推过待办了，别再推一遍
     await ensureCalData(true);
     await loadCalDav();
-    if(S.view === 'calendar'){ renderShelf(); paintCalendar(); }
+    if(S.view === 'calendar'){ paintCalShell(); paintCalendar(); }
     if(!silent){
       const bad = (r.errors || []).length;
       if(r.authBad){
@@ -13998,7 +14032,7 @@ async function ensureCalData(force){
     CAL.events = d.events || [];
     CAL.key = key;
     CAL.loading = false;
-    apiCall('/api/calevents?meta=1').then(mm=>{ CAL.meta = mm; if(S.view==='calendar') renderShelf(); }).catch(()=>{});
+    apiCall('/api/calevents?meta=1').then(mm=>{ CAL.meta = mm; paintCalShell(); }).catch(()=>{});
   }catch(e){
     CAL.loading = false;
     CAL.err = e.status === 401 ? '登录后才有日历' : (e.message || '读取失败');
@@ -14015,12 +14049,13 @@ function renderCalendar(){
   // 不用等接口回来才变，也不会闪一下「同步苹果日历」的登录按钮
   if(CAL.dav === null){ const c = calCacheLoad(); if(c){ CAL.dav = c; CAL.davAt = 0; } }
   paintCalendar();
+  paintCalShell();          // 中栏的迷你月历跟着换月 / 换选中日
   ensureCalData(false);
   // 一分钟内不重复问；刚登录 / 刚断开时 CAL.dav 会被置空，下次进来自动重取
   if(CAL.dav === null || Date.now() - (CAL.davAt || 0) > 60000){
     loadCalDav().then(()=>{
       if(S.view !== 'calendar') return;
-      renderShelf(); paintCalendar();
+      paintCalShell(); paintCalendar();
       // 进日历页顺手拉一次 iCloud（3 分钟内刚同步过就跳过），
       // 这样在苹果日历里改完，回到网页不用专门点「同步」
       const dav = CAL.dav || {};

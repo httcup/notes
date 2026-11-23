@@ -1273,7 +1273,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
   transform:translateY(10px) scale(.995);transition:transform .22s var(--spring);
 }
 .help-ov.open .help-card{transform:none}
-.help-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px}
+.help-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;flex:0 0 auto}
 .help-hd h3{font-family:var(--font-serif);font-size:19px;font-weight:700;letter-spacing:-.01em}
 .help-hd p{font-size:12.5px;color:rgb(var(--faint));margin-top:5px}
 .help-x{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:rgb(var(--faint));flex:0 0 auto}
@@ -1324,6 +1324,38 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .help-doc .help-row{font-size:14px;padding:9px 2px}
 .help-doc .help-table{margin-top:8px}
 .help-doc .help-hero{padding:10px 0 4px}
+/* 正文按「一篇分享笔记」来排：导语、小标题、要点列表、提示条 */
+.help-doc h5{font-family:var(--font-serif);font-size:14.5px;font-weight:650;color:rgb(var(--ink));margin:20px 0 4px;letter-spacing:-.005em}
+.help-doc .help-lead{
+  font-size:15px;line-height:1.95;color:rgb(var(--muted));
+  margin:2px 0 4px;padding:0 0 12px;border-bottom:1px solid rgb(var(--line)/.65);
+}
+.help-doc .help-lead b{color:rgb(var(--ink-2))}
+.help-doc .help-list{display:flex;flex-direction:column;gap:7px;padding:4px 0 2px}
+.help-doc .help-li{display:flex;gap:9px;font-size:14px;line-height:1.8;color:rgb(var(--ink-2))}
+.help-doc .help-li>i{
+  flex:0 0 auto;font-style:normal;font-family:var(--font-mono);font-size:10.5px;line-height:1.5;
+  min-width:17px;height:17px;margin-top:4px;border-radius:5px;display:grid;place-items:center;
+  background:rgb(var(--hover));color:rgb(var(--muted));
+}
+.help-doc .help-li b{color:rgb(var(--ink))}
+.help-doc .help-li code{white-space:nowrap}
+.help-doc .help-tip{
+  margin:14px 0 2px;padding:11px 13px;border-radius:10px;background:rgb(var(--ivy-soft));
+  font-size:13.5px;line-height:1.85;color:rgb(var(--ink-2));
+}
+.help-doc .help-tip b{color:rgb(var(--ivy-ink))}
+.help-doc .help-two{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.help-doc .help-two>div{min-width:0}
+.help-doc .help-table-3 th:nth-child(1),.help-doc .help-table-3 td:nth-child(1){width:20%}
+.help-doc .help-table-3 th:nth-child(2),.help-doc .help-table-3 td:nth-child(2){width:38%}
+.help-doc .help-table-3 th:nth-child(3),.help-doc .help-table-3 td:nth-child(3){width:42%}
+@media (max-width:760px){ .help-doc .help-two{grid-template-columns:1fr} }
+/* 弹窗顶部的七节目录（设置页用右侧大纲，这里用一排小胶囊） */
+.help-toc{display:flex;flex-wrap:wrap;gap:6px;padding:0 22px 12px;border-bottom:1px solid rgb(var(--line));flex:0 0 auto}
+.help-toc-i{padding:5px 10px;border-radius:999px;font-family:inherit;font-size:12px;color:rgb(var(--muted));background:rgb(var(--hover))}
+.help-toc-i:hover{color:rgb(var(--ink))}
+.help-toc-i.on{background:rgb(var(--ivy));color:rgb(var(--on-ivy));font-weight:600}
 .help-ol{
   position:sticky;top:6px;flex:0 0 212px;width:212px;
   padding:10px 8px 12px;border-radius:12px;
@@ -3363,6 +3395,9 @@ body.ol-open .ol-mini{opacity:0;pointer-events:none}
   /* 使用说明顶部这排栏目：原来 5 个挤成一行，每个字被迫竖排；改成横向可滑动 */
   .help-tabs{padding:0 14px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .help-tabs::-webkit-scrollbar{display:none}
+  .help-toc{padding:0 14px 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .help-toc::-webkit-scrollbar{display:none}
+  .help-toc-i{flex:0 0 auto;white-space:nowrap}
   .help-tab{flex:0 0 auto;white-space:nowrap}
   /* 手机上待办视图直接把列表画进主区（手机没有左侧栏） */
   .todo-mobile{padding:6px 8px calc(24px + env(safe-area-inset-bottom))}
@@ -3826,7 +3861,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.67', at: '2026-11-23 15:59' };
+window.IVY_BUILD = { id: '2.68', at: '2026-11-23 16:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -7561,32 +7596,38 @@ let LK_PENDING_SCOPE = null;      // 解锁成功后要自动跳过去的位置
 let LK_ARM_T = null;              // 「重置密码」两段式确认的撤销计时器
 function lkResetDesc(online){
   return online
-    ? '忘了密码就用登录密码重置。只会清掉这个笔记本的密码，里面的笔记都会留着。'
+    ? '忘了密码就用登录密码重置。验证通过后直接设一个新密码，里面的笔记都留着。'
     : '当前没登录云同步，只能在这台设备上直接重置：密码会被清掉，笔记都留着。注意这是访问锁、不是内容加密，重置后这台设备上谁都能打开。';
 }
-function openLockDlg(mode, nbId){
+function openLockDlg(mode, nbId, opts){
   const nb = nbById(nbId); if(!nb) return;
   const ov = $('#lkOv'); if(!ov) return;
   const has = !!nbLockOf(nb);
   const isSet = mode === 'set';
   const isReset = mode === 'reset';
+  // 重置流程验过登录密码后直接进「设新密码」：不再要旧密码，也不再弹二次确认
+  const verified = !!(opts && opts.verified) && isSet;
   const online = typeof isConnected === 'function' && isConnected();
   if(LK_ARM_T){ clearTimeout(LK_ARM_T); LK_ARM_T = null; }
-  LK_DLG = { mode, nbId, armed:false };
-  $('#lkTitle').textContent = mode === 'unlock' ? '解锁「' + nb.name + '」'
+  LK_DLG = { mode, nbId, armed:false, skipOld: verified };
+  const showOld = (mode === 'unlock' || mode === 'remove') || (isSet && has && !verified);
+  $('#lkTitle').textContent = verified ? '给「' + nb.name + '」设新密码'
+    : mode === 'unlock' ? '解锁「' + nb.name + '」'
     : mode === 'remove' ? '取消「' + nb.name + '」的密码'
     : isReset ? '重置「' + nb.name + '」的密码'
     : (has ? '修改「' + nb.name + '」的密码' : '给「' + nb.name + '」设密码');
-  $('#lkDesc').textContent = isReset
-    ? lkResetDesc(online)
+  $('#lkDesc').textContent = verified
+    ? '登录密码已经验证过了。设一个新密码就行，里面的笔记都留着。'
+    : isReset ? lkResetDesc(online)
     : mode === 'unlock' ? '这个笔记本设了密码，输入后才能看到里面的笔记。'
     : mode === 'remove' ? '输入当前密码确认后，这个笔记本就不用密码了。'
     : '密码只存在本机与你的同步里，忘了可以用登录密码重置，建议顺手留个提示。';
   $('#lkIco').innerHTML = ic(mode === 'remove' || isReset ? 'lockOpen' : 'lock');
-  $('#lkOk').textContent = mode === 'unlock' ? '解锁' : mode === 'remove' ? '取消密码'
-    : isReset ? '重置密码' : (has ? '保存' : '设置密码');
+  $('#lkOk').textContent = verified ? '保存新密码'
+    : mode === 'unlock' ? '解锁' : mode === 'remove' ? '取消密码'
+    : isReset ? (online ? '验证并重设' : '重置密码') : (has ? '保存' : '设置密码');
   $('#lkOk').classList.remove('armed');
-  $('#lkOldWrap').hidden = isReset ? true : !(mode !== 'set' || has);
+  $('#lkOldWrap').hidden = !showOld;
   $('#lkKeyWrap').hidden = !(isReset && online);
   $('#lkNewWrap').hidden = !isSet;
   $('#lkNew2Wrap').hidden = !isSet;
@@ -7600,7 +7641,7 @@ function openLockDlg(mode, nbId){
   ov.classList.add('open');
   setTimeout(()=>{
     try{
-      (isReset ? (online ? $('#lkKey') : $('#lkOk')) : (mode === 'set' && !has ? $('#lkNew') : $('#lkOld'))).focus();
+      (isReset ? (online ? $('#lkKey') : $('#lkOk')) : (isSet && (!has || verified) ? $('#lkNew') : $('#lkOld'))).focus();
     }catch(e){}
   }, 50);
 }
@@ -7621,35 +7662,24 @@ async function submitLockDlg(){
   $('#lkErr').textContent = '';
   if(mode !== 'set' && !lock){ closeLockDlg(); return; }
 
-  // 忘了密码：用登录密码验一次身份（已登录时），然后清掉访问锁，笔记原样保留
+  // 忘了密码：用登录密码验一次身份（已登录时）。验证过了就直接进「设新密码」，
+  // 不再多要一次「确认重置」的点击
   if(mode === 'reset'){
     const online = typeof isConnected === 'function' && isConnected();
     const resetDesc = lkResetDesc(online);
     const key = online ? String($('#lkKey').value || '') : '';
     if(online && key.length < 4) return warn('先输入登录密码');
-    if(!LK_DLG.armed){
-      LK_DLG.armed = true;
-      $('#lkDesc').textContent = '再点一次就重置：密码会被清掉，笔记都留着。';
-      okBtn.textContent = '确认重置';
-      okBtn.classList.add('armed');
-      LK_ARM_T = setTimeout(()=>{
-        LK_ARM_T = null;
-        if(!LK_DLG || LK_DLG.mode !== 'reset') return;
-        LK_DLG.armed = false;
-        okBtn.classList.remove('armed');
-        okBtn.textContent = '重置密码';
-        $('#lkDesc').textContent = resetDesc;
-      }, 8000);
-      return;
-    }
-    if(LK_ARM_T){ clearTimeout(LK_ARM_T); LK_ARM_T = null; }
-    LK_DLG.armed = false;
-    okBtn.disabled = true; okBtn.textContent = '正在重置…';
+    okBtn.disabled = true;
+    okBtn.textContent = online ? '正在验证…' : '正在重置…';
     try{
       if(online){
-        // 服务端再验一次登录密码：令牌可能是别人捡到的设备，不能只凭令牌就拆锁
+        // 服务端验一次登录密码：令牌可能是别人捡到的设备，不能只凭令牌就拆锁
         await apiCall('/api/account', { method:'POST', body:{ action:'verify', key } });
+        okBtn.disabled = false;
+        openLockDlg('set', nbId, { verified:true });   // 直接来设新密码这一页
+        return;
       }
+      // 没登录云同步：没有账号密码可验，只能在这台设备上直接清掉访问锁
       delete nb.lock;
       nb.updatedAt = Date.now();
       LOCK_OPEN.add(nb.id);
@@ -7660,7 +7690,6 @@ async function submitLockDlg(){
       toast('已重置「' + nb.name + '」的密码，笔记都还在');
     }catch(e){
       okBtn.disabled = false;
-      okBtn.classList.remove('armed');
       okBtn.textContent = '重置密码';
       $('#lkDesc').textContent = resetDesc;
       warn(e && e.status === 403 ? '登录密码不对，再试一次' : ((e && e.message) || '重置失败'));
@@ -7693,8 +7722,8 @@ async function submitLockDlg(){
     return;
   }
 
-  // 设置 / 修改密码
-  if(lock){
+  // 设置 / 修改密码（重置流程已经验过登录密码，这里不再要旧密码）
+  if(lock && !LK_DLG.skipOld){
     const oldPw = $('#lkOld').value;
     if(!oldPw) return warn('先输入当前密码');
     okBtn.disabled = true;
@@ -7710,6 +7739,7 @@ async function submitLockDlg(){
   if(pw.length < 4) return warn('密码至少 4 位');
   if(pw !== pw2) return warn('两次输入不一致');
   okBtn.disabled = true;
+  const wasReset = !!LK_DLG.skipOld;
   try{
     const salt = lkB64e(crypto.getRandomValues(new Uint8Array(16)));
     const hash = await lkHash(pw, salt, LK_ITER);
@@ -7717,7 +7747,7 @@ async function submitLockDlg(){
     nb.updatedAt = Date.now();
     LOCK_OPEN.add(nb.id);
     closeLockDlg(); save(); renderAll();
-    toast(lock ? '密码已修改' : '已给「' + nb.name + '」加密');
+    toast(wasReset ? '已重设「' + nb.name + '」的密码' : (lock ? '密码已修改' : '已给「' + nb.name + '」加密'));
   }catch(e){
     warn('设置失败：' + (e.message || '这个浏览器不支持加密'));
   }finally{ okBtn.disabled = false; }
@@ -9309,7 +9339,7 @@ const HELP_KEYS_MM = [
   ['展开 / 收起分支', '点节点右侧圆点'],
   ['收起样式面板 / 关闭导图', 'Esc']
 ];
-let helpTab = 'io';
+let helpTab = '';        // 空 = 从头看；菜单里指定「导入导出 / 快捷键」等才跳过去
 function openHelpPanel(){
   let ov = $('#helpOv');
   if(!ov){
@@ -9317,26 +9347,18 @@ function openHelpPanel(){
     ov.id = 'helpOv'; ov.className = 'help-ov';
     ov.innerHTML = `<div class="help-card" role="dialog" aria-label="使用说明">
         <div class="help-hd">
-          <div><h3>使用说明</h3><p>导入导出、Markdown 写法、快捷键与日程</p></div>
-          <button class="help-tab jump-key" id="helpKeyJump" title="查看全部快捷键">⌨ 快捷键</button>
+          <div><h3>使用说明</h3><p>Markdown、同步、备份、日历、AI、导图与快捷键</p></div>
+          <button class="help-tab jump-key" id="helpKeyJump" title="跳到快捷键">⌨ 快捷键</button>
           <button class="help-x" id="helpClose" title="关闭">${ic('x')}</button>
         </div>
-        <div class="help-tabs">
-          <button class="help-tab" data-htab="io">导入 / 导出</button>
-          <button class="help-tab" data-htab="acct">账户与安全</button>
-          <button class="help-tab" data-htab="ai">AI 与导图</button>
-          <button class="help-tab" data-htab="md">Markdown 写法</button>
-          <button class="help-tab" data-htab="key">快捷键</button>
-          <button class="help-tab" data-htab="todo">日程怎么用</button>
-        </div>
-        <div class="help-body" id="helpBody"></div>
+        <div class="help-toc" id="helpToc"></div>
+        <div class="help-body help-doc" id="helpBody"></div>
       </div>`;
     document.body.appendChild(ov);
     ov.addEventListener('mousedown', e=>{ if(e.target === ov) closeHelpPanel(); });
     $('#helpClose').onclick = closeHelpPanel;
     const kj = $('#helpKeyJump');
     if(kj) kj.onclick = ()=>{ helpTab = 'key'; paintHelp(); };
-    ov.querySelectorAll('[data-htab]').forEach(b=>b.onclick=()=>{ helpTab = b.dataset.htab; paintHelp(); });
   }
   paintHelp();
   ov.classList.add('open');
@@ -9483,98 +9505,189 @@ function showIosInstallHint(){
 }
 function paintHelp(){
   const ov = $('#helpOv'); if(!ov) return;
-  ov.querySelectorAll('[data-htab]').forEach(b=>b.classList.toggle('on', b.dataset.htab === helpTab));
   const body = $('#helpBody');
-  if(body) body.innerHTML = helpBodyHtml(helpTab);
-}
-/* 帮助正文：弹窗和设置页共用，只产出 HTML */
-function helpBodyHtml(tab){
-  if(tab === 'io'){
-    return `
-      <div class="help-sec"><h4>导出备份（.json）· 用来恢复自己</h4>
-        <p class="help-p">「导出全部笔记（备份）」导出一个 <code>.json</code> 文件，<b>包含全部笔记正文、所属笔记本、标签、创建与修改时间</b>。以后换电脑、重装、清了浏览器数据，用「导入」选这个文件，就能<b>连笔记本分类一起原样还原</b>。<b>想留后路，选它，不要用 Markdown。</b></p></div>
-      <div class="help-sec"><h4>导出 Markdown（.md）· 用来分享或搬去别的软件</h4>
-        <p class="help-p">「导出全部笔记（Markdown）」导出纯文本 <code>.md</code>，每篇之间用 <code>---</code> 隔开，<b>只保留标题和正文，不带笔记本分类和标签</b>。适合发给别人看，或导进 Obsidian、Typora、Notion 等工具。<b>它不能用来恢复自己的数据。</b></p></div>
-      <div class="help-sec"><h4>导入 · 一个入口认三种文件</h4>
-        <p class="help-p">「导入 Markdown / HTML / 备份」会自动判断文件类型：<br>
-        ① <b>.json 备份</b> → 逐篇还原笔记，<b>笔记本分类、标签一起回来</b>；已存在的笔记自动跳过，重复导入不会产生副本；<br>
-        ② <b>.md</b> → 自动<b>按 <code>---</code> 分篇</b>：每篇的第一个 <code># 标题</code> 作标题、其余作正文，一篇一个笔记；只写了一篇时就导入成一篇（正文里自己的分割线不会被误拆）；<br>
-        ③ <b>.html</b> → 按网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown；登录状态下内嵌图片会自动转存。</p></div>
-      <div class="help-sec"><h4>该选哪个</h4>
-        <p class="help-p"><b>给自己留后路 → 导出备份（.json）</b>；<b>分享给别人 / 搬去别的软件 → 导出 Markdown</b>。备份不含回收站里的笔记；云同步只负责多设备一致，<b>不能代替备份</b>，重要的东西建议隔段时间导一份 .json 存到别处。</p></div>`;
-  } else if(tab === 'acct'){
-    return `
-      <div class="help-sec"><h4>忘记密码 / 改密码</h4>
-        <p class="help-p">已登录时：⚙ → <b>账户 / 同步</b> → 最下面的<b>「修改密码」</b>，输入当前密码和两遍新密码即可，其他设备下次登录用新密码。<b>忘记密码</b>：找站主在管理后台重置（后台账号列表每行有「改密码」），重置后直接用新密码登录。</p></div>
-      <div class="help-sec"><h4>注销账号（删除云端数据）</h4>
-        <p class="help-p">⚙ → <b>账户 / 同步</b> → 最下面<b>「注销账号」</b>。展开后会先列出这个账号在云端有多少篇笔记、笔记本、历史版本和分享，输入<b>当前密码</b>、在确认框里输入 <code>DELETE</code>，再点两次按钮才会执行。<b>注销后云端该账号名下的一切（含上传的图片）永久删除，无法恢复</b>，这个用户名之后可以重新注册。<b>本机这份笔记不会被删</b>，注销后仍可离线使用；想留云端旧数据，请先「导出全部笔记（备份）」。站主账号不能自助注销，需要到 Cloudflare 控制台处理。</p></div>
-    `;
-  } else if(tab === 'ai'){
-    return `
-      <div class="help-sec"><h4>AI（站内免费模型 / 自己的接口）</h4>
-        <p class="help-p">打开任意 AI 面板，顶部有三个来源可选：<b>智谱 GLM</b>、<b>讯飞星火</b>、<b>我的接口</b>。前两个是站内提供的免费模型，<b>不登录也能用</b>（未登录按 IP 每天 20 次，次日恢复）；<b>登录后不限次数</b>。第三个填你自己的 OpenAI 兼容接口，同样不限次数。</p>
-        <p class="help-p">用「我的接口」：⚙ → <b>AI 接口设置</b>（或 AI 面板右上角齿轮），填服务地址、API Key 和模型，点<b>「拉取模型」</b>可以自动列出来挑。DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>，Moonshot / 硅基流动 / 自建网关同理；面板里还有「豆包 / 混元 / 智谱 / 百炼 / 硅基流动 / 讯飞 / DeepSeek」的常用预设，点一下自动带出地址。</p>
-        <p class="help-p">自己填的密钥按账号加密保存，<b>只有你自己能用，页面里读不回原值</b>，注销账号时会一起删掉；费用由你的接口账户承担。地址必须是公网能访问到的（请求由服务端代发，本机与局域网地址连不上）。</p>
-        <p class="help-p">两个入口：<b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可先改再决定要不要替换；<b>⌘K 命令面板</b>里搜「AI 对话」或「AI 排版」：前者勾「参考当前笔记」让它读正文，回复可一键插入，后者只整理标题层级、列表、空行和中英文间距，不动文字。</p></div>
-      <div class="help-sec"><h4>思维导图</h4>
-        <p class="help-p">笔记菜单 ⋯ → <b>思维导图</b>（或输入 <code>/导图</code>）。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画成脑图：缩进一级就是子节点，同一缩进就是同级。<b>只读取、不改写</b>，笔记仍然保存为普通 Markdown，导出、同步、导入都不受影响。</p>
-        <p class="help-p">滚轮缩放、拖动平移、点节点选中、双击节点改名；被折叠的节点右侧小圆圈显示子节点数，点它展开/收起。顶部可「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是<b>整张导图</b>（不受屏幕大小与缩放影响，折叠起来的节点也会画进去），手机上会按屏幕上限自动挑一个合适的清晰度，保证内容不缺。不想把列表画进去就点掉「含列表项」，只保留标题骨架。</p>
-        <p class="help-p"><b>在导图里改结构</b>：选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表（原来用标题分层的，标题层级会保留），可以用「撤销」回退。若这篇里有正文段落或代码块，为了不覆盖它们会禁止直接编辑，改点「另存为新笔记」，会复制出一篇纯大纲笔记再随便改。</p>
-        <p class="help-p"><b>键盘更快</b>：选中节点后按 <code>Tab</code> 长一个子节点、按 <code>Enter</code> 长一个同级；什么都没选时按 <code>Tab</code> 或 <code>Enter</code>，都从根节点长出新分支。新节点出来就是改名状态：敲完字按 <code>Tab</code> 落定并继续往下长，按 <code>Enter</code> 只落定，按 <code>Esc</code> 取消这次改名。<code>Esc</code> 也能关掉整个导图（样式面板开着时先收面板）。</p></div>
-      <div class="help-sec"><h4>关于这个应用</h4>
-        <p class="help-p">随手笔记 · 数据优先存在本机（IndexedDB，容量几百 MB 起），登录后同步到 Cloudflare；不登录也能完整使用。</p></div>`;
-  } else if(tab === 'md'){
-    return `<div class="help-sec"><h4>常用语法</h4>
-      <div class="help-hero">` + HELP_HERO.map(c=>`
-        <div class="hh${c.hl ? ' hl' : ''}">
-          <div class="hh-t">${c.sym ? `<i>${esc(c.sym)}</i>` : ''}${esc(c.t)}</div>
-          <div class="hh-p">${esc(c.d)}</div>
-        </div>`).join('') + `</div></div>
-      <div class="help-sec"><h4>完整对照表</h4>
-      <table class="help-table">
-        <thead><tr><th>格式</th><th>直接输入</th><th>快捷键</th><th>效果</th></tr></thead>
-        <tbody>${HELP_TABLE.map(([n, syn, k, eff])=>`<tr>
-          <td class="ht-n">${esc(n)}</td>
-          <td>${syn}</td>
-          <td class="ht-k">${k ? k.split(' / ').map(x=>`<span>${esc(x)}</span>`).join(' ') : ''}</td>
-          <td class="ht-eff">${eff}</td>
-        </tr>`).join('')}</tbody>
-      </table></div>`;
-  } else if(tab === 'todo'){
-    return `
-      <div class="help-sec"><h4>添加日期</h4>
-        <p class="help-p">在待办 <code>- [ ]</code> 后面写 <code>@</code>，再写时间：<code>@今天</code>、<code>@明天 9点</code>、<code>@周五下午3点</code>、<code>@11月20日</code>、<code>@3天后</code>、<code>@下周一</code>，英文 <code>@tomorrow 3pm</code> 也行。也可以直接写 <code>⏰ 2026-11-15 18:00</code>。点条目右侧的时间可以改。</p></div>
-      <div class="help-sec"><h4>重复</h4>
-        <p class="help-p">点时间，选「每天 / 每个工作日 / 每周 / 每月 / 每年」，会写成 <code>🔁 every month</code>。勾选完成后会自动生成下一次。</p></div>
-      <div class="help-sec"><h4>提醒</h4>
-        <p class="help-p">有时间的待办到点会弹系统通知（网页保持开着，缩到后台也行）；点通知会跳回那条待办。第一次设提醒时会问一次通知权限。</p></div>
-      <div class="help-sec"><h4>订阅到日历</h4>
-        <p class="help-p">点左下「提醒与日历」→「生成订阅链接」，把 <code>webcal://</code> 链接加进 iPhone / Mac / Google 日历，关着网页也能收到提醒。笔记改了会自己同步上去。</p></div>
-      <div class="help-sec"><h4>同步到「提醒事项」</h4>
-        <p class="help-p">提醒事项不支持订阅日历链接，但有两条路：<br>
-        ① <b>导入</b>：在 Mac 的提醒事项里选「文件 → 导入」，挑「提醒与日历」里下载的 <code>提醒事项 .ics</code>，导入后 iCloud 会同步到手机；<br>
-        ② <b>快捷指令</b>：复制面板里的 JSON 地址，在 iPhone 快捷指令里「获取 URL 内容 → 重复每个项目 → 添加新提醒事项」，再挂一个每天早上的自动化，就一直是新的。</p></div>
-      <div class="help-sec"><h4>和苹果日历双向同步</h4>
-        <p class="help-p">在左栏点「<b>日历</b>」→ 右上角「<b>同步</b>」→「连接」，填 Apple ID 和<b>App 专用密码</b>（去 <code>appleid.apple.com</code> → 登录与安全 → App 专用密码生成，16 位，不是登录密码）。连上之后两边就是同一份：<br>
-        ① 在网页日历里点空白格新建、点事件改/删，都会立刻写回苹果日历，手机和 Mac 上马上能看到；<br>
-        ② 在苹果日历、iPhone 或别的设备上改的，下次打开日历页会自动拉过来（也可以点「同步」手动拉）；<br>
-        ③ 左栏的日历列表可以逐个开关，关掉的不会被拉取；节气和农历节假日是本地算的，不用联网。<br>
-        <b>改过 Apple ID 密码或撤销过专用密码，同步就会失效</b>，侧栏会出现「登录已失效 · 点此重连」，重新填一次新密码即可，数据不会丢。</p></div>
-      <div class="help-sec"><h4>分组</h4>
-        <p class="help-p">已逾期、今天、明天默认展开；未来一周按天分组，更远的按月分组。点分组名可以折叠，折叠状态会被记住。</p></div>
-      <div class="help-sec"><h4>写法</h4>
-        <pre class="help-code">- [ ] 交房租 ⏰ 2026-11-15 18:00 🔁 every month
-- [ ] 体检预约 @明天 9点
-- [x] 报税 ⏰ 2026-11-07 ✅ 2026-11-08</pre></div>`;
-  } else {
-    const row = ([n,k])=>`<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`;
-    return `<div class="help-sec"><h4>编辑与视图</h4>` + HELP_KEYS.map(row).join('') + `</div>`
-      + `<div class="help-sec"><h4>Markdown 格式</h4>` + HELP_KEYS_MD.map(row).join('') + `</div>`
-      + `<div class="help-sec"><h4>复制 / 粘贴 / 缩进</h4>` + HELP_KEYS_CLIP.map(row).join('')
-      + `<p class="help-p">复制会同时带上 Markdown 源和富文本：贴回笔记保留 <code>**</code>、标题、列表，贴到微信 / 备忘录也保留加粗样式。</p></div>`
-      + `<div class="help-sec"><h4>思维导图</h4>` + HELP_KEYS_MM.map(row).join('') + `</div>`;
+  if(body && !body.dataset.done){
+    body.innerHTML = helpBodyHtml();
+    body.dataset.done = '1';
   }
+  // 顶部目录：和正文里的七个部分一一对应，点一下滚过去
+  const toc = $('#helpToc');
+  if(toc && !toc.dataset.done){
+    toc.innerHTML = HELP_TOC.map(([id, name])=>`<button type="button" class="help-toc-i" data-htab2="${id}">${esc(name)}</button>`).join('');
+    toc.dataset.done = '1';
+    toc.querySelectorAll('[data-htab2]').forEach(b=>{
+      b.onclick = ()=>{ helpTab = b.dataset.htab2; helpScrollTo(helpTab); };
+    });
+  }
+  const on = HELP_TOC.find(t=>t[0] === helpTab);
+  if(toc) toc.querySelectorAll('[data-htab2]').forEach(b=>b.classList.toggle('on', !!on && b.dataset.htab2 === helpTab));
+  helpScrollTo(helpTab);
 }
+/* 把弹窗里那一篇滚到某个部分；helpTab 就是部分 id（md / acct / io / todo / ai / mm / key） */
+function helpScrollTo(id){
+  const ov = $('#helpOv'), body = $('#helpBody');
+  if(!ov || !body) return;
+  if(!id || !body.querySelector('#h-' + id)){
+    try{ body.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ body.scrollTop = 0; }
+    ov.querySelectorAll('.help-toc-i').forEach(b=>b.classList.remove('on'));
+    return;
+  }
+  const sec = body.querySelector('#h-' + id);
+  const r = sec.getBoundingClientRect(), rb = body.getBoundingClientRect();
+  const top = Math.max(0, body.scrollTop + (r.top - rb.top) - 8);
+  try{ body.scrollTo({ top, behavior: 'smooth' }); }
+  catch(e){ body.scrollTop = top; }
+  ov.querySelectorAll('.help-toc-i').forEach(b=>b.classList.toggle('on', b.dataset.htab2 === id));
+}
+/* ================= 使用说明：弹窗和设置页共用同一篇 ================= */
+/* 七个部分写成一篇「像分享笔记」的文章：设置页右侧带大纲，弹窗顶部是一排目录 */
+const HELP_TOC = [
+  ['md',   'Markdown'],
+  ['acct', '本地与同步'],
+  ['io',   '导入导出'],
+  ['todo', '日历与待办'],
+  ['ai',   'AI 设置'],
+  ['mm',   '思维导图'],
+  ['key',  '快捷键']
+];
+const HELP_TITLES = {
+  md:   '一、Markdown 使用说明',
+  acct: '二、本地使用和登录账号同步数据',
+  io:   '三、导入和导出备份功能',
+  todo: '四、日历同步和待办',
+  ai:   '五、AI 设置',
+  mm:   '六、思维导图',
+  key:  '七、快捷键'
+};
+function helpDocHtml(){
+  const MD_PICK = ['标题','加粗','斜体','高亮','待办','无序 / 有序列表','引用','链接到笔记','代码块','表格','分割线','标签'];
+  const mdRows = HELP_TABLE.filter(r=>MD_PICK.indexOf(r[0]) >= 0).map(([n,syn,k,eff])=>`<tr>
+      <td class="ht-n">${esc(n)}</td><td>${syn}</td>
+      <td class="ht-k">${k ? k.split(' / ').map(x=>`<span>${esc(x)}</span>`).join(' ') : ''}</td>
+      <td class="ht-eff">${eff}</td></tr>`).join('');
+  const krow = ([n,k])=>`<div class="help-row"><span>${n}</span><span class="kbd">${esc(k)}</span></div>`;
+  const li = (n, html)=>`<div class="help-li"><i>${n}</i><span>${html}</span></div>`;
+  return `
+  <p class="help-lead">随手笔记把内容<b>优先存在这台设备</b>：不登录也能完整使用，登录后自动同步。下面按七个部分写清楚怎么用，都是实际操作。</p>
+
+  <section class="help-sec" id="h-md">
+    <h4>${HELP_TITLES.md}</h4>
+    <p class="help-p">正文就是 Markdown，边写边排版。<code>#</code> 加空格是标题，<code>-</code> 是列表，<code>- [ ]</code> 是待办；工具栏那些按钮只是替你插入符号，想手写也行。</p>
+    <table class="help-table">
+      <thead><tr><th>格式</th><th>直接输入</th><th>快捷键</th><th>效果</th></tr></thead>
+      <tbody>${mdRows}</tbody>
+    </table>
+    <h5>几个容易忽略的</h5>
+    <div class="help-list">
+      ${li('1', '<code>==重点==</code> 是高亮，点工具栏「高亮」还能换颜色。')}
+      ${li('2', '<code>[[笔记标题]]</code> 是双链，点一下跳过去，关系图里也会连一条线。')}
+      ${li('3', '<code>- [ ] 交房租 @明天 9点</code> 会自动进「日程待办」，见第四节。')}
+      ${li('4', '在行首或空格后输入 <code>/</code> 打开插入菜单，支持拼音首字母（<code>/bg</code> 表格、<code>/rq</code> 日期）。')}
+      ${li('5', '复制会同时带上 Markdown 源码和富文本：贴回笔记保留格式，贴到微信、备忘录也保留加粗。')}
+    </div>
+  </section>
+
+  <section class="help-sec" id="h-acct">
+    <h4>${HELP_TITLES.acct}</h4>
+    <p class="help-p"><b>不登录也完整可用。</b>笔记存在这台设备的浏览器里（IndexedDB，容量几百 MB 起），断网照写，关掉网页也不会丢。</p>
+    <h5>登录与自动同步</h5>
+    <p class="help-p">⚙ 设置 → 账户 → 用「用户名 + 密码」登录，第一次直接注册。之后换电脑、换手机、换浏览器，登录同一个账号就能接着写。</p>
+    <p class="help-p">改动会自动上传。<b>「随手笔记」右边那颗小圆点</b>就是同步状态：绿色已同步、黄色正在保存、红色出错（点一下看原因）。刚改完等它变绿再关机或换设备。</p>
+    <h5>两台设备同时改</h5>
+    <p class="help-p">同一篇里后改的覆盖先改的；删掉的笔记在所有设备一起消失，回收站也保持一致。<b>动手前先看一眼小圆点是不是绿的</b>，就能避免互相盖掉。</p>
+    <h5>给笔记本加密码</h5>
+    <p class="help-p">笔记本右侧 ⋯ →「设置密码」，锁上后必须输密码才能看到里面的笔记。密码存在本机和同步里，忘了可以用<b>登录密码重设</b>（验证通过后直接设新密码），建议顺手留个提示。</p>
+    <h5>账户安全</h5>
+    <div class="help-list">
+      ${li('·', '<b>修改密码</b>：⚙ 设置 → 账户 → 安全。改完其它设备要用新密码重新登录。')}
+      ${li('·', '<b>退出登录</b>：可选笔记留在本机，或一起清空。')}
+      ${li('·', '<b>注销账号</b>：删除云端的笔记、笔记本、历史版本与分享（含图床图片），本机保留；要输当前密码再输 <code>DELETE</code>。忘记登录密码找站主在后台重置。')}
+    </div>
+  </section>
+
+  <section class="help-sec" id="h-io">
+    <h4>${HELP_TITLES.io}</h4>
+    <p class="help-p">⚙ 设置 → 备份 / 导入 / 导出，三个按钮：导出备份、导出 Markdown、导入。</p>
+    <table class="help-table help-table-3">
+      <thead><tr><th>导出</th><th>包含什么</th><th>用来做什么</th></tr></thead>
+      <tbody>
+        <tr><td class="ht-n">.json 备份</td><td>正文 + 笔记本 + 标签 + 时间</td><td><b>恢复自己</b>：换电脑、重装、清了浏览器数据</td></tr>
+        <tr><td class="ht-n">.md</td><td>只有标题和正文，用 <code>---</code> 分篇</td><td><b>分享 / 迁移</b>：发给别人、导进 Obsidian、Typora</td></tr>
+      </tbody>
+    </table>
+    <h5>导入：一个入口认三种文件</h5>
+    <div class="help-list">
+      ${li('1', '<b>.json 备份</b>：逐篇还原，笔记本和标签一起回来；已存在的自动跳过，重复导入不会出现副本。')}
+      ${li('2', '<b>.md</b>：按 <code>---</code> 分篇，每篇第一个 <code># 标题</code> 作标题；只写了一篇就导入成一篇。')}
+      ${li('3', '<b>.html</b>：当网页剪藏处理，标题取 <code>&lt;title&gt;</code> 或第一个 <code>&lt;h1&gt;</code>，正文转成 Markdown，登录后内嵌图片会转存。')}
+    </div>
+    <div class="help-tip"><b>云同步不能代替备份。</b>同步只保证多设备一致，误删也会一起删掉。重要的东西隔段时间导一份 .json 存到别处；备份不含回收站里的笔记。</div>
+  </section>
+
+  <section class="help-sec" id="h-todo">
+    <h4>${HELP_TITLES.todo}</h4>
+    <p class="help-p">在笔记里写成待办、并且写了日期，就会自动出现在「日程待办」和日历上，同时推送到连接好的苹果日历。</p>
+    <pre class="help-code">- [ ] 交房租 @下周一 9点 🔁 every month
+- [ ] 体检 @11月25日 上午
+- [x] 报税 @11月7日 ✅</pre>
+    <h5>怎么写日期</h5>
+    <p class="help-p">在 <code>- [ ]</code> 后面写 <code>@</code> 再写时间：<code>@今天</code>、<code>@明天 9点</code>、<code>@周五下午3点</code>、<code>@3天后</code>，英文 <code>@tomorrow 3pm</code> 也行；也可以直接写 <code>⏰ 2026-11-15 18:00</code>。点条目右边的时间可以改，选「每天 / 每个工作日 / 每周 / 每月 / 每年」会写成 <code>🔁</code>，勾完自动生成下一次。</p>
+    <h5>日历页怎么看</h5>
+    <p class="help-p">左栏「日程待办」→ 中栏是「我的日历 / 待办 / 完成 / 归档」，右边是能一直上下滑的月历（本月的后半个月接着下个月的前半个月）。<b>双击空格子新建日程</b>，点事件看详情、改或删；顶部「今天」回到当前这一周，同步按钮上显示上次同步的时间。</p>
+    <h5>和苹果日历双向同步</h5>
+    <p class="help-p">点右上角「同步苹果日历」，填 Apple ID 和 <b>App 专用密码</b>（<code>appleid.apple.com</code> → 登录与安全 → App 专用密码，16 位，不是登录密码）。连上以后两边是同一份：</p>
+    <div class="help-list">
+      ${li('·', '网页里新建 / 修改 / 删除，会立刻写回苹果日历，手机和 Mac 马上能看到。')}
+      ${li('·', '苹果日历那边改的，下次打开日历会自动拉过来，也可以点「同步」手动拉。')}
+      ${li('·', '笔记里的待办也会写进去；勾完只是标题前加 <b>[已完成]</b>，只有把待办从笔记里删掉，苹果日历那条才真删。')}
+      ${li('·', '「我的日历」里可以逐个开关日历，关掉的不拉取。改过 Apple ID 密码会让同步失效，侧栏会提示「登录已失效 · 点此重连」，重填一次即可，数据不会丢。')}
+    </div>
+    <h5>提醒与订阅</h5>
+    <p class="help-p">有时间的待办到点会弹系统通知（网页开着或缩到后台都行，第一次会问一次通知权限）。想在手机日历 / 提醒事项里也看到，用「提醒与日历」里的 webcal 订阅链接，或导出 .ics 导入到提醒事项。</p>
+  </section>
+
+  <section class="help-sec" id="h-ai">
+    <h4>${HELP_TITLES.ai}</h4>
+    <p class="help-p">AI 面板顶部有三个来源：<b>智谱 GLM</b>、<b>讯飞星火</b> 是站内免费模型，不登录也能用（未登录按 IP 每天 20 次，次日恢复），登录后不限次数。</p>
+    <h5>用自己的接口</h5>
+    <p class="help-p">第三个「我的接口」可以填任何 OpenAI 兼容服务：⚙ 设置 → AI 接口设置（或面板右上角齿轮），填服务地址、API Key 和模型；点「拉取模型」能自动列出模型来挑。DeepSeek、OpenAI、Moonshot、硅基流动等常用服务点一下预设就会带出地址。</p>
+    <div class="help-list">
+      ${li('·', 'DeepSeek 填 <code>https://api.deepseek.com</code>，OpenAI 填 <code>https://api.openai.com/v1</code>。')}
+      ${li('·', '密钥按账号加密保存，<b>页面里读不回原值</b>，注销账号时一起删掉；费用由你的接口账户承担。')}
+      ${li('·', '地址必须公网能访问（请求由服务端代发），本机和局域网地址连不上。')}
+    </div>
+    <h5>两个用法</h5>
+    <p class="help-p"><b>选中文字</b> → 浮动条最右的星形按钮 → 润色 / 精简 / 扩写 / 纠错 / 翻译 / 续写 / 起标题 / 摘要，结果可以先改再替换。<b>⌘K</b> 里搜「AI 对话」或「AI 排版」：前者可以勾「参考当前笔记」，回复一键插入；后者只整理标题层级、列表、空行和中英文间距，不动文字。</p>
+  </section>
+
+  <section class="help-sec" id="h-mm">
+    <h4>${HELP_TITLES.mm}</h4>
+    <p class="help-p">笔记菜单 ⋯ →「思维导图」，或输入 <code>/导图</code>。它把正文里的 <code># 标题</code> 和 <code>- 缩进列表</code> 读成层级画出来：缩进一级是子节点，同一缩进是同级。<b>只读取、不改写</b>，笔记还是普通 Markdown，导出、同步、导入都不受影响。</p>
+    <h5>看和调</h5>
+    <p class="help-p">滚轮缩放、拖动平移、双击节点改名；折叠的节点右侧圆点显示子节点数，点它展开 / 收起。顶部有「展开全部 / 折叠到二级 / 适应窗口 / 导出图片」，导出的 PNG 是整张图（折叠起来的节点也会画进去）。不想把列表项画进去就点掉「含列表项」。</p>
+    <h5>直接改结构</h5>
+    <p class="help-p">选中节点后用底部按钮「＋子节点 / ＋同级 / 改名 / ↑↓ / 删除」，改完立刻写回笔记的缩进列表，可以用「撤销」回退。选中节点时按 <code>Tab</code> 长一级、按 <code>Enter</code> 长同级，新节点直接进入改名。若这篇里有正文段落或代码块，为免覆盖会禁止直接编辑，可以「另存为新笔记」再改。</p>
+  </section>
+
+  <section class="help-sec" id="h-key">
+    <h4>${HELP_TITLES.key}</h4>
+    <p class="help-p">Mac 上是 ⌘，Windows 上换成 Ctrl。</p>
+    <div class="help-two">
+      <div><h5>编辑与视图</h5>${HELP_KEYS.map(krow).join('')}</div>
+      <div>
+        <h5>Markdown 格式</h5>${HELP_KEYS_MD.map(krow).join('')}
+        <h5>复制 / 缩进</h5>${HELP_KEYS_CLIP.map(krow).join('')}
+      </div>
+    </div>
+    <h5>思维导图</h5>
+    <div class="help-two">
+      <div>${HELP_KEYS_MM.map(krow).join('')}</div>
+      <div></div>
+    </div>
+  </section>`;
+}
+/* 老名字还在用（弹窗 / 设置页都调它），内容已经是整篇了 */
+function helpBodyHtml(){ return helpDocHtml(); }
 function helpTabsHtml(){
   return [['io','导入 / 导出'],['acct','账户与安全'],['ai','AI 与导图'],
           ['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']]
@@ -16572,7 +16685,7 @@ document.addEventListener('pointerup', e=>{
   const t = e.target;
   if(!t || !t.closest) return;
   if(t.closest('.shelf')) return;                                 // 点抽屉自己不算
-  if(t.closest('#nlOpen, #shelfOpen, #btnShelf, .nl-open')) return;  // 这几个按钮自己管开合
+  if(t.closest('#nlOpen, #shelfOpen, #btnShelf, .nl-open, #listCollapse')) return;  // 这几个按钮自己管开合
   if(!t.closest('.main-wrap, .notelist')) return;                 // 只认笔记区与笔记列表
   setTimeout(()=>{
     if(shelfCloseIfDrawer()) return;
@@ -16584,6 +16697,9 @@ document.addEventListener('pointerup', e=>{
     if((S.view || 'notes') !== 'notes') return;
     if(t.closest('.paper-actions')) return;                       // 右上那排按钮会弹浮层，别让浮层跟着漂
     if(t.closest('.tabbar') && t.closest('button')) return;       // 页签 / 新建 / 更多都不算「点正文」
+    // 已经用左上角那颗「全屏」把中栏收掉了，就别再顺手收左侧目录栏：
+    // 两栏都收掉就真的一屏空白，只想专心看正文的人反而找不回入口
+    if(S.listCollapsed) return;
     try{ if(String(window.getSelection() || '')) return; }catch(err){}
     closeShelfNow();
   }, 0);
@@ -17679,50 +17795,26 @@ function setPaneHtml(tab){
 function setHelpHtml(){
   return `<div class="help-wrap">
     <div class="help-main">
-      <article class="help-doc" id="setHelpDoc">${helpBodyHtml(helpTab)}</article>
+      <article class="help-doc" id="setHelpDoc">${helpDocHtml()}</article>
     </div>
     <aside class="help-ol" id="setHelpOl" aria-label="使用说明大纲"></aside>
   </div>`;
 }
-/* 右侧目录：一级 = 栏目（手风琴，当前栏目展开），二级 = 章节，三级 = 章节里的要点。
-   原来那排「导入/导出、Markdown 写法…」按钮已收进这里，正文只剩文章本身。 */
+/* 右侧大纲：一级是七个部分，二级是每个部分里的小标题，点一下滚过去 */
 function renderHelpOutline(){
   const pane = $('#setPane'), doc = $('#setHelpDoc'), ol = $('#setHelpOl');
   if(!pane || !doc || !ol) return;
-  const TABS = [['io','导入 / 导出'],['acct','账户与安全'],['ai','AI 与导图'],
-                ['md','Markdown 写法'],['key','快捷键'],['todo','日程怎么用']];
   const secs = Array.from(doc.querySelectorAll('.help-sec'));
-
-  // 四个栏目始终排在目录最上面，当前栏目下面再展开它的章节
-  let html = `<div class="ol-t">栏目</div>`;
-  TABS.forEach(([id, name])=>{
-    const on = helpTab === id;
-    html += `<button type="button" class="ol-l1${on ? ' on' : ''}" data-htab2="${id}" title="${esc(name)}">`
-      + `<i class="ol-caret">${on ? '▾' : '▸'}</i><span>${esc(name)}</span></button>`;
-  });
-  html += `<div class="ol-t">本节</div>`;
-  const seenSub = new Set();
+  let html = `<div class="ol-t">目录</div>`;
   secs.forEach((sec, si)=>{
     const h = sec.querySelector('h4');
     if(!h) return;
     const full = h.textContent.trim();
-    const short = full.split('·')[0].trim() || full;          // 目录里只留短名，正文里还是完整标题
-    const label = short.length > 18 ? short.slice(0, 18) + '…' : short;
-    html += `<button type="button" class="ol-l2" data-hi="${si}" title="${esc(full)}">${esc(label)}</button>`;
-    // 三级：本节里挑一条最短也最有指向性的 <b> 短语，全局不重复，多了反而看不清层级
-    let pick = null;
-    sec.querySelectorAll('.help-p').forEach((p, pi)=>{
-      if(pick) return;
-      const b = p.querySelector('b');
-      if(!b) return;
-      const t = b.textContent.trim().replace(/[，。；：、,.;:]+$/, '');
-      if(!t || t.length < 4 || t.length > 10 || seenSub.has(t)) return;
-      pick = [pi, t];
+    html += `<button type="button" class="ol-l1" data-hi="${si}" title="${esc(full)}"><span>${esc(full)}</span></button>`;
+    sec.querySelectorAll('h5').forEach((h5, hi)=>{
+      const t = h5.textContent.trim();
+      html += `<button type="button" class="ol-l2" data-hj="${si}:${hi}" title="${esc(t)}">${esc(t)}</button>`;
     });
-    if(pick){
-      seenSub.add(pick[1]);
-      html += `<button type="button" class="ol-l3" data-hj="${si}:${pick[0]}" title="${esc(pick[1])}">${esc(pick[1])}</button>`;
-    }
   });
   ol.innerHTML = html;
   ol.style.display = '';
@@ -17731,37 +17823,33 @@ function renderHelpOutline(){
     const top = pane.scrollTop + (el.getBoundingClientRect().top - pane.getBoundingClientRect().top) - pad;
     pane.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   };
-  ol.querySelectorAll('[data-htab2]').forEach(b=>{
-    b.onclick = ()=>{
-      const id = b.dataset.htab2;
-      if(helpTab === id) return;
-      helpTab = id;
-      paintSettings(true);
-      pane.scrollTop = 0;
-      renderHelpOutline();
-    };
+  ol.querySelectorAll('.ol-l1').forEach(b=>{
+    b.onclick = ()=>{ const h = secs[+b.dataset.hi]?.querySelector('h4'); if(h) toTop(h, 10); };
   });
   ol.querySelectorAll('.ol-l2').forEach(b=>{
-    b.onclick = ()=>{ const h = secs[+b.dataset.hi]?.querySelector('h4'); if(h) toTop(h, 14); };
-  });
-  ol.querySelectorAll('.ol-l3').forEach(b=>{
     b.onclick = ()=>{
-      const [si, pi] = b.dataset.hj.split(':').map(Number);
-      const p = secs[si]?.querySelectorAll('.help-p')[pi];
-      if(p) toTop(p, 14);
+      const [si, hi] = b.dataset.hj.split(':').map(Number);
+      const h5 = secs[si] && secs[si].querySelectorAll('h5')[hi];
+      if(h5) toTop(h5, 10);
     };
   });
 
+  const l1btns = Array.from(ol.querySelectorAll('.ol-l1'));
   const l2btns = Array.from(ol.querySelectorAll('.ol-l2'));
   const mark = ()=>{
-    if(!l2btns.length){ l2btns.forEach(b=>b.classList.remove('on')); return; }
-    const base = pane.getBoundingClientRect().top + 46;
-    let cur = 0;
+    const base = pane.getBoundingClientRect().top + 52;
+    let cur = 0, curH5 = -1;
     secs.forEach((sec, i)=>{
       const h = sec.querySelector('h4');
       if(h && h.getBoundingClientRect().top <= base) cur = i;
     });
-    l2btns.forEach(b=>b.classList.toggle('on', +b.dataset.hi === cur));
+    const hs = secs[cur] ? Array.from(secs[cur].querySelectorAll('h5')) : [];
+    hs.forEach((h5, i)=>{ if(h5.getBoundingClientRect().top <= base + 6) curH5 = i; });
+    l1btns.forEach(b=>b.classList.toggle('on', +b.dataset.hi === cur));
+    l2btns.forEach(b=>{
+      const [si, hi] = b.dataset.hj.split(':').map(Number);
+      b.classList.toggle('on', si === cur && hi === curH5);
+    });
   };
   pane.onscroll = mark;
   mark();

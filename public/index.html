@@ -3451,7 +3451,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <h1 class="brand-name" id="brandName">随手笔记</h1>
       </div>
       <div class="head-actions" id="headActions">
-        <button class="icon-btn" id="btnViewMenu" title="视图" aria-label="切换视图"></button>
+        <button class="icon-btn" id="btnHome" title="主目录" aria-label="回到主目录"></button>
         <button class="icon-btn notes-only" id="btnNewNb" title="新建笔记本" aria-label="新建笔记本"></button>
         <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置"></button>
         <button class="icon-btn" id="btnShelf" title="收起工作区 (⌘\)" aria-label="收起工作区"></button>
@@ -3733,7 +3733,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.44', at: '2026-11-23 12:14' };
+window.IVY_BUILD = { id: '2.45', at: '2026-11-23 14:05' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -4372,7 +4372,9 @@ function paintRowIcons(){
   const nlMore = $('#nlMore'); if(nlMore) nlMore.innerHTML = ic('more');
   const nlSearch = $('#nlSearch'); if(nlSearch) nlSearch.innerHTML = ic('search');
   const newNb = $('#btnNewNb'); if(newNb) newNb.innerHTML = ic('folderPlus');
-  const vm = $('#btnViewMenu'); if(vm) vm.innerHTML = ic('menu');
+  // 主目录：图标和手机底部那颗「笔记本栏」按钮同一个，一眼知道是回笔记
+  const hm = $('#btnHome');
+  if(hm) hm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.8" y="4.8" width="16.4" height="14.4" rx="3.4"/><path d="M7.6 14.6h8.8"/></svg>';
   const st = $('#btnSettings'); if(st) st.innerHTML = ic('gear');
   $('#btnShelf').innerHTML = ic('panelLeft');
   $('#shelfOpen').innerHTML = ic('panelLeft');
@@ -4785,18 +4787,8 @@ function openListMore(anchor){
     ['按标题排序', S.listSort === 'title' ? '✓' : '', '', 'sort', ()=>{ S.listSort='title'; renderList(); save(); }]
   ]);
 }
-/* 顶部「视图 / 设置」菜单：原来侧栏底部那排图标收在这里 */
-function openViewMenu(anchor, opts){
-  const after = opts && opts.after;
-  const go = fn => ()=>{ if(after) after(); fn(); };
-  // 手机上也要有「主目录」：日历页的抽屉里只剩媒体库 / 关系图的话，回不到笔记
-  const items = [
-    ['主目录', (S.view==='notes' && (S.scope||'all')!=='todo') ? '✓' : '', '', 'notePen', go(()=>switchView('notes'))],
-    ['媒体库', S.view==='media' ? '✓' : '', '', 'image', go(()=>switchView('media'))],
-    ['关系图', S.view==='graph' ? '✓' : '', '', 'graph', go(()=>switchView('graph'))]
-  ];
-  popover(anchor, items, {align:'left'});
-}
+/* 顶部那颗「主目录」按钮替代了原来的视图菜单；
+   媒体库 / 关系图收进 设置 → 外观 → 其他视图（见 setAppearanceHtml） */
 function renderList(){
   const host = $('#noteList'); if(!host) return;
   const sc = S.scope || 'all';
@@ -5050,6 +5042,9 @@ function renderShelf(){
   // 日程已经并进笔记侧栏，牌子就还挂着「随手笔记」（媒体库/关系图仍是自己的侧栏）
   brandName.textContent = ({media:'媒体库', graph:'关系图', calendar:'日程待办'})[S.view] || '随手笔记';
   document.body.classList.remove('view-todo');
+  // 「主目录」只在别的视图里才出现：已经在笔记里就没必要摆一颗回笔记的按钮
+  const hmBtns = $('#btnHome');
+  if(hmBtns) hmBtns.style.display = ((S.view || 'notes') === 'notes') ? 'none' : '';
 
   if(S.view==='media'){ shelfBody.innerHTML = mediaShelf(); bindShelf(); return; }
   if(S.view==='graph'){ shelfBody.innerHTML = graphShelf(); bindShelf(); return; }
@@ -15988,7 +15983,8 @@ $('#overlay').addEventListener('mousedown', e=>{ if(e.target.id==='overlay') clo
 $('#paletteInput').addEventListener('input', e=>renderPalette(e.target.value));
 $('#btnShelf').onclick=()=>toggleShelf();
 $('#btnNewNb').onclick=()=>newNotebook();
-$('#btnViewMenu').onclick=(e)=>openViewMenu(e.currentTarget);
+/* 主目录：直接回笔记列表（媒体库 / 关系图挪到 设置 → 外观 → 其他视图） */
+$('#btnHome').onclick=()=>{ if((S.view||'notes') !== 'notes') switchView('notes'); };
 $('#btnSettings').onclick=()=>openSettings();
 $('#shelfOpen').onclick=()=>toggleShelf();
 $('#nlNew').onclick=()=>newNote(S.scope && S.scope.startsWith('nb:') ? S.scope.slice(3) : null);
@@ -16912,7 +16908,7 @@ function openSettings(tab){
         <div class="set-top">
           <div class="set-title">设置</div>
           <div class="set-acts">
-            <button class="set-x" id="setMenu" title="视图 / 设置" aria-label="视图与设置">${ic('menu')}</button>
+            <button class="set-x" id="setMenu" title="回到主目录" aria-label="回到主目录">${ic('menu')}</button>
             <button class="set-x set-more" id="setMore" aria-haspopup="menu" title="更多分类" aria-label="更多分类">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="5.4" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18.6" cy="12" r="1.15"/></svg><i>更多</i>
             </button>
@@ -16930,7 +16926,7 @@ function openSettings(tab){
     document.body.appendChild(ov);
     ov.querySelector('#setClose').onclick = closeSettings;
     const setMenuBtn = ov.querySelector('#setMenu');
-    if(setMenuBtn) setMenuBtn.onclick = (e)=> openViewMenu(e.currentTarget, { after: closeSettings });
+    if(setMenuBtn) setMenuBtn.onclick = ()=>{ closeSettings(); if((S.view || 'notes') !== 'notes') switchView('notes'); };
     let lastGroup = null;
     ov.querySelector('#setNav').innerHTML = SET_TABS.map(([id, name, icon, group])=>{
       const grp = (group && group !== lastGroup) ? `<div class="set-nav-grp">${group}</div>` : '';
@@ -17374,7 +17370,13 @@ function setAppearanceHtml(){
       <button type="button" class="set-chip${mode === 'source' ? ' on' : ''}" data-mode="source">源码</button>
       <button type="button" class="set-chip${mode === 'split' ? ' on' : ''}" data-mode="split">双栏</button>
     </div>
-    <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>`;
+    <p class="set-note">快捷键：⌘E 切换编辑模式，⌘⇧E 在实时与源码间快速切，⌘\\ 收起侧栏。</p>
+    <div class="set-sec">其他视图</div>
+    <div class="set-row"><div><div class="t">媒体库</div><div class="d">笔记里上传过的图片和附件，按分类浏览、清理。</div></div>
+      <button class="set-btn" data-openview="media">打开</button></div>
+    <div class="set-row"><div><div class="t">关系图</div><div class="d">按 [[双链]] 和标签看笔记之间的连线。</div></div>
+      <button class="set-btn" data-openview="graph">打开</button></div>
+    <p class="set-note">这两页以前在左栏顶部的「视图」菜单里，现在收在这里。</p>`;
 }
 
 /* ---- 提醒与日历（直接铺在设置页里，不再开单独弹窗） ---- */
@@ -17641,6 +17643,14 @@ function bindPane(tab){
     }
     pane.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick = ()=>{ setMode(b.dataset.mode); paintSettings(); };
+    });
+    // 媒体库 / 关系图：原来在左栏的视图菜单里，现在从这里进
+    pane.querySelectorAll('[data-openview]').forEach(b=>{
+      b.onclick = ()=>{
+        const v = b.dataset.openview;
+        closeSettings();
+        switchView(v === 'graph' ? 'graph' : 'media');
+      };
     });
   }
 

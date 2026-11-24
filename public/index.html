@@ -856,6 +856,7 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .fmt-bar button b,.fmt-bar button i,.fmt-bar button s{font-size:13px;font-weight:700}
 .fmt-bar button i{font-style:italic;font-family:var(--font-serif)}
 .fmt-sep{width:1px;height:12px;background:rgb(var(--line));margin:0 4px;flex:0 0 auto}
+.fmt-g{display:inline-flex;align-items:center;flex:0 0 auto}
 /* 窄屏：工具条不换行（换行会叠成好几行，吸顶后挡住半屏正文），改成横向滑动 */
 @media (max-width:900px){
   .fmt-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -2493,6 +2494,7 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .view-pad{padding:44px 32px 40px}
 
 .media-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.media-bar-l{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0}
 .media-danger{
   height:32px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:500;font-family:inherit;
   border:.5px solid rgb(var(--danger)/.38);background:transparent;color:rgb(var(--danger));
@@ -2501,11 +2503,26 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .media-danger:hover{background:rgb(var(--danger)/.08);border-color:rgb(var(--danger)/.55)}
 .media-danger:disabled{opacity:.55;cursor:default;background:transparent}
 .media-search{
-  display:flex;align-items:center;gap:8px;max-width:320px;flex:1 1 200px;height:32px;padding:0 10px;
+  display:flex;align-items:center;gap:8px;max-width:320px;flex:1 1 200px;min-width:0;height:32px;padding:0 10px;
   border-radius:8px;background:rgb(var(--sunken));color:rgb(var(--muted));
 }
 .media-search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
-.media-search input{flex:1;border:0;outline:none;background:none;font-size:13px}
+.media-search input{flex:1;min-width:0;border:0;outline:none;background:none;font-size:13px}
+/* 排序方式（媒体库）：原生 select 收成一颗小胶囊，左边一根排序图标，右边一个箭头 */
+.media-sort{
+  position:relative;display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+  height:32px;padding:0 9px 0 10px;border-radius:8px;
+  background:rgb(var(--sunken));color:rgb(var(--muted));
+}
+.media-sort>svg{width:13px;height:13px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.media-sort select{
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  border:0;outline:none;background:transparent;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:rgb(var(--ink-2));
+  padding:0 14px 0 0;height:100%;max-width:132px;
+}
+.media-sort .ms-ar{position:absolute;right:8px;width:11px;height:11px;stroke:rgb(var(--faint));fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.media-sort:hover{color:rgb(var(--ink-2))}
 .media-empty{
   position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;color:rgb(var(--muted));font-size:13.5px;padding-bottom:60px;
@@ -4074,7 +4091,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.76', at: '2026-11-24 11:33' };
+window.IVY_BUILD = { id: '2.78', at: '2026-11-24 11:45' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8452,31 +8469,36 @@ function countWords(md){
   return t.length;
 }
 
-/* ---- 标题下的 Markdown 工具条 ---- */
+/* ---- 标题下的 Markdown 工具条 ----
+   顺序：/ H ｜ B I S 高亮 ｜ 待办 无序列表 有序列表 缩进 引用 @日程 ｜ 双链 链接 分割 ｜ AI ｜ 代码 表格 图表 表情 ｜ ? */
 const FMT_GROUPS = [
   [['insert','/','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
-  [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],
-   ['ul','-','无序列表：加 - 前缀（⌘⇧8，再点一次取消）'],
+  [['todo','待办','待办事项 - [ ]（⌘⇧9）'],
+   ['ul','无序列表','无序列表：给这几行加 - 前缀（⌘⇧8，再点一次取消）'],
+   ['ol','有序列表','有序列表：给这几行加 1. 编号（⌘⇧7，再点一次取消）'],
    ['indent','缩进','段首缩进两格：插入两个全角空格，中文排版常用'],
-   ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）'],
-   ['quote','引用','引用块']],
-  [['table','表格','拖动选择行数和列数'],
-   ['chart','图表','插入 Mermaid 图表：流程图、时序图等'],
-   ['emoji','表情','插入表情符号'],
-   ['wiki','双链','插入笔记链接，跳到另一篇笔记'],
+   ['quote','引用','引用块'],
+   ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）']],
+  [['wiki','双链','插入笔记链接，跳到另一篇笔记'],
    ['link','链接','插入外部链接'],
    ['hr','分割','分割线']],
   [['ai','AI','AI 改写 / 对话 / 排版']],
+  [['code','代码','行内代码 / 代码块'],
+   ['table','表格','拖动选择行数和列数'],
+   ['chart','图表','插入 Mermaid 图表：流程图、时序图等'],
+   ['emoji','表情','插入表情符号']],
   [['help','?','Markdown 与快捷键一览']]
 ];
 function renderFmtBar(){
   const bar = document.getElementById('fmtBar');
   if(!bar) return;
+  // 每组包一层 .fmt-g：换行只在组之间发生，不会把「代码 / 表格」这种拆到两行去
   bar.innerHTML = FMT_GROUPS.map((g,gi)=>
-    (gi ? '<span class="fmt-sep"></span>' : '') +
-    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${k==='ai' ? ic('spark') : (k==='i' ? '<span class="fmt-ital">I</span>' : label)}</button>`).join('')
+    '<span class="fmt-g">' + (gi ? '<span class="fmt-sep"></span>' : '') +
+    g.map(([k,label,tip])=>`<button data-fmt="${k}" title="${tip}">${k==='ai' ? ic('spark') : (k==='i' ? '<span class="fmt-ital">I</span>' : label)}</button>`).join('') +
+    '</span>'
   ).join('');
   bar.querySelectorAll('[data-fmt]').forEach(b=>{
     b.onmousedown = e=>e.preventDefault();          // 别抢走正文里的选区
@@ -10132,6 +10154,29 @@ function applyFormat(kind, opt){
     else setRange(lineStart, lineStart + nb.length);
   };
 
+  /* 列表前缀：这几行还不是这种列表就加上，已经是了就撤掉（同一颗按钮再点一次 = 取消）。
+     待办行（- [ ] …）跳过不动，免得把勾选框弄丢；空段落也照样摆出前缀，点了就有效果。 */
+  const toggleList = (mark, hasRe, stripRe)=>{
+    const TASKRE = /^\s*[-*+]\s+\[[ xX]\]/;
+    const lineStart = v.lastIndexOf('\n', s-1) + 1;
+    let blockEnd = v.indexOf('\n', Math.max(s, e));
+    if(blockEnd === -1) blockEnd = v.length;
+    const block = v.slice(lineStart, blockEnd);
+    const rows = block.split('\n');
+    const solid = rows.filter(l => l.trim());
+    const all = solid.length > 0 && solid.every(l => hasRe.test(l) && !TASKRE.test(l));
+    const nb = !block.trim() ? mark : rows.map(line=>{
+      if(!line.trim()) return line;
+      if(TASKRE.test(line)) return line;
+      return all
+        ? line.replace(stripRe, '$1')
+        : mark + line.replace(/^\s*(?:[-*+]\s+|\d+\.\s+)?/, '');
+    }).join('\n');
+    v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
+    if(!block.trim()) setRange(lineStart + nb.length, lineStart + nb.length);
+    else setRange(lineStart, lineStart + nb.length);
+  };
+
   switch(kind){
     case 'h1': prefixLines('# '); break;
     case 'h2': prefixLines('## '); break;
@@ -10176,30 +10221,9 @@ function applyFormat(kind, opt){
       setRange(s, s + ins.length);
       break;
     }
-    case 'ul': {
-      // 单独一颗「-」按钮：这几行还不是无序列表就加上，已经是了就取消（再点一次撤掉前缀）。
-      // 待办行（- [ ] ...）不属于普通列表，跳过不动，免得把勾选框弄丢。
-      const TASK = /^\s*[-*+]\s+\[[ xX]\]/;
-      const UL = /^\s*[-*+]\s+/;
-      const lineStart = v.lastIndexOf('\n', s - 1) + 1;
-      let blockEnd = v.indexOf('\n', Math.max(s, e));
-      if(blockEnd === -1) blockEnd = v.length;
-      const block = v.slice(lineStart, blockEnd);
-      const rows = block.split('\n');
-      const solid = rows.filter(l => l.trim());
-      const allUl = solid.length > 0 && solid.every(l => UL.test(l) && !TASK.test(l));
-      const nb = rows.map(line=>{
-        if(!line.trim()) return line;
-        if(TASK.test(line)) return line;
-        return allUl
-          ? line.replace(/^(\s*)[-*+]\s+/, '$1')
-          : '- ' + line.replace(/^\s*(?:[-*+]\s+|\d+\.\s+)?/, '');
-      }).join('\n');
-      v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
-      if(!block.trim()) setRange(lineStart + nb.length, lineStart + nb.length);
-      else setRange(lineStart, lineStart + nb.length);
-      break;
-    }
+    // 无序 / 有序列表：同一套 toggle，再点一次撤掉前缀
+    case 'ul': toggleList('- ', /^\s*[-*+]\s+/, /^(\s*)[-*+]\s+/); break;
+    case 'ol': toggleList('1. ', /^\s*\d+\.\s+/, /^(\s*)\d+\.\s+/); break;
     case 'indent': {
       // 段首缩进两格：中文排版习惯，用两个全角空格（普通空格在 HTML 里会被吃掉）。
       // 已经有缩进的行再点一次就取消；选中多行就一起缩进 / 取消。
@@ -10231,7 +10255,6 @@ function applyFormat(kind, opt){
       }
       break;
     }
-    case 'ol': prefixLines('1. '); break;
     case 'todo': prefixLines('- [ ] '); break;
     case 'quote': prefixLines('> '); break;
     case 'wiki': {
@@ -13558,18 +13581,29 @@ function renderMedia(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
   const isUsed = buildUsedIndex();
-  const list = allMedia().filter(m=>{
+  const list = sortMedia(allMedia().filter(m=>{
     if(mediaCat==='all') return true;
     if(mediaCat==='pic') return !!m.pic;
     if(mediaCat==='unused') return !isUsed(m);
     return kindOf(m)===mediaCat;
-  });
+  }));
   scrollEl.style.display='';
   mediaList = list;
   scrollEl.innerHTML = `<div class="view-pad" style="position:relative;height:100%">
       <div class="media-bar">
-        <div class="media-search">${ic('search')}
-          <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
+        <div class="media-bar-l">
+          <div class="media-search">${ic('search')}
+            <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
+          <label class="media-sort" title="排序方式">${ic('sort')}
+            <select id="mediaSort" aria-label="排序方式">
+              <option value="new">最新上传</option>
+              <option value="old">最早上传</option>
+              <option value="name">名称 A→Z</option>
+              <option value="size">大小 大→小</option>
+            </select>
+            <svg class="ms-ar" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </label>
+        </div>
         <div class="media-bar-r">
           <button class="media-up" data-mup="1" title="上传到图床（也可以直接把文件拖进来）">${ic('upload')}上传</button>
           ${list.length ? `<button class="media-danger" data-mdall${mediaCat==='unused' ? ' title="把所有没被笔记引用的图片一次删掉"' : ''}>${
@@ -13599,6 +13633,11 @@ function renderMedia(){
                 : '还没有文件。点右上角「上传」，或把文件拖进来，也可以直接在笔记里粘贴图片。')}</span>
         </div>`}
     </div>`;
+  const sortSel = $('#mediaSort');
+  if(sortSel){
+    sortSel.value = S.mediaSort || 'new';
+    sortSel.onchange = ()=>{ S.mediaSort = sortSel.value; save(); renderMedia(); };
+  }
   const ms = $('#mediaSearch');
   if(ms) ms.oninput = ()=>{
     const q = ms.value.trim().toLowerCase();
@@ -18238,6 +18277,17 @@ async function loadPicMedia(force){
     }
   }catch(e){ picMedia = picMedia || []; }
   picLoading = false;
+}
+/* 媒体库排序：默认「最新上传」（图床是哈希命名，名字排不出先后，只能按时间） */
+function sortMedia(list){
+  const mode = S.mediaSort || 'new';
+  const at = m => Number(m && m.createdAt) || 0;
+  const out = list.slice();
+  if(mode === 'old') out.sort((a,b)=>at(a) - at(b));
+  else if(mode === 'name') out.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''), 'zh-Hans-CN', {numeric:true}));
+  else if(mode === 'size') out.sort((a,b)=>(b.size||0) - (a.size||0));
+  else out.sort((a,b)=>at(b) - at(a));           // new：最新上传在前
+  return out;
 }
 function allMedia(){
   const pic = (picMedia||[]).map(it=>({

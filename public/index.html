@@ -2550,6 +2550,41 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .media-up:disabled{opacity:.55}
 /* 拖文件到格子上：整块给个提示 */
 .media-grid.dragging{outline:1.5px dashed rgb(var(--ivy)/.5);outline-offset:6px;border-radius:10px}
+/* ---- 点「上传」弹出的框：先粘贴 / 拖拽，最后才是选文件 ---- */
+.up-mask{position:fixed;inset:0;z-index:9500;background:rgb(10 14 20/.32);display:grid;place-items:center;padding:18px;backdrop-filter:blur(2px)}
+.up-card{
+  width:min(468px,100%);box-sizing:border-box;background:rgb(var(--surface));border-radius:16px;
+  padding:16px 17px 15px;box-shadow:0 24px 64px rgb(10 14 20/.3);
+}
+.up-hd{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.up-hd h3{flex:1;font-size:15px;font-weight:650;color:rgb(var(--ink));letter-spacing:.01em}
+.up-hd .up-x{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:rgb(var(--faint));background:transparent}
+.up-hd .up-x:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.up-hd .up-x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.up-drop{
+  border:1.5px dashed rgb(var(--line));border-radius:12px;background:rgb(var(--sunken)/.45);
+  padding:24px 18px 22px;text-align:center;transition:border-color .15s,background .15s;
+}
+.up-drop.hot{border-color:rgb(var(--ivy)/.7);background:rgb(var(--ivy-soft)/.7)}
+.up-drop>svg{width:30px;height:30px;stroke:rgb(var(--faint));fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px}
+.up-drop b{display:block;font-size:13.5px;font-weight:600;color:rgb(var(--ink));line-height:1.6}
+.up-drop b em{font-style:normal;font-family:var(--font-mono);font-size:12px;padding:1px 5px;border-radius:5px;background:rgb(var(--surface));border:.5px solid rgb(var(--line));color:rgb(var(--ink-2));margin:0 2px}
+.up-drop span{display:block;font-size:11.5px;color:rgb(var(--muted));line-height:1.6;margin-top:5px}
+.up-pick{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px}
+.up-pick button{
+  height:34px;padding:0 20px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:600;
+  background:rgb(var(--ivy));color:rgb(var(--on-ivy));flex:0 0 auto;
+}
+.up-pick button:disabled{opacity:.55}
+.up-pick span{font-size:11.5px;color:rgb(var(--faint));line-height:1.5;text-align:center}
+.up-list{margin-top:11px;display:flex;flex-direction:column;gap:5px;max-height:150px;overflow:auto}
+.up-list:empty{display:none}
+.up-item{display:flex;align-items:center;gap:7px;font-size:12px;color:rgb(var(--ink-2));line-height:1.5}
+.up-item i{width:6px;height:6px;border-radius:50%;background:rgb(var(--faint));flex:0 0 auto}
+.up-item.ok i{background:rgb(var(--ivy))}
+.up-item.bad i{background:rgb(var(--danger))}
+.up-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-item em{font-style:normal;font-size:11px;color:rgb(var(--faint))}
 
 /* ============ graph ============ */
 #graphWrap{position:absolute;inset:0;overflow:hidden;cursor:grab}
@@ -4039,7 +4074,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.74', at: '2026-11-24 11:21' };
+window.IVY_BUILD = { id: '2.75', at: '2026-11-24 11:26' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13306,43 +13341,159 @@ async function copyTextTo(t){
   try{ await navigator.clipboard.writeText(t); return true; }
   catch(e){ try{ return legacyCopy(t); }catch(_){ return false; } }
 }
-/* 上传：选文件 → 传到图床 → 刷新列表（不插进笔记，媒体库只管存档） */
-function pickMediaUpload(){
-  if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
-  if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
-  const inp = document.createElement('input');
-  inp.type = 'file';
-  inp.multiple = true;
-  inp.onchange = ()=>{ const files = [...inp.files]; if(files.length) uploadMediaBatch(files); };
-  inp.click();
+/* 上传：点「上传」先弹框 —— 粘贴 / 拖拽 / 选文件三条路都通，最后才让人去找文件
+   传完只进媒体库存档，不插进笔记。 */
+let UP_BUSY = false;
+async function uploadFilesToPic(files, hooks){
+  const list = [...(files || [])].filter(f => f && f.size);
+  const out = { ok:0, fail:0, lastErr:'', rows:[] };
+  for(let i = 0; i < list.length; i++){
+    if(hooks && hooks.step) hooks.step(i, list.length, list[i]);
+    let ok = false, err = '';
+    try{
+      const img = isImageFile(list[i]);
+      const send = img ? await shrinkImage(list[i], 2200, 0.9, false) : list[i];
+      const up = await uploadMediaFile(send, list[i].name || (img ? 'image.jpg' : 'file'));
+      if(up && up.url) ok = true;
+      else err = '这个账号不能传云端';
+    }catch(e){ err = (e && e.message) || '网络错误'; }
+    if(ok) out.ok++; else { out.fail++; out.lastErr = err || out.lastErr; }
+    out.rows.push({ ok, err });
+    if(hooks && hooks.done) hooks.done(i, ok, err);
+  }
+  picMedia = null; remoteMedia = null;
+  await refreshMediaLists();
+  return out;
 }
+/* 拖到媒体库格子上时用的：没有对话框，进度挂在右下角那颗小球上 */
 async function uploadMediaBatch(files){
-  const list = [...(files || [])].filter(f=>f && f.size);
+  const list = [...(files || [])].filter(f => f && f.size);
   if(!list.length) return;
   if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
   if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
-  let ok = 0, fail = 0, lastErr = '';
   uploadPill('正在上传 1/' + list.length);
-  for(let i = 0; i < list.length; i++){
-    const f = list[i];
-    if(list.length > 1 || f.size > 300 * 1024) uploadPill('正在上传 ' + (i + 1) + '/' + list.length);
-    try{
-      const img = isImageFile(f);
-      const send = img ? await shrinkImage(f, 2200, 0.9, false) : f;
-      const up = await uploadMediaFile(send, f.name || (img ? 'image.jpg' : 'file'));
-      if(up && up.url) ok++;
-      else { fail++; lastErr = '这个账号不能传云端'; }
-    }catch(e){
-      fail++;
-      lastErr = (e && e.message) || '网络错误';
-    }
-  }
+  const res = await uploadFilesToPic(list, {
+    step:(i, total)=>{ if(total > 1 || list[i].size > 300 * 1024) uploadPill('正在上传 ' + (i + 1) + '/' + total); }
+  });
   uploadPillDone();
-  picMedia = null; remoteMedia = null;
-  await refreshMediaLists();
-  if(ok && !fail) toast('已上传 ' + ok + ' 个文件到图床');
-  else if(ok) toast('上传完成：成功 ' + ok + ' 个，失败 ' + fail + ' 个' + (lastErr ? '（' + lastErr + '）' : ''));
-  else toast('上传失败：' + (lastErr || '网络错误'));
+  if(res.ok && !res.fail) toast('已上传 ' + res.ok + ' 个文件到图床');
+  else if(res.ok) toast('上传完成：成功 ' + res.ok + ' 个，失败 ' + res.fail + ' 个' + (res.lastErr ? '（' + res.lastErr + '）' : ''));
+  else toast('上传失败：' + (res.lastErr || '网络错误'));
+}
+
+function closeUploadDlg(){
+  const m = document.getElementById('upMask');
+  if(m) m.remove();
+  document.removeEventListener('paste', upPaste, true);
+  document.removeEventListener('keydown', upEsc, true);
+  UP_BUSY = false;
+}
+function upEsc(e){ if(e.key === 'Escape' && !UP_BUSY) closeUploadDlg(); }
+/* 框开着的时候，⌘V 一律我们接：剪贴板里有图就传，没图就提示一句（别漏到笔记里当文字粘进去） */
+function upPaste(e){
+  if(!document.getElementById('upMask')) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  const cd = e.clipboardData;
+  let files = [...((cd && cd.files) || [])];
+  if(!files.length){
+    files = [...((cd && cd.items) || [])].filter(i=>i.kind === 'file').map(i=>i.getAsFile()).filter(Boolean);
+  }
+  if(!files.length){ toast('剪贴板里没有图片'); return; }
+  upStart(files);
+}
+async function upStart(files){
+  const list = [...(files || [])].filter(f => f && f.size);
+  if(!list.length) return;
+  if(UP_BUSY){ toast('上一批还在传，稍等一下'); return; }
+  if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
+  if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
+  UP_BUSY = true;
+  const box = document.getElementById('upList');
+  const pickBtn = document.querySelector('#upMask [data-upfile]');
+  const tip = document.querySelector('#upMask .up-pick span');
+  const sub = document.querySelector('#upMask .up-drop span');
+  if(pickBtn) pickBtn.disabled = true;
+  if(sub) sub.textContent = '正在上传，别关这个框';
+  if(box) box.innerHTML = '';
+  const rows = list.map(f=>{
+    const el = document.createElement('div');
+    el.className = 'up-item';
+    el.innerHTML = '<i></i><span class="nm">' + esc(f.name || '图片') + '</span><em>等待</em>';
+    if(box) box.appendChild(el);
+    return el;
+  });
+  const res = await uploadFilesToPic(list, {
+    step:(i, total)=>{
+      if(tip) tip.textContent = '正在上传 ' + (i + 1) + ' / ' + total;
+      const el = rows[i];
+      const em = el && el.querySelector('em');
+      if(em) em.textContent = '上传中';
+    },
+    done:(i, ok, err)=>{
+      const el = rows[i];
+      if(!el) return;
+      el.classList.add(ok ? 'ok' : 'bad');
+      const em = el.querySelector('em');
+      if(em) em.textContent = ok ? '已上传' : (err || '失败');
+    }
+  });
+  UP_BUSY = false;
+  if(pickBtn) pickBtn.disabled = false;
+  if(sub) sub.textContent = '支持一次多张，图片会自动压到 2200px';
+  if(tip) tip.textContent = res.ok ? ('完成：上传 ' + res.ok + ' 张' + (res.fail ? '，失败 ' + res.fail + ' 张' : '')) : ('上传失败：' + (res.lastErr || '网络错误'));
+}
+function openUploadDlg(){
+  if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
+  if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
+  if(document.getElementById('upMask')) return;
+  const m = document.createElement('div');
+  m.className = 'up-mask';
+  m.id = 'upMask';
+  m.innerHTML = `<div class="up-card" role="dialog" aria-label="上传到图床" tabindex="-1">
+      <div class="up-hd"><h3>上传到图床</h3><button class="up-x" data-upx="1" aria-label="关闭">${ic('x')}</button></div>
+      <div class="up-drop" id="upDrop">
+        ${ic('image')}
+        <b>把图片拖到这里，或者按 <em>⌘V</em> 粘贴</b>
+        <span>支持一次多张，图片会自动压到 2200px</span>
+      </div>
+      <div class="up-pick">
+        <button data-upfile="1">选择文件</button>
+        <span>图片、PDF、压缩包都行；一次可以选多个</span>
+      </div>
+      <div class="up-list" id="upList"></div>
+    </div>`;
+  document.body.appendChild(m);
+
+  const card = m.querySelector('.up-card');
+  const drop = m.querySelector('#upDrop');
+  m.querySelectorAll('[data-upx]').forEach(b=>b.onclick = ()=>{ if(!UP_BUSY) closeUploadDlg(); });
+  m.addEventListener('pointerdown', e=>{ if(e.target === m && !UP_BUSY) closeUploadDlg(); });
+
+  // 选文件（放在最后，是三条路里最麻烦的那条）
+  m.querySelector('[data-upfile]').onclick = ()=>{
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.multiple = true;
+    inp.onchange = ()=>{ const fs = [...inp.files]; if(fs.length) upStart(fs); };
+    inp.click();
+  };
+
+  // 拖拽：整个卡片都收，拖到上面时把虚线框点亮
+  const hot = on=>drop.classList.toggle('hot', on);
+  const stop = e=>{ e.preventDefault(); e.stopPropagation(); };
+  card.addEventListener('dragenter', e=>{ stop(e); hot(true); });
+  card.addEventListener('dragover', e=>{ stop(e); hot(true); });
+  card.addEventListener('dragleave', e=>{ if(e.target === card || e.target === drop) hot(false); });
+  card.addEventListener('drop', e=>{
+    stop(e); hot(false);
+    const files = [...((e.dataTransfer && e.dataTransfer.files) || [])];
+    if(files.length) upStart(files);
+  });
+
+  document.addEventListener('paste', upPaste, true);
+  document.addEventListener('keydown', upEsc, true);
+  try{ card.focus(); }catch(e){}
 }
 
 function renderMedia(){
@@ -13400,7 +13551,7 @@ function renderMedia(){
   const delAll = scrollEl.querySelector('[data-mdall]');
   if(delAll) delAll.onclick = ()=>deleteMediaBatch();
   const upBtn = scrollEl.querySelector('[data-mup]');
-  if(upBtn) upBtn.onclick = pickMediaUpload;
+  if(upBtn) upBtn.onclick = openUploadDlg;
   scrollEl.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat=b.dataset.mediaCat; renderShelf(); renderMain(); });
   scrollEl.querySelectorAll('[data-mdel]').forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); deleteMedia(list[+b.dataset.mdel]); };

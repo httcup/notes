@@ -4074,7 +4074,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.75', at: '2026-11-24 11:26' };
+window.IVY_BUILD = { id: '2.76', at: '2026-11-24 11:33' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -5311,7 +5311,7 @@ function renderList(){
       if(e.target.closest('[data-nlmenu]')) return;
       openNote(el.dataset.open);
     };
-    el.oncontextmenu = (e)=>{ e.preventDefault(); openListMenu(el, el.dataset.open); };
+    el.oncontextmenu = (e)=>{ e.preventDefault(); openNoteRowMenu(el, el.dataset.open); };
   });
   rows.querySelectorAll('[data-nlmenu]').forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); openNoteRowMenu(b, b.dataset.nlmenu); };
@@ -8457,7 +8457,9 @@ const FMT_GROUPS = [
   [['insert','/','插入菜单：标题、待办、日期与提醒、表格、代码块、图表…（⌘/ 或 Ctrl+/）']],
   [['h','H','标题级别（一号～六号）']],
   [['b','B','加粗'],['i','I','斜体'],['s','S','删除线'],['mark','高亮','文本高亮 ==文字==']],
-  [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],['list','列表','列表样式：无序 / 有序'],
+  [['code','代码','行内代码 / 代码块'],['todo','待办','待办事项 - [ ]（⌘⇧9）'],
+   ['ul','-','无序列表：加 - 前缀（⌘⇧8，再点一次取消）'],
+   ['indent','缩进','段首缩进两格：插入两个全角空格，中文排版常用'],
    ['due','@日程','插入提醒时间：今天 / 明天 / 几点，也能设重复（正文里输入 @ 同样可选用）'],
    ['quote','引用','引用块']],
   [['table','表格','拖动选择行数和列数'],
@@ -8482,7 +8484,6 @@ function renderFmtBar(){
       const k = b.dataset.fmt;
       if(k==='insert') openInsertMenu(b);
       else if(k==='h') openHeadingMenu(b);
-      else if(k==='list') openListMenu(b);
       else if(k==='due') openRemindDialog({insert:true});
       else if(k==='mark') openHighlightMenu(b);
       else if(k==='emoji') openEmojiMenu(b);
@@ -8653,6 +8654,7 @@ const INSERT_ITEMS = [
   {name:'图片和附件', keys:['tp','tupian','img','fj','fujian'], icon:'image', desc:'从媒体库选择，或上传新文件', run:()=>pickFiles()},
   {name:'无序列表', keys:['wxlb','ul','lb'], icon:'menu', desc:'- 项目符号列表', block:1, run:()=>applyFormat('ul')},
   {name:'有序列表', keys:['yxlb','ol'], icon:'menu', desc:'1. 编号列表', block:1, run:()=>applyFormat('ol')},
+  {name:'段首缩进两格', keys:['sd','sj','suojin','indent','kg'], icon:'menu', desc:'段首空两格（两个全角空格）', run:()=>applyFormat('indent')},
   {name:'引用', keys:['yy','yinyong','quote'], icon:'quote', desc:'> 引用块', block:1, run:()=>applyFormat('quote')},
   {name:'表情', keys:['bq','biaoqing','emoji'], icon:'smile', desc:'插入表情符号', run:()=>openEmojiMenu(insertAnchor())},
   {name:'外部链接', keys:['wblj','link','url'], icon:'link', desc:'[文字](https://…)', run:()=>applyFormat('link')},
@@ -10174,7 +10176,61 @@ function applyFormat(kind, opt){
       setRange(s, s + ins.length);
       break;
     }
-    case 'ul': prefixLines('- '); break;
+    case 'ul': {
+      // 单独一颗「-」按钮：这几行还不是无序列表就加上，已经是了就取消（再点一次撤掉前缀）。
+      // 待办行（- [ ] ...）不属于普通列表，跳过不动，免得把勾选框弄丢。
+      const TASK = /^\s*[-*+]\s+\[[ xX]\]/;
+      const UL = /^\s*[-*+]\s+/;
+      const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+      let blockEnd = v.indexOf('\n', Math.max(s, e));
+      if(blockEnd === -1) blockEnd = v.length;
+      const block = v.slice(lineStart, blockEnd);
+      const rows = block.split('\n');
+      const solid = rows.filter(l => l.trim());
+      const allUl = solid.length > 0 && solid.every(l => UL.test(l) && !TASK.test(l));
+      const nb = rows.map(line=>{
+        if(!line.trim()) return line;
+        if(TASK.test(line)) return line;
+        return allUl
+          ? line.replace(/^(\s*)[-*+]\s+/, '$1')
+          : '- ' + line.replace(/^\s*(?:[-*+]\s+|\d+\.\s+)?/, '');
+      }).join('\n');
+      v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
+      if(!block.trim()) setRange(lineStart + nb.length, lineStart + nb.length);
+      else setRange(lineStart, lineStart + nb.length);
+      break;
+    }
+    case 'indent': {
+      // 段首缩进两格：中文排版习惯，用两个全角空格（普通空格在 HTML 里会被吃掉）。
+      // 已经有缩进的行再点一次就取消；选中多行就一起缩进 / 取消。
+      const IND = '\u3000\u3000';
+      const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+      let blockEnd = v.indexOf('\n', Math.max(s, e));
+      if(blockEnd === -1) blockEnd = v.length;
+      const block = v.slice(lineStart, blockEnd);
+      const rows = block.split('\n');
+      const solid = rows.filter(l => l.trim());
+      const allIn = solid.length > 0 && solid.every(l => l.indexOf(IND) === 0);
+      let nb;
+      if(!block.trim()){
+        nb = IND;                                   // 空块：先摆两个空格，接着写正文
+      }else{
+        nb = rows.map(line=>{
+          if(!line.trim()) return line;
+          if(allIn) return line.indexOf(IND) === 0 ? line.slice(IND.length) : line;
+          return line.indexOf(IND) === 0 ? line : IND + line;
+        }).join('\n');
+      }
+      v = v.slice(0, lineStart) + nb + v.slice(blockEnd);
+      const delta = nb.length - block.length;
+      if(e > s){
+        setRange(lineStart, lineStart + nb.length);
+      }else{
+        const c = Math.max(lineStart, Math.min(lineStart + nb.length, s + delta));
+        setRange(c, c);
+      }
+      break;
+    }
     case 'ol': prefixLines('1. '); break;
     case 'todo': prefixLines('- [ ] '); break;
     case 'quote': prefixLines('> '); break;
@@ -11530,6 +11586,8 @@ function commitAnyEditing(){
 }
 
 function trimRaw(raw){
+  // 只点了「缩进」却没写正文：整块只剩全角空格，当成空块，别在正文里留一行空白
+  if(/^[\s\u3000]+$/.test(String(raw))) return '';
   const lines = String(raw).split('\n');
   const isEmptyItem = l => /^\s*([-*+]|\d+\.)\s*(\[[ xX]\]\s*)?$/.test(l);
   if(!lines.every(isEmptyItem)) {

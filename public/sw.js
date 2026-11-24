@@ -7,12 +7,17 @@
    - 只有「首页导航」（/ 与 /index.html）做 network-first：联网时永远拿最新 HTML，断网回落缓存；
    - 同源的静态资源（js / png / webmanifest / vendor）走 stale-while-revalidate，先给缓存再后台更新；
    - /api/* 一律不接管：同步、上传、删除全部直连，失败由页面自己的重试逻辑处理；
+   - 图床图片（img.139t.cn）单独一个缓存：缓存优先 + 后台刷新，重看不用再等几百 KB；
    - 其它路径（/admin、/s.html 等）完全不干预。
    缓存名带版本号（注册时 ?v=IVY_BUILD），发版即换新缓存，旧的在 activate 里清掉。 */
 
 const BUILD = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = 'ivy-shell-' + BUILD;
 const NAV_TIMEOUT = 3500;          // 联网时最多等这么久，超时就用缓存（地铁、弱网场景）
+/* 图床图片缓存：故意不跟 BUILD 走，否则每次发版都要把几十 MB 图片重新下一遍 */
+const IMG_CACHE = 'ivy-img-v1';
+const IMG_HOSTS = ['img.139t.cn', 'pic.139t.cn'];
+const IMG_MAX = 160;               // 最多留 160 张（约 60～90MB），超了删最早的
 
 const SHELL = [
   '/index.html',
@@ -69,7 +74,8 @@ self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(
-      keys.filter((k) => k.startsWith('ivy-shell-') && k !== CACHE).map((k) => caches.delete(k))
+      keys.filter((k) => (k.startsWith('ivy-shell-') && k !== CACHE) ||
+                       (k.startsWith('ivy-img-') && k !== IMG_CACHE)).map((k) => caches.delete(k))
     );
     await self.clients.claim();
   })());
@@ -142,6 +148,30 @@ async function staleWhileRevalidate(req) {
   return new Response('', { status: 504, statusText: 'Offline' });
 }
 
+/* 图床图片：有缓存就先给（瞬间出来），同时后台更新；单张几百 KB，缓一轮够用很久 */
+async function pruneImg(cache) {
+  try {
+    const keys = await cache.keys();
+    if (keys.length <= IMG_MAX) return;
+    for (const k of keys.slice(0, keys.length - IMG_MAX)) await cache.delete(k);
+  } catch (err) {}
+}
+async function imgCacheFirst(req) {
+  const cache = await caches.open(IMG_CACHE);
+  const hit = await cache.match(req);
+  const net = fetch(req)
+    .then((res) => {
+      if (res && (res.ok || res.type === 'opaque')) {
+        cache.put(req, res.clone()).then(() => pruneImg(cache)).catch(() => {});
+      }
+      return res;
+    })
+    .catch(() => null);
+  if (hit) return hit;
+  const res = await net;
+  return res || new Response('', { status: 504, statusText: 'Offline' });
+}
+
 /* ---------- 请求拦截 ---------- */
 self.addEventListener('fetch', (e) => {
   const req = e.request;
@@ -149,7 +179,13 @@ self.addEventListener('fetch', (e) => {
 
   let url;
   try { url = new URL(req.url); } catch (err) { return; }
-  if (url.origin !== self.location.origin) return;          // 图床 img.139t.cn、外链：不管
+  if (url.origin !== self.location.origin) {
+    // 图床图片缓存一份：移动网络下重看笔记不用再等一遍
+    if (req.destination === 'image' && IMG_HOSTS.indexOf(url.hostname) >= 0) {
+      e.respondWith(imgCacheFirst(req));
+    }
+    return;
+  }
   if (url.pathname.startsWith('/api/')) return;             // 接口：不缓存，失败交给页面重试
 
   if (req.mode === 'navigate') {

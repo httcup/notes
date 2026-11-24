@@ -2435,8 +2435,9 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .cal-shelf-hd{display:flex;align-items:center;gap:5px;width:100%;padding:4px 9px;border-radius:7px;
   background:transparent;font-family:inherit;cursor:pointer;text-align:left}
 .cal-shelf-hd:hover{background:rgb(var(--hover))}
-.cal-shelf-hd .chev{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;color:rgb(var(--faint));flex:0 0 auto;transform:rotate(-90deg);transition:transform .14s}
-.cal-shelf-hd .chev.open{transform:rotate(0)}
+/* 箭头：收起时指向右（▶），展开时转向下（▼） */
+.cal-shelf-hd .chev{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;color:rgb(var(--faint));flex:0 0 auto;transition:transform .16s var(--spring)}
+.cal-shelf-hd .chev.open{transform:rotate(90deg)}
 .cal-shelf-hd .t{flex:1;font-size:11.5px;font-weight:600;color:rgb(var(--faint));letter-spacing:.4px}
 .cal-shelf-hd .n{font-size:10.5px;color:rgb(var(--faint));font-variant-numeric:tabular-nums}
 
@@ -2487,7 +2488,12 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
   .cal-ev b{display:block;font-size:9px}
   .cal-ev .dot{width:3px;height:3px}
   .cal-cell .cal-evs{gap:1px}
-  .cal-shelf-hd,.cal-mini{display:none}
+  /* 手机上迷你月历照旧藏起来，但「我的日历」那颗折叠头要留着，不然列表没法收；
+     手指点得到才行，所以给它留住高度 */
+  .cal-mini{display:none}
+  .cal-shelf-hd{padding:8px 8px}
+  .cal-shelf-hd .t{font-size:12px}
+  .cal-shelf-hd .chev{width:13px;height:13px}
 }
 
 /* ============ media ============ */
@@ -4091,7 +4097,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.78', at: '2026-11-24 11:45' };
+window.IVY_BUILD = { id: '2.80', at: '2026-11-24 23:41' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13058,7 +13064,8 @@ function renderTrashPane(){
 function inlineMd(s){
   s = esc(s);
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img alt="$1" src="$2" loading="lazy">');
+  // 不加 loading="lazy"：iOS Safari 在自定义滚动容器里经常不触发懒加载，图就一直空着
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img alt="$1" src="$2" decoding="async">');
   s = s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m,t,alias)=>
     `<a href="#" class="wikilink" data-wiki="${t}">${alias||t}</a>`);
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
@@ -13577,6 +13584,51 @@ function openUploadDlg(){
   try{ card.focus(); }catch(e){}
 }
 
+/* 媒体库缩略图懒加载：不用原生 loading="lazy"。
+   手机 Safari 在自定义滚动容器里对原生懒加载支持不稳，图会一直空着；
+   这里先只放 data-src，跟视口相交（上下各多 400px）再真正去取。
+   还有一层兜底：1.2 秒后把「已经滚到可见范围」但还没赋 src 的补上。 */
+let MEDIA_IO = null;
+function mediaLazy(root){
+  if(!root) return;
+  const load = img => {
+    if(!img || !img.dataset || !img.dataset.src) return;
+    if(!img.getAttribute('src')) img.setAttribute('src', img.dataset.src);
+    img.removeAttribute('data-src');
+  };
+  const all = [...root.querySelectorAll('img[data-src]')];
+  if(!all.length) return;
+  if(!('IntersectionObserver' in window)){ all.forEach(load); return; }
+  if(MEDIA_IO) MEDIA_IO.disconnect();
+  MEDIA_IO = new IntersectionObserver(es=>{
+    es.forEach(en=>{ if(en.isIntersecting){ load(en.target); MEDIA_IO.unobserve(en.target); } });
+  }, { rootMargin: '400px 0px' });
+  all.forEach(img=>MEDIA_IO.observe(img));
+  setTimeout(()=>{
+    if(!root.isConnected) return;
+    // 兜底只看「当前滚动窗口旁边那一圈」，别拿整个网格的高度去比（那会把几十张全拉下来）
+    const box = (root.closest('.scroll') || document.documentElement).getBoundingClientRect();
+    root.querySelectorAll('img[data-src]').forEach(img=>{
+      const r = img.getBoundingClientRect();
+      if(r.bottom > box.top - 400 && r.top < box.bottom + 400) load(img);
+    });
+  }, 1200);
+}
+/* 图片加载失败（弱网、图床刚醒）自动重试一次；只试一次，别死循环 */
+(function bindImgRetry(){
+  if(window.__ivyImgRetry) return;
+  window.__ivyImgRetry = true;
+  document.addEventListener('error', e=>{
+    const im = e.target;
+    if(!im || im.tagName !== 'IMG') return;
+    if(im.dataset.retried) return;
+    const src = im.getAttribute('src') || im.dataset.src;
+    if(!src || /^data:|^blob:/i.test(src)) return;
+    im.dataset.retried = '1';
+    setTimeout(()=>{ try{ im.removeAttribute('src'); im.setAttribute('src', src); }catch(_){} }, 400);
+  }, true);
+})();
+
 function renderMedia(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
@@ -13614,7 +13666,7 @@ function renderMedia(){
         const img = m.type.startsWith('image');
         return `
         <div class="media-card" data-name="${esc(m.name.toLowerCase())}" data-mi="${i}">
-          <div class="media-thumb">${img?`<img src="${m.url}" alt="" loading="lazy">`:kindOf(m).toUpperCase()}</div>
+          <div class="media-thumb">${img?`<img data-src="${esc(m.url)}" alt="" decoding="async">`:kindOf(m).toUpperCase()}</div>
           <div class="media-name" title="${esc(m.name)}">${esc(m.name)}</div>
           ${m.pic ? '<span class="media-badge">图床</span>' : ''}
           <div class="media-acts">
@@ -13672,9 +13724,10 @@ function renderMedia(){
   scrollEl.querySelectorAll('.media-card').forEach(c=>{
     c.onclick = ()=>{ const m = list[+c.dataset.mi]; if(m) window.open(m.url, '_blank', 'noopener'); };
   });
-  // 把文件直接拖进格子就能上传
+  // 把文件直接拖进格子就能上传（顺带接上自己的懒加载）
   const grid = $('#mediaGrid');
   if(grid){
+    mediaLazy(grid);
     const stop = e=>{ e.preventDefault(); e.stopPropagation(); };
     ['dragenter','dragover'].forEach(t=>grid.addEventListener(t, e=>{ stop(e); grid.classList.add('dragging'); }));
     ['dragleave','dragend'].forEach(t=>grid.addEventListener(t, e=>{
@@ -13937,7 +13990,7 @@ const CAL = {
   autoSyncing: false,
   syncing: false,      // 正在从 iCloud 拉
   writing: 0,          // 正在写回 iCloud 的条数（新建/改动/删除）
-  calOpen: false,      // 左栏「我的日历」是否展开（默认折叠）
+  calOpen: null,       // 左栏「我的日历」是否展开：null=还没点过（桌面折叠 / 手机展开）
   todoTab: 'todo',     // 左栏底部标签：todo 待办 / done 完成 / arch 归档
   bidx: null,          // 月历上已经铺开的月份（y*12+m-1，连续滚动用）
   jump: null,          // 下次重绘后要落到哪一天 { y, m, day }
@@ -14086,6 +14139,11 @@ const calHm = ts => {
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 };
 
+/* 「我的日历」列表开着没有：点过就按用户的来，没点过时桌面折叠、手机展开 */
+function calListOpen(){
+  if(CAL.calOpen === true || CAL.calOpen === false) return CAL.calOpen === true;
+  return window.innerWidth <= 640;
+}
 function calShelf(){
   // 连了 CalDAV 就按「同步哪些日历」来列（点一下就是开关，会真的影响拉取）；
   // 没连的时候只有本地快照，点了只是当前视图里隐藏
@@ -14095,9 +14153,7 @@ function calShelf(){
     : ((CAL.meta && CAL.meta.calendars) || []);
   const y = CAL.y || new Date().getFullYear();
   const m = CAL.m || (new Date().getMonth()+1);
-  // 日历列表默认折叠（手机抽屉里没有折叠头，直接展开）
-  const mobile = window.innerWidth <= 640;
-  const open = mobile || CAL.calOpen === true;
+  const open = calListOpen();
   const onCount = list.filter(c => linked ? c.on : !CAL.hidden[c.cal]).length;
   let html = `<button class="cal-shelf-hd" data-calcalft="1" aria-expanded="${open?'true':'false'}"
       title="${open?'收起日历列表':'展开日历列表'}">
@@ -14256,7 +14312,7 @@ function bindCalShelf(root){
   const rw = el.querySelector('[data-calreauth]');
   if(rw) rw.onclick = ()=>openCalSetup({ reauth:true });
   const cfold = el.querySelector('[data-calcalft]');
-  if(cfold) cfold.onclick = ()=>{ CAL.calOpen = !(CAL.calOpen === true); paintCalShell(); };
+  if(cfold) cfold.onclick = ()=>{ CAL.calOpen = !calListOpen(); paintCalShell(); };
   el.querySelectorAll('[data-caltab]').forEach(b=>{
     b.onclick = ()=>{
       const k = b.dataset.caltab;

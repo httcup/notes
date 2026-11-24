@@ -2517,16 +2517,39 @@ body.ol-flash .ol-mini{opacity:0;pointer-events:none}
 .media-thumb{aspect-ratio:4/3;display:grid;place-items:center;font-size:11px;color:rgb(var(--faint))}
 .media-thumb img{width:100%;height:100%;object-fit:cover}
 .media-name{padding:7px 26px 7px 9px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgb(var(--surface))}
-.media-del{
-  position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:7px;
-  display:grid;place-items:center;background:rgb(var(--surface)/.92);color:rgb(var(--muted));
-  box-shadow:0 1px 4px rgb(0 0 0 / .16);opacity:0;transform:scale(.9);
-  transition:opacity .14s,transform .14s var(--spring),background .14s,color .14s;
+/* 每张图右上角的小工具条：复制链接 / 复制 Markdown / 删除（悬停才出，触屏一直显示） */
+.media-acts{
+  position:absolute;top:6px;right:6px;display:flex;gap:4px;
+  opacity:0;transform:translateY(-2px);
+  transition:opacity .14s,transform .14s var(--spring);
 }
-.media-del svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.media-card:hover .media-del,.media-card:focus-within .media-del{opacity:1;transform:none}
-.media-del:hover{background:rgb(var(--danger));color:#fff}
-@media (hover:none){ .media-del{opacity:1;transform:none} }
+.media-act{
+  width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+  background:rgb(var(--surface)/.92);color:rgb(var(--muted));box-shadow:0 1px 4px rgb(0 0 0 / .16);
+  transition:background .14s,color .14s;
+}
+.media-act svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.media-act:hover{background:rgb(var(--surface));color:rgb(var(--ink))}
+.media-act.del:hover{background:rgb(var(--danger));color:#fff}
+.media-card:hover .media-acts,.media-card:focus-within .media-acts{opacity:1;transform:none}
+@media (hover:none){ .media-acts{opacity:1;transform:none} }
+@media (max-width:900px){ .media-acts{opacity:1;transform:none} }   /* 手机上一直显示，别让人猜 */
+/* 图床来的图片标一下，和本机 / 旧媒体库的文件区分开 */
+.media-badge{
+  position:absolute;left:6px;top:6px;font-size:10px;line-height:1.6;padding:0 5px;border-radius:5px;
+  background:rgb(var(--surface)/.9);color:rgb(var(--muted));box-shadow:0 1px 3px rgb(0 0 0 / .12);
+  letter-spacing:.02em;
+}
+/* 顶栏右侧那组：上传 + 全部删除 */
+.media-bar-r{display:flex;align-items:center;gap:8px}
+.media-up{
+  height:32px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:500;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;background:rgb(var(--ivy));color:rgb(var(--on-ivy));
+}
+.media-up svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.media-up:disabled{opacity:.55}
+/* 拖文件到格子上：整块给个提示 */
+.media-grid.dragging{outline:1.5px dashed rgb(var(--ivy)/.5);outline-offset:6px;border-radius:10px}
 
 /* ============ graph ============ */
 #graphWrap{position:absolute;inset:0;overflow:hidden;cursor:grab}
@@ -4016,7 +4039,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.73', at: '2026-11-23 17:05' };
+window.IVY_BUILD = { id: '2.74', at: '2026-11-24 11:21' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -13270,6 +13293,58 @@ function mediaShelf(){
   return h;
 }
 
+/* ---- 媒体库：复制链接 / 复制 Markdown / 上传 ---- */
+function mdUrlOf(m){ return absUrl(m && m.url); }
+/* alt 文字：图床存的常是哈希名（0144d12ef07…），当 alt 只是噪音，留空更干净 */
+function mediaAlt(m){
+  const raw = String((m && m.name) || '').trim();
+  const base = raw.replace(/\.[a-z0-9]{2,5}$/i, '');
+  if(!base || base.length > 24 || /^[0-9a-f]{8,}$/i.test(base)) return '';
+  return base.replace(/[\[\]]/g, '');
+}
+async function copyTextTo(t){
+  try{ await navigator.clipboard.writeText(t); return true; }
+  catch(e){ try{ return legacyCopy(t); }catch(_){ return false; } }
+}
+/* 上传：选文件 → 传到图床 → 刷新列表（不插进笔记，媒体库只管存档） */
+function pickMediaUpload(){
+  if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
+  if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.multiple = true;
+  inp.onchange = ()=>{ const files = [...inp.files]; if(files.length) uploadMediaBatch(files); };
+  inp.click();
+}
+async function uploadMediaBatch(files){
+  const list = [...(files || [])].filter(f=>f && f.size);
+  if(!list.length) return;
+  if(!isConnected()){ toast('登录账号后才能传到图床'); return; }
+  if(CLOUD_UPLOAD === false){ toast('当前账号没开通云图床'); return; }
+  let ok = 0, fail = 0, lastErr = '';
+  uploadPill('正在上传 1/' + list.length);
+  for(let i = 0; i < list.length; i++){
+    const f = list[i];
+    if(list.length > 1 || f.size > 300 * 1024) uploadPill('正在上传 ' + (i + 1) + '/' + list.length);
+    try{
+      const img = isImageFile(f);
+      const send = img ? await shrinkImage(f, 2200, 0.9, false) : f;
+      const up = await uploadMediaFile(send, f.name || (img ? 'image.jpg' : 'file'));
+      if(up && up.url) ok++;
+      else { fail++; lastErr = '这个账号不能传云端'; }
+    }catch(e){
+      fail++;
+      lastErr = (e && e.message) || '网络错误';
+    }
+  }
+  uploadPillDone();
+  picMedia = null; remoteMedia = null;
+  await refreshMediaLists();
+  if(ok && !fail) toast('已上传 ' + ok + ' 个文件到图床');
+  else if(ok) toast('上传完成：成功 ' + ok + ' 个，失败 ' + fail + ' 个' + (lastErr ? '（' + lastErr + '）' : ''));
+  else toast('上传失败：' + (lastErr || '网络错误'));
+}
+
 function renderMedia(){
   outlineEl.classList.add('hidden');
   paperActions.innerHTML = '';
@@ -13286,15 +13361,25 @@ function renderMedia(){
       <div class="media-bar">
         <div class="media-search">${ic('search')}
           <input id="mediaSearch" placeholder="搜索文件名" spellcheck="false"></div>
-        ${list.length ? `<button class="media-danger" data-mdall${mediaCat==='unused' ? ' title="把所有没被笔记引用的图片一次删掉"' : ''}>${
-          mediaCat==='unused' ? '删除全部未引用' : '全部删除'}（${list.length}）</button>` : ''}
+        <div class="media-bar-r">
+          <button class="media-up" data-mup="1" title="上传到图床（也可以直接把文件拖进来）">${ic('upload')}上传</button>
+          ${list.length ? `<button class="media-danger" data-mdall${mediaCat==='unused' ? ' title="把所有没被笔记引用的图片一次删掉"' : ''}>${
+            mediaCat==='unused' ? '删除全部未引用' : '全部删除'}（${list.length}）</button>` : ''}
+        </div>
       </div>
-      ${list.length? `<div class="media-grid" id="mediaGrid">${list.map((m,i)=>`
+      ${list.length? `<div class="media-grid" id="mediaGrid">${list.map((m,i)=>{
+        const img = m.type.startsWith('image');
+        return `
         <div class="media-card" data-name="${esc(m.name.toLowerCase())}" data-mi="${i}">
-          <div class="media-thumb">${m.type.startsWith('image')?`<img src="${m.url}" alt="" loading="lazy">`:kindOf(m).toUpperCase()}</div>
+          <div class="media-thumb">${img?`<img src="${m.url}" alt="" loading="lazy">`:kindOf(m).toUpperCase()}</div>
           <div class="media-name" title="${esc(m.name)}">${esc(m.name)}</div>
-          <button class="media-del" data-mdel="${i}" title="删除这个文件" aria-label="删除">${ic('trash')}</button>
-        </div>`).join('')}</div>`
+          ${m.pic ? '<span class="media-badge">图床</span>' : ''}
+          <div class="media-acts">
+            <button class="media-act" data-mcopy="link" data-mi="${i}" title="复制链接" aria-label="复制链接">${ic('link')}</button>
+            ${img ? `<button class="media-act" data-mcopy="md" data-mi="${i}" title="复制图片 Markdown" aria-label="复制 Markdown">${ic('code')}</button>` : ''}
+            <button class="media-act del" data-mdel="${i}" title="删除这个文件" aria-label="删除">${ic('trash')}</button>
+          </div>
+        </div>`;}).join('')}</div>`
       : `<div class="media-empty">
           ${ic('image')}<span>${mediaCat==='pic'
             ? (CLOUD_UPLOAD === false
@@ -13302,7 +13387,7 @@ function renderMedia(){
                 : (isConnected() ? '图床里还没有图片。在笔记里粘贴或拖入图片就会传到这里。' : '登录后粘贴或拖入的图片才会传到图床。'))
             : (mediaCat==='unused'
                 ? '没有未被引用的图片：现在图库里的图片都还被笔记用着。'
-                : '还没有文件。在笔记中粘贴或拖入图片即可自动加入媒体库。')}</span>
+                : '还没有文件。点右上角「上传」，或把文件拖进来，也可以直接在笔记里粘贴图片。')}</span>
         </div>`}
     </div>`;
   const ms = $('#mediaSearch');
@@ -13314,13 +13399,46 @@ function renderMedia(){
   };
   const delAll = scrollEl.querySelector('[data-mdall]');
   if(delAll) delAll.onclick = ()=>deleteMediaBatch();
+  const upBtn = scrollEl.querySelector('[data-mup]');
+  if(upBtn) upBtn.onclick = pickMediaUpload;
   scrollEl.querySelectorAll('[data-media-cat]').forEach(b=>b.onclick=()=>{ mediaCat=b.dataset.mediaCat; renderShelf(); renderMain(); });
   scrollEl.querySelectorAll('[data-mdel]').forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); deleteMedia(list[+b.dataset.mdel]); };
   });
+  // 复制链接 / 复制 Markdown：点完按住不动，别顺手把图在新标签页里打开
+  scrollEl.querySelectorAll('[data-mcopy]').forEach(b=>{
+    b.onclick = async (e)=>{
+      e.stopPropagation();
+      const m = list[+b.dataset.mi];
+      if(!m) return;
+      const url = mdUrlOf(m);
+      if(b.dataset.mcopy === 'md'){
+        const ok = await copyTextTo('![' + mediaAlt(m) + '](' + url + ')');
+        toast(ok ? '已复制图片 Markdown' : '复制失败，请手动复制：' + url);
+      }else{
+        const ok = await copyTextTo(url);
+        toast(ok ? '已复制链接' : '复制失败，请手动复制：' + url);
+      }
+    };
+  });
   scrollEl.querySelectorAll('.media-card').forEach(c=>{
     c.onclick = ()=>{ const m = list[+c.dataset.mi]; if(m) window.open(m.url, '_blank', 'noopener'); };
   });
+  // 把文件直接拖进格子就能上传
+  const grid = $('#mediaGrid');
+  if(grid){
+    const stop = e=>{ e.preventDefault(); e.stopPropagation(); };
+    ['dragenter','dragover'].forEach(t=>grid.addEventListener(t, e=>{ stop(e); grid.classList.add('dragging'); }));
+    ['dragleave','dragend'].forEach(t=>grid.addEventListener(t, e=>{
+      if(e.target !== grid) return;
+      grid.classList.remove('dragging');
+    }));
+    grid.addEventListener('drop', e=>{
+      stop(e); grid.classList.remove('dragging');
+      const files = [...((e.dataTransfer && e.dataTransfer.files) || [])];
+      if(files.length) uploadMediaBatch(files);
+    });
+  }
   // 首次进入异步拉一次云端列表（图床 + 旧媒体库并取）
   if(isConnected()){
     const jobs = [];

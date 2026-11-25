@@ -811,6 +811,20 @@ body.ol-touch .ol-item{padding-top:6px;padding-bottom:6px}
 .dev-item b{font-weight:500;font-size:10px;padding:1px 5px;border-radius:4px;background:rgb(var(--ivy-soft));color:rgb(var(--ivy-ink))}
 .meta-btn:hover{background:rgb(var(--hover));color:rgb(var(--ink-2))}
 .meta-btn.add{color:rgb(var(--faint))}
+/* 标题下的「所在笔记本」下拉：一眼看出这篇归到哪，点开就是笔记本列表 */
+.meta-nb{
+  display:inline-flex;align-items:center;gap:4px;max-width:170px;
+  padding:2px 7px;border-radius:6px;background:rgb(var(--ink)/.05);
+  color:rgb(var(--ink-2));font-size:12px;line-height:1.6;
+}
+.meta-nb:hover{background:rgb(var(--hover));color:rgb(var(--ink))}
+.meta-nb svg{width:13px;height:13px;flex:0 0 auto;opacity:.7}
+.meta-nb .nb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta-nb .dd{font-size:9px;opacity:.5;flex:0 0 auto}
+.meta-nb.none{color:rgb(var(--faint));background:rgb(var(--ink)/.035)}
+@media (max-width:560px){
+  .view-pad .doc-meta .meta-nb{padding:4px 8px;border-radius:7px;font-size:12.5px;max-width:46vw}
+}
 /* 回收站头部：窄屏要能换行，否则「清空回收站」会被挤出屏幕 */
 .trash-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 22px}
 .trash-hint{color:rgb(var(--faint));font-size:12.5px;margin:0;flex:1 1 auto;min-width:0}
@@ -4097,7 +4111,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.80', at: '2026-11-24 23:41' };
+window.IVY_BUILD = { id: '2.81', at: '2026-11-25 10:05' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -8370,13 +8384,18 @@ function renderMeta(){
   const d = new Date(n.updatedAt);
   const stamp = `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   const wc = countWords(n.body);
+  // 这篇归在哪个笔记本（笔记本被删了就当未归类）
+  const nb = n.notebookId ? (nbById(n.notebookId) || null) : null;
   meta.innerHTML = `<button class="meta-btn" id="metaTime">${stamp}</button>
     <span class="sep">·</span><span>${wc} 字</span>
     <span class="meta-sync" id="metaSync"></span>
     ${res ? `<button class="meta-resume" id="metaResume" title="切回来还能接着撤销">↩ 上次编辑 · ${agoText(res.at)}${res.steps ? ' · 可撤 ' + res.steps + ' 步' : ''}<span class="rx" id="metaResumeX" title="收起">×</span></button>` : ''}
+    <button class="meta-btn meta-nb${nb ? '' : ' none'}" id="metaNb" title="这篇笔记所在的笔记本，点击可移动或新建">${ic('book')}<span class="nb-name">${esc(nb ? nb.name : '未归类')}</span><span class="dd">▾</span></button>
     ${tagOf(n).map(t=>`<span class="chip" data-pick="${esc(t)}" style="color:${tagColor(t)}">${esc(t)}<span class="rm" data-rmtag="${esc(t)}">×</span></span>`).join('')}
     <button class="meta-btn add" id="addTag">+ 标签</button>`;
   updateSyncBadge();
+  const nbb = meta.querySelector('#metaNb');
+  if(nbb) nbb.onclick = e=>openMoveMenu(e.currentTarget, n.id);
   const rb = meta.querySelector('#metaResume');
   if(rb) rb.onclick = e=>{
     if(e.target.closest('#metaResumeX')){ UNDO.resumed = null; renderMeta(); return; }

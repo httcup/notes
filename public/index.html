@@ -4111,7 +4111,7 @@ function ic(name, cls){
 }
 /* 版本水印：随本 HTML 一起部署，是「当前页面是哪一版」的权威标记。
    每次发布请同步更新 public/version.js 的 id，页面会拿它校验线上是否被旧部署覆盖。 */
-window.IVY_BUILD = { id: '2.81', at: '2026-11-25 10:05' };
+window.IVY_BUILD = { id: '2.82', at: '2026-11-26 11:05' };
 /* 触屏设备（iPad Safari）没有稳定 hover，大纲改为点击展开 */
 /* 触屏判定：iPad Safari 桌面模式会报 hover:hover，所以要兼顾「有触摸点 + 粗指针」 */
 const OL_TOUCH = !!(window.matchMedia && (window.matchMedia('(hover: none)').matches
@@ -11029,8 +11029,10 @@ document.addEventListener('paste', e=>{
     return;
   }
   if((S.mode || 'live') !== 'live') return;
-  // 焦点在「看不见的块输入框」里不算在编辑：那种情况粘贴会被吞掉，得我们自己接管
-  if(inRealEditor() && focusedVisibleField()) return;
+  /* 焦点落在任何「看得见」的输入框里（标题 textarea、正文块、搜索框…）就放行，交给它自己粘。
+     以前这里写的是 inRealEditor() && focusedVisibleField()：标题里光标没选中文字时
+     inRealEditor() 返回 false，于是粘贴被下面接管、跑去了正文末尾，看起来就是「标题粘不上」。 */
+  if(focusedVisibleField()) return;
   const host = liveHost(); if(!host) return;
   const cd = e.clipboardData;
   if(!cd) return;
@@ -12197,6 +12199,19 @@ function wireEditor(n){
   });
   title.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); src.focus(); }
+  });
+  /* 标题的粘贴自己接管：只读预览 / 客户端 WebView / 某些输入法下，原生 ⌘V 不一定落进这个 textarea，
+     表现就是「光标明明在标题里，却粘不上」。这里直接取纯文本插进选区，各平台行为一致。 */
+  title.addEventListener('paste', e=>{
+    if(e.defaultPrevented) return;
+    const cd = e.clipboardData; if(!cd) return;
+    const txt = cd.getData('text/plain');
+    if(!txt) return;                                  // 剪贴板里是图片/文件，别吞掉
+    e.preventDefault();
+    const s = title.selectionStart == null ? title.value.length : title.selectionStart;
+    const en = title.selectionEnd == null ? s : title.selectionEnd;
+    title.setRangeText(txt, s, en, 'end');
+    title.dispatchEvent(new Event('input', { bubbles:true }));
   });
   title.addEventListener('blur', ()=>{ if(!n.title.trim() && n._auto){ n._auto=false; } });
 
